@@ -1,0 +1,64 @@
+id: postkarte-a6-kampagne
+version: 0.1.0
+title: Kampagnen-Postkarte A6
+format: A6
+orientation: portrait
+audience: [bezirksgruppe, landesgruppe]
+description: >
+  Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Badge),
+  Petition-CTA und QR-Code-Rückseite mit Impressum.
+slots:
+  headline:
+    type: text
+    description: 4-zeilige Hauptbotschaft (Vorderseite)
+    lines: 4
+    max_chars_per_line: 22
+    required: true
+  cta:
+    type: text
+    description: Call-to-Action unter Headline
+    default: "Jetzt Petition unterschreiben!"
+  stoerer:
+    type: text
+    description: 3-zeiliger Störer-Text im rosa Kreis
+    default: "Super-reiche fair besteuern"
+  body:
+    type: text
+    description: Erklärtext auf der Rückseite
+    multiline: true
+    required: true
+  social:
+    type: text
+    description: Social-Handles (4 Zeilen)
+    lines: 4
+  url:
+    type: text
+    description: Kampagnen-URL unterm QR-Code
+    pattern: "^https?://"
+    required: true
+  impressum:
+    type: text
+    description: Impressum-Block (klein)
+    multiline: true
+  hero:
+    type: image
+    description: Hauptbild Vorderseite (oder leer für Vollfarbe)
+    aspect: "2:3"
+    min_dpi: 300
+    optional: true
+  logo:
+    type: image
+    description: Logo (zentriert auf Vorderseite)
+    source: shared/logos/gruene-no-weiss.png
+    locked: true
+  qr:
+    type: image
+    description: QR-Code zum Kampagnen-URL
+    generate_from: url
+golden:
+  reference: golden/reference.pdf
+  pages_dpi: 300
+preflight:
+  profile: pdfx-4
+  bleed_mm: 3
+  cmyk_only: true

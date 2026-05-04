@@ -1,0 +1,111 @@
+# Extends the base claude-flow image with the Scribus template pipeline toolchain.
+#
+# Base provides: node 20, python3, git/git-lfs, gh, jq, ripgrep, uv, ruff, mypy, pytest.
+# This image adds:
+#   - Scribus 1.6.x (from Debian trixie, since bookworm only ships 1.5.8 which
+#     cannot read the project's 1.6.5 .sla files)
+#   - Xvfb (Scribus needs an X display even in --no-gui mode on Linux)
+#   - Poppler-utils (pdftoppm / pdfinfo / pdftocairo for rasterising PDFs)
+#   - Ghostscript (PDF post-processing, PDF/X conversion)
+#   - ImageMagick (compare, convert — visual diff fallback)
+#   - libxml2-utils (xmllint for validating SLA XML in CI)
+#   - python3-lxml, python3-yaml (used by tools/sla_lib and tools/render.py)
+#
+# Optional preflight/diff tools (veraPDF, pdfcpu, odiff) are NOT installed by
+# default to keep the image small. Enable with:
+#   docker build --build-arg INSTALL_PREFLIGHT=1 -f Dockerfile.claude -t scribus-pipeline .
+#
+# Build (default):
+#   docker build -f Dockerfile.claude -t scribus-pipeline .
+# Build (with preflight + visual diff stack):
+#   docker build --build-arg INSTALL_PREFLIGHT=1 -f Dockerfile.claude -t scribus-pipeline .
+# Run an ad-hoc render:
+#   docker run --rm -v "$PWD":/root/workspace scribus-pipeline \
+#     python3 tools/render.py templates/postkarte-a6-kampagne --sample klimaschutz
+
+FROM ghcr.io/flomotlik/claude-code:latest
+
+ARG INSTALL_PREFLIGHT=0
+ARG VERAPDF_VERSION=1.26.2
+ARG PDFCPU_VERSION=0.8.0
+
+# Pin Scribus to Debian trixie because bookworm has only 1.5.8.
+# We pin only the scribus packages from trixie to avoid pulling in unrelated upgrades.
+RUN echo "deb http://deb.debian.org/debian trixie main" \
+      > /etc/apt/sources.list.d/trixie-scribus.list && \
+    printf 'Package: *\nPin: release n=trixie\nPin-Priority: 100\n\nPackage: scribus scribus-data scribus-doc\nPin: release n=trixie\nPin-Priority: 990\n' \
+      > /etc/apt/preferences.d/99-trixie-scribus && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        -t trixie scribus scribus-data && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        xvfb \
+        poppler-utils \
+        ghostscript \
+        imagemagick \
+        libxml2-utils \
+        python3-lxml \
+        python3-yaml \
+        fonts-dejavu-core && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Allow ImageMagick to read/write PDF (Debian's policy.xml blocks PDF by default).
+# We need this for compare/convert in visual diff workflows.
+RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
+      sed -i 's|<policy domain="coder" rights="none" pattern="PDF" />|<policy domain="coder" rights="read\|write" pattern="PDF" />|' \
+        /etc/ImageMagick-6/policy.xml; \
+    fi
+
+# Optional: preflight + visual-diff stack
+# - veraPDF: PDF/X / PDF/A conformance checker
+# - pdfcpu: PDF integrity validator (Go binary, multi-arch)
+# - default-jre: required by veraPDF
+RUN if [ "$INSTALL_PREFLIGHT" = "1" ]; then \
+      set -e; \
+      apt-get update && \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          default-jre-headless \
+          unzip && \
+      apt-get clean && rm -rf /var/lib/apt/lists/* && \
+      arch="$(dpkg --print-architecture)"; \
+      case "$arch" in \
+        amd64) pdfcpu_arch=amd64 ;; \
+        arm64) pdfcpu_arch=arm64 ;; \
+        *) echo "Unsupported architecture for pdfcpu: $arch" >&2; exit 1 ;; \
+      esac; \
+      curl -fsSL "https://github.com/pdfcpu/pdfcpu/releases/download/v${PDFCPU_VERSION}/pdfcpu_${PDFCPU_VERSION}_Linux_${pdfcpu_arch}.tar.xz" \
+        | tar -xJ -C /usr/local/bin --strip-components=1 --wildcards '*/pdfcpu' && \
+      chmod +x /usr/local/bin/pdfcpu && \
+      mkdir -p /opt/verapdf && \
+      curl -fsSL -o /tmp/verapdf.zip \
+        "https://software.verapdf.org/releases/${VERAPDF_VERSION}/verapdf-greenfield-${VERAPDF_VERSION}-installer.zip" && \
+      unzip -q /tmp/verapdf.zip -d /tmp/verapdf-installer && \
+      installer_dir="$(find /tmp/verapdf-installer -maxdepth 1 -type d -name 'verapdf*' | head -1)"; \
+      printf 'INSTALL_PATH=/opt/verapdf\nMODE=cli\n' > /tmp/verapdf-auto.xml && \
+      "$installer_dir"/verapdf-install /tmp/verapdf-auto.xml || true; \
+      ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf 2>/dev/null || true; \
+      rm -rf /tmp/verapdf.zip /tmp/verapdf-installer /tmp/verapdf-auto.xml; \
+    fi
+
+# odiff (visual-diff): pure binary, no JS runtime needed
+RUN if [ "$INSTALL_PREFLIGHT" = "1" ]; then \
+      arch="$(uname -m)"; \
+      case "$arch" in \
+        x86_64) odiff_arch=linux-x64 ;; \
+        aarch64) odiff_arch=linux-arm64 ;; \
+        *) echo "Unsupported architecture for odiff: $arch" >&2; exit 1 ;; \
+      esac; \
+      npm install -g "odiff-bin@^3" || true; \
+    fi
+
+# Sanity probe: exercise the headless render path on a tiny synthetic SLA so
+# layer-cached image catches Scribus regressions during build, not at runtime.
+RUN xvfb-run -a --server-args="-screen 0 800x600x24" scribus --version 2>&1 | grep -E '^[0-9]' && \
+    pdftoppm -v 2>&1 | head -1 && \
+    python3 -c "import lxml.etree, yaml; print('python deps ok')"
+
+# Default working directory is the mounted repo (volume from base image).
+WORKDIR /root/workspace
+
+# Default command: show the render CLI help so `docker run` without args is informative.
+CMD ["python3", "tools/render.py", "--help"]
