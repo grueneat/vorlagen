@@ -15,7 +15,8 @@ from typing import Optional, Union
 from lxml import etree
 
 from .ci import Color, Style
-from .document import mm_to_pt
+from .document import mm_to_pt, _fmt_num, MM_TO_PT
+from .styles import SoftShadow
 
 # Anchor type: either a string name or (x, y) where each can be a number (mm)
 # or "left"|"right"|"center"|"top"|"bottom" or "bottom-N" / "right-N" (margin)
@@ -68,6 +69,98 @@ def _resolve_axis(spec, page_size_pt: float, item_size_pt: float, axis: str) -> 
 
 
 # ---------------------------------------------------------------------------
+# Run — typed per-run text formatting
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Run:
+    """A single ITEXT run with optional per-run style overrides.
+
+    ``separator`` is the StoryText element placed AFTER this run (and before
+    the next): ``"para"`` -> <para/>, ``"breakline"`` -> <breakline/>,
+    ``"tab"`` -> <tab/>, ``"breakcol"`` -> <breakcol/>, ``"breakframe"`` -> <breakframe/>.
+    ``var="pgno"`` emits a ``<var name="pgno"/>`` element after the run (and
+    after any separator if both are set).
+    """
+    text: str = ""
+    font: Optional[str] = None
+    fontsize: Optional[float] = None
+    fcolor: Optional[str] = None
+    fshade: Optional[int] = None
+    fontfeatures: Optional[str] = None
+    features: Optional[str] = None
+    kern: Optional[float] = None
+    underline_position: Optional[int] = None  # TXTULP
+    strike_position: Optional[int] = None     # TXTSTP
+    char_style: Optional[str] = None          # CPARENT
+    separator: Optional[str] = None           # "para" | "breakline" | "tab" | ...
+    var: Optional[str] = None                 # "pgno"
+
+
+_RUN_ATTR_MAP_INT = (
+    ("fshade", "FSHADE"),
+    ("underline_position", "TXTULP"),
+    ("strike_position", "TXTSTP"),
+)
+
+_RUN_ATTR_MAP_NUM = (
+    ("fontsize", "FONTSIZE"),
+    ("kern", "KERN"),
+)
+
+_RUN_ATTR_MAP_STR = (
+    ("font", "FONT"),
+    ("fcolor", "FCOLOR"),
+    ("fontfeatures", "FONTFEATURES"),
+    ("features", "FEATURES"),
+    ("char_style", "CPARENT"),
+)
+
+
+def _apply_run_attrs(it: etree._Element, run: Run) -> None:
+    """Set ITEXT attributes from a Run dataclass; only non-None fields write."""
+    for kw, attr in _RUN_ATTR_MAP_STR:
+        v = getattr(run, kw)
+        if v is not None:
+            it.set(attr, v)
+    for kw, attr in _RUN_ATTR_MAP_NUM:
+        v = getattr(run, kw)
+        if v is not None:
+            it.set(attr, _fmt_num(v))
+    for kw, attr in _RUN_ATTR_MAP_INT:
+        v = getattr(run, kw)
+        if v is not None:
+            it.set(attr, str(v))
+
+
+def _normalise_run(item) -> Run:
+    """Accept the legacy ``(text, dict, sep)`` tuple form too. Returns a Run."""
+    if isinstance(item, Run):
+        return item
+    if isinstance(item, tuple):
+        text = item[0]
+        override = item[1] if len(item) > 1 else None
+        sep = item[2] if len(item) > 2 else None
+        kwargs = {"text": text, "separator": sep}
+        if override:
+            for src_key, dst_key in (
+                ("fcolor", "fcolor"),
+                ("fontsize", "fontsize"),
+                ("font", "font"),
+                ("fshade", "fshade"),
+                ("features", "features"),
+                ("kern", "kern"),
+                ("fontfeatures", "fontfeatures"),
+                ("char_style", "char_style"),
+            ):
+                if src_key in override:
+                    kwargs[dst_key] = override[src_key]
+        return Run(**kwargs)
+    if isinstance(item, str):
+        return Run(text=item)
+    raise TypeError(f"Unsupported run item: {item!r}")
+
+
+# ---------------------------------------------------------------------------
 # Common base for primitives
 # ---------------------------------------------------------------------------
 @dataclass
@@ -80,6 +173,10 @@ class _Frame:
     rotation_deg: float = 0
     layer: int = 2  # default Text layer
     anname: str = ""
+    custom_path: Optional[str] = None
+    fill_rule: Optional[int] = None
+    corner_radius_mm: float = 0
+    soft_shadow: Optional[SoftShadow] = None
 
     def _xy_pt(self, page) -> tuple[float, float]:
         """Return absolute XPOS/YPOS in scratch canvas space."""
@@ -92,6 +189,50 @@ class _Frame:
         return page.page_xpos_pt + local_x, page.page_ypos_pt + local_y
 
 
+def _apply_shape_attrs(attrs: dict, frame: _Frame, w_pt: float, h_pt: float,
+                        default_path: str, default_frtype: str) -> None:
+    """Set FRTYPE, RADRECT, path/copath, fillRule based on the frame's
+    ``custom_path`` / ``corner_radius_mm`` / ``fill_rule`` configuration.
+
+    ``default_path`` and ``default_frtype`` describe the shape the primitive
+    would emit when none of those override fields are set.
+    """
+    if frame.custom_path is not None:
+        attrs["FRTYPE"] = "3"
+        attrs["path"] = frame.custom_path
+        attrs["copath"] = frame.custom_path
+    elif frame.corner_radius_mm > 0:
+        radrect_pt = mm_to_pt(frame.corner_radius_mm)
+        attrs["FRTYPE"] = "2"
+        attrs["RADRECT"] = _fmt_num(radrect_pt)
+        # When custom_path isn't passed, fall back to a plain rectangle path.
+        # The converter will normally pass the original's bezier-rounded path
+        # via custom_path so RADRECT alone is rare in round-trip mode.
+        attrs["path"] = default_path
+        attrs["copath"] = default_path
+    else:
+        attrs["FRTYPE"] = default_frtype
+        attrs["path"] = default_path
+        attrs["copath"] = default_path
+    if frame.fill_rule is not None:
+        attrs["fillRule"] = str(frame.fill_rule)
+
+
+def _apply_soft_shadow(attrs: dict, ss: Optional[SoftShadow]) -> None:
+    if ss is None:
+        return
+    attrs["HASSOFTSHADOW"] = "1"
+    attrs["SOFTSHADOWCOLOR"] = ss.color
+    attrs["SOFTSHADOWBLURRADIUS"] = _fmt_num(ss.blur_radius_pt)
+    attrs["SOFTSHADOWXOFFSET"] = _fmt_num(ss.x_offset_pt)
+    attrs["SOFTSHADOWYOFFSET"] = _fmt_num(ss.y_offset_pt)
+    attrs["SOFTSHADOWBLENDMODE"] = str(ss.blend_mode)
+    attrs["SOFTSHADOWOPACITY"] = _fmt_num(ss.opacity)
+    attrs["SOFTSHADOWSHADE"] = str(ss.shade)
+    attrs["SOFTSHADOWERASEDBYOBJECT"] = "1" if ss.erase else "0"
+    attrs["SOFTSHADOWOBJTRANS"] = "1" if ss.object_trans else "0"
+
+
 # ---------------------------------------------------------------------------
 # TextFrame
 # ---------------------------------------------------------------------------
@@ -100,20 +241,32 @@ class TextFrame(_Frame):
     text: str = ""
     style: str = ""           # paragraph style name (e.g. Style.BODY_12)
     fcolor: str = ""          # override color (e.g. Color.WHITE)
-    runs: Optional[list] = None  # list of (text, style_override) tuples for multi-run
+    runs: Optional[list] = None  # list of Run, or legacy (text, dict, sep) tuples
     columns: int = 1
     col_gap_mm: float = 4
+    text_align: Optional[int] = None  # ALIGN attribute (vertical text align override)
+    next_item: Optional["TextFrame"] = field(default=None, repr=False, compare=False)
+    # Internal: pre-allocated ItemID for chain ordering. Set by Document._build_xml.
+    _preallocated_id: Optional[int] = field(default=None, repr=False, compare=False)
+
+    def link_to(self, other: "TextFrame") -> "TextFrame":
+        """Chain self -> other. Returns ``other`` for fluent chains
+        (``a.link_to(b).link_to(c)``)."""
+        self.next_item = other
+        return other
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
         w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
+        item_id = self._preallocated_id if self._preallocated_id is not None else idgen.next()
+        rect_path = f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z"
         attrs = {
             "XPOS": f"{x:.6f}", "YPOS": f"{y:.6f}",
             "OwnPage": str(page.own_page),
-            "ItemID": str(idgen.next()),
+            "ItemID": str(item_id),
             "PTYPE": "4",
             "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "FRTYPE": "0", "CLIPEDIT": "0", "PWIDTH": "0",
+            "CLIPEDIT": "0", "PWIDTH": "0",
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
@@ -121,14 +274,17 @@ class TextFrame(_Frame):
             "AUTOTEXT": "0", "EXTRA": "0", "TEXTRA": "0", "BEXTRA": "0", "REXTRA": "0",
             "VAlign": "0", "FLOP": "1", "PLTSHOW": "0", "BASEOF": "0",
             "textPathType": "0", "textPathFlipped": "0",
-            "path": f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z",
-            "copath": f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z",
             "gXpos": f"{x:.6f}", "gYpos": f"{y:.6f}",
             "gWidth": "0", "gHeight": "0",
             "LAYER": str(self.layer),
             "NEXTITEM": "-1", "BACKITEM": "-1",
             "ROT": f"{self.rotation_deg:.6f}",
         }
+        _apply_shape_attrs(attrs, self, w_pt, h_pt,
+                            default_path=rect_path, default_frtype="0")
+        _apply_soft_shadow(attrs, self.soft_shadow)
+        if self.text_align is not None:
+            attrs["ALIGN"] = str(self.text_align)
         if self.anname:
             attrs["ANNAME"] = self.anname
         po = etree.Element("PAGEOBJECT", attrib=attrs)
@@ -136,31 +292,33 @@ class TextFrame(_Frame):
         ds = etree.SubElement(story, "DefaultStyle")
         if self.style:
             ds.set("PARENT", self.style)
-        ds.set("LINESPMode", "2")
 
         # Emit ITEXT runs
         if self.runs:
-            # multi-run: list of (text, optional style override) tuples
-            for i, run in enumerate(self.runs):
-                if isinstance(run, tuple):
-                    text, override = run[0], run[1] if len(run) > 1 else None
-                else:
-                    text, override = run, None
+            run_list = [_normalise_run(r) for r in self.runs]
+            for r in run_list:
+                # ITEXT element with the run's text and per-run overrides
                 it = etree.SubElement(story, "ITEXT")
-                it.set("CH", text)
-                if override:
-                    if "fcolor" in override:
-                        it.set("FCOLOR", override["fcolor"])
-                    if "fontsize" in override:
-                        it.set("FONTSIZE", str(override["fontsize"]))
-                if i < len(self.runs) - 1:
-                    if isinstance(run, tuple) and len(run) > 2 and run[2] == "para":
-                        para = etree.SubElement(story, "para")
-                        if self.style:
-                            para.set("PARENT", self.style)
-                    else:
-                        etree.SubElement(story, "breakline")
-        else:
+                it.set("CH", r.text)
+                _apply_run_attrs(it, r)
+                # Separator between this run and the next
+                if r.separator == "para":
+                    para = etree.SubElement(story, "para")
+                    if self.style:
+                        para.set("PARENT", self.style)
+                elif r.separator == "breakline":
+                    etree.SubElement(story, "breakline")
+                elif r.separator == "tab":
+                    etree.SubElement(story, "tab")
+                elif r.separator == "breakcol":
+                    etree.SubElement(story, "breakcol")
+                elif r.separator == "breakframe":
+                    etree.SubElement(story, "breakframe")
+                # Variable insert (e.g. <var name="pgno"/>)
+                if r.var is not None:
+                    var = etree.SubElement(story, "var")
+                    var.set("name", r.var)
+        elif self.text:
             it = etree.SubElement(story, "ITEXT")
             it.set("CH", self.text)
             if self.fcolor:
@@ -178,32 +336,48 @@ class TextFrame(_Frame):
 @dataclass
 class ImageFrame(_Frame):
     src: str = ""             # PFILE path (absolute or relative-to-SLA)
+    image: str = ""           # alias for src; converter prefers `image=`
     layer: int = 1            # default Bilder layer
+    local_scale: tuple[float, float] = (1.0, 1.0)
+    local_offset_mm: tuple[float, float] = (0.0, 0.0)
+    local_rotation_deg: float = 0.0
+    scale_type: int = 1       # SCALETYPE
+    ratio: int = 1            # RATIO
+    pic_art: int = 1          # PICART (1=visible)
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
         w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
+        rect_path = f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z"
+        pfile = self.image or self.src
+        scx, scy = self.local_scale
+        lx_mm, ly_mm = self.local_offset_mm
         attrs = {
             "XPOS": f"{x:.6f}", "YPOS": f"{y:.6f}",
             "OwnPage": str(page.own_page),
             "ItemID": str(idgen.next()),
             "PTYPE": "2",
             "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "FRTYPE": "0", "CLIPEDIT": "0", "PWIDTH": "0",
-            "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
-            "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
-            "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
-            "PFILE": self.src,
+            "CLIPEDIT": "0", "PWIDTH": "0",
+            "PLINEART": "1",
+            "LOCALSCX": _fmt_num(scx), "LOCALSCY": _fmt_num(scy),
+            "LOCALX": _fmt_num(mm_to_pt(lx_mm)), "LOCALY": _fmt_num(mm_to_pt(ly_mm)),
+            "LOCALROT": _fmt_num(self.local_rotation_deg),
+            "PICART": str(self.pic_art),
+            "SCALETYPE": str(self.scale_type),
+            "RATIO": str(self.ratio),
+            "PFILE": pfile,
             "PRFILE": "sRGB display profile (ICC v2.2)",
             "IRENDER": "0",
-            "path": f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z",
-            "copath": f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z",
             "gXpos": f"{x:.6f}", "gYpos": f"{y:.6f}",
             "gWidth": "0", "gHeight": "0",
             "LAYER": str(self.layer),
             "NEXTITEM": "-1", "BACKITEM": "-1",
             "ROT": f"{self.rotation_deg:.6f}",
         }
+        _apply_shape_attrs(attrs, self, w_pt, h_pt,
+                            default_path=rect_path, default_frtype="0")
+        _apply_soft_shadow(attrs, self.soft_shadow)
         if self.anname:
             attrs["ANNAME"] = self.anname
         return etree.Element("PAGEOBJECT", attrib=attrs)
@@ -219,37 +393,41 @@ class Polygon(_Frame):
     line_width_pt: float = 0
     layer: int = 0                # default Hintergrund
     shape: str = "rectangle"      # 'rectangle' | 'ellipse'
+    fill_shade: int = 100         # SHADE — emitted when != 100
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
         w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
         if self.shape == "ellipse":
-            # 4-bezier-arc ellipse approximation
-            path = self._ellipse_path(w_pt, h_pt)
-            frtype = "1"  # FRTYPE=1 = ellipse
+            default_path = self._ellipse_path(w_pt, h_pt)
+            default_frtype = "1"  # FRTYPE=1 = ellipse
         else:
-            path = f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z"
-            frtype = "0"  # rectangle
+            default_path = f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z"
+            default_frtype = "0"
         attrs = {
             "XPOS": f"{x:.6f}", "YPOS": f"{y:.6f}",
             "OwnPage": str(page.own_page),
             "ItemID": str(idgen.next()),
             "PTYPE": "6",
             "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "FRTYPE": frtype, "CLIPEDIT": "0",
+            "CLIPEDIT": "0",
             "PCOLOR": self.fill,
             "PCOLOR2": self.line_color,
             "PWIDTH": f"{self.line_width_pt:.6f}",
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
-            "path": path, "copath": path,
             "gXpos": f"{x:.6f}", "gYpos": f"{y:.6f}",
             "gWidth": "0", "gHeight": "0",
             "LAYER": str(self.layer),
             "NEXTITEM": "-1", "BACKITEM": "-1",
             "ROT": f"{self.rotation_deg:.6f}",
         }
+        _apply_shape_attrs(attrs, self, w_pt, h_pt,
+                            default_path=default_path, default_frtype=default_frtype)
+        _apply_soft_shadow(attrs, self.soft_shadow)
+        if self.fill_shade != 100:
+            attrs["SHADE"] = str(self.fill_shade)
         if self.anname:
             attrs["ANNAME"] = self.anname
         return etree.Element("PAGEOBJECT", attrib=attrs)
