@@ -238,5 +238,224 @@ class StoryTextRoundTripTests(unittest.TestCase):
         self.assertNotIn("separator", runs[1])
 
 
+class ParagraphAttributeRoundTripTests(unittest.TestCase):
+    """Per-<para>/<trail> attribute overrides (ALIGN, LINESP, LINESPMode) must
+    survive the converter→build.py→builder round-trip. Dropping them silently
+    is the bug PR #3 had: ALIGN="0" overrides on Headlines were ignored, so
+    lines that should have rendered left-aligned ended up centered.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import sla_to_dsl  # noqa: E402
+        cls.sla_to_dsl = sla_to_dsl
+        # Lazy import; avoids module-load ordering surprises on first import.
+        from sla_lib.builder.primitives import (  # noqa: E402
+            PARAGRAPH_OVERRIDE_ATTRS, Run, TextFrame,
+        )
+        cls.PARAGRAPH_OVERRIDE_ATTRS = PARAGRAPH_OVERRIDE_ATTRS
+        cls.Run = Run
+        cls.TextFrame = TextFrame
+
+    # ---- converter side -------------------------------------------------
+    def _runs(self, story_xml: str) -> list[dict]:
+        from lxml import etree
+        story = etree.fromstring(story_xml.strip())
+        return self.sla_to_dsl._build_runs(story)
+
+    def test_align_override_captured_into_paragraph_attrs(self):
+        runs = self._runs("""
+            <StoryText>
+              <ITEXT CH="Headline"/>
+              <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
+              <ITEXT CH="Body"/>
+              <trail/>
+            </StoryText>
+        """)
+        self.assertEqual(len(runs), 2)
+        self.assertEqual(runs[0]["paragraph_style"], "Headline in grünem Kasten")
+        self.assertEqual(runs[0].get("paragraph_attrs"), {"ALIGN": "0"})
+        # The plain run after the para must NOT inherit overrides.
+        self.assertNotIn("paragraph_attrs", runs[1])
+
+    def test_linesp_mode_override_captured(self):
+        runs = self._runs("""
+            <StoryText>
+              <ITEXT CH="x"/>
+              <para PARENT="NormalParagraphStyle" LINESPMode="1"/>
+              <ITEXT CH="y"/>
+              <trail/>
+            </StoryText>
+        """)
+        self.assertEqual(runs[0]["paragraph_attrs"], {"LINESPMode": "1"})
+
+    def test_multiple_overrides_on_one_para(self):
+        runs = self._runs("""
+            <StoryText>
+              <ITEXT CH="x"/>
+              <para PARENT="P" ALIGN="3" LINESPMode="2" LINESP="13"/>
+              <ITEXT CH="y"/>
+              <trail/>
+            </StoryText>
+        """)
+        self.assertEqual(
+            runs[0]["paragraph_attrs"],
+            {"ALIGN": "3", "LINESPMode": "2", "LINESP": "13"},
+        )
+
+    def test_unhandled_para_attr_raises(self):
+        from sla_to_dsl import UnhandledElement
+        with self.assertRaises(UnhandledElement) as cm:
+            self._runs("""
+                <StoryText>
+                  <ITEXT CH="x"/>
+                  <para PARENT="P" SOMETHING_NEW="42"/>
+                  <trail/>
+                </StoryText>
+            """)
+        self.assertIn("SOMETHING_NEW", str(cm.exception))
+
+    # ---- builder side ---------------------------------------------------
+    def _bare_page(self):
+        """Return a Page sufficient to call to_pageobject() on a TextFrame."""
+        from sla_lib.builder.document import Page, mm_to_pt
+        return Page(width_pt=mm_to_pt(100), height_pt=mm_to_pt(100))
+
+    def _idgen(self):
+        from sla_lib.builder.document import _IdGen
+        return _IdGen()
+
+    def test_textframe_emits_paragraph_attrs_on_para(self):
+        tf = self.TextFrame(
+            x_mm=10, y_mm=10, w_mm=80, h_mm=20,
+            anname="t1",
+            runs=[
+                self.Run(text="Headline", separator="para",
+                          paragraph_style="Headline in grünem Kasten",
+                          paragraph_attrs={"ALIGN": "0"}),
+                self.Run(text="Body"),
+            ],
+            trail_style="Body",
+        )
+        po = tf.to_pageobject(self._idgen(), self._bare_page())
+        story = po.find("StoryText")
+        paras = [c for c in story if c.tag == "para"]
+        self.assertEqual(len(paras), 1)
+        self.assertEqual(paras[0].attrib.get("PARENT"), "Headline in grünem Kasten")
+        self.assertEqual(paras[0].attrib.get("ALIGN"), "0")
+
+    def test_textframe_emits_trail_attrs(self):
+        tf = self.TextFrame(
+            x_mm=10, y_mm=10, w_mm=80, h_mm=20,
+            anname="t2",
+            runs=[self.Run(text="Headline")],
+            trail_style="Headline in grünem Kasten",
+            trail_attrs={"ALIGN": "0"},
+        )
+        po = tf.to_pageobject(self._idgen(), self._bare_page())
+        story = po.find("StoryText")
+        trails = [c for c in story if c.tag == "trail"]
+        self.assertEqual(len(trails), 1)
+        self.assertEqual(trails[0].attrib.get("ALIGN"), "0")
+        self.assertEqual(trails[0].attrib.get("PARENT"), "Headline in grünem Kasten")
+
+    def test_textframe_omits_trail_when_last_run_para_terminated(self):
+        """When the last run already ends with separator='para', there's no
+        unterminated final paragraph and the original SLA omits <trail/>.
+        Emitting one anyway adds a phantom empty paragraph the diff (rightly)
+        flags as a count mismatch."""
+        tf = self.TextFrame(
+            x_mm=10, y_mm=10, w_mm=80, h_mm=20,
+            anname="t3",
+            runs=[
+                self.Run(text="A", separator="para", paragraph_style="P"),
+                self.Run(text="B", separator="para", paragraph_style="P"),
+            ],
+        )
+        po = tf.to_pageobject(self._idgen(), self._bare_page())
+        story = po.find("StoryText")
+        trails = [c for c in story if c.tag == "trail"]
+        paras = [c for c in story if c.tag == "para"]
+        self.assertEqual(len(paras), 2)
+        self.assertEqual(len(trails), 0,
+                          msg="trail must be omitted when last run is para-terminated")
+
+    def test_invalid_paragraph_attr_key_rejected_at_construction(self):
+        with self.assertRaises(ValueError):
+            self.Run(text="x", paragraph_attrs={"UNKNOWN_KEY": "0"})
+        with self.assertRaises(ValueError):
+            self.TextFrame(x_mm=0, y_mm=0, w_mm=10, h_mm=10,
+                            trail_attrs={"UNKNOWN_KEY": "0"})
+
+    # ---- end-to-end via the converter on a synthetic SLA ----------------
+    def test_para_overrides_round_trip_through_builder(self):
+        """Build a tiny synthetic SLA on the fly with ALIGN overrides on
+        <para> and <trail>, run it through the converter→build.py→builder,
+        and assert the regenerated SLA has the same per-paragraph
+        attributes verbatim.
+        """
+        import importlib.util
+        import shutil
+        import tempfile
+
+        from lxml import etree
+
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            # Construct a minimal SLA the converter accepts. Simplest path:
+            # take the Postkarte original (small, valid), rewrite a single
+            # frame's StoryText to contain the override pattern we care
+            # about, then run the converter on the result.
+            src = (ROOT / "postkarte-vorlage-original.sla").read_bytes()
+            tree = etree.fromstring(src)
+            # Find the first PAGEOBJECT[PTYPE=4] and inject a synthetic
+            # StoryText with an ALIGN override.
+            doc = tree.find("DOCUMENT")
+            target = None
+            for po in doc.findall("PAGEOBJECT"):
+                if po.attrib.get("PTYPE") == "4":
+                    target = po
+                    break
+            self.assertIsNotNone(target)
+            # Replace storytext with our fixture
+            old = target.find("StoryText")
+            target.remove(old)
+            new_story = etree.SubElement(target, "StoryText")
+            etree.SubElement(new_story, "DefaultStyle").set("PARENT", "Default Paragraph Style")
+            it1 = etree.SubElement(new_story, "ITEXT"); it1.set("CH", "Eins")
+            p1 = etree.SubElement(new_story, "para"); p1.set("PARENT", "Default Paragraph Style"); p1.set("ALIGN", "0")
+            it2 = etree.SubElement(new_story, "ITEXT"); it2.set("CH", "Zwei")
+            tr = etree.SubElement(new_story, "trail"); tr.set("PARENT", "Default Paragraph Style"); tr.set("ALIGN", "1")
+            (tmp / "src.sla").write_bytes(etree.tostring(tree, xml_declaration=True, encoding="UTF-8"))
+
+            # Run the converter on the mutated SLA.
+            spec = importlib.util.spec_from_file_location(
+                "sla_to_dsl_local", str(ROOT / "tools" / "sla_to_dsl.py"))
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            mod.convert(tmp / "src.sla", tmp / "build.py",
+                         "synthetic", tmp / "assets")
+
+            # Build it.
+            build_sla = _run_build(tmp / "build.py")
+
+            # Read back and find the same frame's StoryText.
+            built = etree.parse(str(build_sla)).getroot()
+            built_doc = built.find("DOCUMENT")
+            for po in built_doc.findall("PAGEOBJECT"):
+                if po.attrib.get("PTYPE") == "4":
+                    story = po.find("StoryText")
+                    paras = [c for c in story if c.tag == "para"]
+                    trails = [c for c in story if c.tag == "trail"]
+                    if paras and any(p.attrib.get("ALIGN") == "0" for p in paras):
+                        # Assert ALIGN=0 made it onto the para
+                        self.assertEqual(paras[0].attrib.get("ALIGN"), "0")
+                        self.assertEqual(trails[0].attrib.get("ALIGN"), "1")
+                        return
+            self.fail("could not find the synthetic frame in the rebuilt SLA")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

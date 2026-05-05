@@ -10,13 +10,36 @@ PTYPE values from `pageitem.h::ItemType`:
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Optional, Union
+from typing import Mapping, Optional, Union
 
 from lxml import etree
 
 from .ci import Color, Style
 from .document import mm_to_pt, _fmt_num, MM_TO_PT
 from .styles import SoftShadow
+
+# Closed set of per-paragraph attribute overrides the DSL accepts on a
+# <para>/<trail> element beyond PARENT (the paragraph style name, which has
+# its own kwarg). Originals encountered so far carry only ALIGN, LINESP and
+# LINESPMode here; anything else must extend this set explicitly so silent
+# drops cannot happen again. Per CONTEXT.md D2 we keep this typed (a closed
+# enum-keyed thing), not a free-form raw_attrs escape hatch.
+PARAGRAPH_OVERRIDE_ATTRS: frozenset[str] = frozenset({
+    "ALIGN",        # per-paragraph horizontal alignment override (0..3)
+    "LINESP",       # explicit line spacing in pt (used with LINESPMode=2)
+    "LINESPMode",   # 0=auto, 1=fixed, 2=baseline, 3=baseline-grid
+})
+
+
+def _validate_paragraph_attrs(attrs: Optional[Mapping[str, str]]) -> None:
+    if not attrs:
+        return
+    bad = sorted(set(attrs) - PARAGRAPH_OVERRIDE_ATTRS)
+    if bad:
+        raise ValueError(
+            f"paragraph_attrs contains unsupported keys {bad!r}; "
+            f"allowed keys are {sorted(PARAGRAPH_OVERRIDE_ATTRS)!r}"
+        )
 
 # Anchor type: either a string name or (x, y) where each can be a number (mm)
 # or "left"|"right"|"center"|"top"|"bottom" or "bottom-N" / "right-N" (margin)
@@ -93,8 +116,16 @@ class Run:
     strike_position: Optional[int] = None     # TXTSTP
     char_style: Optional[str] = None          # CPARENT
     paragraph_style: Optional[str] = None     # PARENT on the trailing <para/> element
+    # Per-paragraph attribute overrides (e.g. {"ALIGN": "0"}, {"LINESPMode": "1"}).
+    # Emitted on the trailing <para/> alongside PARENT. Keys must come from
+    # PARAGRAPH_OVERRIDE_ATTRS (currently ALIGN / LINESP / LINESPMode); the
+    # converter raises UnhandledElement if an original carries anything else.
+    paragraph_attrs: Optional[dict] = None
     separator: Optional[str] = None           # "para" | "breakline" | "tab" | ...
     var: Optional[str] = None                 # "pgno"
+
+    def __post_init__(self) -> None:
+        _validate_paragraph_attrs(self.paragraph_attrs)
 
 
 _RUN_ATTR_MAP_INT = (
@@ -252,12 +283,21 @@ class TextFrame(_Frame):
     default_linesp_mode: Optional[int] = None  # DefaultStyle LINESPMode attribute
     trail_style: Optional[str] = None  # PARENT on the closing <trail/> element
                                        # (style for the final unterminated paragraph)
+    # Per-paragraph attribute overrides on the closing <trail/> element
+    # (ALIGN, LINESP, LINESPMode). Same closed key set as Run.paragraph_attrs.
+    # Originals carry these on the trail of the final unterminated paragraph
+    # (e.g. <trail PARENT="..." ALIGN="1"/>); dropping them silently centers
+    # text the layout intends to be left-aligned.
+    trail_attrs: Optional[dict] = None
     fill: Optional[str] = None        # PCOLOR (frame background fill)
     line_color: Optional[str] = None  # PCOLOR2 (frame border color)
     line_width_pt: float = 0          # PWIDTH
     next_item: Optional["TextFrame"] = field(default=None, repr=False, compare=False)
     # Internal: pre-allocated ItemID for chain ordering. Set by Document._build_xml.
     _preallocated_id: Optional[int] = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        _validate_paragraph_attrs(self.trail_attrs)
 
     def link_to(self, other: "TextFrame") -> "TextFrame":
         """Chain self -> other. Returns ``other`` for fluent chains
@@ -311,6 +351,7 @@ class TextFrame(_Frame):
             ds.set("LINESPMode", str(self.default_linesp_mode))
 
         # Emit ITEXT runs
+        run_list: list[Run] = []
         if self.runs:
             run_list = [_normalise_run(r) for r in self.runs]
             for r in run_list:
@@ -324,6 +365,11 @@ class TextFrame(_Frame):
                     style_attr = r.paragraph_style or self.style
                     if style_attr:
                         para.set("PARENT", style_attr)
+                    # Per-paragraph attribute overrides (ALIGN, LINESPMode,
+                    # LINESP). Validated in Run.__post_init__.
+                    if r.paragraph_attrs:
+                        for k, v in r.paragraph_attrs.items():
+                            para.set(k, str(v))
                 elif r.separator == "breakline":
                     etree.SubElement(story, "breakline")
                 elif r.separator == "tab":
@@ -341,13 +387,22 @@ class TextFrame(_Frame):
             it.set("CH", self.text)
             if self.fcolor:
                 it.set("FCOLOR", self.fcolor)
-        # Trail terminates StoryText. Its PARENT is the paragraph style
-        # for the final (unterminated) paragraph — required for Scribus to
-        # render the last paragraph correctly.
-        trail = etree.SubElement(story, "trail")
-        trail_parent = self.trail_style if self.trail_style is not None else self.style
-        if trail_parent:
-            trail.set("PARENT", trail_parent)
+        # Trail terminates StoryText, but only when there's a final
+        # *unterminated* paragraph for it to describe. When the last run
+        # already ends with separator='para' (or there are no runs at all
+        # and no plain text), the StoryText has no trailing unterminated
+        # paragraph and the original SLAs omit <trail/> entirely. Emitting
+        # it anyway adds a phantom empty paragraph at the end of the frame
+        # which the diff (correctly) reports as a structural mismatch.
+        last_is_para_terminated = bool(run_list) and run_list[-1].separator == "para"
+        if not last_is_para_terminated:
+            trail = etree.SubElement(story, "trail")
+            trail_parent = self.trail_style if self.trail_style is not None else self.style
+            if trail_parent:
+                trail.set("PARENT", trail_parent)
+            if self.trail_attrs:
+                for k, v in self.trail_attrs.items():
+                    trail.set(k, str(v))
         return po
 
 

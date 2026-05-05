@@ -359,6 +359,162 @@ class SyntheticDiffTests(unittest.TestCase):
         self.assertIn("inline-vs-sidecar-image", codes)
 
 
+class StoryTextParagraphDiffTests(unittest.TestCase):
+    """sla_diff must catch missing per-<para>/<trail> attribute overrides
+    (the ALIGN / LINESP / LINESPMode round-trip drops that PR #3 introduced).
+
+    A missing override is critical (a meaningful round-trip drop).
+    A different value is a warning (visible drift, recoverable).
+    A different paragraph count is critical (text structure differs).
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def _frame_with_story(self, story_xml: str) -> tuple[str, dict]:
+        """Helper: build a PAGEOBJECT[PTYPE=4] item containing a StoryText.
+        The StoryText XML is stored on a magic ``__inner_xml__`` key the test
+        helper ``_write_synthetic_sla_with_inner`` honours."""
+        return ("PAGEOBJECT", {
+            "ItemID": "100", "PTYPE": "4", "OwnPage": "0",
+            "XPOS": "150", "YPOS": "100", "WIDTH": "100", "HEIGHT": "50",
+            "FRTYPE": "0",
+            "__inner_xml__": story_xml,
+        })
+
+    def _write(self, name: str, story_xml: str) -> Path:
+        """Build a 1-page synthetic SLA with one TextFrame whose StoryText is
+        the given XML string. Returns the path."""
+        from lxml import etree as _et
+        target = self.tmp / name
+        root = _et.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
+        doc = _et.SubElement(root, "DOCUMENT")
+        doc.set("ANZPAGES", "1")
+        doc.set("PAGEWIDTH", "297.638")
+        doc.set("PAGEHEIGHT", "419.528")
+        for k in ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight"):
+            doc.set(k, "8.504")
+        page = _et.SubElement(doc, "PAGE")
+        page.set("NUM", "0"); page.set("PAGEXPOS", "100")
+        page.set("PAGEYPOS", "20"); page.set("MNAM", "Normal")
+        m = _et.SubElement(doc, "MASTERPAGE"); m.set("NAM", "Normal")
+        m.set("PAGEXPOS", "500"); m.set("PAGEYPOS", "20")
+        po = _et.SubElement(doc, "PAGEOBJECT")
+        po.set("ItemID", "100"); po.set("PTYPE", "4"); po.set("OwnPage", "0")
+        po.set("XPOS", "150"); po.set("YPOS", "100")
+        po.set("WIDTH", "100"); po.set("HEIGHT", "50"); po.set("FRTYPE", "0")
+        story = _et.fromstring(story_xml)
+        po.append(story)
+        _et.ElementTree(root).write(str(target), encoding="UTF-8", xml_declaration=True)
+        return target
+
+    def test_missing_align_override_is_critical(self):
+        """The exact bug PR #3 had: original carries <para ALIGN="0"/>, the
+        rebuilt SLA dropped it. Diff must flag this critically."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="Headline" ALIGN="0"/>'
+                                 '<ITEXT CH="y"/>'
+                                 '<trail PARENT="Body"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="Headline"/>'
+                                 '<ITEXT CH="y"/>'
+                                 '<trail PARENT="Body"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        self.assertIn("para-attr-missing", codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_missing_trail_align_override_is_critical(self):
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<trail PARENT="Body" ALIGN="1"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<trail PARENT="Body"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        critical = [i for i in report.issues
+                    if i.severity == sd.SEVERITY_CRITICAL and i.code == "para-attr-missing"]
+        self.assertEqual(len(critical), 1)
+        self.assertEqual(critical[0].attr, "ALIGN")
+
+    def test_missing_linespmode_override_is_critical(self):
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="P" LINESPMode="1"/>'
+                                 '<trail PARENT="P"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="P"/>'
+                                 '<trail PARENT="P"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [(i.code, i.attr) for i in report.issues]
+        self.assertIn(("para-attr-missing", "LINESPMode"), codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_para_attr_value_mismatch_is_warning(self):
+        """Different value (not just presence) is warning-level: visible
+        drift but the round-trip didn't lose the override entirely."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="P" ALIGN="0"/>'
+                                 '<trail PARENT="P"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="P" ALIGN="1"/>'
+                                 '<trail PARENT="P"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        self.assertIn("para-attr-value-mismatch", codes)
+        # No critical from this mismatch (count and presence both match).
+        self.assertEqual(
+            sum(1 for i in report.issues
+                if i.severity == sd.SEVERITY_CRITICAL and i.code.startswith("para-")),
+            0,
+        )
+
+    def test_para_count_mismatch_is_critical(self):
+        """An extra <para> on one side (e.g. phantom trailing element) is a
+        structural difference flagged as critical."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="P"/>'
+                                 '<ITEXT CH="y"/>'
+                                 '<para PARENT="P"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="P"/>'
+                                 '<ITEXT CH="y"/>'
+                                 '<para PARENT="P"/>'
+                                 '<trail PARENT="P"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        self.assertIn("para-count-mismatch", codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_identical_storytext_clean(self):
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<para PARENT="Headline" ALIGN="0"/>'
+                                 '<ITEXT CH="y"/>'
+                                 '<trail PARENT="Body" ALIGN="1" LINESPMode="2"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, a)
+        para_issues = [i for i in report.issues if i.code.startswith("para-")]
+        self.assertEqual(para_issues, [])
+
+
 class CLIIntegrationTests(unittest.TestCase):
     """Mirror the gate's manual checks: run sla_diff CLI on each original
     against itself, expect exit 0 and clean summary."""
