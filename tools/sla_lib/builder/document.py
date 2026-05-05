@@ -538,20 +538,44 @@ class Document:
         if cs_obj.is_default:
             cs.set("DefaultStyle", "1")
         cs.set("CNAME", cs_obj.name)
-        if cs_obj.font is not None:
-            cs.set("FONT", cs_obj.font)
-        if cs_obj.fontsize is not None:
-            cs.set("FONTSIZE", _fmt_num(cs_obj.fontsize))
-        if cs_obj.fcolor is not None:
-            cs.set("FCOLOR", cs_obj.fcolor)
-        if cs_obj.fshade is not None:
-            cs.set("FSHADE", str(cs_obj.fshade))
-        if cs_obj.fontfeatures is not None:
-            cs.set("FONTFEATURES", cs_obj.fontfeatures)
-        if cs_obj.features is not None:
-            cs.set("FEATURES", cs_obj.features)
-        if cs_obj.kern is not None:
-            cs.set("KERN", _fmt_num(cs_obj.kern))
+        for kw, attr in (
+            ("font", "FONT"),
+            ("fcolor", "FCOLOR"),
+            ("fontfeatures", "FONTFEATURES"),
+            ("features", "FEATURES"),
+            ("language", "LANGUAGE"),
+            ("scolor", "SCOLOR"),
+            ("bgcolor", "BGCOLOR"),
+        ):
+            v = getattr(cs_obj, kw)
+            if v is not None:
+                cs.set(attr, v)
+        for kw, attr in (
+            ("fontsize", "FONTSIZE"),
+            ("kern", "KERN"),
+            ("txt_underline_pos", "TXTULP"),
+            ("txt_underline_width", "TXTULW"),
+            ("txt_strike_pos", "TXTSTP"),
+            ("txt_strike_width", "TXTSTW"),
+        ):
+            v = getattr(cs_obj, kw)
+            if v is not None:
+                cs.set(attr, _fmt_num(v))
+        for kw, attr in (
+            ("fshade", "FSHADE"),
+            ("hyph_word_min", "HyphenWordMin"),
+            ("sshade", "SSHADE"),
+            ("bgshade", "BGSHADE"),
+            ("txt_shadow_x", "TXTSHX"),
+            ("txt_shadow_y", "TXTSHY"),
+            ("txt_outline", "TXTOUT"),
+            ("scaleh", "SCALEH"),
+            ("scalev", "SCALEV"),
+            ("baseline_offset", "BASEO"),
+        ):
+            v = getattr(cs_obj, kw)
+            if v is not None:
+                cs.set(attr, str(v))
 
     def _emit_para_style(self, doc, ps: ParaStyle) -> None:
         st = etree.SubElement(doc, "STYLE")
@@ -572,10 +596,6 @@ class Document:
             ("bshade", "BSHADE"),
             ("scalev", "SCALEV"),
             ("fshade", "FSHADE"),
-            ("txt_underline_pos", "TXTULP"),
-            ("txt_underline_width", "TXTULW"),
-            ("txt_strike_pos", "TXTSTP"),
-            ("txt_strike_width", "TXTSTW"),
             ("txt_shadow_x", "TXTSHX"),
             ("txt_shadow_y", "TXTSHY"),
             ("txt_outline", "TXTOUT"),
@@ -598,6 +618,10 @@ class Document:
             ("max_glyph_extend", "MaxGlyphExtend"),
             ("kern", "KERN"),
             ("paragraph_effect_offset", "ParagraphEffectOffset"),
+            ("txt_underline_pos", "TXTULP"),
+            ("txt_underline_width", "TXTULW"),
+            ("txt_strike_pos", "TXTSTP"),
+            ("txt_strike_width", "TXTSTW"),
         ):
             v = getattr(ps, kw)
             if v is not None:

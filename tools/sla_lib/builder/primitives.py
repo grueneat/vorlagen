@@ -196,20 +196,23 @@ def _apply_shape_attrs(attrs: dict, frame: _Frame, w_pt: float, h_pt: float,
 
     ``default_path`` and ``default_frtype`` describe the shape the primitive
     would emit when none of those override fields are set.
+
+    Precedence: when ``corner_radius_mm > 0`` is set, FRTYPE=2 always wins
+    (rounded rectangle). ``custom_path`` is then taken as the verbatim path
+    Scribus stored — typically a bezier-rounded-rect path. If ``custom_path``
+    alone is set (no corner radius), FRTYPE=3.
     """
-    if frame.custom_path is not None:
-        attrs["FRTYPE"] = "3"
-        attrs["path"] = frame.custom_path
-        attrs["copath"] = frame.custom_path
-    elif frame.corner_radius_mm > 0:
+    if frame.corner_radius_mm > 0:
         radrect_pt = mm_to_pt(frame.corner_radius_mm)
         attrs["FRTYPE"] = "2"
         attrs["RADRECT"] = _fmt_num(radrect_pt)
-        # When custom_path isn't passed, fall back to a plain rectangle path.
-        # The converter will normally pass the original's bezier-rounded path
-        # via custom_path so RADRECT alone is rare in round-trip mode.
-        attrs["path"] = default_path
-        attrs["copath"] = default_path
+        path = frame.custom_path if frame.custom_path is not None else default_path
+        attrs["path"] = path
+        attrs["copath"] = path
+    elif frame.custom_path is not None:
+        attrs["FRTYPE"] = "3"
+        attrs["path"] = frame.custom_path
+        attrs["copath"] = frame.custom_path
     else:
         attrs["FRTYPE"] = default_frtype
         attrs["path"] = default_path
@@ -229,7 +232,7 @@ def _apply_soft_shadow(attrs: dict, ss: Optional[SoftShadow]) -> None:
     attrs["SOFTSHADOWBLENDMODE"] = str(ss.blend_mode)
     attrs["SOFTSHADOWOPACITY"] = _fmt_num(ss.opacity)
     attrs["SOFTSHADOWSHADE"] = str(ss.shade)
-    attrs["SOFTSHADOWERASEDBYOBJECT"] = "1" if ss.erase else "0"
+    attrs["SOFTSHADOWERASE"] = "1" if ss.erase else "0"
     attrs["SOFTSHADOWOBJTRANS"] = "1" if ss.object_trans else "0"
 
 

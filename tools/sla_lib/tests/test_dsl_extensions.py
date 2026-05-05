@@ -410,7 +410,7 @@ class LongTailFrameAttrsTests(unittest.TestCase):
         for attr in ("SOFTSHADOWCOLOR", "SOFTSHADOWBLURRADIUS",
                      "SOFTSHADOWXOFFSET", "SOFTSHADOWYOFFSET",
                      "SOFTSHADOWBLENDMODE", "SOFTSHADOWOPACITY",
-                     "SOFTSHADOWSHADE", "SOFTSHADOWERASEDBYOBJECT",
+                     "SOFTSHADOWSHADE", "SOFTSHADOWERASE",
                      "SOFTSHADOWOBJTRANS"):
             self.assertIn(attr, po.attrib)
 

@@ -76,23 +76,29 @@ class ParaStyle:
     kern: Optional[float] = None             # KERN
     scalev: Optional[int] = None             # SCALEV (vertical scale, integer percent)
     fshade: Optional[int] = None             # FSHADE
-    txt_underline_pos: Optional[int] = None  # TXTULP
-    txt_underline_width: Optional[int] = None  # TXTULW
-    txt_strike_pos: Optional[int] = None     # TXTSTP
-    txt_strike_width: Optional[int] = None   # TXTSTW
+    txt_underline_pos: Optional[float] = None  # TXTULP
+    txt_underline_width: Optional[float] = None  # TXTULW
+    txt_strike_pos: Optional[float] = None     # TXTSTP
+    txt_strike_width: Optional[float] = None   # TXTSTW
     txt_shadow_x: Optional[int] = None       # TXTSHX
     txt_shadow_y: Optional[int] = None       # TXTSHY
     txt_outline: Optional[int] = None        # TXTOUT
     baseline_offset: Optional[int] = None    # BASEO
     paragraph_effect_offset: Optional[float] = None  # ParagraphEffectOffset
-    bullet: Optional[str] = None             # Bullet
+    bullet: Optional[str] = None             # Bullet (Scribus stores codepoint
+                                              # number as string; we treat as opaque)
     numeration: Optional[int] = None         # Numeration
     is_default: bool = False                 # DefaultStyle="1"
 
 
 @dataclass(frozen=True)
 class CharStyle:
-    """A character style (Scribus ``<CHARSTYLE>`` element)."""
+    """A character style (Scribus ``<CHARSTYLE>`` element).
+
+    Scribus's CHARSTYLE carries far more attributes than an ITEXT does (it
+    is the *default* character style applied to every paragraph). Optional
+    fields cover everything used in our originals.
+    """
     name: str
     font: Optional[str] = None
     fontsize: Optional[float] = None
@@ -101,6 +107,22 @@ class CharStyle:
     fontfeatures: Optional[str] = None
     features: Optional[str] = None
     kern: Optional[float] = None
+    language: Optional[str] = None       # LANGUAGE
+    hyph_word_min: Optional[int] = None  # HyphenWordMin
+    scolor: Optional[str] = None         # SCOLOR (stroke color)
+    sshade: Optional[int] = None         # SSHADE
+    bgcolor: Optional[str] = None        # BGCOLOR (background)
+    bgshade: Optional[int] = None        # BGSHADE
+    txt_shadow_x: Optional[int] = None   # TXTSHX
+    txt_shadow_y: Optional[int] = None   # TXTSHY
+    txt_outline: Optional[int] = None    # TXTOUT
+    txt_underline_pos: Optional[float] = None    # TXTULP
+    txt_underline_width: Optional[float] = None  # TXTULW
+    txt_strike_pos: Optional[float] = None       # TXTSTP
+    txt_strike_width: Optional[float] = None     # TXTSTW
+    scaleh: Optional[int] = None         # SCALEH (horizontal scale %)
+    scalev: Optional[int] = None         # SCALEV (vertical scale %)
+    baseline_offset: Optional[int] = None  # BASEO
     is_default: bool = False
 
 
