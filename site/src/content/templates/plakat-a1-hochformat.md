@@ -1,5 +1,5 @@
 ---
-id: plakat-event
+id: plakat-a1-hochformat
 version: 0.1.0
 title: Event-Plakat (Familie)
 type: family
@@ -14,11 +14,21 @@ description: 'Veranstaltungs-Plakat für Events, Mahnwachen, Stammtische, Kundge
   '
 build:
   script: build.py
+  output: template.sla
   outputs:
   - a0.sla
   - a1.sla
   - a2.sla
   - a3.sla
+original_sla: ../../plakat-a1-hochformat-original.sla
+ci_overrides:
+  non_ci_styles:
+  - Default Paragraph Style
+  - Headlineweiß
+  - Überschrift gelb
+  - Fließtext
+  - Impressum
+  non_ci_colors: []
 sizes:
 - code: a0
   format: A0
@@ -73,26 +83,26 @@ preflight:
   cmyk_only: true
 _downloads:
 - label: A0 (841×1189mm)
-  sla: /templates/plakat-event/a0.sla
-  pdf: /templates/plakat-event/a0.pdf
+  sla: /templates/plakat-a1-hochformat/a0.sla
+  pdf: /templates/plakat-a1-hochformat/a0.pdf
 - label: A1 (594×841mm)
-  sla: /templates/plakat-event/a1.sla
-  pdf: /templates/plakat-event/a1.pdf
+  sla: /templates/plakat-a1-hochformat/a1.sla
+  pdf: /templates/plakat-a1-hochformat/a1.pdf
 - label: A2 (420×594mm)
-  sla: /templates/plakat-event/a2.sla
-  pdf: /templates/plakat-event/a2.pdf
+  sla: /templates/plakat-a1-hochformat/a2.sla
+  pdf: /templates/plakat-a1-hochformat/a2.pdf
 - label: A3 (297×420mm)
-  sla: /templates/plakat-event/a3.sla
-  pdf: /templates/plakat-event/a3.pdf
+  sla: /templates/plakat-a1-hochformat/a3.sla
+  pdf: /templates/plakat-a1-hochformat/a3.pdf
 _previews:
 - label: A0
-  src: /templates/plakat-event/a0-page-1.png
+  src: /templates/plakat-a1-hochformat/a0-page-1.png
 - label: A1
-  src: /templates/plakat-event/a1-page-1.png
+  src: /templates/plakat-a1-hochformat/a1-page-1.png
 - label: A2
-  src: /templates/plakat-event/a2-page-1.png
+  src: /templates/plakat-a1-hochformat/a2-page-1.png
 - label: A3
-  src: /templates/plakat-event/a3-page-1.png
+  src: /templates/plakat-a1-hochformat/a3-page-1.png
 ---
 
 # Event-Plakat (A0/A1/A2/A3 Familie)

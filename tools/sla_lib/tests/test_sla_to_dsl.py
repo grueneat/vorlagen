@@ -97,7 +97,7 @@ class PostkarteConverterFreshRun(unittest.TestCase):
 class PlakatRoundTrip(unittest.TestCase):
     """Plakat reproduction: 9 frames, 7 soft-hyphens, 90-deg rotation, 0 chains."""
 
-    TEMPLATE_DIR = ROOT / "templates" / "plakat-event"
+    TEMPLATE_DIR = ROOT / "templates" / "plakat-a1-hochformat"
     ORIGINAL = ROOT / "plakat-a1-hochformat-original.sla"
 
     def test_diff_against_original_clean(self):

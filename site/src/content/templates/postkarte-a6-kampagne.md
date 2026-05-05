@@ -17,6 +17,20 @@ description: 'Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Ba
 build:
   script: build.py
   output: template.sla
+original_sla: ../../postkarte-vorlage-original.sla
+ci_overrides:
+  non_ci_styles:
+  - Default Paragraph Style
+  - Fließtext
+  - Impressum
+  - Default Paragraph Style (2)
+  - Schrift rosa Kreis
+  - Headline sehr wichtig
+  - Kontaktmöglichkeiten
+  - Vollkorn Headline sehr wichtig
+  - Unterüberschrift
+  non_ci_colors:
+  - Green
 slots:
   headline:
     type: text

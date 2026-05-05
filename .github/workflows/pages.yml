@@ -94,7 +94,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/validation
-          for tdir in templates/postkarte-a6-kampagne templates/plakat-event templates/zeitung-a4-grun; do
+          for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4-grun; do
             tid=$(basename "$tdir")
             # Resolve original_sla relative to the template directory
             original=$(python3 -c "

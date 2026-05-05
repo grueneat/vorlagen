@@ -16,6 +16,34 @@ description: 'Mehrseitige A4-Zeitungsvorlage mit Master-Pages und Beispielseiten
 build:
   script: build.py
   output: template.sla
+original_sla: ../../gruene-zeitung-vorlage-original.sla
+ci_overrides:
+  non_ci_styles:
+  - Default Paragraph Style
+  - '[No paragraph style]'
+  - Titelseite Header
+  - Monat/Ausgabe
+  - Zustellerhinweis (Post)
+  - Impressum
+  - Copyright
+  - Seitenzahl
+  - Fließtext
+  - Schrift Störer
+  - Inhaltsheadline Titelseite
+  - Überschrift weiß
+  - Überschrift Dunkelgrün
+  - Bildunterschrift weiß
+  - Fließtext weiß
+  - Fließtext in grünem Kasten
+  - Headline in grünem Kasten
+  - Zwischenüberschrift
+  - Einleitungstext
+  - Zwischenüberschrift weiß
+  - Zitat weißer Text
+  - Zitat grüner Text
+  - NormalParagraphStyle
+  non_ci_colors:
+  - Green
 masters:
 - name: Normal
   description: implicit baseline
@@ -58,22 +86,50 @@ _downloads:
   pdf: /templates/zeitung-a4-grun/preview.pdf
 _previews:
 - label: Seite 1
-  src: /templates/zeitung-a4-grun/page-1.png
+  src: /templates/zeitung-a4-grun/page-01.png
 - label: Seite 2
-  src: /templates/zeitung-a4-grun/page-2.png
+  src: /templates/zeitung-a4-grun/page-02.png
 - label: Seite 3
-  src: /templates/zeitung-a4-grun/page-3.png
+  src: /templates/zeitung-a4-grun/page-03.png
 - label: Seite 4
-  src: /templates/zeitung-a4-grun/page-4.png
+  src: /templates/zeitung-a4-grun/page-04.png
 - label: Seite 5
-  src: /templates/zeitung-a4-grun/page-5.png
+  src: /templates/zeitung-a4-grun/page-05.png
 - label: Seite 6
-  src: /templates/zeitung-a4-grun/page-6.png
+  src: /templates/zeitung-a4-grun/page-06.png
 - label: Seite 7
-  src: /templates/zeitung-a4-grun/page-7.png
+  src: /templates/zeitung-a4-grun/page-07.png
 - label: Seite 8
-  src: /templates/zeitung-a4-grun/page-8.png
+  src: /templates/zeitung-a4-grun/page-08.png
 - label: Seite 9
+  src: /templates/zeitung-a4-grun/page-09.png
+- label: Seite 10
+  src: /templates/zeitung-a4-grun/page-1.png
+- label: Seite 11
+  src: /templates/zeitung-a4-grun/page-10.png
+- label: Seite 12
+  src: /templates/zeitung-a4-grun/page-11.png
+- label: Seite 13
+  src: /templates/zeitung-a4-grun/page-12.png
+- label: Seite 14
+  src: /templates/zeitung-a4-grun/page-13.png
+- label: Seite 15
+  src: /templates/zeitung-a4-grun/page-14.png
+- label: Seite 16
+  src: /templates/zeitung-a4-grun/page-2.png
+- label: Seite 17
+  src: /templates/zeitung-a4-grun/page-3.png
+- label: Seite 18
+  src: /templates/zeitung-a4-grun/page-4.png
+- label: Seite 19
+  src: /templates/zeitung-a4-grun/page-5.png
+- label: Seite 20
+  src: /templates/zeitung-a4-grun/page-6.png
+- label: Seite 21
+  src: /templates/zeitung-a4-grun/page-7.png
+- label: Seite 22
+  src: /templates/zeitung-a4-grun/page-8.png
+- label: Seite 23
   src: /templates/zeitung-a4-grun/page-9.png
 ---
 
@@ -131,3 +187,9 @@ Wer das Layout strukturell ändern will (z.B. neue Beispielseite, Master-Page-An
 ## Brand
 
 Alle Farben und Schriften referenzieren `shared/ci.yml`. Direkt-Edits an Stilen in der SLA werden vom CI-Validator (`tools/check_ci.py`) als Drift gemeldet.
+
+## LANGUAGE-Vererbung auf STYLE-Ebene
+
+Die ursprüngliche Zeitungsvorlage setzt `LANGUAGE="de"` nur auf 13 von 23 Paragraphenstilen. Die anderen 10 Stile (z.B. `Fließtext`, `Fließtext weiß`, `Fließtext in grünem Kasten`) erben über `PARENT` oder verlassen sich auf den Dokument-Default (DEFLANG="de"). Der DSL-Konverter (`tools/sla_to_dsl.py`) übernimmt dieses Muster verbatim — `ParaStyle.language` ist `None` für die 10 Stile, die das Original nicht setzt.
+
+Die Hyphenation in den `Fließtext*`-Spalten (vgl. Seite 3/4 der gerenderten PDF) ist im DSL-Output identisch mit der Originalvorlage; das Auslassen von `LANGUAGE` führt nicht zu Drift, weil der Default greift. Sollte sich das in einem zukünftigen Scribus-Upgrade ändern, muss der Konverter auf "alle 23 Stile auf `language='de'` setzen" umgestellt werden.

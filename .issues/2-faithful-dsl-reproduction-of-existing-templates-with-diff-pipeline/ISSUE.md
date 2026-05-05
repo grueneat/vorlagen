@@ -1,7 +1,7 @@
 ---
 id: '2'
 title: Faithful DSL reproduction of existing templates with diff pipeline
-status: open
+status: done
 priority: high
 labels:
 - dsl

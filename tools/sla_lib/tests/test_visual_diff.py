@@ -73,7 +73,7 @@ class CommittedConfigsTests(unittest.TestCase):
         self.assertGreater(tol.fuzz_pct, 0)
 
     def test_plakat_diff_yml(self):
-        tol = vd.TemplateTolerance.load(ROOT / "templates" / "plakat-event" / "diff.yml")
+        tol = vd.TemplateTolerance.load(ROOT / "templates" / "plakat-a1-hochformat" / "diff.yml")
         self.assertGreater(tol.max_pixel_mismatch_pct, 0)
 
     def test_zeitung_diff_yml(self):

@@ -11,7 +11,7 @@ templates/
 │   ├── template.sla          # build artifact, in Scribus zu öffnen
 │   ├── meta.yml              # Metadaten + Slot-Hinweise
 │   └── README.md
-├── plakat-event/             # Event-Plakate als Familie A0/A1/A2/A3
+├── plakat-a1-hochformat/     # A1 Veranstaltungs-Plakat (faithful DSL reproduction)
 │   ├── build.py              # eine DSL → 4 SLAs
 │   ├── a0.sla a1.sla a2.sla a3.sla
 │   ├── meta.yml
@@ -65,6 +65,77 @@ Lege ein neues `templates/<id>/build.py` an mit `Document(...)` + `add_page` + B
 | **Galerie-Build** | Templates → Astro-Content + PNG-Previews | `tools/gallery_build.py` |
 | **Galerie-Site** | Astro statisch, deployed auf GitHub Pages | `site/` |
 | **CI** | Build + Validate + Deploy | `.github/workflows/pages.yml` |
+
+## Round-trip Validation
+
+Die drei Galerie-Vorlagen werden gegen ihre Originale (an Workspace-Root: `postkarte-vorlage-original.sla`, `plakat-a1-hochformat-original.sla`, `gruene-zeitung-vorlage-original.sla`) validiert — strukturell und visuell.
+
+### Strukturell — `tools/sla_diff.py`
+
+Vergleicht zwei SLAs nach einer 10-Schritte-Normalisierungs-Pipeline (volatile-Attrs strippen, ItemID renumbern, page-local Koordinaten, Float-Rundung, Attribut-Sortierung). Liefert dreistufige Severity (`critical` / `warning` / `info`), Markdown- oder JSON-Reporter.
+
+```bash
+python3 tools/sla_diff.py \
+  --left postkarte-vorlage-original.sla \
+  --right templates/postkarte-a6-kampagne/template.sla \
+  --strict
+# Exit 0 → reproduktion strukturell faithful
+# Exit 1 → critical oder warning vorhanden (mit --strict)
+```
+
+### Visuell — `tools/visual_diff.py`
+
+Rendert beide SLAs zu PDF (Scribus + Xvfb), rasterisiert per Page (pdftoppm), per-pixel diff via ImageMagick `compare`, plus Composite (baseline | dsl | delta) zur visuellen Inspektion.
+
+```bash
+python3 tools/visual_diff.py \
+  templates/postkarte-a6-kampagne/template.sla \
+  --baseline templates/postkarte-a6-kampagne/baseline.pdf \
+  --tolerance templates/postkarte-a6-kampagne/diff.yml \
+  --dpi 96 \
+  --out build/postkarte/
+```
+
+DPI: `--dpi 150` lokal, `--dpi 96` in CI (CONTEXT.md D4). Toleranzen pro Template in `templates/<id>/diff.yml` — Schema in [docs/diff-tolerance.md](docs/diff-tolerance.md).
+
+### Komplette Validierung
+
+```bash
+bin/validate
+```
+
+oder
+
+```bash
+make validate    # falls Makefile vorhanden
+```
+
+Beides ruft `sla_diff` + `visual_diff` für alle drei Templates auf und gibt Exit 0 wenn alles innerhalb der Toleranzen.
+
+### Konverter `tools/sla_to_dsl.py` — One-Shot Bootstrap
+
+Erzeugt initial `templates/<id>/build.py` aus einer existierenden SLA. **Nicht** Teil der CI-Pipeline. Wird einmal manuell laufen gelassen, danach ist `build.py` die Source of Truth und wird von Hand editiert.
+
+```bash
+python3 tools/sla_to_dsl.py \
+  postkarte-vorlage-original.sla \
+  templates/postkarte-a6-kampagne/build.py \
+  --template-id postkarte-a6-kampagne \
+  --assets-dir templates/postkarte-a6-kampagne/assets/
+```
+
+### Rebaselining (wenn sich das Original oder Scribus-Toolchain ändert)
+
+```bash
+rm templates/<id>/baseline.pdf
+xvfb-run -a scribus -g -ns -py tools/_export_pdf.py \
+    <updated-original>.sla \
+    templates/<id>/baseline.pdf
+git add templates/<id>/baseline.pdf
+git commit -m "rebaseline <id>: <reason>"
+```
+
+Details in [docs/diff-tolerance.md](docs/diff-tolerance.md) §"Rebaselining workflow".
 
 ## Wo Forschung und Entscheidungen dokumentiert sind
 

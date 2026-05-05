@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# bin/validate — local round-trip validation
+#
+# Runs sla_diff (--strict) + visual_diff for every template under
+# templates/<id>/ that has an `original_sla:` key in its meta.yml. Exits
+# non-zero if any template fails either check.
+#
+# Usage:
+#   bin/validate                # default 150 dpi (full coverage)
+#   bin/validate --ci           # 96 dpi (CI parity)
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+DPI=150
+if [ "${1:-}" = "--ci" ]; then
+    DPI=96
+fi
+
+OUT_BASE="build/validation"
+mkdir -p "$OUT_BASE"
+
+EXIT=0
+for tdir in templates/*/; do
+    if [ ! -f "$tdir/meta.yml" ]; then
+        continue
+    fi
+    if ! grep -q "^original_sla:" "$tdir/meta.yml"; then
+        continue
+    fi
+    tid=$(basename "$tdir")
+    original=$(python3 -c "
+import os, sys, yaml
+m = yaml.safe_load(open('$tdir/meta.yml'))
+rel = m.get('original_sla', '')
+if not rel: sys.exit('no original_sla in $tid meta.yml')
+print(os.path.normpath(os.path.join('$tdir', rel)))
+")
+    echo "=== $tid ==="
+    echo "  original: $original"
+    echo "  template: ${tdir}template.sla"
+
+    if ! python3 tools/sla_diff.py \
+        --left "$original" \
+        --right "${tdir}template.sla" \
+        --json "$OUT_BASE/${tid}-sla_diff.json" \
+        --strict > /dev/null; then
+        echo "  sla_diff: FAIL"
+        EXIT=1
+    else
+        echo "  sla_diff: PASS"
+    fi
+
+    if [ -f "${tdir}baseline.pdf" ] && [ -f "${tdir}diff.yml" ]; then
+        if ! python3 tools/visual_diff.py \
+            "${tdir}template.sla" \
+            --baseline "${tdir}baseline.pdf" \
+            --tolerance "${tdir}diff.yml" \
+            --dpi "$DPI" \
+            --out "$OUT_BASE/${tid}/" > /dev/null 2>&1; then
+            echo "  visual_diff (${DPI}dpi): FAIL"
+            EXIT=1
+        else
+            echo "  visual_diff (${DPI}dpi): PASS"
+        fi
+    else
+        echo "  visual_diff: SKIPPED (no baseline.pdf or diff.yml)"
+    fi
+done
+
+exit $EXIT

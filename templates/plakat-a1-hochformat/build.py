@@ -12,7 +12,7 @@ HERE = Path(__file__).resolve().parent
 
 doc = Document(
     title='',
-    template_id='plakat-event',
+    template_id='plakat-a1-hochformat',
     author='',
     facing_pages=False,
     column_gap_default_pt=11,
