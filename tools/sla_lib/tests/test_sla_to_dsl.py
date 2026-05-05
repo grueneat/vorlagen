@@ -143,5 +143,100 @@ class ZeitungRoundTrip(unittest.TestCase):
                          msg=f"chain issues: {[i.short() for i in chain_issues]}")
 
 
+class StoryTextRoundTripTests(unittest.TestCase):
+    """Direct tests on the converter's StoryText walker (_build_runs).
+
+    Specifically exercise the consecutive-control-element case: two adjacent
+    <para/> elements in the source encode an empty paragraph used for
+    vertical spacing. The walker must NOT collapse them into a single Run
+    or the body text drifts up by ~1 line per missing empty paragraph.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Imported lazily so the bare-converter sys.path setup at the top of
+        # this module is in effect first.
+        import sla_to_dsl  # noqa: E402
+        cls.sla_to_dsl = sla_to_dsl
+
+    def _runs(self, story_xml: str) -> list[dict]:
+        from lxml import etree
+        story = etree.fromstring(story_xml.strip())
+        return self.sla_to_dsl._build_runs(story)
+
+    def test_double_para_preserves_empty_paragraph(self):
+        runs = self._runs("""
+            <StoryText>
+              <ITEXT CH="A"/>
+              <para PARENT="Headline"/>
+              <para PARENT="Headline"/>
+              <ITEXT CH="B"/>
+              <trail/>
+            </StoryText>
+        """)
+        # Expected: 3 runs — "A" with para, empty with para, "B" (no sep yet)
+        self.assertEqual(len(runs), 3, msg=f"expected 3 runs, got {len(runs)}: {runs}")
+        self.assertEqual(runs[0]["text"], "A")
+        self.assertEqual(runs[0].get("separator"), "para")
+        self.assertEqual(runs[0].get("paragraph_style"), "Headline")
+        self.assertEqual(runs[1]["text"], "")
+        self.assertEqual(runs[1].get("separator"), "para")
+        self.assertEqual(runs[1].get("paragraph_style"), "Headline")
+        self.assertEqual(runs[2]["text"], "B")
+
+    def test_para_then_breakline_keeps_both(self):
+        """A <para/> followed by <breakline/> represents a paragraph end
+        plus a forced line break — both must be preserved."""
+        runs = self._runs("""
+            <StoryText>
+              <ITEXT CH="X"/>
+              <para PARENT="Body"/>
+              <breakline/>
+              <ITEXT CH="Y"/>
+              <trail/>
+            </StoryText>
+        """)
+        self.assertEqual(len(runs), 3)
+        self.assertEqual(runs[0]["text"], "X")
+        self.assertEqual(runs[0].get("separator"), "para")
+        self.assertEqual(runs[1]["text"], "")
+        self.assertEqual(runs[1].get("separator"), "breakline")
+        self.assertEqual(runs[2]["text"], "Y")
+
+    def test_triple_para_keeps_all_three_paragraphs(self):
+        """Three consecutive <para/>s = two empty paragraphs of vertical
+        spacing. None should collapse."""
+        runs = self._runs("""
+            <StoryText>
+              <ITEXT CH="A"/>
+              <para PARENT="P1"/>
+              <para PARENT="P2"/>
+              <para PARENT="P3"/>
+              <ITEXT CH="B"/>
+              <trail/>
+            </StoryText>
+        """)
+        # Expected: 4 runs — A+para[P1], ''+para[P2], ''+para[P3], B
+        self.assertEqual(len(runs), 4, msg=f"expected 4 runs, got {len(runs)}: {runs}")
+        para_styles = [r.get("paragraph_style") for r in runs[:3]]
+        self.assertEqual(para_styles, ["P1", "P2", "P3"])
+
+    def test_single_para_unchanged(self):
+        """The one-empty-text + one-control-element case must not regress."""
+        runs = self._runs("""
+            <StoryText>
+              <ITEXT CH="A"/>
+              <para PARENT="Body"/>
+              <ITEXT CH="B"/>
+              <trail/>
+            </StoryText>
+        """)
+        self.assertEqual(len(runs), 2)
+        self.assertEqual(runs[0]["text"], "A")
+        self.assertEqual(runs[0].get("separator"), "para")
+        self.assertEqual(runs[1]["text"], "B")
+        self.assertNotIn("separator", runs[1])
+
+
 if __name__ == "__main__":
     unittest.main()

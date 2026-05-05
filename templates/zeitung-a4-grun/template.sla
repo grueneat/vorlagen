@@ -347,6 +347,10 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland."/>
         <para PARENT="Fließtext "/>
+        <ITEXT CH=""/>
+        <para PARENT="Fließtext "/>
+        <ITEXT CH=""/>
+        <para PARENT="Fließtext "/>
         <trail/>
       </StoryText>
     </PAGEOBJECT>
@@ -737,6 +741,8 @@
         <ITEXT CH="• atis etur soluptur, id qui nost faccate culparum re aperum re sin nem necto ipitatat volut et moluptasimus num "/>
         <breakline/>
         <ITEXT CH="• eatur ad eiuscil ignihil idus di nosanis unt fugia audis sam, cuptaqu issunto essinctem. "/>
+        <para PARENT="Fließtext in grünem Kasten"/>
+        <ITEXT CH=""/>
         <breakline/>
         <ITEXT CH="Itae pm est alignis as ipientus et ut labora quis ducipiciis ex et hilluptam, corecullo to doluptas earum natem a idebite ntiandi non re ped exceptatur? Sed quia."/>
         <para PARENT="Fließtext in grünem Kasten"/>
@@ -1571,6 +1577,8 @@
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Impressum"/>
+        <para PARENT="Inhaltsheadline Titelseite"/>
+        <ITEXT CH=""/>
         <para PARENT="Inhaltsheadline Titelseite"/>
         <ITEXT CH="Medieninhaber u. Herausgeber: Die Grünen Niederösterreich, Daniel Gran Straße 48, 3100 St. Pölten • Redaktion: Ortsgruppe + Anschrift •  Verteilt durch Firma/Post • Erscheinungstermin: April 2026 • Druck: Druckerei + Postanschrift • Fotos:wenn nicht anders angegeben: Name"/>
         <trail PARENT="Impressum"/>

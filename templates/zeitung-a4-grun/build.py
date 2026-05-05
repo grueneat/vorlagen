@@ -21,8 +21,8 @@ doc = Document(
     first_page_num=1,
     palette_replaces_ci=True,
     hcms=True,
-    extra_pdf_attrs={'CMethod': '0', 'Clip': '0', 'Encrypt': '0', 'FontEmbedding': '0', 'ImageP': 'Adobe RGB (1998)', 'ImagePr': '0', 'InfoString': 'Grüne Zeitung Vorlage Scribus.sla', 'Intent': '1', 'Intent2': '0', 'PageLayout': '0', 'PassOwner': '', 'PassUser': '', 'Permissions': '-4', 'PresentMode': '0', 'PrintP': 'PSO Uncoated ISO12647 (ECI)', 'RGBMode': '0', 'RecalcPic': '1', 'RotateDeg': '0', 'SolidP': 'Adobe RGB (1998)', 'Thumbnails': '0', 'UseLayers': '0', 'UseLpi': '0', 'UseProfiles': '0', 'UseProfiles2': '1', 'UseSpotColors': '1', 'Version': '10', 'colorMarks': '0', 'displayBookmarks': '0', 'displayFullscreen': '0', 'displayLayers': '0', 'displayThumbs': '0', 'doMultiFile': '0', 'docInfoMarks': '0', 'firstUse': '0', 'fitWindow': '0', 'hideMenuBar': '0', 'hideToolBar': '0', 'openAfterExport': '0', 'rangeSel': '0', 'rangeTxt': '', 'registrationMarks': '0'},
     extra_doc_attrs={'ALAYER': '0', 'AUTOL': '100', 'BaseC': '#c0c0c0', 'CPICT': 'None', 'CSPICT': 'None', 'DCOL': '1', 'DGAP': '0', 'DIIm': '0', 'DISc': '1', 'DPIn': 'sRGB display profile (ICC v2.2)', 'DPIn2': 'sRGB display profile (ICC v2.2)', 'DPIn3': 'PSO Uncoated ISO12647 (ECI)', 'DPInCMYK': 'PSO Uncoated ISO12647 (ECI)', 'DPPr': 'PSO Uncoated ISO12647 (ECI)', 'DPSFo': '0', 'DPSo': '0', 'DPbla': '1', 'DPgam': '0', 'DPuse': '1', 'EmbeddedPath': '0', 'EndArrow': '0', 'FirstLineOffset': '1', 'GRAB': '4', 'GUIDELOCK': '0', 'GridType': '0', 'GuideC': '#000080', 'GuideRad': '9', 'HalfRes': '1', 'MAJGRID': '100.00062992126', 'MAJORC': '#00ff00', 'MINGRID': '20.0012598425197', 'MINORC': '#00ff00', 'PASPECT': '1', 'PICTSCX': '1', 'PICTSCY': '1', 'PICTSSHADE': '100', 'POLYC': '4', 'POLYCUR': '0', 'POLYF': '0.502045814642449', 'POLYIR': '0', 'POLYOCUR': '0', 'POLYR': '0', 'POLYS': '0', 'PRESET': '0', 'PSCALE': '1', 'SHOWBASE': '1', 'SHOWControl': '0', 'SHOWFRAME': '1', 'SHOWGRID': '0', 'SHOWGUIDES': '0', 'SHOWLAYERM': '0', 'SHOWLINK': '0', 'SHOWMARGIN': '0', 'SHOWPICT': '1', 'SUBJECT': '', 'SnapToElement': '0', 'SnapToGrid': '0', 'SnapToGuides': '0', 'StartArrow': '0', 'StrikeThruPos': '-1', 'StrikeThruWidth': '-1', 'StrokeText': 'Black', 'TabFill': '', 'TabWidth': '36', 'TextBackGround': 'None', 'TextBackGroundShade': '100', 'TextDistBottom': '0', 'TextDistLeft': '0', 'TextDistRight': '0', 'TextDistTop': '0', 'TextLineColor': 'None', 'TextLineShade': '100', 'TextPenShade': '100', 'TextStrokeShade': '100', 'UnderlinePos': '-1', 'UnderlineWidth': '-1', 'VHOCH': '33', 'VHOCHSC': '66', 'VKAPIT': '75', 'VTIEF': '33', 'VTIEFSC': '66', 'arcStartAngle': '30', 'arcSweepAngle': '300', 'calligraphicPenAngle': '0', 'calligraphicPenFillColor': 'Black', 'calligraphicPenFillColorShade': '100', 'calligraphicPenLineColor': 'Black', 'calligraphicPenLineColorShade': '100', 'calligraphicPenLineWidth': '1', 'calligraphicPenStyle': '1', 'calligraphicPenWidth': '10', 'constrain': '15', 'dispX': '10.0006299212598', 'dispY': '10.0006299212598', 'renderStack': '2 0 4 1 3', 'rulerMode': '1', 'rulerXoffset': '0', 'rulerYoffset': '0', 'showcolborders': '1', 'showrulers': '1', 'spiralEndAngle': '1080', 'spiralFactor': '1.2', 'spiralStartAngle': '0'},
+    extra_pdf_attrs={'CMethod': '0', 'Clip': '0', 'Encrypt': '0', 'FontEmbedding': '0', 'ImageP': 'Adobe RGB (1998)', 'ImagePr': '0', 'InfoString': 'Grüne Zeitung Vorlage Scribus.sla', 'Intent': '1', 'Intent2': '0', 'PageLayout': '0', 'PassOwner': '', 'PassUser': '', 'Permissions': '-4', 'PresentMode': '0', 'PrintP': 'PSO Uncoated ISO12647 (ECI)', 'RGBMode': '0', 'RecalcPic': '1', 'RotateDeg': '0', 'SolidP': 'Adobe RGB (1998)', 'Thumbnails': '0', 'UseLayers': '0', 'UseLpi': '0', 'UseProfiles': '0', 'UseProfiles2': '1', 'UseSpotColors': '1', 'Version': '10', 'colorMarks': '0', 'displayBookmarks': '0', 'displayFullscreen': '0', 'displayLayers': '0', 'displayThumbs': '0', 'doMultiFile': '0', 'docInfoMarks': '0', 'firstUse': '0', 'fitWindow': '0', 'hideMenuBar': '0', 'hideToolBar': '0', 'openAfterExport': '0', 'rangeSel': '0', 'rangeTxt': '', 'registrationMarks': '0'},
     layers=[
         DocumentLayer(name='Ebene 1', visible=True, printable=True, editable=True, flow=False, transparent=1, blend=0, outline=False, layer_color='#000000'),
     ],
@@ -596,6 +596,8 @@ _chain2_0 = TextFrame(
         Run(text='Gentorrum eum re re dus', separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', separator='para', paragraph_style='Fließtext '),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext '),
+        Run(text='', separator='para', paragraph_style='Fließtext '),
+        Run(text='', separator='para', paragraph_style='Fließtext '),
     ],
 )
 page2.add(_chain2_0)
@@ -1183,7 +1185,8 @@ page6.add(TextFrame(
         Run(text='• temporum re periberum endit officil il id et faceatem    quatusdanto con ', separator='breakline'),
         Run(text='• pero id quati quunt fuga. Ut inctotas corion reptatiis modit ditae ex excest mo beriost quamad que senis est undus iunti doluptas re occus et ut oditat et voluptatecte por', separator='breakline'),
         Run(text='• atis etur soluptur, id qui nost faccate culparum re aperum re sin nem necto ipitatat volut et moluptasimus num ', separator='breakline'),
-        Run(text='• eatur ad eiuscil ignihil idus di nosanis unt fugia audis sam, cuptaqu issunto essinctem. ', separator='breakline', paragraph_style='Fließtext in grünem Kasten'),
+        Run(text='• eatur ad eiuscil ignihil idus di nosanis unt fugia audis sam, cuptaqu issunto essinctem. ', separator='para', paragraph_style='Fließtext in grünem Kasten'),
+        Run(text='', separator='breakline'),
         Run(text='Itae pm est alignis as ipientus et ut labora quis ducipiciis ex et hilluptam, corecullo to doluptas earum natem a idebite ntiandi non re ped exceptatur? Sed quia.', separator='para', paragraph_style='Fließtext in grünem Kasten'),
     ],
 ))
@@ -2461,6 +2464,7 @@ page13.add(TextFrame(
     col_gap_mm=0,
     runs=[
         Run(text='Impressum', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
+        Run(text='', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
         Run(text='Medieninhaber u. Herausgeber: Die Grünen Niederösterreich, Daniel Gran Straße 48, 3100 St. Pölten • Redaktion: Ortsgruppe + Anschrift •  Verteilt durch Firma/Post • Erscheinungstermin: April 2026 • Druck: Druckerei + Postanschrift • Fotos:wenn nicht anders angegeben: Name'),
     ],
 ))

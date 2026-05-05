@@ -96,6 +96,8 @@
         <para PARENT="Vollkorn Headline sehr wichtig"/>
         <ITEXT CH="fair besteuern"/>
         <para PARENT="Headline sehr wichtig"/>
+        <ITEXT CH=""/>
+        <para PARENT="Headline sehr wichtig"/>
         <ITEXT CH="Österreich muss sparen. Aber was "/>
         <para PARENT="Fließtext"/>
         <ITEXT CH="die Regierung macht, ist unfair: "/>
@@ -105,6 +107,8 @@
         <ITEXT CH="Aber die Superreichen, die zig "/>
         <para PARENT="Fließtext"/>
         <ITEXT CH="Millionen erben, zahlen nichts."/>
+        <para PARENT="Fließtext"/>
+        <ITEXT CH=""/>
         <para PARENT="Unterüberschrift"/>
         <ITEXT CH="Wir wollen das ändern."/>
         <para PARENT="Unterüberschrift"/>

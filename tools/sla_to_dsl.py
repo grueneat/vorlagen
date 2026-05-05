@@ -422,7 +422,17 @@ def _build_runs(story_elem: etree._Element) -> list[dict]:
                 if k not in ITEXT_ATTR_HANDLED:
                     raise UnhandledElement(f"ITEXT carries unhandled attribute {k!r}")
         elif tag in ("para", "breakline", "tab", "breakcol", "breakframe"):
+            # If the current run already has a separator, this is a
+            # consecutive control-element sequence (e.g. two <para/> in a
+            # row, which encodes an empty paragraph used as vertical
+            # spacing). Push the current run and start a fresh empty run
+            # so the new separator is not silently merged into the
+            # previous one — that loses the empty paragraph and causes
+            # body text to drift up by ~1 line per missing empty para.
             if cur is None:
+                cur = {"text": ""}
+            elif cur.get("separator") is not None:
+                runs.append(cur)
                 cur = {"text": ""}
             cur["separator"] = tag
             # The <para/> element may carry PARENT="<paragraph style>" specifying
