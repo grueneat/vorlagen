@@ -19,6 +19,24 @@ build:
   script: build.py
   output: template.sla
 
+# Round-trip validation (issue #2): structural-diff target, plus the per-template
+# overrides for `tools/check_ci.py` allowing the document-local non-CI styles and
+# colors that the original Postkarte ships with.
+original_sla: ../../postkarte-vorlage-original.sla
+ci_overrides:
+  non_ci_styles:
+    - "Default Paragraph Style"
+    - "Fließtext"
+    - "Impressum"
+    - "Default Paragraph Style (2)"
+    - "Schrift rosa Kreis"
+    - "Headline sehr wichtig"
+    - "Kontaktmöglichkeiten"
+    - "Vollkorn Headline sehr wichtig"
+    - "Unterüberschrift"
+  non_ci_colors:
+    - "Green"
+
 # Slots are documented hints for editors, not fill-targets.
 # Each slot's ANNAME (visible in Scribus's Object Properties panel) names
 # the frame so users can find the right element to edit.

@@ -88,6 +88,38 @@ class SLADocument:
             ))
         return out
 
+    # ------------- iterators (used by sla_diff and sla_to_dsl) -----------
+
+    def iter_pages(self) -> Iterator[etree._Element]:
+        """Yield <PAGE> elements in document order."""
+        for el in self.doc.findall("PAGE"):
+            yield el
+
+    def iter_masters(self) -> Iterator[etree._Element]:
+        """Yield <MASTERPAGE> elements in document order."""
+        for el in self.doc.findall("MASTERPAGE"):
+            yield el
+
+    def iter_layers(self) -> Iterator[etree._Element]:
+        """Yield <LAYERS> elements in document order."""
+        for el in self.doc.findall("LAYERS"):
+            yield el
+
+    def iter_colors(self) -> Iterator[etree._Element]:
+        """Yield <COLOR> elements in document order."""
+        for el in self.doc.findall("COLOR"):
+            yield el
+
+    def iter_styles(self) -> Iterator[etree._Element]:
+        """Yield <STYLE> (paragraph style) elements in document order."""
+        for el in self.doc.findall("STYLE"):
+            yield el
+
+    def iter_charstyles(self) -> Iterator[etree._Element]:
+        """Yield <CHARSTYLE> elements in document order."""
+        for el in self.doc.findall("CHARSTYLE"):
+            yield el
+
     # ------------- text helpers -------------------------------------------
 
     def iter_itext(self, frame: etree._Element) -> Iterator[etree._Element]:

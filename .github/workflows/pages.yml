@@ -3,6 +3,12 @@ name: Build & Deploy Gallery
 on:
   push:
     branches: [main]
+  pull_request:
+    paths:
+      - 'tools/**'
+      - 'templates/**'
+      - 'shared/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +30,15 @@ jobs:
       # 1.5.8 which cannot read 1.6.x SLA files; the Debian trixie route
       # fails on Ubuntu runners because the trixie GPG keys aren't bundled).
       # The AppImage is extracted so libfuse2 isn't required at runtime.
+      # Cache the extracted Scribus AppImage to avoid the ~30s download on
+      # every run. Keyed by version so a bump invalidates automatically.
+      - name: Cache Scribus AppImage
+        id: scribus-cache
+        uses: actions/cache@v4
+        with:
+          path: /opt/squashfs-root
+          key: scribus-1.6.5-appimage-v1
+
       - name: Install Scribus 1.6.5 + headless deps
         env:
           SCRIBUS_VERSION: 1.6.5
@@ -32,12 +47,14 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-            xvfb poppler-utils ghostscript python3-lxml python3-yaml
-          # Download + extract AppImage (no FUSE required when extracted)
-          sudo curl -fsSL -o /opt/scribus.AppImage "$SCRIBUS_URL"
-          sudo chmod +x /opt/scribus.AppImage
-          cd /opt
-          sudo /opt/scribus.AppImage --appimage-extract >/dev/null
+            xvfb poppler-utils ghostscript imagemagick python3-lxml python3-yaml
+          # Download + extract AppImage if not restored from cache
+          if [ ! -d /opt/squashfs-root ]; then
+            sudo curl -fsSL -o /opt/scribus.AppImage "$SCRIBUS_URL"
+            sudo chmod +x /opt/scribus.AppImage
+            cd /opt
+            sudo /opt/scribus.AppImage --appimage-extract >/dev/null
+          fi
           # Provide a wrapper that points to the extracted AppRun
           printf '#!/bin/sh\nexec /opt/squashfs-root/AppRun "$@"\n' \
             | sudo tee /usr/local/bin/scribus >/dev/null
@@ -72,6 +89,45 @@ jobs:
 
       - name: Run unit tests
         run: python3 -m unittest discover tools/sla_lib/tests
+
+      - name: Validate reproductions (sla_diff + visual_diff)
+        run: |
+          set -euo pipefail
+          mkdir -p build/validation
+          for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4-grun; do
+            tid=$(basename "$tdir")
+            # Resolve original_sla relative to the template directory
+            original=$(python3 -c "
+          import os, sys, yaml
+          m = yaml.safe_load(open('$tdir/meta.yml'))
+          rel = m.get('original_sla', '')
+          if not rel:
+            sys.exit('no original_sla in meta.yml')
+          print(os.path.normpath(os.path.join('$tdir', rel)))
+          ")
+            mkdir -p "build/validation/$tid"
+            echo "=== sla_diff $tid ==="
+            python3 tools/sla_diff.py \
+              --left "$original" \
+              --right "$tdir/template.sla" \
+              --json "build/validation/$tid/sla_diff.json" \
+              --strict
+            echo "=== visual_diff $tid (96 dpi) ==="
+            python3 tools/visual_diff.py \
+              "$tdir/template.sla" \
+              --baseline "$tdir/baseline.pdf" \
+              --tolerance "$tdir/diff.yml" \
+              --dpi 96 \
+              --out "build/validation/$tid/"
+          done
+
+      - name: Upload visual-diff composites on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff-composites
+          path: build/validation/*/composite-page-*.png
+          if-no-files-found: ignore
 
       - name: Run brand validator
         run: |

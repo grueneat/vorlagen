@@ -1,0 +1,9 @@
+# Visual-diff tolerance for the Plakat A1 reproduction.
+# See docs/diff-tolerance.md for schema.
+#
+# Single-page A1 poster: headline + small impressum + Dunkelgrün block.
+# After honouring HCMS=1 + ICC profile state, this page renders
+# byte-clean (~0.0000% mismatch) against the baseline at fuzz=5%.
+visual_diff:
+  max_pixel_mismatch_pct: 1.0
+  fuzz_pct: 5.0

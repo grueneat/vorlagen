@@ -24,6 +24,7 @@ from typing import Optional, Iterable
 from lxml import etree
 
 from .ci import load_ci, BrandColor, BrandStyle, BrandLayer
+from .styles import DocumentLayer, ParaStyle, CharStyle
 
 # Conversion: 1 mm = 2.83464566929... pt (1pt = 1/72in, 1in = 25.4mm)
 MM_TO_PT = 72.0 / 25.4
@@ -44,6 +45,19 @@ ISO_SIZES_MM: dict[str, tuple[float, float]] = {
 
 def mm_to_pt(value_mm: float) -> float:
     return value_mm * MM_TO_PT
+
+
+def _fmt_num(value: float) -> str:
+    """Format a numeric attribute the way Scribus does: integers stay integers
+    (no trailing ``.0``), non-integers print with up to 6 decimals, trailing
+    zeros stripped. Round-trip stable across save/reload."""
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, int):
+        return str(value)
+    if float(value).is_integer():
+        return str(int(value))
+    return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
 def resolve_size(size: str | tuple[float, float], orientation: str) -> tuple[float, float]:
@@ -116,15 +130,83 @@ class Document:
 
     def __init__(self, title: str = "", template_id: str = "",
                  author: str = "Die Grünen Niederösterreich",
-                 ci_path: Optional[Path | str] = None) -> None:
+                 ci_path: Optional[Path | str] = None,
+                 *,
+                 layers: Optional[list[DocumentLayer]] = None,
+                 facing_pages: bool = False,
+                 column_gap_default_pt: float = 11.0,
+                 unit: str = "mm",
+                 deffont: str = "Gotham Narrow Book",
+                 defsize: float = 12,
+                 first_page_num: int = 1,
+                 palette_replaces_ci: bool = False,
+                 hcms: bool = False,
+                 extra_doc_attrs: Optional[dict[str, str]] = None,
+                 extra_pdf_attrs: Optional[dict[str, str]] = None) -> None:
         self.title = title
         self.template_id = template_id
         self.author = author
         self.ci = load_ci(ci_path) if ci_path else load_ci()
         self.pages: list[Page] = []
         self.masters: list[Page] = []  # masters use Page structure too
-        self.facing_pages: bool = False
+        self.facing_pages: bool = facing_pages
+        self.column_gap_default_pt: float = column_gap_default_pt
+        self.unit: str = unit
+        self.deffont: str = deffont
+        self.defsize: float = defsize
+        self.first_page_num: int = first_page_num
+        self.palette_replaces_ci: bool = palette_replaces_ci
+        # HCMS=1 enables Scribus's color-management-system rendering: CMYK
+        # colors are translated through the configured ICC profiles
+        # (DPInCMYK / DPPr) on draw + PDF export. With HCMS=0 Scribus uses a
+        # naive CMYK→sRGB conversion that produces visibly different RGB
+        # values for the same CMYK input. The originals all have HCMS=1, so
+        # the converter sets this to True to match the baseline rendering.
+        self.hcms: bool = hcms
+        # Extra DOCUMENT-level attributes the converter passes through
+        # verbatim. Useful for round-tripping locale/runtime fields like
+        # ALAYER, AUTOL, BaseC, CPICT, ICC profile names, calligraphic-pen
+        # widths, etc. that Scribus assumes present on first read.
+        self.extra_doc_attrs: dict[str, str] = dict(extra_doc_attrs) if extra_doc_attrs else {}
+        # Extra PDF-element attributes the converter passes through verbatim.
+        # The CMS-relevant set (SolidP / ImageP / PrintP / Intent / RGBMode /
+        # UseSpotColors / Version / etc.) drives what ICC profile Scribus
+        # uses on PDF export; without them, Scribus falls back to a naive
+        # CMYK→sRGB conversion that mismatches the baseline rendering.
+        self.extra_pdf_attrs: dict[str, str] = dict(extra_pdf_attrs) if extra_pdf_attrs else {}
         self._idgen = _IdGen()
+        # Per-document overrides — empty == fall back to CI defaults.
+        self._layers_override: list[DocumentLayer] = list(layers) if layers else []
+        self._extra_colors: dict[str, BrandColor] = {}
+        self._extra_para_styles: dict[str, ParaStyle] = {}
+        self._extra_char_styles: dict[str, CharStyle] = {}
+
+    # ---- per-document palette / style registration ---------------------
+    def add_color(self, name: str, *,
+                   rgb: Optional[tuple[int, int, int]] = None,
+                   cmyk: Optional[tuple[int, int, int, int]] = None,
+                   spot: bool = False, register: bool = False) -> None:
+        """Register a document-local color. Pass either ``rgb=`` or ``cmyk=``."""
+        if (rgb is None) == (cmyk is None):
+            raise ValueError("add_color requires exactly one of rgb= or cmyk=")
+        if rgb is not None:
+            self._extra_colors[name] = BrandColor(
+                name=name, cmyk=(0, 0, 0, 0), rgb_native=tuple(rgb),
+                spot=spot, register=register,
+            )
+        else:
+            self._extra_colors[name] = BrandColor(
+                name=name, cmyk=tuple(cmyk),
+                spot=spot, register=register,
+            )
+
+    def add_para_style(self, style: ParaStyle) -> None:
+        """Register a document-local paragraph style."""
+        self._extra_para_styles[style.name] = style
+
+    def add_char_style(self, style: CharStyle) -> None:
+        """Register a document-local character style."""
+        self._extra_char_styles[style.name] = style
 
     # ---- page authoring -------------------------------------------------
     # Scratch-canvas constants matching Scribus's own defaults so a fresh
@@ -171,15 +253,36 @@ class Document:
                  label: str = "") -> Page:
         w_pt, h_pt = resolve_size(size, orientation)
         own_page = len(self.pages)
-        # Page Y position = ScratchTop + cumulative previous page heights + gaps.
-        # Page X position = ScratchLeft (single-page stacking; facing pages use columns).
+        # Single-page stacking: every page sits in the left column, stacked
+        # vertically with GapVertical between rows.
         page_x = self.SCRATCH_LEFT
         page_y = self.SCRATCH_TOP + own_page * (h_pt + self.GAP_VERTICAL)
         if self.facing_pages:
-            # Even index = left column, odd = right column. Two pages per row.
-            is_left = (own_page % 2 == 0)
-            page_x = self.SCRATCH_LEFT if is_left else self.SCRATCH_LEFT + w_pt
-            page_y = self.SCRATCH_TOP + (own_page // 2) * (h_pt + self.GAP_VERTICAL)
+            # Facing pages with PageSets <Set Name="Facing Pages" FirstPage="1">
+            # — the first doc page sits ALONE in the right column on row 0
+            # (cover), then every subsequent pair (1,2), (3,4), ... shares a
+            # row with the left page in the left column and the right page in
+            # the right column. The Y stride is PageHeight + GapVertical.
+            #
+            # Row indices: page 0 → row 0 (right, alone); page 1 → row 1 (left);
+            # page 2 → row 1 (right); page 3 → row 2 (left); page 4 → row 2 (right); ...
+            # Side: page 0 → right; odd index → left; even index (>0) → right.
+            if own_page == 0:
+                row = 0
+                side_left = False  # cover stands on the right column
+            else:
+                row = ((own_page - 1) // 2) + 1
+                side_left = ((own_page - 1) % 2 == 0)
+            page_x = (self.SCRATCH_LEFT if side_left
+                      else self.SCRATCH_LEFT + w_pt)
+            page_y = self.SCRATCH_TOP + row * (h_pt + self.GAP_VERTICAL)
+            # The per-PAGE LEFT attribute is informational; the actual side is
+            # determined by PageSets columns + master's LEFT. Match the
+            # original Scribus convention of writing LEFT="0" on every doc
+            # page (verified against gruene-zeitung-vorlage-original.sla, all
+            # 14 pages have LEFT="0"). Templates that rely on facing-page side
+            # use master_name lookup, not the per-page LEFT bit.
+            is_left = False
         else:
             is_left = False
         page = Page(
@@ -196,14 +299,71 @@ class Document:
         tree = etree.ElementTree(root)
         tree.write(str(path), encoding="UTF-8", xml_declaration=True, standalone=False, pretty_print=True)
 
+    # ---- chain ID pre-allocation ---------------------------------------
+    def _preallocate_chain_ids(self) -> None:
+        """Walk all TextFrames; for each chain (head with BACKITEM=-1, follow
+        next_item until a tail), allocate ItemIDs depth-first per chain so
+        NEXTITEM/BACKITEM references resolve at emit time.
+
+        Non-chained frames keep allocating fresh IDs in their natural emit
+        order (after MASTEROBJECTs, which are always emitted before
+        PAGEOBJECTs).
+        """
+        from .primitives import TextFrame
+        # Collect frames in emit order (masters first, then pages).
+        ordered_text_frames: list[TextFrame] = []
+        for m in self.masters:
+            for it in m.items:
+                if isinstance(it, TextFrame):
+                    ordered_text_frames.append(it)
+        for p in self.pages:
+            for it in p.items:
+                if isinstance(it, TextFrame):
+                    ordered_text_frames.append(it)
+        # Build inverse map: target -> source
+        prev_for: dict[int, TextFrame] = {}
+        for f in ordered_text_frames:
+            if f.next_item is not None:
+                prev_for[id(f.next_item)] = f
+        # Find chain heads (frame whose next_item != None, with no predecessor)
+        head_to_chain: list[list[TextFrame]] = []
+        seen: set[int] = set()
+        for f in ordered_text_frames:
+            if f.next_item is None:
+                continue
+            if id(f) in prev_for:
+                continue  # not a head
+            if id(f) in seen:
+                continue
+            chain: list[TextFrame] = []
+            cur: Optional[TextFrame] = f
+            while cur is not None:
+                if id(cur) in seen:
+                    break
+                seen.add(id(cur))
+                chain.append(cur)
+                cur = cur.next_item
+            head_to_chain.append(chain)
+        # Allocate IDs depth-first per chain. The IDs come from the same
+        # _IdGen so they remain monotonic and unique.
+        for chain in head_to_chain:
+            for f in chain:
+                f._preallocated_id = self._idgen.next()
+
     # ---- XML emission ---------------------------------------------------
     def _build_xml(self) -> etree._Element:
         if not self.pages:
             raise ValueError("Document has no pages — call add_page() first")
+        # Reset idgen so multiple save() calls produce stable IDs.
+        self._idgen = _IdGen()
+        # Pre-allocate IDs for chained TextFrames so NEXTITEM/BACKITEM resolve.
+        self._preallocate_chain_ids()
 
-        # Ensure a "Normal" master page exists (any page MNAM that doesn't
-        # match a master defaults to "Normal", which must exist).
-        if not any(m.master_id == "Normal" for m in self.masters):
+        # Ensure a "Normal" master page exists ONLY when no masters are
+        # defined at all. Templates that declare their own master(s) (e.g. the
+        # Zeitung's 'Neue Musterseite rechts'/'Neue Musterseite links') must
+        # not get a third auto-injected 'Normal' master.
+        if not self.masters:
             normal = Page(
                 width_pt=self.pages[0].width_pt,
                 height_pt=self.pages[0].height_pt,
@@ -272,7 +432,7 @@ class Document:
         first = self.pages[0]
         ml, mr, mt, mb = first.margins_mm
         bleed = first.bleed_mm
-        return {
+        attrs = {
             "ANZPAGES": str(len(self.pages)),
             "PAGEWIDTH": f"{w_pt:.6f}",
             "PAGEHEIGHT": f"{h_pt:.6f}",
@@ -286,11 +446,11 @@ class Document:
             "BleedRight": f"{mm_to_pt(bleed):.6f}",
             "ORIENTATION": "0",  # 0=portrait, 1=landscape
             "PAGESIZE": "Custom",
-            "FIRSTPAGENUM": "1",
+            "FIRSTPAGENUM": str(self.first_page_num),
             "BOOK": "1" if self.facing_pages else "0",
             "FIRSTLEFT": "0",
             "AUTOSPALTEN": "1",
-            "ABSTSPALTEN": "11",
+            "ABSTSPALTEN": f"{self.column_gap_default_pt:g}",
             "UNITS": "1",  # 1=mm
             "TITLE": self.title,
             "AUTHOR": self.author,
@@ -307,8 +467,39 @@ class Document:
             "DOCCOVER": "",
             "DOCRIGHTS": "",
             "DOCCONTRIB": "",
-            "DEFFONT": "Gotham Narrow Book",
-            "DEFSIZE": "12",
+            # Both DEFFONT/DEFSIZE (legacy DSL fields) and DFONT/DSIZE
+            # (what Scribus actually reads) are emitted; Scribus 1.6 looks
+            # for DFONT specifically when rendering text frames whose ITEXT
+            # has no explicit FONT.
+            "DEFFONT": self.deffont,
+            "DEFSIZE": f"{self.defsize:g}",
+            "DFONT": self.deffont,
+            "DSIZE": f"{self.defsize:g}",
+            # Document language — used by hyphenation engine and as the
+            # default for paragraph styles that omit LANGUAGE.
+            "LANGUAGE": "de",
+            # Default character / paragraph fill colors (Scribus expects these)
+            "PEN": "Black",
+            "BRUSH": "None",
+            "PENLINE": "Black",
+            "PENTEXT": "Black",
+            "PENSHADE": "100",
+            "BRUSHSHADE": "100",
+            "LINESHADE": "100",
+            "PICTSHADE": "100",
+            # Misc render flags Scribus checks
+            "AUTOMATIC": "1",
+            "AUTOCHECK": "0",
+            "BASEGRID": "13",
+            "BASEO": "0",
+            "STIL": "1",
+            "STILLINE": "1",
+            "WIDTH": "1",
+            "WIDTHLINE": "5",
+            "GROUPC": "1",
+            "HCMS": "1" if self.hcms else "0",
+            "showBleed": "1",
+            "FIRSTNUM": "1",
             "DSAVE": "0",
             "AUTOSAVE": "0",
             "AUTOSAVETIME": "10",
@@ -327,6 +518,12 @@ class Document:
             "RANDF": "0",
             "currentProfile": "Default",
         }
+        # Converter pass-through: any DOCUMENT attribute not explicitly handled
+        # above gets emitted verbatim. Existing keys win (the DSL's own
+        # constants take precedence over surprise overrides).
+        for k, v in self.extra_doc_attrs.items():
+            attrs.setdefault(k, v)
+        return attrs
 
     def _emit_check_profiles(self, doc) -> None:
         cp = etree.SubElement(doc, "CheckProfile")
@@ -355,31 +552,59 @@ class Document:
         cp.set("checkEmptyTextFrames", "1")
 
     def _emit_colors(self, doc) -> None:
-        # Scribus 1.6 expects per-channel integer attributes (C/M/Y/K), not
-        # a packed hex CMYK= attribute. Verified by comparing emitted SLAs
-        # against the existing Postkarte Vorlage.sla (renders correctly).
-        for cname, c in self.ci.colors.items():
+        # Scribus 1.6 expects per-channel integer attributes (C/M/Y/K) for
+        # CMYK colors; native-RGB colors emit SPACE="RGB" with R/G/B.
+        # When ``palette_replaces_ci=True``, only colors explicitly registered
+        # via ``add_color`` are emitted. Otherwise, CI brand colors merge with
+        # document-local extras (extras win on name collision).
+        if self.palette_replaces_ci:
+            all_colors: dict[str, BrandColor] = dict(self._extra_colors)
+        else:
+            all_colors = dict(self.ci.colors)
+            for cname, c in self._extra_colors.items():
+                all_colors[cname] = c
+        for cname, c in all_colors.items():
             el = etree.SubElement(doc, "COLOR")
             el.set("NAME", cname)
-            el.set("SPACE", "CMYK")
-            cval, mval, yval, kval = c.cmyk
-            el.set("C", str(cval))
-            el.set("M", str(mval))
-            el.set("Y", str(yval))
-            el.set("K", str(kval))
+            if c.rgb_native is not None:
+                el.set("SPACE", "RGB")
+                r, g, b = c.rgb_native
+                el.set("R", str(r))
+                el.set("G", str(g))
+                el.set("B", str(b))
+            else:
+                el.set("SPACE", "CMYK")
+                cval, mval, yval, kval = c.cmyk
+                el.set("C", str(cval))
+                el.set("M", str(mval))
+                el.set("Y", str(yval))
+                el.set("K", str(kval))
             if c.spot:
                 el.set("Spot", "1")
             if c.register:
                 el.set("Register", "1")
 
     def _emit_styles(self, doc) -> None:
-        # CHARSTYLE block (one default)
-        cs = etree.SubElement(doc, "CHARSTYLE")
-        cs.set("CNAME", "")
-        cs.set("FONT", self.ci.styles.get("ci/default", BrandStyle("ci/default", "Gotham Narrow Book", 12)).font)
-        cs.set("FONTSIZE", "12")
-        cs.set("FCOLOR", "Black")
-        # STYLE blocks (paragraph styles)
+        # If the document registered its own char styles, emit those.
+        # Otherwise, fall back to a single empty default CHARSTYLE.
+        if self._extra_char_styles:
+            for cs_obj in self._extra_char_styles.values():
+                self._emit_char_style(doc, cs_obj)
+        else:
+            cs = etree.SubElement(doc, "CHARSTYLE")
+            cs.set("CNAME", "")
+            cs.set("FONT", self.ci.styles.get("ci/default",
+                BrandStyle("ci/default", "Gotham Narrow Book", 12)).font)
+            cs.set("FONTSIZE", "12")
+            cs.set("FCOLOR", "Black")
+
+        # If the document registered its own paragraph styles, emit those
+        # using only-non-None semantics (PARENT inheritance preserved).
+        # Otherwise, fall back to the CI brand style stack as before.
+        if self._extra_para_styles:
+            for ps in self._extra_para_styles.values():
+                self._emit_para_style(doc, ps)
+            return
         for sname, s in self.ci.styles.items():
             st = etree.SubElement(doc, "STYLE")
             st.set("NAME", sname)
@@ -393,6 +618,120 @@ class Document:
             st.set("FCOLOR", s.fcolor)
             st.set("LANGUAGE", s.language)
 
+    def _emit_char_style(self, doc, cs_obj: CharStyle) -> None:
+        cs = etree.SubElement(doc, "CHARSTYLE")
+        if cs_obj.is_default:
+            cs.set("DefaultStyle", "1")
+        cs.set("CNAME", cs_obj.name)
+        for kw, attr in (
+            ("font", "FONT"),
+            ("fcolor", "FCOLOR"),
+            ("fontfeatures", "FONTFEATURES"),
+            ("features", "FEATURES"),
+            ("language", "LANGUAGE"),
+            ("scolor", "SCOLOR"),
+            ("bgcolor", "BGCOLOR"),
+        ):
+            v = getattr(cs_obj, kw)
+            if v is not None:
+                cs.set(attr, v)
+        for kw, attr in (
+            ("fontsize", "FONTSIZE"),
+            ("kern", "KERN"),
+            ("txt_underline_pos", "TXTULP"),
+            ("txt_underline_width", "TXTULW"),
+            ("txt_strike_pos", "TXTSTP"),
+            ("txt_strike_width", "TXTSTW"),
+        ):
+            v = getattr(cs_obj, kw)
+            if v is not None:
+                cs.set(attr, _fmt_num(v))
+        for kw, attr in (
+            ("fshade", "FSHADE"),
+            ("hyph_word_min", "HyphenWordMin"),
+            ("sshade", "SSHADE"),
+            ("bgshade", "BGSHADE"),
+            ("txt_shadow_x", "TXTSHX"),
+            ("txt_shadow_y", "TXTSHY"),
+            ("txt_outline", "TXTOUT"),
+            ("scaleh", "SCALEH"),
+            ("scalev", "SCALEV"),
+            ("baseline_offset", "BASEO"),
+        ):
+            v = getattr(cs_obj, kw)
+            if v is not None:
+                cs.set(attr, str(v))
+
+    def _emit_para_style(self, doc, ps: ParaStyle) -> None:
+        st = etree.SubElement(doc, "STYLE")
+        if ps.is_default:
+            st.set("DefaultStyle", "1")
+        st.set("NAME", ps.name)
+        if ps.parent is not None:
+            st.set("PARENT", ps.parent)
+        # Only-non-None emission preserves PARENT inheritance.
+        for kw, attr in (
+            ("align", "ALIGN"),
+            ("linesp_mode", "LINESPMode"),
+            ("drop_lines", "DROPLIN"),
+            ("hyph_consecutive_lines", "HyphenConsecutiveLines"),
+            ("hyph_word_min", "HyphenWordMin"),
+            ("keep_lines_start", "KeepLinesStart"),
+            ("direction", "DIRECTION"),
+            ("bshade", "BSHADE"),
+            ("scalev", "SCALEV"),
+            ("fshade", "FSHADE"),
+            ("txt_shadow_x", "TXTSHX"),
+            ("txt_shadow_y", "TXTSHY"),
+            ("txt_outline", "TXTOUT"),
+            ("baseline_offset", "BASEO"),
+            ("numeration", "Numeration"),
+        ):
+            v = getattr(ps, kw)
+            if v is not None:
+                st.set(attr, str(v))
+        for kw, attr in (
+            ("linesp", "LINESP"),
+            ("fontsize", "FONTSIZE"),
+            ("space_before_pt", "VOR"),
+            ("space_after_pt", "NACH"),
+            ("first_indent_pt", "FIRST"),
+            ("left_indent_pt", "INDENT"),
+            ("right_indent_pt", "RMARGIN"),
+            ("min_word_track", "MinWordTrack"),
+            ("min_glyph_shrink", "MinGlyphShrink"),
+            ("max_glyph_extend", "MaxGlyphExtend"),
+            ("kern", "KERN"),
+            ("paragraph_effect_offset", "ParagraphEffectOffset"),
+            ("txt_underline_pos", "TXTULP"),
+            ("txt_underline_width", "TXTULW"),
+            ("txt_strike_pos", "TXTSTP"),
+            ("txt_strike_width", "TXTSTW"),
+        ):
+            v = getattr(ps, kw)
+            if v is not None:
+                st.set(attr, _fmt_num(v))
+        for kw, attr in (
+            ("font", "FONT"),
+            ("fcolor", "FCOLOR"),
+            ("language", "LANGUAGE"),
+            ("bcolor", "BCOLOR"),
+            ("fontfeatures", "FONTFEATURES"),
+            ("features", "FEATURES"),
+            ("bullet", "Bullet"),
+        ):
+            v = getattr(ps, kw)
+            if v is not None:
+                st.set(attr, str(v))
+        # Boolean fields become "1"/"0" only when set
+        for kw, attr in (
+            ("drop_cap", "DROP"),
+            ("keep_together", "KeepTogether"),
+        ):
+            v = getattr(ps, kw)
+            if v is not None:
+                st.set(attr, "1" if v else "0")
+
     def _emit_table_cell_stubs(self, doc) -> None:
         ts = etree.SubElement(doc, "TableStyle")
         ts.set("NAME", "Default Table Style")
@@ -400,6 +739,24 @@ class Document:
         cs.set("NAME", "Default Cell Style")
 
     def _emit_layers(self, doc) -> None:
+        # If the document declared its own layer stack via Document(layers=[...]),
+        # emit those instead of the CI brand stack.
+        if self._layers_override:
+            for idx, layer in enumerate(self._layers_override):
+                el = etree.SubElement(doc, "LAYERS")
+                el.set("NUMMER", str(idx))
+                el.set("LEVEL", str(idx))
+                el.set("NAME", layer.name)
+                el.set("SICHTBAR", "1" if layer.visible else "0")
+                el.set("DRUCKEN", "1" if layer.printable else "0")
+                el.set("EDIT", "1" if layer.editable else "0")
+                el.set("SELECT", "1")
+                el.set("FLOW", "1" if layer.flow else "0")
+                el.set("TRANS", f"{layer.transparent:g}")
+                el.set("BLEND", str(layer.blend))
+                el.set("OUTL", "1" if layer.outline else "0")
+                el.set("LAYERC", layer.layer_color)
+            return
         for layer in self.ci.layers:
             el = etree.SubElement(doc, "LAYERS")
             el.set("NUMMER", str(layer.level))
@@ -416,17 +773,24 @@ class Document:
             el.set("LAYERC", "#000000")
 
     def _emit_printer_pdf_stubs(self, doc) -> None:
-        # Minimal Printer + PDF blocks Scribus expects to be present
+        # Minimal Printer + PDF blocks Scribus expects to be present.
+        # The PDF block includes the document-level bleed (BBottom/BLeft/BRight/
+        # BTop) and useDocBleeds=1 so PDF export honours the SLA's bleed setting
+        # — without these the rendered PDF page would crop to the trim box and
+        # visual_diff would fail with "raster size mismatch" against the
+        # baseline (which was rendered from the same SLA-with-bleed source).
         pr = etree.SubElement(doc, "Printer")
         pr.set("firstUse", "1")
         pdf = etree.SubElement(doc, "PDF")
+        bleed = self.pages[0].bleed_mm if self.pages else 3.0
+        bleed_pt = mm_to_pt(bleed)
         pdf.set("Articles", "0")
         pdf.set("Bookmarks", "0")
         pdf.set("Compress", "1")
         pdf.set("CompressMethod", "0")
         pdf.set("Quality", "0")
         pdf.set("EmbedPDF", "0")
-        pdf.set("Version", "16")  # PDF 1.6
+        pdf.set("Version", "16")
         pdf.set("Resolution", "300")
         pdf.set("Binding", "0")
         pdf.set("PicRes", "300")
@@ -437,6 +801,36 @@ class Document:
         pdf.set("MirrorH", "0")
         pdf.set("MirrorV", "0")
         pdf.set("openAction", "")
+        # Bleed + marks — drives PDF page-with-bleed dimensions
+        pdf.set("BBottom", _fmt_num(bleed_pt))
+        pdf.set("BLeft", _fmt_num(bleed_pt))
+        pdf.set("BRight", _fmt_num(bleed_pt))
+        pdf.set("BTop", _fmt_num(bleed_pt))
+        pdf.set("useDocBleeds", "1")
+        pdf.set("cropMarks", "1")
+        pdf.set("bleedMarks", "1")
+        pdf.set("colorMarks", "0")
+        pdf.set("docInfoMarks", "0")
+        pdf.set("registrationMarks", "0")
+        pdf.set("markLength", _fmt_num(bleed_pt))
+        pdf.set("markOffset", _fmt_num(bleed_pt))
+        # Pass-through any extra PDF attributes the converter captured from
+        # the original (ICC profile names, Intent2, RGBMode, UseSpotColors,
+        # Version, etc.). When ``hcms=True`` the converter's extras win over
+        # the DSL defaults — the original's PDF state is what produced the
+        # frozen baseline, so faithful round-trip requires honouring it
+        # exactly. Bleed-related attrs (BBottom/BLeft/BRight/BTop/useDocBleeds/
+        # cropMarks/bleedMarks/markLength/markOffset) are guarded so the
+        # converter cannot accidentally undo the bleed-emit fix.
+        BLEED_GUARDED = {
+            "BBottom", "BLeft", "BRight", "BTop",
+            "useDocBleeds", "cropMarks", "bleedMarks",
+            "markLength", "markOffset",
+        }
+        for k, v in self.extra_pdf_attrs.items():
+            if k in BLEED_GUARDED:
+                continue
+            pdf.set(k, v)
         # DocItemAttributes / TablesOfContents minimal
         etree.SubElement(doc, "DocItemAttributes")
         etree.SubElement(doc, "TablesOfContents")
@@ -541,4 +935,17 @@ class Document:
         # Each primitive class implements `to_pageobject(idgen, page)` returning
         # an element name + attributes + child elements
         node = item.to_pageobject(self._idgen, page)
+        # Wire NEXTITEM/BACKITEM for chained TextFrames using the preallocated
+        # IDs assigned in _preallocate_chain_ids.
+        from .primitives import TextFrame
+        if isinstance(item, TextFrame):
+            if item.next_item is not None and item.next_item._preallocated_id is not None:
+                node.set("NEXTITEM", str(item.next_item._preallocated_id))
+            # Find back-pointer: any frame whose next_item is this one
+            for other_page in self.pages:
+                for other in other_page.items:
+                    if isinstance(other, TextFrame) and other.next_item is item:
+                        if other._preallocated_id is not None:
+                            node.set("BACKITEM", str(other._preallocated_id))
+                        break
         doc.append(node)

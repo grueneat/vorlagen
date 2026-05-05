@@ -28,14 +28,21 @@ def _cmyk_to_rgb(c: float, m: float, y: float, k: float) -> tuple[int, int, int]
 
 @dataclass(frozen=True)
 class BrandColor:
+    """A named color. Either ``cmyk`` or ``rgb_native`` is supplied; emitting
+    a CMYK color writes ``SPACE="CMYK"`` with C/M/Y/K integer attributes,
+    while a native-RGB color writes ``SPACE="RGB"`` with R/G/B integer attrs.
+    """
     name: str
-    cmyk: tuple[int, int, int, int]
+    cmyk: tuple[int, int, int, int] = (0, 0, 0, 0)
     spot: bool = False
     register: bool = False
     role: Optional[str] = None
+    rgb_native: Optional[tuple[int, int, int]] = None
 
     @property
     def rgb(self) -> tuple[int, int, int]:
+        if self.rgb_native is not None:
+            return self.rgb_native
         return _cmyk_to_rgb(*self.cmyk)
 
     @property
