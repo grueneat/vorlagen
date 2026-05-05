@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -109,16 +110,33 @@ def _run(cmd: list[str], *, allow_nonzero: bool = False, env: Optional[dict] = N
 
 
 def render_sla_to_pdf(sla_path: Path, pdf_path: Path) -> None:
-    """Render an SLA to PDF via the sanctioned headless pipeline."""
+    """Render an SLA to PDF via the sanctioned headless pipeline.
+
+    Mirrors tools/gallery_build.py invocation: explicit screen geometry +
+    UTF-8 locale env. Scribus on Ubuntu CI exits 0 without writing the
+    PDF if the locale is unset, so we also assert the output exists.
+    """
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
     repo = Path(__file__).resolve().parent.parent
+    env = {
+        **os.environ,
+        "PYTHONIOENCODING": "utf-8",
+        "LC_ALL": "C.UTF-8",
+        "LANG": "C.UTF-8",
+    }
     _run(
         [
-            "xvfb-run", "-a", "scribus", "-g", "-ns", "-py",
+            "xvfb-run", "-a", "--server-args=-screen 0 1024x768x24",
+            "scribus", "-g", "-ns", "-py",
             str(repo / "tools" / "_export_pdf.py"),
             str(sla_path), str(pdf_path),
         ],
+        env=env,
     )
+    if not pdf_path.exists():
+        raise RuntimeError(
+            f"render_sla_to_pdf: scribus exited 0 but produced no PDF at {pdf_path}"
+        )
 
 
 def rasterise(pdf_path: Path, prefix: Path, dpi: int) -> list[Path]:
