@@ -92,8 +92,15 @@ class Page:
     is_left: bool = False    # for facing-pages layout
 
     def add(self, item) -> "Page":
-        """Add a primitive or block to this page. Returns self for chaining."""
-        self.items.append(item)
+        """Add a primitive or block to this page. Blocks (anything with an
+        emit() method that yields primitives) are expanded immediately so
+        the per-page item list stays flat for emission. Returns self for
+        chaining."""
+        if hasattr(item, "emit"):
+            for primitive in item.emit():
+                self.items.append(primitive)
+        else:
+            self.items.append(item)
         return self
 
 

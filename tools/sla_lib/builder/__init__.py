@@ -27,6 +27,7 @@ from __future__ import annotations
 from .ci import Color, Style, load_ci
 from .document import Document, Page
 from .primitives import TextFrame, ImageFrame, Polygon, Line, Anchor
+from . import blocks
 
 __all__ = [
     "Document",
@@ -39,4 +40,5 @@ __all__ = [
     "Line",
     "Anchor",
     "load_ci",
+    "blocks",
 ]
