@@ -13,9 +13,9 @@ from sla_lib import SLADocument  # noqa: E402
 from sla_lib.editor import SLAEditor  # noqa: E402
 
 ORIGINALS = [
-    ROOT / "Plakat A1 Hochformat_Vorlage.sla",
-    ROOT / "Postkarte Vorlage.sla",
-    ROOT / "Grüne Zeitung Vorlage Scribus.sla",
+    ROOT / "plakat-a1-hochformat-original.sla",
+    ROOT / "postkarte-vorlage-original.sla",
+    ROOT / "gruene-zeitung-vorlage-original.sla",
 ]
 
 

@@ -84,7 +84,7 @@ class CheckCIAgainstOriginals(unittest.TestCase):
         self.ci = load_ci(ROOT / "shared" / "ci.yml")
 
     def test_postkarte_has_extra_green(self):
-        report = check_sla(ROOT / "Postkarte Vorlage.sla", self.ci)
+        report = check_sla(ROOT / "postkarte-vorlage-original.sla", self.ci)
         extra_colors = [
             i for i in report.issues
             if i.code == "extra-color" and i.detail.get("name") == "Green"
@@ -92,7 +92,7 @@ class CheckCIAgainstOriginals(unittest.TestCase):
         self.assertEqual(len(extra_colors), 1)
 
     def test_zeitung_has_extra_green(self):
-        report = check_sla(ROOT / "Grüne Zeitung Vorlage Scribus.sla", self.ci)
+        report = check_sla(ROOT / "gruene-zeitung-vorlage-original.sla", self.ci)
         extra_colors = [
             i for i in report.issues
             if i.code == "extra-color" and i.detail.get("name") == "Green"
@@ -100,7 +100,7 @@ class CheckCIAgainstOriginals(unittest.TestCase):
         self.assertEqual(len(extra_colors), 1)
 
     def test_plakat_has_no_extra_green(self):
-        report = check_sla(ROOT / "Plakat A1 Hochformat_Vorlage.sla", self.ci)
+        report = check_sla(ROOT / "plakat-a1-hochformat-original.sla", self.ci)
         extra_colors = [
             i for i in report.issues
             if i.code == "extra-color" and i.detail.get("name") == "Green"
