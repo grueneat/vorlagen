@@ -137,6 +137,7 @@ page0.add(ImageFrame(
     h_mm=413.939413,
     layer=0,
     image='',
+    line_width_pt=1,
 ))
 
 page0.add(ImageFrame(
@@ -146,6 +147,7 @@ page0.add(ImageFrame(
     h_mm=133.46549,
     layer=0,
     image='assets/frame_01.png',
+    line_width_pt=1,
     local_scale=(0.978485, 0.978485),
 ))
 
@@ -156,6 +158,7 @@ page0.add(ImageFrame(
     h_mm=107.1,
     layer=0,
     image='assets/frame_02.png',
+    line_width_pt=1,
     local_scale=(0.12432, 0.12432),
 ))
 

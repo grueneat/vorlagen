@@ -85,6 +85,7 @@ page0.add(ImageFrame(
     h_mm=127,
     layer=0,
     image='',
+    line_width_pt=3.835276,
 ))
 
 page0.add(ImageFrame(
@@ -94,6 +95,7 @@ page0.add(ImageFrame(
     h_mm=20.905395,
     layer=0,
     image='assets/frame_01.png',
+    line_width_pt=1,
     local_scale=(0.048533, 0.048533),
 ))
 
@@ -222,6 +224,7 @@ page1.add(ImageFrame(
     corner_radius_mm=1,
     custom_path='M0 2.83465 C0 1.26911 1.26911 0 2.83465 0 L4.25197 0 C5.8175 0 7.08661 1.26911 7.08661 2.83465 L7.08661 4.25197 C7.08661 5.8175 5.8175 7.08661 4.25197 7.08661 L2.83465 7.08661 C1.26911 7.08661 0 5.8175 0 4.25197 L0 2.83465 Z',
     image='assets/frame_02.png',
+    line_width_pt=1,
     local_scale=(0.009981, 0.009981),
 ))
 
@@ -234,6 +237,7 @@ page1.add(ImageFrame(
     corner_radius_mm=1,
     custom_path='M0 2.83465 C0 1.26911 1.26911 0 2.83465 0 L4.25197 0 C5.8175 0 7.08661 1.26911 7.08661 2.83465 L7.08661 4.25197 C7.08661 5.8175 5.8175 7.08661 4.25197 7.08661 L2.83465 7.08661 C1.26911 7.08661 0 5.8175 0 4.25197 L0 2.83465 Z',
     image='assets/frame_03.png',
+    line_width_pt=1,
     local_scale=(0.009981, 0.009981),
 ))
 
@@ -246,6 +250,7 @@ page1.add(ImageFrame(
     corner_radius_mm=0.82422,
     custom_path='M0 2.33637 C0 1.04603 1.04603 0 2.33637 0 L4.75024 0 C6.04058 0 7.08661 1.04603 7.08661 2.33637 L7.08661 4.75024 C7.08661 6.04058 6.04058 7.08661 4.75024 7.08661 L2.33637 7.08661 C1.04603 7.08661 0 6.04058 0 4.75024 L0 2.33637 Z',
     image='assets/frame_04.png',
+    line_width_pt=1,
     local_scale=(0.009981, 0.009981),
 ))
 
@@ -258,6 +263,7 @@ page1.add(ImageFrame(
     corner_radius_mm=1,
     custom_path='M0 2.83465 C0 1.26911 1.26911 0 2.83465 0 L4.25197 0 C5.8175 0 7.08661 1.26911 7.08661 2.83465 L7.08661 4.25197 C7.08661 5.8175 5.8175 7.08661 4.25197 7.08661 L2.83465 7.08661 C1.26911 7.08661 0 5.8175 0 4.25197 L0 2.83465 Z',
     image='assets/frame_05.png',
+    line_width_pt=1,
     local_scale=(0.009981, 0.009981),
 ))
 
@@ -268,6 +274,7 @@ page1.add(ImageFrame(
     h_mm=19.920617,
     layer=0,
     image='assets/frame_06.png',
+    line_width_pt=1,
     local_scale=(0.110289, 0.110289),
 ))
 
@@ -290,6 +297,7 @@ page1.add(ImageFrame(
     h_mm=3.621636,
     layer=0,
     image='assets/frame_07.png',
+    line_width_pt=1,
     local_scale=(0.135884, 0.135884),
 ))
 

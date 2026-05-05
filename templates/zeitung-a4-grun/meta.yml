@@ -13,6 +13,36 @@ description: >
 build:
   script: build.py
   output: template.sla
+
+# Round-trip validation (issue #2)
+original_sla: ../../gruene-zeitung-vorlage-original.sla
+ci_overrides:
+  non_ci_styles:
+    - "Default Paragraph Style"
+    - "[No paragraph style]"
+    - "Titelseite Header"
+    - "Monat/Ausgabe"
+    - "Zustellerhinweis (Post)"
+    - "Impressum"
+    - "Copyright"
+    - "Seitenzahl"
+    - "Fließtext"
+    - "Schrift Störer"
+    - "Inhaltsheadline Titelseite"
+    - "Überschrift weiß"
+    - "Überschrift Dunkelgrün"
+    - "Bildunterschrift weiß"
+    - "Fließtext weiß"
+    - "Fließtext in grünem Kasten"
+    - "Headline in grünem Kasten"
+    - "Zwischenüberschrift"
+    - "Einleitungstext"
+    - "Zwischenüberschrift weiß"
+    - "Zitat weißer Text"
+    - "Zitat grüner Text"
+    - "NormalParagraphStyle"
+  non_ci_colors:
+    - "Green"
 masters:
   - { name: Normal,            description: implicit baseline }
   - { name: rechts-3col,       description: rechte Innenseite mit 3-Spalten-Raster und Footer-Akzent }
