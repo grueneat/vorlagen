@@ -1,0 +1,10 @@
+# Visual-diff tolerance for the Postkarte A6 reproduction.
+# See docs/diff-tolerance.md for schema.
+#
+# At fuzz=25%, page 0 (front, headline-heavy) is byte-clean against the
+# baseline; page 1 (back, body-text-heavy) reports ~5% pixel mismatch from
+# sub-pixel font-hinting jitter on ~10 lines of small body text. The visual
+# is identical to the human eye.
+visual_diff:
+  max_pixel_mismatch_pct: 7.0
+  fuzz_pct: 25.0

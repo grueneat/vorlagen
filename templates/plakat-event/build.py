@@ -16,10 +16,11 @@ doc = Document(
     author='',
     facing_pages=False,
     column_gap_default_pt=11,
-    deffont='Gotham Narrow Book',
+    deffont='Gotham Narrow Black',
     defsize=12,
     first_page_num=1,
     palette_replaces_ci=True,
+    extra_doc_attrs={'ALAYER': '0', 'AUTOL': '100', 'BaseC': '#c0c0c0', 'CPICT': 'None', 'CSPICT': 'None', 'DCOL': '1', 'DGAP': '0', 'DIIm': '0', 'DISc': '1', 'DPIn': 'sRGB display profile (ICC v2.2)', 'DPIn2': 'sRGB display profile (ICC v2.2)', 'DPIn3': 'PSO Uncoated ISO12647 (ECI)', 'DPInCMYK': 'PSO Uncoated ISO12647 (ECI)', 'DPPr': 'PSO Uncoated ISO12647 (ECI)', 'DPSFo': '0', 'DPSo': '0', 'DPbla': '1', 'DPgam': '0', 'DPuse': '1', 'EmbeddedPath': '0', 'EndArrow': '0', 'FirstLineOffset': '1', 'GRAB': '4', 'GUIDELOCK': '0', 'GridType': '0', 'GuideC': '#000080', 'GuideRad': '10', 'HalfRes': '1', 'MAJGRID': '100.001', 'MAJORC': '#00ff00', 'MINGRID': '20.001', 'MINORC': '#00ff00', 'PASPECT': '1', 'PICTSCX': '1', 'PICTSCY': '1', 'PICTSSHADE': '100', 'POLYC': '4', 'POLYCUR': '0', 'POLYF': '0.502', 'POLYIR': '0', 'POLYOCUR': '0', 'POLYR': '0', 'POLYS': '0', 'PRESET': '0', 'PSCALE': '1', 'SHOWBASE': '0', 'SHOWControl': '0', 'SHOWFRAME': '1', 'SHOWGRID': '0', 'SHOWGUIDES': '0', 'SHOWLAYERM': '0', 'SHOWLINK': '0', 'SHOWMARGIN': '0', 'SHOWPICT': '1', 'SUBJECT': '', 'SnapToElement': '0', 'SnapToGrid': '0', 'SnapToGuides': '0', 'StartArrow': '0', 'StrikeThruPos': '-1', 'StrikeThruWidth': '-1', 'StrokeText': 'Black', 'TabFill': '', 'TabWidth': '36', 'TextBackGround': 'None', 'TextBackGroundShade': '100', 'TextDistBottom': '0', 'TextDistLeft': '0', 'TextDistRight': '0', 'TextDistTop': '0', 'TextLineColor': 'None', 'TextLineShade': '100', 'TextPenShade': '100', 'TextStrokeShade': '100', 'UnderlinePos': '-1', 'UnderlineWidth': '-1', 'VHOCH': '33', 'VHOCHSC': '66', 'VKAPIT': '75', 'VTIEF': '33', 'VTIEFSC': '66', 'arcStartAngle': '30', 'arcSweepAngle': '300', 'calligraphicPenAngle': '0', 'calligraphicPenFillColor': 'Black', 'calligraphicPenFillColorShade': '100', 'calligraphicPenLineColor': 'Black', 'calligraphicPenLineColorShade': '100', 'calligraphicPenLineWidth': '1', 'calligraphicPenStyle': '1', 'calligraphicPenWidth': '10', 'constrain': '15', 'dispX': '10.001', 'dispY': '10.001', 'renderStack': '2 0 4 3 1', 'rulerMode': '1', 'rulerXoffset': '0', 'rulerYoffset': '0', 'showcolborders': '1', 'showrulers': '1', 'spiralEndAngle': '1080', 'spiralFactor': '1.2', 'spiralStartAngle': '0'},
     layers=[
         DocumentLayer(name='Hintergrund', visible=True, printable=True, editable=True, flow=True, transparent=1, blend=0, outline=False, layer_color='#000000'),
     ],
@@ -59,6 +60,8 @@ page0.add(TextFrame(
     w_mm=594,
     h_mm=427.060587,
     layer=0,
+    fill='Dunkelgrün',
+    line_width_pt=1,
     col_gap_mm=0,
 ))
 
@@ -68,12 +71,14 @@ page0.add(TextFrame(
     w_mm=491.280275,
     h_mm=244.271193,
     layer=0,
+    line_width_pt=1,
+    trail_style='Headlineweiß',
     col_gap_mm=0,
     runs=[
-        Run(text='Hier steht ', separator='para'),
-        Run(text='ei\xadne gro\xadße ', separator='para'),
-        Run(text='vier\xadzei\xadli\xadge ', separator='para'),
-        Run(text='Ü\xadber\xadschrift ', separator='para'),
+        Run(text='Hier steht ', separator='para', paragraph_style='Headlineweiß'),
+        Run(text='ei\xadne gro\xadße ', separator='para', paragraph_style='Überschrift gelb'),
+        Run(text='vier\xadzei\xadli\xadge ', separator='para', paragraph_style='Headlineweiß'),
+        Run(text='Ü\xadber\xadschrift ', separator='para', paragraph_style='Headlineweiß'),
         Run(text='in Baden.'),
     ],
 ))
@@ -85,6 +90,8 @@ page0.add(TextFrame(
     h_mm=21.0235,
     layer=0,
     rotation_deg=270,
+    line_width_pt=1,
+    trail_style='Impressum',
     col_gap_mm=0,
     runs=[
         Run(text='Impressum:', font='Gotham Narrow Bold', fcolor='White', fshade=100),
@@ -98,6 +105,8 @@ page0.add(TextFrame(
     w_mm=306.776147,
     h_mm=34.488073,
     layer=0,
+    line_width_pt=1,
+    trail_style='Fließtext',
     col_gap_mm=0,
     runs=[
         Run(text='Anmeldung unter: gruene.at/tour'),
@@ -110,9 +119,11 @@ page0.add(TextFrame(
     w_mm=233.027523,
     h_mm=41.797558,
     layer=0,
+    line_width_pt=1,
+    trail_style='Fließtext',
     col_gap_mm=0,
     runs=[
-        Run(text='Freitag, 20. Februar', separator='para'),
+        Run(text='Freitag, 20. Februar', separator='para', paragraph_style='Fließtext'),
         Run(text='18:00 - 21:00'),
     ],
 ))
@@ -123,9 +134,11 @@ page0.add(TextFrame(
     w_mm=235.940367,
     h_mm=41.797558,
     layer=0,
+    line_width_pt=1,
+    trail_style='Fließtext',
     col_gap_mm=0,
     runs=[
-        Run(text='Wirtshaus im Batzenhäusl', separator='para'),
+        Run(text='Wirtshaus im Batzenhäusl', separator='para', paragraph_style='Fließtext'),
         Run(text='Theaterplatz 9, 2500 Baden'),
     ],
 ))
