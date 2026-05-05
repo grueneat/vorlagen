@@ -515,6 +515,218 @@ class StoryTextParagraphDiffTests(unittest.TestCase):
         self.assertEqual(para_issues, [])
 
 
+class StoryTextSequenceDiffTests(unittest.TestCase):
+    """Position-aware StoryText comparator (the diagnostic that catches the
+    `<var name="pgno"/>` AFTER `<para/>` ordering bug PR #4 introduced).
+
+    Each test crafts two storytext shapes whose original/round-tripped output
+    differ in exactly one structural way and asserts the new diagnostic class
+    fires at the expected severity.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def _write(self, name: str, story_xml: str) -> Path:
+        from lxml import etree as _et
+        target = self.tmp / name
+        root = _et.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
+        doc = _et.SubElement(root, "DOCUMENT")
+        doc.set("ANZPAGES", "1"); doc.set("PAGEWIDTH", "297.638")
+        doc.set("PAGEHEIGHT", "419.528")
+        for k in ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight"):
+            doc.set(k, "8.504")
+        page = _et.SubElement(doc, "PAGE"); page.set("NUM", "0")
+        page.set("PAGEXPOS", "100"); page.set("PAGEYPOS", "20")
+        page.set("MNAM", "Normal")
+        m = _et.SubElement(doc, "MASTERPAGE"); m.set("NAM", "Normal")
+        m.set("PAGEXPOS", "500"); m.set("PAGEYPOS", "20")
+        po = _et.SubElement(doc, "PAGEOBJECT")
+        po.set("ItemID", "100"); po.set("PTYPE", "4"); po.set("OwnPage", "0")
+        po.set("XPOS", "150"); po.set("YPOS", "100")
+        po.set("WIDTH", "100"); po.set("HEIGHT", "50"); po.set("FRTYPE", "0")
+        po.append(_et.fromstring(story_xml))
+        _et.ElementTree(root).write(str(target), encoding="UTF-8", xml_declaration=True)
+        return target
+
+    def test_var_after_para_is_critical(self):
+        """The page-number bug fingerprint: original has <var/> before <para/>,
+        rebuilt SLA has <var/> AFTER <para/>. Scribus then attaches the var to
+        a non-existent next paragraph and never renders the page number."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<var name="pgno"/>'
+                                 '<para PARENT="Seitenzahl"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH=""/>'
+                                 '<para PARENT="Seitenzahl"/>'
+                                 '<var name="pgno"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        # Both diagnostics fire: length differs (3 vs 4) and at index 1 the
+        # left says <var/> while the right says <ITEXT/> (spurious empty).
+        self.assertIn("storytext-length-mismatch", codes)
+        self.assertIn("storytext-spurious-empty-itext", codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_storytext_length_mismatch_is_critical(self):
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<ITEXT CH="extra"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        self.assertIn("storytext-length-mismatch", codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_storytext_spurious_empty_itext_is_critical(self):
+        """Detects the converter's old "always seed an ITEXT before the
+        separator" bug — left has var-then-para, right has empty-itext-
+        then-para-then-var."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<var name="pgno"/>'
+                                 '<para PARENT="Seitenzahl"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH=""/>'
+                                 '<para PARENT="Seitenzahl"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        self.assertIn("storytext-spurious-empty-itext", codes)
+        critical = [i for i in report.issues
+                    if i.severity == sd.SEVERITY_CRITICAL
+                    and i.code == "storytext-spurious-empty-itext"]
+        self.assertEqual(len(critical), 1)
+
+    def test_storytext_var_attribute_mismatch(self):
+        """A var name="pgno" vs name="other" must be flagged as a warning
+        (storytext-element-attr-value-mismatch). Same kind, same position,
+        same name attribute presence — only value differs."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<var name="pgno"/>'
+                                 '<para PARENT="P"/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<var name="other"/>'
+                                 '<para PARENT="P"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [(i.code, i.attr) for i in report.issues]
+        self.assertIn(("storytext-element-attr-value-mismatch", "name"), codes)
+
+    def test_storytext_defaultstyle_attribute_missing_is_critical(self):
+        a = self._write("a.sla", '<StoryText><DefaultStyle PARENT="Body"/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [(i.code, i.attr) for i in report.issues]
+        self.assertIn(("storytext-element-attr-missing", "PARENT"), codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_storytext_itext_font_attribute_missing_is_critical(self):
+        """Per-ITEXT FONT override on left, no FONT on right — that's a
+        silent round-trip drop the diff must flag."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x" FONT="Gotham Narrow Bold"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [(i.code, i.attr) for i in report.issues]
+        self.assertIn(("storytext-element-attr-missing", "FONT"), codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_storytext_element_kind_swap_is_critical(self):
+        """Left has <breakline/>, right has <tab/> at same position — both
+        are zero-attribute control elements but they render differently."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<breakline/>'
+                                 '<ITEXT CH="y"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        b = self._write("b.sla", '<StoryText><DefaultStyle/>'
+                                 '<ITEXT CH="x"/>'
+                                 '<tab/>'
+                                 '<ITEXT CH="y"/>'
+                                 '<trail/>'
+                                 '</StoryText>')
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        self.assertIn("storytext-element-kind-mismatch", codes)
+        self.assertGreater(report.summary[sd.SEVERITY_CRITICAL], 0)
+
+    def test_inline_vs_sidecar_image_is_critical(self):
+        """Inline ImageData on one side, PFILE-on-disk on the other is no
+        longer info-level: the qCompress↔PNG round-trip is not byte-clean
+        and pages with inline images render differently than pages with
+        PFILE references."""
+        from lxml import etree as _et
+        # Build two PAGEOBJECT[PTYPE=2]: one inline, one sidecar
+        a = self.tmp / "a.sla"
+        b = self.tmp / "b.sla"
+        for p, inline in ((a, True), (b, False)):
+            root = _et.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
+            doc = _et.SubElement(root, "DOCUMENT")
+            doc.set("ANZPAGES", "1"); doc.set("PAGEWIDTH", "297.638")
+            doc.set("PAGEHEIGHT", "419.528")
+            for k in ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight"):
+                doc.set(k, "8.504")
+            page = _et.SubElement(doc, "PAGE"); page.set("NUM", "0")
+            page.set("PAGEXPOS", "100"); page.set("PAGEYPOS", "20")
+            page.set("MNAM", "Normal")
+            m = _et.SubElement(doc, "MASTERPAGE"); m.set("NAM", "Normal")
+            m.set("PAGEXPOS", "500"); m.set("PAGEYPOS", "20")
+            po = _et.SubElement(doc, "PAGEOBJECT")
+            po.set("ItemID", "100"); po.set("PTYPE", "2"); po.set("OwnPage", "0")
+            po.set("XPOS", "150"); po.set("YPOS", "100")
+            po.set("WIDTH", "100"); po.set("HEIGHT", "50"); po.set("FRTYPE", "0")
+            if inline:
+                # Build a tiny qCompress-wrapped zlib payload of "PNG" bytes
+                payload = b"PNG"
+                qc = len(payload).to_bytes(4, "big") + zlib.compress(payload)
+                po.set("isInlineImage", "1")
+                po.set("inlineImageExt", "png")
+                po.set("ImageData", b64encode(qc).decode("ascii"))
+                po.set("PFILE", "")
+            else:
+                po.set("PFILE", "frame.png")
+                po.set("isInlineImage", "0")
+            _et.ElementTree(root).write(str(p), encoding="UTF-8", xml_declaration=True)
+        report = sd.diff(a, b)
+        codes = [i.code for i in report.issues]
+        self.assertIn("inline-vs-sidecar-image", codes)
+        critical = [i for i in report.issues
+                    if i.severity == sd.SEVERITY_CRITICAL and i.code == "inline-vs-sidecar-image"]
+        self.assertEqual(len(critical), 1)
+
+    def test_identical_var_then_para_clean(self):
+        """Self-diff on the var-then-para shape (the original page-number
+        StoryText) must report zero structural issues."""
+        a = self._write("a.sla", '<StoryText><DefaultStyle/>'
+                                 '<var name="pgno"/>'
+                                 '<para PARENT="Seitenzahl"/>'
+                                 '</StoryText>')
+        report = sd.diff(a, a)
+        seq_issues = [i for i in report.issues if i.code.startswith("storytext-")]
+        self.assertEqual(seq_issues, [])
+
+
 class CLIIntegrationTests(unittest.TestCase):
     """Mirror the gate's manual checks: run sla_diff CLI on each original
     against itself, expect exit 0 and clean summary."""
