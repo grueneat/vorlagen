@@ -507,6 +507,14 @@ def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
             common_kwargs["image"] = po.attrib["PFILE"]
         else:
             common_kwargs["image"] = ""
+        if "PCOLOR" in po.attrib:
+            common_kwargs["fill"] = po.attrib["PCOLOR"]
+        if "PCOLOR2" in po.attrib:
+            common_kwargs["line_color"] = po.attrib["PCOLOR2"]
+        if "PWIDTH" in po.attrib:
+            lw = float(po.attrib["PWIDTH"])
+            if abs(lw) > 1e-6:
+                common_kwargs["line_width_pt"] = lw
         # LOCAL* if non-default
         for src, dst, default in (
             ("LOCALSCX", "lscx", 1.0),
@@ -535,12 +543,14 @@ def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
         # primitive accepts (x1,y1,x2,y2). Reconstructing those from a single
         # rotated frame is a fool's errand, so emit as Polygon(custom_path=)
         # with line_color/line_width — visually equivalent.
-        line_color = po.attrib.get("PCOLOR2", "Black")
-        line_width = float(po.attrib.get("PWIDTH", "0"))
         kwargs = dict(common_kwargs)
         kwargs["fill"] = "None"
-        kwargs["line_color"] = line_color
-        kwargs["line_width_pt"] = line_width
+        if "PCOLOR2" in po.attrib:
+            kwargs["line_color"] = po.attrib["PCOLOR2"]
+        if "PWIDTH" in po.attrib:
+            lw = float(po.attrib["PWIDTH"])
+            if abs(lw) > 1e-6:
+                kwargs["line_width_pt"] = lw
         kwargs["custom_path"] = po.attrib.get("path", "")
         return _emit_polygon(kwargs, anname, safe), safe
 
@@ -548,8 +558,12 @@ def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
         _check_unhandled_attrs(po, ptype, f"ANNAME={anname!r}")
         kwargs = dict(common_kwargs)
         kwargs["fill"] = po.attrib.get("PCOLOR", "Black")
-        kwargs["line_color"] = po.attrib.get("PCOLOR2", "None")
-        kwargs["line_width_pt"] = float(po.attrib.get("PWIDTH", "0"))
+        if "PCOLOR2" in po.attrib:
+            kwargs["line_color"] = po.attrib["PCOLOR2"]
+        if "PWIDTH" in po.attrib:
+            lw = float(po.attrib["PWIDTH"])
+            if abs(lw) > 1e-6:
+                kwargs["line_width_pt"] = lw
         if frtype == "1":
             kwargs["shape"] = "ellipse"
         if "SHADE" in po.attrib:

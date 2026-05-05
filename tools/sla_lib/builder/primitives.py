@@ -347,6 +347,9 @@ class ImageFrame(_Frame):
     scale_type: int = 1       # SCALETYPE
     ratio: int = 1            # RATIO
     pic_art: int = 1          # PICART (1=visible)
+    fill: Optional[str] = None        # PCOLOR (frame background fill)
+    line_color: Optional[str] = None  # PCOLOR2 (frame border)
+    line_width_pt: float = 0          # PWIDTH
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
@@ -361,7 +364,8 @@ class ImageFrame(_Frame):
             "ItemID": str(idgen.next()),
             "PTYPE": "2",
             "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "CLIPEDIT": "0", "PWIDTH": "0",
+            "CLIPEDIT": "0",
+            "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1",
             "LOCALSCX": _fmt_num(scx), "LOCALSCY": _fmt_num(scy),
             "LOCALX": _fmt_num(mm_to_pt(lx_mm)), "LOCALY": _fmt_num(mm_to_pt(ly_mm)),
@@ -378,6 +382,10 @@ class ImageFrame(_Frame):
             "NEXTITEM": "-1", "BACKITEM": "-1",
             "ROT": f"{self.rotation_deg:.6f}",
         }
+        if self.fill is not None:
+            attrs["PCOLOR"] = self.fill
+        if self.line_color is not None:
+            attrs["PCOLOR2"] = self.line_color
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=rect_path, default_frtype="0")
         _apply_soft_shadow(attrs, self.soft_shadow)
@@ -391,12 +399,12 @@ class ImageFrame(_Frame):
 # ---------------------------------------------------------------------------
 @dataclass
 class Polygon(_Frame):
-    fill: str = "Black"           # color name from Color enum
-    line_color: str = "None"
+    fill: str = "Black"               # color name from Color enum, mapped to PCOLOR
+    line_color: Optional[str] = None  # PCOLOR2 (default omitted, matches originals)
     line_width_pt: float = 0
-    layer: int = 0                # default Hintergrund
-    shape: str = "rectangle"      # 'rectangle' | 'ellipse'
-    fill_shade: int = 100         # SHADE — emitted when != 100
+    layer: int = 0                    # default Hintergrund
+    shape: str = "rectangle"          # 'rectangle' | 'ellipse'
+    fill_shade: int = 100             # SHADE — emitted when != 100
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
@@ -415,7 +423,6 @@ class Polygon(_Frame):
             "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
             "CLIPEDIT": "0",
             "PCOLOR": self.fill,
-            "PCOLOR2": self.line_color,
             "PWIDTH": f"{self.line_width_pt:.6f}",
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
@@ -429,6 +436,8 @@ class Polygon(_Frame):
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=default_path, default_frtype=default_frtype)
         _apply_soft_shadow(attrs, self.soft_shadow)
+        if self.line_color is not None:
+            attrs["PCOLOR2"] = self.line_color
         if self.fill_shade != 100:
             attrs["SHADE"] = str(self.fill_shade)
         if self.anname:

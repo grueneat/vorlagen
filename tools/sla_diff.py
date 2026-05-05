@@ -526,15 +526,30 @@ def _chain_topology(doc: etree._Element) -> list[list[etree._Element]]:
 
 
 def _chain_hash(chain: list[etree._Element]) -> str:
+    """Return a stable hash of a chain's geometry.
+
+    Coordinates are rounded to 3 decimals (≈ 1 micrometer; far below the 0.5pt
+    drift threshold) so converter mm→pt round-trip noise (which can shift a
+    coordinate by ~2 microns at A4 dimensions) doesn't trigger a false-positive
+    chain mismatch."""
     h = hashlib.sha256()
     for el in chain:
-        tup = (
-            el.attrib.get("OwnPage", ""),
-            el.attrib.get("XPOS", ""),
-            el.attrib.get("YPOS", ""),
-            el.attrib.get("WIDTH", ""),
-            el.attrib.get("HEIGHT", ""),
-        )
+        try:
+            tup = (
+                int(el.attrib.get("OwnPage", "-1")),
+                round(float(el.attrib.get("XPOS", "0")), 3),
+                round(float(el.attrib.get("YPOS", "0")), 3),
+                round(float(el.attrib.get("WIDTH", "0")), 3),
+                round(float(el.attrib.get("HEIGHT", "0")), 3),
+            )
+        except ValueError:
+            tup = (
+                el.attrib.get("OwnPage", ""),
+                el.attrib.get("XPOS", ""),
+                el.attrib.get("YPOS", ""),
+                el.attrib.get("WIDTH", ""),
+                el.attrib.get("HEIGHT", ""),
+            )
         h.update(repr(tup).encode("utf-8"))
         h.update(b"|")
     return h.hexdigest()

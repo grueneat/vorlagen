@@ -119,5 +119,29 @@ class PlakatRoundTrip(unittest.TestCase):
         self.assertIn(b"\xc3\x9c\xc2\xadber\xc2\xadschrift", b)
 
 
+class ZeitungRoundTrip(unittest.TestCase):
+    """Zeitung reproduction: 14 pages, 140 frames, 14 linked chains, 23 styles,
+    12 var pgno, 86 FRTYPE=3 paths, 6 inline images, 2 master pages, facing-pages."""
+
+    TEMPLATE_DIR = ROOT / "templates" / "zeitung-a4-grun"
+    ORIGINAL = ROOT / "gruene-zeitung-vorlage-original.sla"
+
+    def test_diff_against_original_clean(self):
+        sla = _run_build(self.TEMPLATE_DIR / "build.py")
+        report = _diff_clean(self.ORIGINAL, sla)
+        self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
+                         msg=f"critical: {[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_CRITICAL]}")
+        self.assertEqual(report.summary[sla_diff.SEVERITY_WARNING], 0,
+                         msg=f"warning: {[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_WARNING]}")
+
+    def test_chain_topology_intact(self):
+        sla = _run_build(self.TEMPLATE_DIR / "build.py")
+        report = _diff_clean(self.ORIGINAL, sla)
+        chain_issues = [i for i in report.issues
+                        if i.code.startswith("chain-")]
+        self.assertEqual(chain_issues, [],
+                         msg=f"chain issues: {[i.short() for i in chain_issues]}")
+
+
 if __name__ == "__main__":
     unittest.main()
