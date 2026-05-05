@@ -9,10 +9,15 @@ Strict mode (D6): the converter raises ``UnhandledElement`` on any element
 or attribute it doesn't know how to translate. Better to fail loudly than
 silently emit a build.py that renders something subtly different.
 
-Inline images: extracted to sidecar PNG files under
-``<assets-dir>/<safe_anname>_<idx>.<ext>``; emitted as ``ImageFrame(image=...)``.
-The qCompress wrapper (4-byte big-endian length prefix + zlib stream) is
-stripped during extraction.
+Inline images: round-tripped VERBATIM. The original PAGEOBJECT carries
+``isInlineImage="1"`` plus an ``ImageData="<base64-of-qCompress-zlib-stream>"``
+attribute; the converter captures that base64 string as-is and the DSL
+emitter writes it back into the rebuilt SLA unchanged. We NEVER decode →
+re-encode through PNG-on-disk: that round-trip is not byte-clean (Scribus's
+qCompress wrapper writes ImageData with platform-dependent compression
+parameters that don't survive a roundtrip through Pillow / libpng) and
+the rendered PDF for pages with inline-image frames showed 3-15× more
+pixel mismatch than non-image pages.
 
 Usage:
     python3 tools/sla_to_dsl.py \\
@@ -26,11 +31,8 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-import textwrap
-from base64 import b64decode
 from pathlib import Path
 from typing import Optional
-import zlib
 
 import yaml
 from lxml import etree
@@ -40,7 +42,11 @@ _THIS = Path(__file__).resolve()
 sys.path.insert(0, str(_THIS.parent))
 
 from sla_lib import SLADocument  # noqa: E402
-from sla_lib.builder.primitives import PARAGRAPH_OVERRIDE_ATTRS as _PARA_OVERRIDE_ATTRS  # noqa: E402
+from sla_lib.builder.primitives import (  # noqa: E402
+    PARAGRAPH_OVERRIDE_ATTRS as _PARA_OVERRIDE_ATTRS,
+    DEFAULTSTYLE_OVERRIDE_ATTRS as _DEFAULTSTYLE_OVERRIDE_ATTRS,
+    VAR_OVERRIDE_ATTRS as _VAR_OVERRIDE_ATTRS,
+)
 
 ROOT = _THIS.parent.parent
 CI_YAML = ROOT / "shared" / "ci.yml"
@@ -96,18 +102,23 @@ class PythonRepr:
 
 
 def _py_value(v) -> str:
-    """Format a Python literal the way Black would."""
+    """Format a Python literal the way Black would.
+
+    Floats use ``repr()`` so the emitted build.py is round-trip-stable: a
+    LOCALSCX of ``0.0438778076573352`` round-trips to the same string and
+    back to the same float on rebuild. Truncating to 6 decimals (the old
+    behaviour) caused per-axis scaling drift on round-tripped inline image
+    frames — visible as 1-2 px shifts at logo edges in the rendered PDF.
+    """
     if v is None:
         return "None"
     if isinstance(v, bool):
         return "True" if v else "False"
     if isinstance(v, (int, float)):
-        # Avoid scientific notation for ints; trim trailing zeros for floats
         if isinstance(v, float) and v.is_integer():
             return str(int(v))
         if isinstance(v, float):
-            s = f"{v:.6f}".rstrip("0").rstrip(".")
-            return s if s else "0"
+            return repr(v)
         return str(v)
     if isinstance(v, str):
         # Use a repr that prefers double quotes when no double quotes inside.
@@ -128,24 +139,20 @@ def _kwarg(name: str, value) -> str:
 
 
 # ---------------------------------------------------------------------------
-def _extract_inline_image(elem: etree._Element, assets_dir: Path,
-                           safe_anname: str, idx_counter: list[int]) -> str:
-    """Decode an inline image (qCompress + base64 + PNG/etc.) to a sidecar
-    file under ``assets_dir`` and return the relative path written into
-    ``ImageFrame(image=...)``."""
+def _capture_inline_image(elem: etree._Element) -> tuple[str, str]:
+    """Return ``(base64_image_data, ext)`` for an inline-image PAGEOBJECT.
+
+    The Scribus PAGEOBJECT carries ``ImageData`` as a base64-encoded
+    qCompress payload (4-byte big-endian uncompressed length prefix + zlib
+    stream around the original PNG/JPEG bytes). We do NOT decode it: the
+    DSL stores the verbatim base64 string and emits it back unchanged so
+    the rebuilt SLA is byte-identical to the original at this attribute.
+    """
     blob = elem.attrib.get("ImageData", "")
     ext = elem.attrib.get("inlineImageExt", "png")
-    raw = b64decode(blob)
-    if len(raw) < 4:
-        raise UnhandledElement("ImageData too short to contain qCompress prefix")
-    # qCompress: 4-byte big-endian uncompressed length + zlib stream
-    decompressed = zlib.decompress(raw[4:])
-    assets_dir.mkdir(parents=True, exist_ok=True)
-    idx_counter[0] += 1
-    name = f"{safe_anname}_{idx_counter[0]:02d}.{ext}"
-    out = assets_dir / name
-    out.write_bytes(decompressed)
-    return f"assets/{name}"
+    if not blob:
+        raise UnhandledElement("isInlineImage=1 PAGEOBJECT has empty ImageData")
+    return blob, ext
 
 
 # ---------------------------------------------------------------------------
@@ -394,22 +401,68 @@ ITEXT_ATTR_HANDLED = (set(ITEXT_ATTR_MAP_STR) | set(ITEXT_ATTR_MAP_FLOAT)
 
 
 def _build_runs(story_elem: etree._Element) -> list[dict]:
-    """Walk a StoryText and return a list of Run kwarg dicts.
+    """Walk a StoryText and return a list of Run kwarg dicts that round-trip
+    the element sequence verbatim.
 
-    Separators (para/breakline/tab/breakcol/breakframe) attach to the
-    *preceding* run; <var name="pgno"/> attaches to the preceding run. A
-    dangling <var/>/<para/>/etc. with no prior ITEXT becomes a zero-text Run.
+    Each Run emits, in order: optional ITEXT → optional var → optional
+    separator. The walker tracks whether the run "owns" an ITEXT (via
+    ``has_itext``) so consecutive control elements (``<para/><para/>``,
+    ``<para/><breakline/>``, ``<var/><para/>``) do NOT inject a phantom
+    ``<ITEXT CH=""/>`` on the rebuilt side. A spurious empty ITEXT is the
+    fingerprint of the previous merging walker — it caused page-numbers to
+    disappear (var attached to a non-existent next paragraph), bullet
+    listicles to drift, and headings to grow an extra empty line.
+
+    Mapping rules:
+
+    - ``<DefaultStyle .../>``: handled at the frame level (TextFrame.style
+      / TextFrame.default_style_attrs). The walker skips it here.
+    - ``<ITEXT CH="..." .../>``: starts a new Run with ``has_itext=True``
+      and per-run formatting attributes; closes any pending Run first.
+    - ``<para/>``: attaches a separator to the current Run (if it has
+      space — i.e. has_itext True OR no separator yet OR var still
+      pending). Otherwise opens a new Run with ``has_itext=False`` and
+      attaches the separator there. PARENT becomes paragraph_style; ALIGN/
+      LINESP/LINESPMode become paragraph_attrs.
+    - ``<breakline/> / <tab/> / <breakcol/> / <breakframe/>``: same
+      separator slot semantics as <para/> minus the PARENT/attrs handling.
+    - ``<var name="..."/>``: attaches to the current Run via the ``var``
+      slot. If the current Run already has a ``var`` set or a separator,
+      a fresh Run with ``has_itext=False`` opens.
+    - ``<trail/>``: terminator; emitter regenerates it from the trailing
+      run state.
     """
     runs: list[dict] = []
     cur: Optional[dict] = None
+
+    def _flush() -> None:
+        nonlocal cur
+        if cur is not None:
+            runs.append(cur)
+            cur = None
+
+    def _ensure_open(*, has_itext: bool) -> None:
+        """Make sure ``cur`` is an open run with the right has_itext flag.
+
+        If ``cur`` is None, open a fresh run with the requested flag. If
+        ``cur`` already exists with a *different* has_itext, leave it alone
+        (the new fragment will overwrite the existing slot, and since we
+        only call _ensure_open(has_itext=False) just before assigning a
+        slot that's currently empty, the existing run still serves).
+        """
+        nonlocal cur
+        if cur is None:
+            cur = {"text": "", "has_itext": has_itext}
+
     for child in story_elem:
         tag = child.tag
         if tag == "DefaultStyle":
-            continue  # handled at the frame level via TextFrame.style
+            # Handled at the frame level (see _convert_pageobject), not here.
+            continue
         if tag == "ITEXT":
-            if cur is not None:
-                runs.append(cur)
-            cur = {"text": child.attrib.get("CH", "")}
+            # Always start a new ITEXT-owning run; flush any pending segment.
+            _flush()
+            cur = {"text": child.attrib.get("CH", ""), "has_itext": True}
             for src, dst in ITEXT_ATTR_MAP_STR.items():
                 if src in child.attrib:
                     cur[dst] = child.attrib[src]
@@ -423,28 +476,13 @@ def _build_runs(story_elem: etree._Element) -> list[dict]:
                 if k not in ITEXT_ATTR_HANDLED:
                     raise UnhandledElement(f"ITEXT carries unhandled attribute {k!r}")
         elif tag in ("para", "breakline", "tab", "breakcol", "breakframe"):
-            # If the current run already has a separator, this is a
-            # consecutive control-element sequence (e.g. two <para/> in a
-            # row, which encodes an empty paragraph used as vertical
-            # spacing). Push the current run and start a fresh empty run
-            # so the new separator is not silently merged into the
-            # previous one — that loses the empty paragraph and causes
-            # body text to drift up by ~1 line per missing empty para.
-            if cur is None:
-                cur = {"text": ""}
-            elif cur.get("separator") is not None:
-                runs.append(cur)
-                cur = {"text": ""}
+            # If the current run already has a separator, the new separator
+            # belongs to a fresh, ITEXT-less run (encoding empty-paragraph
+            # vertical spacing or a bullet-list line break).
+            if cur is None or cur.get("separator") is not None:
+                _flush()
+                _ensure_open(has_itext=False)
             cur["separator"] = tag
-            # The <para/> element may carry PARENT="<paragraph style>" plus
-            # per-paragraph attribute overrides (ALIGN, LINESP, LINESPMode)
-            # that override the named style for this paragraph only. PARENT
-            # is the existing paragraph_style field; the rest are captured
-            # into paragraph_attrs and re-emitted by the DSL builder. Per
-            # CONTEXT.md D6 we raise on any attribute that has no typed
-            # representation rather than silently dropping it (which is the
-            # bug PR #3 had: ALIGN="0" overrides on Headlines were dropped,
-            # centering lines that should have been left-aligned).
             if tag == "para":
                 handled = {"PARENT"} | _PARA_OVERRIDE_ATTRS
                 for k in child.attrib.keys():
@@ -462,25 +500,52 @@ def _build_runs(story_elem: etree._Element) -> list[dict]:
                     cur["paragraph_attrs"] = overrides
         elif tag == "var":
             varname = child.attrib.get("name")
-            if cur is None:
-                cur = {"text": ""}
+            # var attaches to the current run UNLESS the current run already
+            # has a var (consecutive var emission) or a separator (var must
+            # come BEFORE the separator that ends its paragraph). In those
+            # cases open a fresh, ITEXT-less run.
+            if cur is None or cur.get("var") is not None or cur.get("separator") is not None:
+                _flush()
+                _ensure_open(has_itext=False)
             cur["var"] = varname
+            handled_var = {"name"} | _VAR_OVERRIDE_ATTRS
+            for k in child.attrib.keys():
+                if k not in handled_var:
+                    raise UnhandledElement(
+                        f"<var> carries unhandled attribute {k!r}={child.attrib[k]!r}; "
+                        f"extend VAR_OVERRIDE_ATTRS in tools/sla_lib/builder/primitives.py"
+                    )
+            var_overrides = {k: v for k, v in child.attrib.items()
+                              if k in _VAR_OVERRIDE_ATTRS}
+            if var_overrides:
+                cur["var_attrs"] = var_overrides
         elif tag == "trail":
-            # Terminator; the DSL emitter regenerates it.
+            # Terminator; the DSL emitter regenerates it from frame-level
+            # trail_style/trail_attrs (set in _convert_pageobject).
             continue
         else:
             raise UnhandledElement(f"StoryText element {tag!r}")
-    if cur is not None:
-        runs.append(cur)
+    _flush()
+
+    # Strip the redundant `has_itext=True` default from emitted run kwargs so
+    # the resulting build.py is the same as before for the common case
+    # (text-bearing runs). Only the new ``has_itext=False`` discriminator
+    # surfaces, marking the bare-control-element runs.
+    for r in runs:
+        if r.get("has_itext", True) is True:
+            r.pop("has_itext", None)
     return runs
 
 
 # ---------------------------------------------------------------------------
-def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
-                         assets_dir: Path,
-                         inline_idx: list[int]) -> tuple[str, str]:
+def _convert_pageobject(po: etree._Element,
+                         page_origin_pt: tuple[float, float]) -> tuple[str, str]:
     """Translate a PAGEOBJECT to a Python expression. Returns
-    (code_str, var_name_or_empty). The var_name is used by chain emission."""
+    (code_str, var_name_or_empty). The var_name is used by chain emission.
+
+    Inline images are captured verbatim into ``ImageFrame(inline_image_data=
+    <base64>, inline_image_ext=<ext>)``; no sidecar PNG is written.
+    """
     ptype = po.attrib.get("PTYPE", "")
     frtype = po.attrib.get("FRTYPE", "0")
     anname = po.attrib.get("ANNAME", "")
@@ -530,6 +595,25 @@ def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
                     text_kwargs["style"] = ds.attrib["PARENT"]
                 if "LINESPMode" in ds.attrib:
                     text_kwargs["default_linesp_mode"] = int(ds.attrib["LINESPMode"])
+                # Capture every DefaultStyle attribute beyond PARENT/LINESPMode
+                # (already mapped to dedicated kwargs). Originals like the
+                # Zeitung Titelseite hero frame carry ``ALIGN="1" FONT="..."
+                # FONTSIZE="30" FCOLOR="White"`` here; the previous walker
+                # silently dropped them and the rebuilt SLA used the default
+                # PARENT style's font/size/color/alignment instead.
+                handled_ds = {"PARENT", "LINESPMode"} | _DEFAULTSTYLE_OVERRIDE_ATTRS
+                for k in ds.attrib.keys():
+                    if k not in handled_ds:
+                        raise UnhandledElement(
+                            f"<DefaultStyle> carries unhandled attribute "
+                            f"{k!r}={ds.attrib[k]!r}; extend "
+                            f"DEFAULTSTYLE_OVERRIDE_ATTRS in tools/sla_lib/builder/primitives.py"
+                        )
+                ds_overrides = {k: v for k, v in ds.attrib.items()
+                                 if k in _DEFAULTSTYLE_OVERRIDE_ATTRS
+                                 and k != "LINESPMode"}
+                if ds_overrides:
+                    text_kwargs["default_style_attrs"] = ds_overrides
             tr = story.find("trail")
             if tr is not None:
                 # Strict-mode: the trail can carry PARENT plus the same
@@ -566,12 +650,37 @@ def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
     if ptype == "2":  # ImageFrame
         _check_unhandled_attrs(po, ptype, f"ANNAME={anname!r}")
         if po.attrib.get("isInlineImage") == "1":
-            rel = _extract_inline_image(po, assets_dir, safe, inline_idx)
-            common_kwargs["image"] = rel
+            blob, ext = _capture_inline_image(po)
+            common_kwargs["inline_image_data"] = blob
+            common_kwargs["inline_image_ext"] = ext
+            common_kwargs["image"] = ""
         elif po.attrib.get("PFILE"):
             common_kwargs["image"] = po.attrib["PFILE"]
         else:
             common_kwargs["image"] = ""
+        # SCALETYPE controls image fit: 0=free / manual local-scale, 1=
+        # fit-to-frame. Originals mix both; the DSL default is 1 (fit). When
+        # the original explicitly sets 0, the rebuild must do the same — a
+        # different SCALETYPE causes the image to render at a different size
+        # inside the frame.
+        if "SCALETYPE" in po.attrib:
+            scale_type = int(po.attrib["SCALETYPE"])
+            if scale_type != 1:
+                common_kwargs["scale_type"] = scale_type
+        # RATIO=1 keeps aspect ratio; 0 stretches independently. Originals
+        # mostly carry 1; capture explicitly to round-trip the rare 0.
+        if "RATIO" in po.attrib:
+            ratio = int(po.attrib["RATIO"])
+            if ratio != 1:
+                common_kwargs["ratio"] = ratio
+        # Pagenumber on image frames references another doc page used as the
+        # image source (rare; default 0 = none). Originals carry 0
+        # explicitly; emit it on the rebuilt SLA via extra_attrs to keep
+        # byte-equivalence on this attribute.
+        if "PICART" in po.attrib:
+            pa = int(po.attrib["PICART"])
+            if pa != 1:
+                common_kwargs["pic_art"] = pa
         if "PCOLOR" in po.attrib:
             common_kwargs["fill"] = po.attrib["PCOLOR"]
         if "PCOLOR2" in po.attrib:
@@ -706,6 +815,15 @@ def _detect_chains(pos: list[etree._Element]) -> list[list[int]]:
 # ---------------------------------------------------------------------------
 def convert(sla_path: Path, out_path: Path, template_id: str,
              assets_dir: Path) -> None:
+    """Convert ``sla_path`` to ``out_path/build.py``.
+
+    ``assets_dir`` is retained for API compatibility but no longer used by
+    the converter itself: inline images are now round-tripped verbatim
+    (``ImageFrame(inline_image_data=...)``), not extracted to sidecar PNGs.
+    The directory is left untouched; callers may delete pre-existing
+    sidecars after this converter runs.
+    """
+    del assets_dir  # no longer used
     sla = SLADocument(sla_path)
     doc_elem = sla.doc
 
@@ -834,6 +952,8 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         f'    first_page_num={first_page_num},',
         f'    palette_replaces_ci=True,',
         f'    hcms={hcms},',
+        f'    doc_page_width_pt={_py_value(page_w_pt)},',
+        f'    doc_page_height_pt={_py_value(page_h_pt)},',
     ]
     if extras:
         # Sort for stable output across runs
@@ -897,14 +1017,12 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
     master_origin: dict[str, tuple[float, float]] = {}
     for m in sla.iter_masters():
         nam = m.attrib.get("NAM", "Normal")
-        master_origin[nam] = (
-            float(m.attrib.get("PAGEXPOS", "0")),
-            float(m.attrib.get("PAGEYPOS", "0")),
-        )
-        size_pt = (
-            float(m.attrib.get("PAGEWIDTH", page_w_pt)) / PT_PER_MM,
-            float(m.attrib.get("PAGEHEIGHT", page_h_pt)) / PT_PER_MM,
-        )
+        master_pagexpos = float(m.attrib.get("PAGEXPOS", "0"))
+        master_pageypos = float(m.attrib.get("PAGEYPOS", "0"))
+        master_origin[nam] = (master_pagexpos, master_pageypos)
+        m_w_pt = float(m.attrib.get("PAGEWIDTH", page_w_pt))
+        m_h_pt = float(m.attrib.get("PAGEHEIGHT", page_h_pt))
+        size_pt = (m_w_pt / PT_PER_MM, m_h_pt / PT_PER_MM)
         master_margins = (
             float(m.attrib.get("BORDERLEFT", "0")) / PT_PER_MM,
             float(m.attrib.get("BORDERRIGHT", "0")) / PT_PER_MM,
@@ -915,12 +1033,21 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         # Skip the auto-injected "Normal" master if it's empty AND we're the only
         # master AND not declared in the original. We DO want to round-trip
         # masters present in the original.
+        # Pass PAGEXPOS/PAGEYPOS/width_pt/height_pt explicitly so the rebuilt
+        # master sits at the same scratch-canvas coordinate as the original
+        # — without these, the DSL's auto-computed offset rounds away the
+        # ScratchLeft+PAGEWIDTH precision the original carries (e.g. 100.000629
+        # + 595.275590551 vs the DSL's 100.0 + mm_to_pt(210)).
         code.line(f'doc.add_master(')
         code.line(f'    name={_py_value(nam)},')
         code.line(f'    size={_py_value(size_pt)},')
         code.line(f'    bleed_mm={_py_value(bleed_t / PT_PER_MM)},')
         code.line(f'    margins_mm={_py_value(master_margins)},')
         code.line(f'    facing={_py_value("left" if is_left else "right")},')
+        code.line(f'    page_xpos_pt={_py_value(master_pagexpos)},')
+        code.line(f'    page_ypos_pt={_py_value(master_pageypos)},')
+        code.line(f'    width_pt={_py_value(m_w_pt)},')
+        code.line(f'    height_pt={_py_value(m_h_pt)},')
         code.line(f')')
 
     if list(sla.iter_masters()):
@@ -931,14 +1058,12 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
     page_var_names: list[str] = []
     for idx, p in enumerate(sla.iter_pages()):
         num = int(p.attrib.get("NUM", str(idx)))
-        page_origin_by_num[num] = (
-            float(p.attrib.get("PAGEXPOS", "0")),
-            float(p.attrib.get("PAGEYPOS", "0")),
-        )
-        page_size_pt = (
-            float(p.attrib.get("PAGEWIDTH", page_w_pt)) / PT_PER_MM,
-            float(p.attrib.get("PAGEHEIGHT", page_h_pt)) / PT_PER_MM,
-        )
+        p_xpos = float(p.attrib.get("PAGEXPOS", "0"))
+        p_ypos = float(p.attrib.get("PAGEYPOS", "0"))
+        page_origin_by_num[num] = (p_xpos, p_ypos)
+        p_w_pt = float(p.attrib.get("PAGEWIDTH", page_w_pt))
+        p_h_pt = float(p.attrib.get("PAGEHEIGHT", page_h_pt))
+        page_size_pt = (p_w_pt / PT_PER_MM, p_h_pt / PT_PER_MM)
         mnam = p.attrib.get("MNAM", "Normal")
         margins_mm = (
             float(p.attrib.get("BORDERLEFT", "0")) / PT_PER_MM,
@@ -948,11 +1073,19 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         )
         var = f"page{idx}"
         page_var_names.append(var)
+        # Pass PAGEXPOS/PAGEYPOS/width_pt/height_pt explicitly so the rebuilt
+        # page sits at the same scratch-canvas coordinate as the original
+        # (so frame XPOS/YPOS round-trip with original precision instead of
+        # picking up the SCRATCH_LEFT+w_pt mm-rounded approximation).
         code.line(f'{var} = doc.add_page(')
         code.line(f'    size={_py_value(page_size_pt)},')
         code.line(f'    bleed_mm={_py_value(bleed_t / PT_PER_MM)},')
         code.line(f'    margins_mm={_py_value(margins_mm)},')
         code.line(f'    master={_py_value(mnam)},')
+        code.line(f'    page_xpos_pt={_py_value(p_xpos)},')
+        code.line(f'    page_ypos_pt={_py_value(p_ypos)},')
+        code.line(f'    width_pt={_py_value(p_w_pt)},')
+        code.line(f'    height_pt={_py_value(p_h_pt)},')
         code.line(f')')
     code.line("")
 
@@ -976,7 +1109,6 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         for posn, idx in enumerate(chain):
             chain_member[idx] = (cid, posn)
 
-    inline_idx = [0]
     item_var_for_idx: dict[int, str] = {}
 
     for own_page, indices in sorted(by_page.items()):
@@ -986,7 +1118,7 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         po_origin = page_origin_by_num.get(own_page, (0.0, 0.0))
         for i in indices:
             po = pos[i]
-            code_str, _ = _convert_pageobject(po, po_origin, assets_dir, inline_idx)
+            code_str, _ = _convert_pageobject(po, po_origin)
             ptype = po.attrib.get("PTYPE", "")
             anname = po.attrib.get("ANNAME", "")
             if i in chain_member and ptype == "4":
