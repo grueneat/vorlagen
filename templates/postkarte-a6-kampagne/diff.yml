@@ -1,10 +1,12 @@
 # Visual-diff tolerance for the Postkarte A6 reproduction.
 # See docs/diff-tolerance.md for schema.
 #
-# At fuzz=25%, page 0 (front, headline-heavy) is byte-clean against the
-# baseline; page 1 (back, body-text-heavy) reports ~5% pixel mismatch from
-# sub-pixel font-hinting jitter on ~10 lines of small body text. The visual
-# is identical to the human eye.
+# 2-page A6 postcard. After honouring HCMS=1 + ICC profile state and the
+# consecutive-empty-paragraph round-trip fix in the converter, both pages
+# render byte-clean (~0.0001% mismatch) against the baseline. No per-page
+# overrides needed.
+#
+# fuzz_pct=5 is the project-wide cap (issue prompt: "max fuzz is 5%").
 visual_diff:
-  max_pixel_mismatch_pct: 7.0
-  fuzz_pct: 25.0
+  max_pixel_mismatch_pct: 1.0
+  fuzz_pct: 5.0
