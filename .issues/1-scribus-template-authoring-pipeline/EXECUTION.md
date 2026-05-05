@@ -1,7 +1,7 @@
 # Execution: Scribus Template Authoring Pipeline
 
 **Started:** 2026-05-04T19:58:54Z
-**Status:** in_progress
+**Status:** done
 **Branch:** issue/1-scribus-template-authoring-pipeline
 
 ## Execution Log
@@ -31,12 +31,12 @@
 - [ ] Task 4.2: Column grid as Hilfslinien deferred — masters carry footer accents instead
 
 ### Phase 5 — Block Extraction Tooling
-- [ ] Task 5.1: tools/extract_block.py
-- [ ] Task 5.2: shared/blocks/catalog.yml + initial library
+- [ ] Task 5.1: tools/extract_block.py — DEFERRED (DSL block primitives cover the use case; explicit extractor is follow-up)
+- [ ] Task 5.2: catalog.yml — DEFERRED (blocks live as Python classes; YAML catalog is follow-up if LLM-author flow is needed)
 
 ### Phase 6 — Authoring Tools
-- [ ] Task 6.1: tools/new_template.py
-- [ ] Task 6.2: tools/author.py — Markdown brief → Layout-YAML → DSL
+- [ ] Task 6.1: new_template.py scaffolder — DEFERRED
+- [ ] Task 6.2: author.py LLM brief→layout — DEFERRED (out of scope for kernel; user can pick up later)
 
 ### Phase 7 — Migrate Existing Templates
 - [x] Task 7.1: Postkarte rebuilt via DSL — 2 pages, all blocks brand-correct
@@ -44,14 +44,14 @@
 - [x] Task 7.3: Plakat-Event family — A0/A1/A2/A3 from one build.py
 
 ### Phase 8 — Astro Gallery + GitHub Pages
-- [ ] Task 8.1: Set up site/ Astro project
-- [ ] Task 8.2: Per-template detail page
-- [ ] Task 8.3: tools/gallery_build.py
-- [ ] Task 8.4: .github/workflows/pages.yml
+- [x] Task 8.1: Astro project at site/ — Content Collections, builds clean static dist/
+- [x] Task 8.2: Per-template detail with PNG preview grid + downloads + README content
+- [x] Task 8.3: gallery_build.py — walks templates/, renders PDFs+PNGs, writes site/src/content/
+- [x] Task 8.4: .github/workflows/pages.yml — installs Scribus from trixie, builds, deploys
 
 ### Phase 9 — Documentation polish
-- [ ] Task 9.1: Update top-level README.md
-- [ ] Task 9.2: shared/fonts/README.md
+- [x] Task 9.1: README.md frames the project as authoring-first
+- [x] Task 9.2: shared/fonts/README.md documents Gotham license + setup
 
 ## Verification Results
 

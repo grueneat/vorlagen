@@ -1,61 +1,114 @@
-# Grüne Vorlagen — Scribus Template Pipeline
+# Grüne Vorlagen — Scribus Template Authoring System
 
-Versionierte Scribus-Vorlagen für Plakate, Postkarten und Zeitungen, mit Pipeline für Variantenerzeugung, Quality-Gates und Distribution.
+Versionierte, brand-konsistente Skelett-Vorlagen für Postkarten, Plakate und Zeitungen der Grünen NÖ. Andere Gruppierungen laden sie aus der **GitHub Pages Galerie**, öffnen sie in **Scribus**, passen Inhalte an und drucken.
 
-## Stack
-
-- **Renderer:** Scribus 1.6.x in Docker (Headless via Xvfb)
-- **Edit:** Direkter SLA-XML-Edit mit `lxml`, Slot-Konvention via `ANNAME`
-- **Variants:** `templates/<id>/samples/<variant>.json` → gefüllte SLA → PDF
-- **QA:** `veraPDF` + `pdfcpu` Preflight, `odiff`/`dssim` Visual-Diff vs. golden master
-- **Distribution:** Astro auf GitHub Pages (oder Cloudflare Pages + Access)
-
-## Layout
+## Was steckt drin
 
 ```
-templates/<id>/
-├── template.sla       # Master, im GUI editierbar
-├── meta.yml           # Slot-Schema, Tags, Versions-Info
-├── samples/*.json     # Beispieldaten → werden in CI gerendert
-├── golden/            # Referenz-PDF + 300dpi-Page-PNGs
-└── regions.yml        # Per-Region-Toleranzen für Visual-Diff
-
-shared/
-├── ci.yml             # Brand-Stile (Farben, Fonts, kanonische Stilnamen)
-├── fonts/             # Brand-Fonts (LFS, Lizenz beachten!)
-├── icc/               # Color-Profile
-└── logos/             # Statische Logos
-
-tools/
-├── sla_lib/           # Python-Package: SLA-Reader, Slot-Editor
-├── render.py          # Headless-Render-CLI
-├── preflight.py       # PDF/X + Custom-Regeln
-├── diff.py            # Visual-Regression
-└── ai_fill.py         # Slot-Fill via Claude SDK
-
-site/                  # Astro-Galerie
-docker/renderer/       # Pinned Renderer-Image
-.research/             # Architektur- und Technik-Recherche
+templates/
+├── postkarte-a6-kampagne/    # 2-seitige A6-Postkarte
+│   ├── build.py              # DSL-Definition (source of truth)
+│   ├── template.sla          # build artifact, in Scribus zu öffnen
+│   ├── meta.yml              # Metadaten + Slot-Hinweise
+│   └── README.md
+├── plakat-event/             # Event-Plakate als Familie A0/A1/A2/A3
+│   ├── build.py              # eine DSL → 4 SLAs
+│   ├── a0.sla a1.sla a2.sla a3.sla
+│   ├── meta.yml
+│   └── README.md
+└── zeitung-a4-grun/          # 9 Beispielseiten in einer Multi-Page-SLA
+    ├── build.py
+    ├── template.sla          # 9 Pages × 6 Master-Pages
+    ├── meta.yml
+    └── README.md
 ```
 
-## Schnellstart (lokal)
+## Drei Zugänge
+
+### 1. Inhaltliche Anpassung (für Endnutzer:innen)
+
+In Scribus öffnen, im Page-Panel die gewünschte Beispielseite duplizieren, Inhalte ersetzen, ungenutztes löschen, PDF exportieren. Pinke Beschriftungen am Seitenrand erklären, welche Variante was zeigt — werden im PDF-Export nicht gedruckt (Hilfslinien-Layer).
+
+Die einzelnen Templates haben jeweils eine `README.md` mit Schritt-für-Schritt-Anleitung.
+
+### 2. Strukturelle Vorlagenanpassung (für Maintainer:innen)
+
+Neue Beispielseite oder Layout-Variante hinzufügen → editiere `build.py` der jeweiligen Vorlage:
+
+```python
+from sla_lib.builder import Document, Color, Style, blocks, Polygon
+
+doc = Document(title="...", template_id="...")
+doc.add_master(name="rechts-3col", size="A4")
+page = doc.add_page(size="A4", master="rechts-3col",
+                    label="Beispiel: neue Layout-Variante")
+page.add(blocks.Headline4Line(...))
+page.add(blocks.ArticleBody(columns=3, ...))
+doc.save("template.sla")
+```
+
+`build.py` ausführen → SLA wird neu emittiert. Das Layout ist im Code versioniert; Brand-Stile kommen aus `shared/ci.yml`.
+
+### 3. Ganz neue Vorlage erstellen
+
+Lege ein neues `templates/<id>/build.py` an mit `Document(...)` + `add_page` + Blocks aus der Library. Schreibe `meta.yml` mit Slot-Beschreibungen und einen `README.md` für die Galerie. CI rendert beim nächsten Push automatisch Vorschau-PDFs und deployed die Galerie.
+
+## Architektur
+
+| Schicht | Verantwortung | Pfad |
+|---|---|---|
+| **Brand** | Single source of truth für Farben/Fonts/Stile | `shared/ci.yml` |
+| **Validator** | Drift-Detection gegen die SLA | `tools/check_ci.py` |
+| **DSL** | Typed Python API → valides Scribus 1.6 SLA-XML | `tools/sla_lib/builder/` |
+| **Blocks** | Wiederverwendbare Compose-Bausteine | `tools/sla_lib/builder/blocks.py` |
+| **Renderer** | Headless Scribus → PDF (Xvfb) | `tools/render.py` |
+| **Galerie-Build** | Templates → Astro-Content + PNG-Previews | `tools/gallery_build.py` |
+| **Galerie-Site** | Astro statisch, deployed auf GitHub Pages | `site/` |
+| **CI** | Build + Validate + Deploy | `.github/workflows/pages.yml` |
+
+## Wo Forschung und Entscheidungen dokumentiert sind
+
+`.research/` enthält die initiale Tiefenrecherche:
+
+- `00-synthesis.md` — Architektur und Roadmap
+- `01-sla-format.md` — SLA-XML-Schema-Doku (mit allen Stolperfallen)
+- `02-tooling-ecosystem.md` — Stack-Vergleich Scribus / Typst / LaTeX / WeasyPrint
+- `03-validation-distribution.md` — Preflight, Visual-Diff, GitHub Pages
+- `04-scribus-multipage-masters.md` — Master-Pages-Mechanik
+
+Plus die Issue-Dokumentation in `.issues/1-scribus-template-authoring-pipeline/`:
+
+- `ISSUE.md` — Scope, Akzeptanzkriterien
+- `CONTEXT.md` — was im Discuss geklärt wurde
+- `RESEARCH.md` — DSL-Design-Patterns
+- `PLAN.md` — die 29 Tasks
+- `EXECUTION.md` — was abgehakt wurde
+
+## Lokal entwickeln
+
+Voraussetzungen: Scribus 1.6.x (Debian trixie oder neuer), Python 3.11+, lxml, PyYAML, Node 20+ für die Galerie.
 
 ```bash
-# In Docker (sobald gebaut)
-make render TEMPLATE=postkarte-a6-kampagne SAMPLE=klimaschutz
-make preflight TEMPLATE=postkarte-a6-kampagne SAMPLE=klimaschutz
-make diff TEMPLATE=postkarte-a6-kampagne SAMPLE=klimaschutz
+# Eine Vorlage rendern
+python3 templates/postkarte-a6-kampagne/build.py
+xvfb-run -a scribus -g -ns -py tools/_export_pdf.py \
+  templates/postkarte-a6-kampagne/template.sla /tmp/preview.pdf
 
-# Direkt (System hat Scribus 1.6.x + Xvfb installiert)
-python3 tools/render.py templates/postkarte-a6-kampagne --sample samples/klimaschutz.json
+# Oder über die Sammel-Pipeline
+python3 tools/gallery_build.py    # rendert alle + erzeugt site/src/content/
+
+# Galerie-Site bauen
+cd site && npm install && npm run build
+# Output: site/dist/
 ```
 
-## Roadmap
-
-Phasen siehe `.research/00-synthesis.md`. Aktuell: **Phase A — Foundation**.
+Tests:
+```bash
+python3 -m unittest discover tools/sla_lib/tests
+```
 
 ## Lizenz / Credits
 
-Templates: © Die Grünen Niederösterreich, Brand-Designsystem.
-Pipeline-Code: TBD.
-Schriften (Gotham Narrow, Vollkorn): proprietäre Lizenzen — siehe `shared/fonts/LICENSE.md`.
+- Templates und Brand: © Die Grünen Niederösterreich
+- Brand-Schriften (Gotham Narrow, Vollkorn Black Italic): proprietäre Lizenzen — **nicht** im Repo gebündelt. Müssen lokal installiert sein, sonst substituiert der Renderer mit DejaVu (sichtbar in PDF-Vorschau).
+- Pipeline-Code: TBD-Lizenz
