@@ -1,64 +1,78 @@
 id: postkarte-a6-kampagne
-version: 0.1.0
+version: 0.2.0
 title: Kampagnen-Postkarte A6
 format: A6
 orientation: portrait
-audience: [bezirksgruppe, landesgruppe]
+pages: 2
+audience: [bezirksgruppe, landesgruppe, ortsgruppe]
 description: >
   Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Badge),
-  Petition-CTA und QR-Code-Rückseite mit Impressum.
+  Call-to-Action, QR-Code-Rückseite mit Impressum. Skelett-Vorlage —
+  in Scribus öffnen, eigene Inhalte einsetzen.
+
+# Source-of-truth is build.py. The template.sla in this folder is a build
+# artifact regenerable via `python3 build.py`. Recommended workflow:
+#  - Open template.sla in Scribus
+#  - Replace placeholder content (text and images)
+#  - Save under a new name (e.g. postkarte-a6-klimaschutz.sla)
+build:
+  script: build.py
+  output: template.sla
+
+# Slots are documented hints for editors, not fill-targets.
+# Each slot's ANNAME (visible in Scribus's Object Properties panel) names
+# the frame so users can find the right element to edit.
 slots:
   headline:
     type: text
-    description: 4-zeilige Hauptbotschaft (Vorderseite)
+    description: 4-zeilige Hauptbotschaft (Vorderseite, alternierend Weiß/Gelb)
     lines: 4
     max_chars_per_line: 22
-    required: true
+    anname: "Headline 4-zeilig (Brand-Wechselfarbe)"
   cta:
     type: text
-    description: Call-to-Action unter Headline
-    default: "Jetzt Petition unterschreiben!"
+    description: Call-to-Action unter Headline (1 Zeile)
+    anname: "CTA"
   stoerer:
     type: text
-    description: 3-zeiliger Störer-Text im rosa Kreis
-    default: "Super-reiche fair besteuern"
+    description: 3-zeiliger Störer-Text im Magenta-Kreis
+    lines: 3
+    anname: "Störer-Text 3-zeilig"
   body:
     type: text
     description: Erklärtext auf der Rückseite
     multiline: true
-    required: true
-  social:
-    type: text
-    description: Social-Handles (4 Zeilen)
-    lines: 4
+    anname: "Erklärtext Rückseite"
   url:
     type: text
     description: Kampagnen-URL unterm QR-Code
     pattern: "^https?://"
-    required: true
+    anname: "Kampagnen-URL"
+  social:
+    type: text
+    description: Social-Handles (4 Zeilen)
+    lines: 4
+    anname: "Social Handles (4-zeilig)"
   impressum:
     type: text
-    description: Impressum-Block (klein)
+    description: Impressum-Block, gesetzlich vorgeschrieben
     multiline: true
+    anname: "Impressum (1-zeilig)"
   hero:
     type: image
-    description: Hauptbild Vorderseite (oder leer für Vollfarbe)
-    aspect: "2:3"
-    min_dpi: 300
+    description: Hauptbild Vorderseite (optional, sonst Vollfarbe)
     optional: true
   logo:
     type: image
-    description: Logo (zentriert auf Vorderseite)
-    source: shared/logos/gruene-no-weiss.png
-    locked: true
+    description: Grünen-Logo (Vorderseite, zentriert unten)
+    source: shared/logos/gruene-weiss.png
+    anname: "Logo Grüne (weiss, zentriert)"
   qr:
     type: image
-    description: QR-Code zum Kampagnen-URL
-    generate_from: url
-golden:
-  reference: golden/reference.pdf
-  pages_dpi: 300
+    description: QR-Code zum Kampagnen-URL (kann manuell eingefügt werden)
+    anname: "QR-Code (wird aus URL generiert)"
+
 preflight:
-  profile: pdfx-4
   bleed_mm: 3
   cmyk_only: true
+  min_image_dpi: 300

@@ -1,0 +1,40 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const templates = await getCollection('templates');
+  return templates.map(t => ({ params: { id: t.id }, props: { t } }));
+}
+const { t } = Astro.props;
+const { Content } = await render(t);
+---
+<Base title={t.data.title}>
+  <p><a href="/">← Zurück zur Galerie</a></p>
+  <h1>{t.data.title}</h1>
+  <p>{t.data.description}</p>
+
+  {t.data._previews && t.data._previews.length > 0 && (
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin: 2rem 0;">
+      {t.data._previews.map(p => (
+        <div style="background: white; padding: 0.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
+          <img src={p.src} alt={p.label} loading="lazy" style="width: 100%; height: auto; display: block;" />
+          <div style="text-align: center; font-size: 0.8em; margin-top: 0.5rem; color: #666;">{p.label}</div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  <h2>Download</h2>
+  <ul>
+    {t.data._downloads && t.data._downloads.map(d => (
+      <li>
+        <strong>{d.label}</strong>:
+        <a href={d.sla}>SLA</a> · <a href={d.pdf}>Vorschau-PDF</a>
+      </li>
+    ))}
+  </ul>
+
+  <h2>Anleitung</h2>
+  <Content />
+</Base>

@@ -1,37 +1,32 @@
-# Postkarte A6 — Kampagne
+# Kampagnen-Postkarte A6
 
-Zweiseitige Kampagnen-Postkarte. Vorderseite trägt die Hauptbotschaft, Rückseite Erklärtext + QR + Impressum.
+Zweiseitige A6-Postkarte für Kampagnen, Petitionen, Events.
+
+## So nutzt du die Vorlage
+
+1. `template.sla` in Scribus öffnen.
+2. Pinke Beschriftungen am oberen Seitenrand zeigen "Vorderseite" / "Rückseite" — werden im PDF nicht gedruckt (Hilfslinien-Layer).
+3. Frames sind beschriftet: Headline, Störer-Text, Erklärtext, URL, Impressum, etc. Klick auf einen Frame zeigt seinen Namen rechts unten in den Object Properties.
+4. Inhalte ersetzen, Logo bei Bedarf einsetzen, QR-Code unter `[QR-Code (wird aus URL generiert)]` als Bild platzieren.
+5. PDF exportieren — fertig.
 
 ## Slots
 
-Siehe `meta.yml`. Schnell-Übersicht:
+Siehe `meta.yml`. Beispiel:
 
-| Slot | Typ | Format-Hinweis |
+| Slot | ANNAME (im Scribus sichtbar) | Hinweis |
 |---|---|---|
-| `headline` | text | **Genau 4 Zeilen** — sonst geht die alternierende Weiß/Gelb-Färbung verloren |
-| `stoerer` | text | **Genau 3 Zeilen** für Störer-Kreis |
-| `cta` | text | 1 Zeile, Petition-CTA unter Headline |
-| `body` | text | Mehrzeiliger Erklärtext, Rückseite |
-| `social` | text | 4 Zeilen Social-Handles |
-| `url` | text | URL unter QR-Code |
-| `impressum` | text | Impressum-Block |
-| `hero` | image | optional |
-| `logo` | image | gesperrt — `shared/logos/...` |
-| `qr` | image | wird aus `url` generiert (Pipeline) |
+| `headline` | Headline 4-zeilig (Brand-Wechselfarbe) | 4 Zeilen, alternierend Weiß/Gelb |
+| `stoerer` | Störer-Text 3-zeilig | 3 Zeilen im Magenta-Kreis |
+| `body` | Erklärtext Rückseite | Mehrzeiliger Erklärtext |
+| `url` | Kampagnen-URL | unter dem QR-Code |
+| `impressum` | Impressum (1-zeilig) | gesetzlich vorgeschrieben |
+| `logo` | Logo Grüne (weiss, zentriert) | Bild aus shared/logos/ |
 
-## Bekannte Limits (v0-Editor)
+## Vorlagen-Generierung
 
-- Mehrzeilige Slots **müssen** die gleiche Zeilenzahl wie das Original haben, sonst fällt der Editor auf eine Single-Style-Strategie zurück und Mixed-Formatting (z.B. abwechselnde Farbe) geht verloren.
-- Bilder im `hero`-Slot werden noch nicht skaliert/zugeschnitten — Bildverhältnis muss zu `aspect: "2:3"` passen.
-
-## Rendern
+`template.sla` ist aus `build.py` über die DSL erzeugt:
 
 ```bash
-python3 tools/render.py templates/postkarte-a6-kampagne --sample klimaschutz
-# → build/postkarte-a6-kampagne__klimaschutz/postkarte-a6-kampagne__klimaschutz.pdf
+python3 templates/postkarte-a6-kampagne/build.py
 ```
-
-## Samples
-
-- `klimaschutz.json` — Klima-Kampagne
-- `wohnen.json` — Wohnen-Kampagne

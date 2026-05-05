@@ -1,0 +1,86 @@
+name: Build & Deploy Gallery
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Scribus 1.6.x (from Debian trixie via apt; Ubuntu repos lag)
+      - name: Install Scribus + headless deps
+        run: |
+          sudo bash -c 'echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list'
+          sudo bash -c 'cat > /etc/apt/preferences.d/99-trixie <<EOF
+          Package: *
+          Pin: release n=trixie
+          Pin-Priority: 100
+
+          Package: scribus scribus-data
+          Pin: release n=trixie
+          Pin-Priority: 990
+          EOF'
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            -t trixie scribus scribus-data
+          sudo apt-get install -y -qq xvfb poppler-utils ghostscript \
+            python3-lxml python3-yaml
+
+      - name: Build all templates via DSL
+        run: |
+          for build in templates/_smoke/*/build.py templates/*/build.py; do
+            [ -f "$build" ] && python3 "$build"
+          done
+
+      - name: Generate gallery content (PDFs + PNG previews)
+        run: python3 tools/gallery_build.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install Astro deps
+        working-directory: site
+        run: npm ci --no-audit --no-fund
+
+      - name: Build Astro site
+        working-directory: site
+        run: npm run build
+
+      - name: Run unit tests
+        run: python3 -m unittest discover tools/sla_lib/tests
+
+      - name: Run brand validator
+        run: |
+          for sla in templates/*/template.sla templates/*/*.sla; do
+            [ -f "$sla" ] && python3 tools/check_ci.py "$sla" || true
+          done
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

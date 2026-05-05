@@ -1,0 +1,128 @@
+# Brand identity (Corporate Identity) — single source of truth.
+#
+# All templates emitted by the DSL reference colors and styles by name from
+# this file. The validator (tools/check_ci.py) flags drift against this CI:
+# any color or style appearing in an SLA but not here, or vice versa, is
+# reported.
+#
+# Color values are CMYK percentages (0..100). spot=true marks a color
+# intended to be printed as a spot/separation channel.
+#
+# Style names are the canonical brand identifiers. Each style has an optional
+# parent (style PARENT inheritance — the SLA writer never re-emits an
+# attribute equal to the parent's value).
+
+brand:
+  name: "Die Grünen Niederösterreich"
+  short: "Grüne NÖ"
+
+colors:
+  Black:
+    cmyk: [0, 0, 0, 100]
+    spot: false
+  White:
+    cmyk: [0, 0, 0, 0]
+    spot: false
+  Registration:
+    cmyk: [100, 100, 100, 100]
+    spot: false
+    register: true
+  Dunkelgrün:
+    cmyk: [85, 35, 95, 10]
+    spot: false
+    role: brand-primary
+  Hellgrün:
+    cmyk: [69, 0, 100, 0]
+    spot: false
+    role: brand-secondary
+  Gelb:
+    cmyk: [0, 0, 100, 0]
+    spot: false
+    role: brand-accent
+  Magenta:
+    cmyk: [0, 100, 0, 0]
+    spot: false
+    role: brand-stoerer
+
+fonts:
+  - "Gotham Narrow Book"
+  - "Gotham Narrow Bold"
+  - "Gotham Narrow Black"
+  - "Gotham Narrow Ultra"
+  - "Vollkorn Black Italic"
+
+# Default paragraph styles. Names use the `ci/` prefix to be unambiguously
+# brand-managed. PARENT inheritance follows Scribus 1.6 semantics: re-emitting
+# an attribute equal to parent's silently overrides inheritance.
+styles:
+  ci/default:
+    align: left           # 0 = left, 1 = center, 2 = right, 3 = block
+    linesp: 13
+    font: "Gotham Narrow Book"
+    fontsize: 12
+    fcolor: White
+    language: de
+
+  ci/headline-ultra:
+    parent: ci/default
+    align: center
+    linesp: 23
+    font: "Gotham Narrow Ultra"
+    fontsize: 27
+    fcolor: White
+
+  ci/headline-vollkorn-italic:
+    parent: ci/default
+    align: center
+    linesp: 23
+    font: "Vollkorn Black Italic"
+    fontsize: 27
+    fcolor: Gelb
+
+  ci/body-12:
+    parent: ci/default
+    align: center
+    linesp: 13
+    font: "Gotham Narrow Book"
+    fontsize: 12
+    fcolor: White
+
+  ci/body-11:
+    parent: ci/default
+    align: left
+    linesp: 12
+    font: "Gotham Narrow Book"
+    fontsize: 11
+    fcolor: Black
+
+  ci/impressum:
+    parent: ci/default
+    align: left
+    linesp: 6
+    font: "Gotham Narrow Book"
+    fontsize: 5
+    fcolor: White
+
+  ci/stoerer:
+    parent: ci/default
+    align: center
+    linesp: 11
+    font: "Gotham Narrow Ultra"
+    fontsize: 10
+    fcolor: White
+
+  ci/cta:
+    parent: ci/default
+    align: center
+    linesp: 13
+    font: "Gotham Narrow Bold"
+    fontsize: 13
+    fcolor: White
+
+# Default layer stack. Order is bottom-up (Hintergrund renders first).
+# Hilfslinien (guides) is hidden by default and never rendered to PDF.
+layers:
+  - { name: Hintergrund, visible: true,  print: true,  edit: true }
+  - { name: Bilder,      visible: true,  print: true,  edit: true }
+  - { name: Text,        visible: true,  print: true,  edit: true }
+  - { name: Hilfslinien, visible: false, print: false, edit: true }

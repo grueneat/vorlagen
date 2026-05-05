@@ -1,0 +1,36 @@
+id: zeitung-a4-grun
+version: 0.1.0
+title: Grüne Zeitung A4
+format: A4
+orientation: portrait
+pages: 9
+audience: [bezirksgruppe, landesgruppe]
+description: >
+  Mehrseitige A4-Zeitungsvorlage mit Master-Pages und Beispielseiten.
+  Eine Datei mit allen typischen Layout-Optionen — Bezirks- und
+  Landesgruppen duplizieren die gewünschten Beispielseiten, passen
+  Inhalte an und löschen ungenutzte Beispiele.
+build:
+  script: build.py
+  output: template.sla
+masters:
+  - { name: Normal,            description: implicit baseline }
+  - { name: rechts-3col,       description: rechte Innenseite mit 3-Spalten-Raster und Footer-Akzent }
+  - { name: links-3col,        description: linke Innenseite mit 3-Spalten-Raster und Footer-Akzent }
+  - { name: titelseite,        description: Cover-Layout mit Hero-Bereich }
+  - { name: foto-spread,       description: Vollbild-Fotoseite }
+  - { name: impressum-master,  description: Rückseite mit Impressum-Block }
+example_pages:
+  - { num: 1, label: Titelseite (Cover) }
+  - { num: 2, label: "Beispiel: Hauptartikel 3-spaltig" }
+  - { num: 3, label: "Beispiel: Drei Artikel nebeneinander" }
+  - { num: 4, label: "Beispiel: Foto-Doppelseite (links)" }
+  - { num: 5, label: "Beispiel: Foto-Doppelseite (rechts)" }
+  - { num: 6, label: "Beispiel: Veranstaltungskalender" }
+  - { num: 7, label: "Beispiel: Interview-Layout" }
+  - { num: 8, label: "Beispiel: Kommentar mit Pull-Quote" }
+  - { num: 9, label: Impressum + Postvermerk }
+preflight:
+  bleed_mm: 3
+  cmyk_only: true
+  min_image_dpi: 300

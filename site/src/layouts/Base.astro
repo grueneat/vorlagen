@@ -1,0 +1,46 @@
+---
+const { title } = Astro.props;
+---
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title} — Grüne Vorlagen</title>
+    <style is:global>
+      :root {
+        --gruen-dunkel: #2a734f;
+        --gruen-hell: #6abf2c;
+        --gelb: #ffeb00;
+        --magenta: #e6177e;
+        --bg: #fafafa;
+        --text: #222;
+        --muted: #666;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 16px/1.5 system-ui, -apple-system, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      header {
+        background: var(--gruen-dunkel);
+        color: white;
+        padding: 1rem 2rem;
+      }
+      header a { color: white; text-decoration: none; }
+      header h1 { margin: 0; font-size: 1.4rem; }
+      main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+      footer { color: var(--muted); padding: 2rem; text-align: center; font-size: 0.85em; }
+      h1, h2, h3 { color: var(--gruen-dunkel); }
+      a { color: var(--gruen-dunkel); }
+    </style>
+  </head>
+  <body>
+    <header><h1><a href="/">Grüne Vorlagen NÖ</a></h1></header>
+    <main>
+      <slot />
+    </main>
+    <footer>Grüne NÖ · Skelett-Vorlagen für lokale Gruppen</footer>
+  </body>
+</html>
