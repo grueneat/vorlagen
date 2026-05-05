@@ -296,8 +296,17 @@ def round_floats(tree: etree._ElementTree) -> None:
 
 
 def drop_default_equivalents(tree: etree._ElementTree) -> None:
-    """Remove attributes equal to their Scribus default. Applied per element."""
+    """Remove attributes equal to their Scribus default. Applied per element.
+
+    Per-paragraph control elements (<para>/<trail>) are left untouched so the
+    storytext-attr comparator can see explicit overrides verbatim, including
+    values that happen to match a frame-level default (e.g. <para
+    LINESPMode="2"/> overriding a parent style whose LINESPMode is not 2).
+    Stripping defaults there would silently absorb genuine round-trip drops.
+    """
     for el in tree.getroot().iter():
+        if el.tag in ("para", "trail"):
+            continue
         for k, default in DEFAULT_EQUIVALENTS.items():
             if k in el.attrib and el.attrib[k] in (default, _round_float_str(default)):
                 # Special case: gXpos / gYpos are dropped only if equal to XPOS / YPOS
@@ -759,6 +768,73 @@ def _compare_item(idx: int, left: etree._Element, right: etree._Element,
         issues.append(Issue(SEVERITY_INFO, "inline-vs-sidecar-image",
                              path=path,
                              detail="right has inline ImageData; left has PFILE (semantically equivalent)"))
+    # StoryText paragraph attribute comparison (TextFrame only). Catches per-
+    # <para>/<trail> ALIGN / LINESP / LINESPMode overrides that the converter
+    # used to silently drop — the diff that would have caught PR #3's bug.
+    if lp == "4" and rp == "4":
+        _compare_storytext_paragraphs(left, right, path, issues)
+
+
+# Per-paragraph override attributes we compare on <para> and <trail>. PARENT
+# (paragraph style name) is treated separately because absence on one side
+# means "use frame default" — equivalent to "PARENT=<frame default>" on the
+# other side. We compare it as a value, including the absent case, but never
+# warn that "the original named the frame's default style explicitly".
+_PARA_COMPARED_ATTRS = ("ALIGN", "LINESP", "LINESPMode", "PARENT")
+
+
+def _compare_storytext_paragraphs(left: etree._Element, right: etree._Element,
+                                    path: str, issues: list[Issue]) -> None:
+    """Walk both frames' StoryText, align paragraph control elements
+    (<para>/<trail>) by index, and report attribute-set diffs.
+
+    A missing override on one side (e.g. left has ALIGN="0", right has no
+    ALIGN) is critical: the round-trip dropped a semantically-meaningful
+    override. A different value (left ALIGN="0", right ALIGN="1") is a
+    warning — visible drift but recoverable. Mismatched paragraph counts
+    are critical (text content is structurally different).
+    """
+    l_story = left.find("StoryText")
+    r_story = right.find("StoryText")
+    if l_story is None or r_story is None:
+        return
+    l_paras = [c for c in l_story if c.tag in ("para", "trail")]
+    r_paras = [c for c in r_story if c.tag in ("para", "trail")]
+    if len(l_paras) != len(r_paras):
+        issues.append(Issue(SEVERITY_CRITICAL, "para-count-mismatch",
+                             path=path, attr="StoryText",
+                             left=str(len(l_paras)), right=str(len(r_paras)),
+                             detail="number of <para>/<trail> elements differs"))
+        return
+    for idx, (lp, rp) in enumerate(zip(l_paras, r_paras)):
+        if lp.tag != rp.tag:
+            issues.append(Issue(SEVERITY_CRITICAL, "para-kind-mismatch",
+                                 path=f"{path} StoryText[{idx}]",
+                                 left=lp.tag, right=rp.tag,
+                                 detail="paragraph control element kind differs"))
+            continue
+        for attr in _PARA_COMPARED_ATTRS:
+            lv = lp.attrib.get(attr)
+            rv = rp.attrib.get(attr)
+            if lv == rv:
+                continue
+            # Presence asymmetry is the critical case: this is the round-trip
+            # failure we're guarding against. The bug in PR #3 manifests
+            # exactly here: ALIGN="0" on the original, no ALIGN on the
+            # rebuilt SLA.
+            if lv is None or rv is None:
+                issues.append(Issue(SEVERITY_CRITICAL, "para-attr-missing",
+                                     path=f"{path} StoryText[{idx}] <{lp.tag}>",
+                                     attr=attr,
+                                     left=lv if lv is not None else "(absent)",
+                                     right=rv if rv is not None else "(absent)",
+                                     detail="per-paragraph override present on one side, missing on the other"))
+            else:
+                issues.append(Issue(SEVERITY_WARNING, "para-attr-value-mismatch",
+                                     path=f"{path} StoryText[{idx}] <{lp.tag}>",
+                                     attr=attr,
+                                     left=lv, right=rv,
+                                     detail="per-paragraph override value differs"))
 
 
 def _compare_palette(left_doc, right_doc, tag: str, key_attr: str,
