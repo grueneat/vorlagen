@@ -18,6 +18,28 @@ from .ci import Color, Style
 from .document import mm_to_pt, _fmt_num, MM_TO_PT
 from .styles import SoftShadow
 
+
+def _format_path_coord(value: float) -> str:
+    """Format a path coordinate the way Scribus does on save.
+
+    Scribus's path/copath attribute uses ``%.6g`` formatting (6 significant
+    digits, rounded). Frame WIDTH/HEIGHT carry full float precision, but
+    the rectangle path that Scribus regenerates on save is intentionally
+    coarser — the path is a clip-region hint, not a coordinate. Matching
+    that format exactly avoids spurious 5th/6th-decimal drift in the
+    rebuilt path that Scribus would re-round on the next save anyway.
+    """
+    if isinstance(value, int) or float(value).is_integer():
+        return str(int(value))
+    return f"{float(value):.6g}"
+
+
+def _format_rect_path(w_pt: float, h_pt: float) -> str:
+    """Build the canonical Scribus rectangle path for a frame of (w_pt, h_pt)."""
+    w = _format_path_coord(w_pt)
+    h = _format_path_coord(h_pt)
+    return f"M0 0 L{w} 0 L{w} {h} L0 {h} L0 0 Z"
+
 # Closed set of per-paragraph attribute overrides the DSL accepts on a
 # <para>/<trail> element beyond PARENT (the paragraph style name, which has
 # its own kwarg). Originals encountered so far carry only ALIGN, LINESP and
@@ -30,6 +52,35 @@ PARAGRAPH_OVERRIDE_ATTRS: frozenset[str] = frozenset({
     "LINESPMode",   # 0=auto, 1=fixed, 2=baseline, 3=baseline-grid
 })
 
+# Closed set of attributes the DSL accepts on <DefaultStyle>. The
+# DefaultStyle element sits at the top of every StoryText and carries the
+# frame-level paragraph defaults; PARENT is exposed as ``TextFrame.style``
+# while everything else flows through ``TextFrame.default_style_attrs``.
+# Originals encountered so far carry up to ALIGN/FONT/FONTSIZE/FCOLOR/
+# LINESP/LINESPMode — extend explicitly when something new appears so we
+# never re-introduce the silent-drop pattern.
+DEFAULTSTYLE_OVERRIDE_ATTRS: frozenset[str] = frozenset({
+    "ALIGN",        # frame-default horizontal alignment
+    "FONT",         # frame-default font face (used when no para/ITEXT override)
+    "FONTSIZE",     # frame-default font size in pt
+    "FCOLOR",       # frame-default font color name
+    "LANGUAGE",     # frame-default hyphenation language
+    "FONTFEATURES", # OpenType feature string
+    "FEATURES",     # legacy feature string
+    "LINESP",       # frame-default line spacing in pt
+    "LINESPMode",   # frame-default line-spacing mode (0..3)
+})
+
+# Closed set of attributes the DSL accepts on a ``<var/>`` element beyond
+# ``name``. Scribus treats var as an inline element and styles it with the
+# usual character-style attribute set; one Zeitung page-number frame
+# carries ``<var name="pgno" FCOLOR="White" FSHADE="100"/>``.
+VAR_OVERRIDE_ATTRS: frozenset[str] = frozenset({
+    "FCOLOR", "FSHADE", "FONT", "FONTSIZE",
+    "FONTFEATURES", "FEATURES", "KERN",
+    "TXTULP", "TXTSTP", "CPARENT",
+})
+
 
 def _validate_paragraph_attrs(attrs: Optional[Mapping[str, str]]) -> None:
     if not attrs:
@@ -39,6 +90,17 @@ def _validate_paragraph_attrs(attrs: Optional[Mapping[str, str]]) -> None:
         raise ValueError(
             f"paragraph_attrs contains unsupported keys {bad!r}; "
             f"allowed keys are {sorted(PARAGRAPH_OVERRIDE_ATTRS)!r}"
+        )
+
+
+def _validate_defaultstyle_attrs(attrs: Optional[Mapping[str, str]]) -> None:
+    if not attrs:
+        return
+    bad = sorted(set(attrs) - DEFAULTSTYLE_OVERRIDE_ATTRS)
+    if bad:
+        raise ValueError(
+            f"default_style_attrs contains unsupported keys {bad!r}; "
+            f"allowed keys are {sorted(DEFAULTSTYLE_OVERRIDE_ATTRS)!r}"
         )
 
 # Anchor type: either a string name or (x, y) where each can be a number (mm)
@@ -96,15 +158,33 @@ def _resolve_axis(spec, page_size_pt: float, item_size_pt: float, axis: str) -> 
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class Run:
-    """A single ITEXT run with optional per-run style overrides.
+    """A single position-aware StoryText segment.
 
-    ``separator`` is the StoryText element placed AFTER this run (and before
-    the next): ``"para"`` -> <para/>, ``"breakline"`` -> <breakline/>,
-    ``"tab"`` -> <tab/>, ``"breakcol"`` -> <breakcol/>, ``"breakframe"`` -> <breakframe/>.
-    ``var="pgno"`` emits a ``<var name="pgno"/>`` element after the run (and
-    after any separator if both are set).
+    Each Run emits, in this exact order:
+
+    1. An ``<ITEXT CH="..."/>`` (only when ``has_itext=True``; default).
+       The CH attribute carries ``text``; per-run formatting attributes
+       (``font``, ``fontsize``, ``fcolor``, ...) are written here.
+    2. A ``<var name="..."/>`` element when ``var`` is set. This emits
+       BEFORE the separator so the original page-number shape
+       ``<var name="pgno"/><para PARENT="Seitenzahl"/>`` round-trips
+       byte-faithfully — the previous order (separator first, then var)
+       caused Scribus to attach the var to a non-existent next paragraph
+       and silently dropped page numbers on every page.
+    3. A separator element when ``separator`` is set: ``"para"`` -> <para/>,
+       ``"breakline"`` -> <breakline/>, ``"tab"`` -> <tab/>, ``"breakcol"`` ->
+       <breakcol/>, ``"breakframe"`` -> <breakframe/>.
+
+    ``has_itext=False`` represents a Run that contributes only a separator
+    and/or a var with no preceding text. The converter sets it when the
+    original StoryText has consecutive control elements
+    (``<para/><para/>``, ``<para/><breakline/>``, ``<var/><para/>``) so the
+    rebuilt SLA does not invent a spurious empty ``<ITEXT CH=""/>``. A
+    spurious empty ITEXT is a structural difference Scribus renders
+    distinctly from the original (the listicle-bullet drift bug).
     """
     text: str = ""
+    has_itext: bool = True
     font: Optional[str] = None
     fontsize: Optional[float] = None
     fcolor: Optional[str] = None
@@ -123,9 +203,20 @@ class Run:
     paragraph_attrs: Optional[dict] = None
     separator: Optional[str] = None           # "para" | "breakline" | "tab" | ...
     var: Optional[str] = None                 # "pgno"
+    # Character-style attributes attached directly to the <var/> element
+    # (Scribus accepts FCOLOR/FSHADE/FONT/FONTSIZE/etc. on var to style the
+    # rendered substitution). Same closed key set as ITEXT per-run attrs.
+    var_attrs: Optional[dict] = None
 
     def __post_init__(self) -> None:
         _validate_paragraph_attrs(self.paragraph_attrs)
+        if self.var_attrs is not None:
+            bad = sorted(set(self.var_attrs) - VAR_OVERRIDE_ATTRS)
+            if bad:
+                raise ValueError(
+                    f"var_attrs contains unsupported keys {bad!r}; "
+                    f"allowed keys are {sorted(VAR_OVERRIDE_ATTRS)!r}"
+                )
 
 
 _RUN_ATTR_MAP_INT = (
@@ -209,9 +300,34 @@ class _Frame:
     fill_rule: Optional[int] = None
     corner_radius_mm: float = 0
     soft_shadow: Optional[SoftShadow] = None
+    # CLIPEDIT="1" in Scribus marks a frame whose clipping path has been
+    # manually edited (Scribus then leaves the path alone on size change
+    # instead of auto-regenerating it). Round-tripping this flag preserves
+    # the original's clip-edit state — the Zeitung carries it on 87 of 146
+    # frames, and Scribus subtly renormalises clip paths when the flag is
+    # absent on load, which causes character-level glyph drift in the
+    # rendered PDF.
+    clip_edit: bool = False
+    # Verbatim XPOS/YPOS/WIDTH/HEIGHT in pt overrides for byte-equivalent
+    # round-trip. The default mm ↔ pt conversion (x_mm * MM_TO_PT) is
+    # round-trip stable for most values, but a handful of inline-image
+    # frames in the Zeitung carry HEIGHT="27.7755590551181" (13-digit
+    # repr) while the round-trip through mm gives "27.775559055118098"
+    # (17-digit). The values differ at sub-ulp (1e-15) level — invisible
+    # in rendering but enough to make the rebuilt SLA non-byte-equivalent
+    # at this attribute. The converter sets these to the original
+    # attribute strings so the emit path skips mm ↔ pt entirely for
+    # round-trip frames.
+    xpos_pt: Optional[float] = None
+    ypos_pt: Optional[float] = None
+    width_pt: Optional[float] = None
+    height_pt: Optional[float] = None
 
     def _xy_pt(self, page) -> tuple[float, float]:
         """Return absolute XPOS/YPOS in scratch canvas space."""
+        # Verbatim pt overrides bypass the mm ↔ pt round-trip entirely.
+        if self.xpos_pt is not None and self.ypos_pt is not None:
+            return self.xpos_pt, self.ypos_pt
         if self.anchor is not None:
             local_x, local_y = resolve_anchor(self.anchor, page.width_pt, page.height_pt,
                                               mm_to_pt(self.w_mm), mm_to_pt(self.h_mm))
@@ -219,6 +335,12 @@ class _Frame:
             local_x = mm_to_pt(self.x_mm)
             local_y = mm_to_pt(self.y_mm)
         return page.page_xpos_pt + local_x, page.page_ypos_pt + local_y
+
+    def _wh_pt(self) -> tuple[float, float]:
+        """Return WIDTH/HEIGHT in pt, honouring verbatim overrides."""
+        if self.width_pt is not None and self.height_pt is not None:
+            return self.width_pt, self.height_pt
+        return mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
 
 
 def _apply_shape_attrs(attrs: dict, frame: _Frame, w_pt: float, h_pt: float,
@@ -292,12 +414,22 @@ class TextFrame(_Frame):
     fill: Optional[str] = None        # PCOLOR (frame background fill)
     line_color: Optional[str] = None  # PCOLOR2 (frame border color)
     line_width_pt: float = 0          # PWIDTH
+    # Frame-default StoryText DefaultStyle attributes beyond PARENT (which is
+    # the ``style`` kwarg). Keys must come from DEFAULTSTYLE_OVERRIDE_ATTRS:
+    # currently ALIGN/FONT/FONTSIZE/FCOLOR/LANGUAGE/FONTFEATURES/FEATURES/
+    # LINESP/LINESPMode. Originals like the Zeitung's Titelseite hero frame
+    # carry e.g. ``<DefaultStyle ALIGN="1" FONT="Gotham Narrow Book"
+    # FONTSIZE="30" FCOLOR="White"/>``; without this typed channel they were
+    # silently dropped to ``<DefaultStyle/>`` and the rendered hero text
+    # drifted in size and alignment.
+    default_style_attrs: Optional[dict] = None
     next_item: Optional["TextFrame"] = field(default=None, repr=False, compare=False)
     # Internal: pre-allocated ItemID for chain ordering. Set by Document._build_xml.
     _preallocated_id: Optional[int] = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         _validate_paragraph_attrs(self.trail_attrs)
+        _validate_defaultstyle_attrs(self.default_style_attrs)
 
     def link_to(self, other: "TextFrame") -> "TextFrame":
         """Chain self -> other. Returns ``other`` for fluent chains
@@ -307,29 +439,29 @@ class TextFrame(_Frame):
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
-        w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
+        w_pt, h_pt = self._wh_pt()
         item_id = self._preallocated_id if self._preallocated_id is not None else idgen.next()
-        rect_path = f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z"
+        rect_path = _format_rect_path(w_pt, h_pt)
         attrs = {
-            "XPOS": f"{x:.6f}", "YPOS": f"{y:.6f}",
+            "XPOS": _fmt_num(x), "YPOS": _fmt_num(y),
             "OwnPage": str(page.own_page),
             "ItemID": str(item_id),
             "PTYPE": "4",
-            "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "CLIPEDIT": "0",
+            "WIDTH": _fmt_num(w_pt), "HEIGHT": _fmt_num(h_pt),
+            "CLIPEDIT": "1" if self.clip_edit else "0",
             "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
-            "COLUMNS": str(self.columns), "COLGAP": f"{mm_to_pt(self.col_gap_mm):.6f}",
+            "COLUMNS": str(self.columns), "COLGAP": _fmt_num(mm_to_pt(self.col_gap_mm)),
             "AUTOTEXT": "0", "EXTRA": "0", "TEXTRA": "0", "BEXTRA": "0", "REXTRA": "0",
             "VAlign": "0", "FLOP": "1", "PLTSHOW": "0", "BASEOF": "0",
             "textPathType": "0", "textPathFlipped": "0",
-            "gXpos": f"{x:.6f}", "gYpos": f"{y:.6f}",
+            "gXpos": _fmt_num(x), "gYpos": _fmt_num(y),
             "gWidth": "0", "gHeight": "0",
             "LAYER": str(self.layer),
             "NEXTITEM": "-1", "BACKITEM": "-1",
-            "ROT": f"{self.rotation_deg:.6f}",
+            "ROT": _fmt_num(self.rotation_deg),
         }
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=rect_path, default_frtype="0")
@@ -349,17 +481,39 @@ class TextFrame(_Frame):
             ds.set("PARENT", self.style)
         if self.default_linesp_mode is not None:
             ds.set("LINESPMode", str(self.default_linesp_mode))
+        # Frame-default DefaultStyle overrides (ALIGN, FONT, FONTSIZE, etc.).
+        # These were silently dropped before the verbatim-StoryText fix and
+        # caused the Titelseite hero text to render at the wrong size and
+        # alignment on round-trip.
+        if self.default_style_attrs:
+            for k, v in self.default_style_attrs.items():
+                # default_linesp_mode kwarg already handles LINESPMode; if the
+                # caller set both, the explicit dict entry wins (matches
+                # Scribus's last-write-wins attribute semantics).
+                ds.set(k, str(v))
 
-        # Emit ITEXT runs
+        # Emit Runs as ITEXT (optional) → var (optional) → separator (optional).
+        # Variable element MUST come BEFORE the separator: the original Zeitung
+        # page-number frame is `<var name="pgno"/><para PARENT="Seitenzahl"/>`,
+        # and Scribus attaches the var to the paragraph it precedes. Emitting
+        # var after the separator lost the page number on every page.
         run_list: list[Run] = []
         if self.runs:
             run_list = [_normalise_run(r) for r in self.runs]
             for r in run_list:
-                # ITEXT element with the run's text and per-run overrides
-                it = etree.SubElement(story, "ITEXT")
-                it.set("CH", r.text)
-                _apply_run_attrs(it, r)
-                # Separator between this run and the next
+                if r.has_itext:
+                    it = etree.SubElement(story, "ITEXT")
+                    it.set("CH", r.text)
+                    _apply_run_attrs(it, r)
+                # Variable insert (e.g. <var name="pgno"/>) — emit BEFORE
+                # the separator so the var attaches to THIS paragraph.
+                if r.var is not None:
+                    var = etree.SubElement(story, "var")
+                    var.set("name", r.var)
+                    if r.var_attrs:
+                        for k, v in r.var_attrs.items():
+                            var.set(k, str(v))
+                # Separator between this run and the next paragraph
                 if r.separator == "para":
                     para = etree.SubElement(story, "para")
                     style_attr = r.paragraph_style or self.style
@@ -378,10 +532,6 @@ class TextFrame(_Frame):
                     etree.SubElement(story, "breakcol")
                 elif r.separator == "breakframe":
                     etree.SubElement(story, "breakframe")
-                # Variable insert (e.g. <var name="pgno"/>)
-                if r.var is not None:
-                    var = etree.SubElement(story, "var")
-                    var.set("name", r.var)
         elif self.text:
             it = etree.SubElement(story, "ITEXT")
             it.set("CH", self.text)
@@ -423,21 +573,32 @@ class ImageFrame(_Frame):
     fill: Optional[str] = None        # PCOLOR (frame background fill)
     line_color: Optional[str] = None  # PCOLOR2 (frame border)
     line_width_pt: float = 0          # PWIDTH
+    # Verbatim inline-image round-trip channel. When the original SLA carried
+    # an embedded image (``isInlineImage="1"``, ``ImageData="<base64>"``,
+    # ``inlineImageExt="png"``) the converter captures the ImageData blob
+    # without decoding/re-encoding it, and the emitter writes it back into
+    # PAGEOBJECT verbatim. The previous "extract to sidecar PNG" round-trip
+    # was not byte-clean (qCompress↔PNG-on-disk lost ~1px in rendering on
+    # every inline-image-bearing page), so we now keep the bytes identical
+    # in the rebuilt SLA — Scribus then renders byte-identical output.
+    inline_image_data: Optional[str] = None
+    inline_image_ext: Optional[str] = None  # e.g. "png", "jpg"
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
-        w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
-        rect_path = f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z"
-        pfile = self.image or self.src
+        w_pt, h_pt = self._wh_pt()
+        rect_path = _format_rect_path(w_pt, h_pt)
+        is_inline = self.inline_image_data is not None
+        pfile = "" if is_inline else (self.image or self.src)
         scx, scy = self.local_scale
         lx_mm, ly_mm = self.local_offset_mm
         attrs = {
-            "XPOS": f"{x:.6f}", "YPOS": f"{y:.6f}",
+            "XPOS": _fmt_num(x), "YPOS": _fmt_num(y),
             "OwnPage": str(page.own_page),
             "ItemID": str(idgen.next()),
             "PTYPE": "2",
-            "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "CLIPEDIT": "0",
+            "WIDTH": _fmt_num(w_pt), "HEIGHT": _fmt_num(h_pt),
+            "CLIPEDIT": "1" if self.clip_edit else "0",
             "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1",
             "LOCALSCX": _fmt_num(scx), "LOCALSCY": _fmt_num(scy),
@@ -449,12 +610,23 @@ class ImageFrame(_Frame):
             "PFILE": pfile,
             "PRFILE": "sRGB display profile (ICC v2.2)",
             "IRENDER": "0",
-            "gXpos": f"{x:.6f}", "gYpos": f"{y:.6f}",
+            "gXpos": _fmt_num(x), "gYpos": _fmt_num(y),
             "gWidth": "0", "gHeight": "0",
             "LAYER": str(self.layer),
             "NEXTITEM": "-1", "BACKITEM": "-1",
-            "ROT": f"{self.rotation_deg:.6f}",
+            "ROT": _fmt_num(self.rotation_deg),
         }
+        if is_inline:
+            # Pagenumber=0 explicitly emitted to match the original SLA's
+            # full attribute set on inline image frames. Scribus reads this
+            # before isInlineImage; emitting both preserves byte-equivalence
+            # at this attribute (functionally a no-op since 0 is the
+            # default for ImageFrame's "image-of-page" reference).
+            attrs["Pagenumber"] = "0"
+            attrs["isInlineImage"] = "1"
+            attrs["inlineImageExt"] = self.inline_image_ext or "png"
+            attrs["ImageData"] = self.inline_image_data
+            attrs["EMBEDDED"] = "0"
         if self.fill is not None:
             attrs["PCOLOR"] = self.fill
         if self.line_color is not None:
@@ -481,30 +653,30 @@ class Polygon(_Frame):
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
-        w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
+        w_pt, h_pt = self._wh_pt()
         if self.shape == "ellipse":
             default_path = self._ellipse_path(w_pt, h_pt)
             default_frtype = "1"  # FRTYPE=1 = ellipse
         else:
-            default_path = f"M0 0 L{w_pt:.3f} 0 L{w_pt:.3f} {h_pt:.3f} L0 {h_pt:.3f} L0 0 Z"
+            default_path = _format_rect_path(w_pt, h_pt)
             default_frtype = "0"
         attrs = {
-            "XPOS": f"{x:.6f}", "YPOS": f"{y:.6f}",
+            "XPOS": _fmt_num(x), "YPOS": _fmt_num(y),
             "OwnPage": str(page.own_page),
             "ItemID": str(idgen.next()),
             "PTYPE": "6",
-            "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "CLIPEDIT": "0",
+            "WIDTH": _fmt_num(w_pt), "HEIGHT": _fmt_num(h_pt),
+            "CLIPEDIT": "1" if self.clip_edit else "0",
             "PCOLOR": self.fill,
-            "PWIDTH": f"{self.line_width_pt:.6f}",
+            "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
-            "gXpos": f"{x:.6f}", "gYpos": f"{y:.6f}",
+            "gXpos": _fmt_num(x), "gYpos": _fmt_num(y),
             "gWidth": "0", "gHeight": "0",
             "LAYER": str(self.layer),
             "NEXTITEM": "-1", "BACKITEM": "-1",
-            "ROT": f"{self.rotation_deg:.6f}",
+            "ROT": _fmt_num(self.rotation_deg),
         }
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=default_path, default_frtype=default_frtype)
@@ -558,20 +730,20 @@ class Line:
         import math
         angle = math.degrees(math.atan2(dy, dx))
         attrs = {
-            "XPOS": f"{x_origin:.6f}", "YPOS": f"{y_origin:.6f}",
+            "XPOS": _fmt_num(x_origin), "YPOS": _fmt_num(y_origin),
             "OwnPage": str(page.own_page),
             "ItemID": str(idgen.next()),
             "PTYPE": "5",
-            "WIDTH": f"{length:.6f}", "HEIGHT": "1",
-            "FRTYPE": "3", "CLIPEDIT": "0",
+            "WIDTH": _fmt_num(length), "HEIGHT": "1",
+            "FRTYPE": "3", "CLIPEDIT": "1" if self.clip_edit else "0",
             "PCOLOR": "None", "PCOLOR2": self.color,
-            "PWIDTH": f"{self.width_pt:.6f}",
+            "PWIDTH": _fmt_num(self.width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
-            "ROT": f"{angle:.6f}",
-            "path": f"M0 0 L{length:.3f} 0",
-            "copath": f"M0 0 L{length:.3f} 0",
-            "gXpos": f"{x_origin:.6f}", "gYpos": f"{y_origin:.6f}",
+            "ROT": _fmt_num(angle),
+            "path": f"M0 0 L{_format_path_coord(length)} 0",
+            "copath": f"M0 0 L{_format_path_coord(length)} 0",
+            "gXpos": _fmt_num(x_origin), "gYpos": _fmt_num(y_origin),
             "gWidth": "0", "gHeight": "0",
             "LAYER": str(self.layer),
             "NEXTITEM": "-1", "BACKITEM": "-1",

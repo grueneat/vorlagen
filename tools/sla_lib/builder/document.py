@@ -49,15 +49,27 @@ def mm_to_pt(value_mm: float) -> float:
 
 def _fmt_num(value: float) -> str:
     """Format a numeric attribute the way Scribus does: integers stay integers
-    (no trailing ``.0``), non-integers print with up to 6 decimals, trailing
-    zeros stripped. Round-trip stable across save/reload."""
+    (no trailing ``.0``), non-integers print with shortest-round-trip
+    precision (Python's ``repr``).
+
+    Using ``repr`` instead of a fixed ``%.6f`` truncation matters for
+    inline-image LOCALSCX values like ``0.0438778076573352`` (16 digits in
+    the original SLA): truncating to 6 decimals shifts the rendered image
+    by ~0.005 px per native pixel, visible at sharp edges (logo outlines)
+    in the rendered PDF. Scribus itself emits floats with similar precision
+    on save, so this matches the round-trip behaviour and stays bit-stable.
+    """
     if isinstance(value, bool):
         return "1" if value else "0"
     if isinstance(value, int):
         return str(value)
     if float(value).is_integer():
         return str(int(value))
-    return f"{value:.6f}".rstrip("0").rstrip(".")
+    # repr() returns the shortest float string that round-trips to the same
+    # float on parse; that's exactly what we need to faithfully reproduce
+    # the original SLA's precision without inflating attribute lengths for
+    # values that have a clean short representation.
+    return repr(float(value))
 
 
 def resolve_size(size: str | tuple[float, float], orientation: str) -> tuple[float, float]:
@@ -141,6 +153,8 @@ class Document:
                  first_page_num: int = 1,
                  palette_replaces_ci: bool = False,
                  hcms: bool = False,
+                 doc_page_width_pt: Optional[float] = None,
+                 doc_page_height_pt: Optional[float] = None,
                  extra_doc_attrs: Optional[dict[str, str]] = None,
                  extra_pdf_attrs: Optional[dict[str, str]] = None) -> None:
         self.title = title
@@ -163,6 +177,13 @@ class Document:
         # values for the same CMYK input. The originals all have HCMS=1, so
         # the converter sets this to True to match the baseline rendering.
         self.hcms: bool = hcms
+        # DOCUMENT-level PAGEWIDTH/PAGEHEIGHT override. Scribus stores these
+        # twice (DOCUMENT.PAGEWIDTH and per-PAGE PAGEWIDTH), with the
+        # DOC-level value sometimes carrying more precision than the PAGE
+        # value. The converter captures both so the rebuilt SLA is
+        # byte-equivalent at the doc level too.
+        self.doc_page_width_pt: Optional[float] = doc_page_width_pt
+        self.doc_page_height_pt: Optional[float] = doc_page_height_pt
         # Extra DOCUMENT-level attributes the converter passes through
         # verbatim. Useful for round-tripping locale/runtime fields like
         # ALAYER, AUTOL, BaseC, CPICT, ICC profile names, calligraphic-pen
@@ -221,11 +242,23 @@ class Document:
                    orientation: str = "portrait",
                    bleed_mm: float = 3.0,
                    margins_mm: tuple[float, float, float, float] = (10, 10, 10, 10),
-                   facing: str = "right") -> Page:
+                   facing: str = "right",
+                   page_xpos_pt: Optional[float] = None,
+                   page_ypos_pt: Optional[float] = None,
+                   width_pt: Optional[float] = None,
+                   height_pt: Optional[float] = None) -> Page:
         """Define a master page. Items added to it appear on every doc page
         whose master attribute matches `name`. `facing` is 'left' or 'right'
         — controls the LEFT attribute (0=right, 1=left) for facing-pages
         layouts.
+
+        ``page_xpos_pt`` / ``page_ypos_pt`` override the auto-computed
+        scratch-canvas offset (used by the converter for byte-equivalent
+        round-trip; see ``add_page`` for why). ``width_pt`` / ``height_pt``
+        override the size resolved from ``size``+``orientation`` so the
+        original SLA's exact PAGEWIDTH/PAGEHEIGHT values (which often
+        carry more precision than ``mm_to_pt(210)`` produces) round-trip
+        without rounding drift.
 
         Master pages are stacked off to the side of the doc pages on the
         scratch canvas; Scribus normalises positions on next save.
@@ -233,12 +266,22 @@ class Document:
         if any(m.master_id == name for m in self.masters):
             raise ValueError(f"Master page named {name!r} already exists")
         w_pt, h_pt = resolve_size(size, orientation)
+        if width_pt is not None:
+            w_pt = width_pt
+        if height_pt is not None:
+            h_pt = height_pt
+        # Place masters in a separate column to the right of doc pages
+        page_x = self.SCRATCH_LEFT + w_pt + 200
+        page_y = self.SCRATCH_TOP + len(self.masters) * (h_pt + self.GAP_VERTICAL)
+        if page_xpos_pt is not None:
+            page_x = page_xpos_pt
+        if page_ypos_pt is not None:
+            page_y = page_ypos_pt
         m = Page(
             width_pt=w_pt, height_pt=h_pt, bleed_mm=bleed_mm, margins_mm=margins_mm,
             master_name="", label=name, own_page=len(self.masters),
-            # Place masters in a separate column to the right of doc pages
-            page_xpos_pt=self.SCRATCH_LEFT + w_pt + 200,
-            page_ypos_pt=self.SCRATCH_TOP + len(self.masters) * (h_pt + self.GAP_VERTICAL),
+            page_xpos_pt=page_x,
+            page_ypos_pt=page_y,
             is_left=(facing == "left"),
             is_master=True, master_id=name,
         )
@@ -250,8 +293,30 @@ class Document:
                  bleed_mm: float = 3.0,
                  margins_mm: tuple[float, float, float, float] = (10, 10, 10, 10),
                  master: str = "Normal",
-                 label: str = "") -> Page:
+                 label: str = "",
+                 page_xpos_pt: Optional[float] = None,
+                 page_ypos_pt: Optional[float] = None,
+                 width_pt: Optional[float] = None,
+                 height_pt: Optional[float] = None) -> Page:
+        """Add a doc page at the next slot in the scratch canvas.
+
+        ``page_xpos_pt`` / ``page_ypos_pt`` override the auto-computed
+        scratch-canvas offset. The converter uses these to round-trip the
+        original SLA's exact PAGEXPOS/PAGEYPOS — the auto-computed offset
+        rounds to ``SCRATCH_LEFT + w_pt`` (which itself is the DSL's
+        ``mm_to_pt(210)`` ≈ 595.2755905511812), but the original SLA
+        often carries a slightly different value (e.g.
+        ``695.276220472441 = 100.00062992126 + 595.275590551181``). Without
+        an override, items round-trip with sub-pixel position drift on
+        every page; with the override, PAGEXPOS round-trips exactly and the
+        per-frame XPOS does too (the converter computes XPOS from the
+        original frame's local-pt coords + the original PAGEXPOS).
+        """
         w_pt, h_pt = resolve_size(size, orientation)
+        if width_pt is not None:
+            w_pt = width_pt
+        if height_pt is not None:
+            h_pt = height_pt
         own_page = len(self.pages)
         # Single-page stacking: every page sits in the left column, stacked
         # vertically with GapVertical between rows.
@@ -285,6 +350,10 @@ class Document:
             is_left = False
         else:
             is_left = False
+        if page_xpos_pt is not None:
+            page_x = page_xpos_pt
+        if page_ypos_pt is not None:
+            page_y = page_ypos_pt
         page = Page(
             width_pt=w_pt, height_pt=h_pt, bleed_mm=bleed_mm, margins_mm=margins_mm,
             master_name=master, label=label, own_page=own_page,
@@ -376,10 +445,14 @@ class Document:
             )
             self.masters.insert(0, normal)
 
-        # Use the first page's dimensions as the document defaults (Scribus convention)
+        # Use the first page's dimensions as the document defaults (Scribus
+        # convention). The converter overrides these via doc_page_width_pt /
+        # doc_page_height_pt for byte-equivalent round-trip — the original
+        # SLA's DOCUMENT.PAGEWIDTH may carry more precision than the
+        # per-PAGE PAGEWIDTH (Scribus stores them separately on save).
         first = self.pages[0]
-        page_w_pt = first.width_pt
-        page_h_pt = first.height_pt
+        page_w_pt = self.doc_page_width_pt if self.doc_page_width_pt is not None else first.width_pt
+        page_h_pt = self.doc_page_height_pt if self.doc_page_height_pt is not None else first.height_pt
 
         root = etree.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
         doc = etree.SubElement(root, "DOCUMENT", attrib=self._doc_attrs(page_w_pt, page_h_pt))
@@ -434,27 +507,28 @@ class Document:
         bleed = first.bleed_mm
         attrs = {
             "ANZPAGES": str(len(self.pages)),
-            "PAGEWIDTH": f"{w_pt:.6f}",
-            "PAGEHEIGHT": f"{h_pt:.6f}",
-            "BORDERLEFT": f"{mm_to_pt(ml):.6f}",
-            "BORDERRIGHT": f"{mm_to_pt(mr):.6f}",
-            "BORDERTOP": f"{mm_to_pt(mt):.6f}",
-            "BORDERBOTTOM": f"{mm_to_pt(mb):.6f}",
-            "BleedTop": f"{mm_to_pt(bleed):.6f}",
-            "BleedBottom": f"{mm_to_pt(bleed):.6f}",
-            "BleedLeft": f"{mm_to_pt(bleed):.6f}",
-            "BleedRight": f"{mm_to_pt(bleed):.6f}",
+            "PAGEWIDTH": _fmt_num(w_pt),
+            "PAGEHEIGHT": _fmt_num(h_pt),
+            "BORDERLEFT": _fmt_num(mm_to_pt(ml)),
+            "BORDERRIGHT": _fmt_num(mm_to_pt(mr)),
+            "BORDERTOP": _fmt_num(mm_to_pt(mt)),
+            "BORDERBOTTOM": _fmt_num(mm_to_pt(mb)),
+            "BleedTop": _fmt_num(mm_to_pt(bleed)),
+            "BleedBottom": _fmt_num(mm_to_pt(bleed)),
+            "BleedLeft": _fmt_num(mm_to_pt(bleed)),
+            "BleedRight": _fmt_num(mm_to_pt(bleed)),
             "ORIENTATION": "0",  # 0=portrait, 1=landscape
             "PAGESIZE": "Custom",
-            "FIRSTPAGENUM": str(self.first_page_num),
             "BOOK": "1" if self.facing_pages else "0",
-            "FIRSTLEFT": "0",
+            # FIRSTPAGENUM/FIRSTLEFT are obsolete legacy fields — Scribus 1.6
+            # uses FIRSTNUM instead. Originals don't carry FIRSTPAGENUM or
+            # FIRSTLEFT, so the DSL omits them too.
             "AUTOSPALTEN": "1",
             "ABSTSPALTEN": f"{self.column_gap_default_pt:g}",
             "UNITS": "1",  # 1=mm
             "TITLE": self.title,
             "AUTHOR": self.author,
-            "COMMENTS": f"DSL-built template — {self.template_id}",
+            "COMMENTS": "",
             "KEYWORDS": "",
             "PUBLISHER": "",
             "DOCDATE": "",
@@ -467,12 +541,9 @@ class Document:
             "DOCCOVER": "",
             "DOCRIGHTS": "",
             "DOCCONTRIB": "",
-            # Both DEFFONT/DEFSIZE (legacy DSL fields) and DFONT/DSIZE
-            # (what Scribus actually reads) are emitted; Scribus 1.6 looks
-            # for DFONT specifically when rendering text frames whose ITEXT
-            # has no explicit FONT.
-            "DEFFONT": self.deffont,
-            "DEFSIZE": f"{self.defsize:g}",
+            # DFONT/DSIZE are what Scribus 1.6 actually reads when a text
+            # frame's ITEXT has no explicit FONT/FONTSIZE. The originals
+            # emit only these (no DEFFONT/DEFSIZE), so we follow suit.
             "DFONT": self.deffont,
             "DSIZE": f"{self.defsize:g}",
             # Document language — used by hyphenation engine and as the
@@ -500,13 +571,15 @@ class Document:
             "HCMS": "1" if self.hcms else "0",
             "showBleed": "1",
             "FIRSTNUM": "1",
-            "DSAVE": "0",
-            "AUTOSAVE": "0",
-            "AUTOSAVETIME": "10",
-            "AUTOSAVECOUNT": "1",
-            "AUTOSAVEKEEP": "0",
-            "AUTOSAVEINDOCDIR": "1",
-            "AUTOSAVEDIR": "",
+            # AutoSave state — emitted with Scribus's camelCase naming
+            # (matches the originals on save). DSAVE and the all-uppercase
+            # AUTOSAVE/AUTOSAVECOUNT/... variants are obsolete and dropped.
+            "AutoSave": "1",
+            "AutoSaveTime": "600000",
+            "AutoSaveCount": "1",
+            "AutoSaveKeep": "0",
+            "AUtoSaveInDocDir": "1",
+            "AutoSaveDir": "",
             "ScratchTop": str(self.SCRATCH_TOP),
             "ScratchLeft": str(self.SCRATCH_LEFT),
             "ScratchRight": "100",
@@ -518,11 +591,15 @@ class Document:
             "RANDF": "0",
             "currentProfile": "Default",
         }
-        # Converter pass-through: any DOCUMENT attribute not explicitly handled
-        # above gets emitted verbatim. Existing keys win (the DSL's own
-        # constants take precedence over surprise overrides).
+        # Converter pass-through: ``extra_doc_attrs`` overrides the DSL's
+        # own hardcoded defaults so the rebuilt SLA can preserve quirky
+        # doc-level fields verbatim (PENLINE="Green", MARGC="#0000ff",
+        # PAGESIZE="A4", camelCase AutoSave variants, etc.). The DSL's
+        # defaults are still emitted for keys the converter does NOT
+        # provide; only when the converter explicitly captures a value
+        # does it replace the default.
         for k, v in self.extra_doc_attrs.items():
-            attrs.setdefault(k, v)
+            attrs[k] = v
         return attrs
 
     def _emit_check_profiles(self, doc) -> None:
@@ -816,15 +893,15 @@ class Document:
         pdf.set("markOffset", _fmt_num(bleed_pt))
         # Pass-through any extra PDF attributes the converter captured from
         # the original (ICC profile names, Intent2, RGBMode, UseSpotColors,
-        # Version, etc.). When ``hcms=True`` the converter's extras win over
-        # the DSL defaults — the original's PDF state is what produced the
-        # frozen baseline, so faithful round-trip requires honouring it
-        # exactly. Bleed-related attrs (BBottom/BLeft/BRight/BTop/useDocBleeds/
-        # cropMarks/bleedMarks/markLength/markOffset) are guarded so the
-        # converter cannot accidentally undo the bleed-emit fix.
+        # Version, PicRes, useDocBleeds, etc.). The converter's extras win
+        # over the DSL defaults — the original's PDF state is what produced
+        # the frozen baseline, so faithful round-trip requires honouring it
+        # exactly. Bleed dimensions (BBottom/BLeft/BRight/BTop/markLength/
+        # markOffset) are still guarded — they are derived from the page's
+        # bleed_mm and overriding them via extras would silently
+        # de-synchronise the PDF page bbox from the SLA's bleed setting.
         BLEED_GUARDED = {
             "BBottom", "BLeft", "BRight", "BTop",
-            "useDocBleeds", "cropMarks", "bleedMarks",
             "markLength", "markOffset",
         }
         for k, v in self.extra_pdf_attrs.items():
@@ -901,14 +978,14 @@ class Document:
     def _page_attrs(self, p: Page, idx: int) -> dict[str, str]:
         ml, mr, mt, mb = p.margins_mm
         return {
-            "PAGEXPOS": f"{p.page_xpos_pt:.6f}",
-            "PAGEYPOS": f"{p.page_ypos_pt:.6f}",
-            "PAGEWIDTH": f"{p.width_pt:.6f}",
-            "PAGEHEIGHT": f"{p.height_pt:.6f}",
-            "BORDERLEFT": f"{mm_to_pt(ml):.6f}",
-            "BORDERRIGHT": f"{mm_to_pt(mr):.6f}",
-            "BORDERTOP": f"{mm_to_pt(mt):.6f}",
-            "BORDERBOTTOM": f"{mm_to_pt(mb):.6f}",
+            "PAGEXPOS": _fmt_num(p.page_xpos_pt),
+            "PAGEYPOS": _fmt_num(p.page_ypos_pt),
+            "PAGEWIDTH": _fmt_num(p.width_pt),
+            "PAGEHEIGHT": _fmt_num(p.height_pt),
+            "BORDERLEFT": _fmt_num(mm_to_pt(ml)),
+            "BORDERRIGHT": _fmt_num(mm_to_pt(mr)),
+            "BORDERTOP": _fmt_num(mm_to_pt(mt)),
+            "BORDERBOTTOM": _fmt_num(mm_to_pt(mb)),
             "Size": "Custom",
             "Orientation": "0",
             "LEFT": "1" if p.is_left else "0",

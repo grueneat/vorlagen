@@ -760,19 +760,26 @@ def _compare_item(idx: int, left: etree._Element, right: etree._Element,
                                  path=path, attr="ImageData",
                                  left=lh[:12], right=rh[:12]))
     elif (li == "1" and ld) and (rd is None and right.attrib.get("PFILE")):
-        # Inline on left, sidecar on right — info-only equivalence
-        issues.append(Issue(SEVERITY_INFO, "inline-vs-sidecar-image",
+        # Inline on left, sidecar on right — flagged critical because the
+        # rendered PDF differs (qCompress↔PNG-on-disk round-trip is not
+        # byte-clean and pages with inline frames showed 3-15x more
+        # mismatch than pages with no images). Round-trip must preserve
+        # inline ImageData verbatim.
+        issues.append(Issue(SEVERITY_CRITICAL, "inline-vs-sidecar-image",
                              path=path,
-                             detail="left has inline ImageData; right has PFILE (semantically equivalent)"))
+                             detail=("left has inline ImageData; right has PFILE — "
+                                     "round-trip MUST preserve inline data verbatim")))
     elif (ri == "1" and rd) and (ld is None and left.attrib.get("PFILE")):
-        issues.append(Issue(SEVERITY_INFO, "inline-vs-sidecar-image",
+        issues.append(Issue(SEVERITY_CRITICAL, "inline-vs-sidecar-image",
                              path=path,
-                             detail="right has inline ImageData; left has PFILE (semantically equivalent)"))
+                             detail=("right has inline ImageData; left has PFILE — "
+                                     "round-trip MUST preserve inline data verbatim")))
     # StoryText paragraph attribute comparison (TextFrame only). Catches per-
     # <para>/<trail> ALIGN / LINESP / LINESPMode overrides that the converter
     # used to silently drop — the diff that would have caught PR #3's bug.
     if lp == "4" and rp == "4":
         _compare_storytext_paragraphs(left, right, path, issues)
+        _compare_storytext_sequence(left, right, path, issues)
 
 
 # Per-paragraph override attributes we compare on <para> and <trail>. PARENT
@@ -781,6 +788,25 @@ def _compare_item(idx: int, left: etree._Element, right: etree._Element,
 # other side. We compare it as a value, including the absent case, but never
 # warn that "the original named the frame's default style explicitly".
 _PARA_COMPARED_ATTRS = ("ALIGN", "LINESP", "LINESPMode", "PARENT")
+
+# Element-kind-keyed lists of attributes whose absence/presence is critical
+# (silent round-trip drop) and whose value mismatch is a warning. The element
+# itself appearing/disappearing or its position in the StoryText drifting is
+# always critical: those are the round-trip bugs we're hunting.
+_STORYTEXT_KINDS = ("DefaultStyle", "ITEXT", "var", "para", "trail",
+                     "breakline", "tab", "breakcol", "breakframe")
+
+# DefaultStyle, ITEXT and var attribute taxonomies. Anything outside these
+# whitelists is reported via the "extra-attr" warning so we discover features
+# the diff doesn't yet inspect — i.e. follow the "each fix exposes the next
+# silently-dropped class" pattern down to zero.
+_DEFAULTSTYLE_ATTRS = ("PARENT", "LINESPMode", "LINESP", "ALIGN", "FONT",
+                        "FONTSIZE", "FCOLOR", "LANGUAGE", "FONTFEATURES",
+                        "FEATURES")
+_ITEXT_ATTRS = ("CH", "FONT", "FONTSIZE", "FCOLOR", "FSHADE", "FONTFEATURES",
+                 "FEATURES", "KERN", "TXTULP", "TXTSTP", "CPARENT", "LANGUAGE",
+                 "SCOLOR", "BGCOLOR", "TXTSHX", "TXTSHY", "TXTOUT")
+_VAR_ATTRS = ("name",)
 
 
 def _compare_storytext_paragraphs(left: etree._Element, right: etree._Element,
@@ -835,6 +861,125 @@ def _compare_storytext_paragraphs(left: etree._Element, right: etree._Element,
                                      attr=attr,
                                      left=lv, right=rv,
                                      detail="per-paragraph override value differs"))
+
+
+def _compare_storytext_sequence(left: etree._Element, right: etree._Element,
+                                 path: str, issues: list[Issue]) -> None:
+    """Position-aware comparison of every child of <StoryText> on both sides.
+
+    The original Scribus model puts content (ITEXT, var) BEFORE a separator
+    (para / breakline / tab / breakcol / breakframe / trail). PR #4 emitted
+    the page-number frame's `<var name="pgno"/>` AFTER `<para PARENT=
+    "Seitenzahl"/>` — Scribus then never saw the var because it was attached
+    to a non-existent next paragraph. The result: page numbers silently
+    dropped on every page.
+
+    This walker compares the FULL StoryText element sequence verbatim:
+
+      - Length mismatch is critical.
+      - Element kind at any index differing is critical (e.g. left has
+        <var/> at index 1, right has <ITEXT/>).
+      - A `<ITEXT CH=""/>` present on only one side is a critical
+        ``storytext-spurious-empty-itext`` (this is the fingerprint of the
+        old converter's "always emit at least one ITEXT then attach a
+        separator" merge logic).
+      - Element attributes: missing-on-one-side is critical; value mismatch
+        is warning.
+    """
+    l_story = left.find("StoryText")
+    r_story = right.find("StoryText")
+    if l_story is None or r_story is None:
+        return
+    l_seq = list(l_story)
+    r_seq = list(r_story)
+
+    # Sequence length — fundamental structural mismatch.
+    if len(l_seq) != len(r_seq):
+        # Try to localise the discrepancy with a short tag preview so the
+        # report tells you which kind of element drifted in count.
+        l_tags = [el.tag for el in l_seq]
+        r_tags = [el.tag for el in r_seq]
+        issues.append(Issue(SEVERITY_CRITICAL, "storytext-length-mismatch",
+                             path=path, attr="StoryText",
+                             left=f"{len(l_seq)} ({','.join(l_tags)})",
+                             right=f"{len(r_seq)} ({','.join(r_tags)})",
+                             detail=("StoryText element-sequence length differs"
+                                     " — content was added or dropped during round-trip")))
+        # Continue to the per-position comparison up to the shorter length so
+        # the operator gets the FIRST mismatch position, too.
+
+    n = min(len(l_seq), len(r_seq))
+    for idx in range(n):
+        le = l_seq[idx]
+        re_ = r_seq[idx]
+        if le.tag != re_.tag:
+            # Spurious-empty-ITEXT case: one side has <ITEXT CH=""/> here, the
+            # other doesn't. Surface this with a dedicated code so reports
+            # name the bug exactly.
+            if le.tag == "ITEXT" and not le.attrib.get("CH", ""):
+                issues.append(Issue(SEVERITY_CRITICAL, "storytext-spurious-empty-itext",
+                                     path=f"{path} StoryText[{idx}]",
+                                     left=le.tag, right=re_.tag,
+                                     detail="left has <ITEXT CH=\"\"/> at this position; right does not"))
+            elif re_.tag == "ITEXT" and not re_.attrib.get("CH", ""):
+                issues.append(Issue(SEVERITY_CRITICAL, "storytext-spurious-empty-itext",
+                                     path=f"{path} StoryText[{idx}]",
+                                     left=le.tag, right=re_.tag,
+                                     detail="right has <ITEXT CH=\"\"/> at this position; left does not"))
+            else:
+                issues.append(Issue(SEVERITY_CRITICAL, "storytext-element-kind-mismatch",
+                                     path=f"{path} StoryText[{idx}]",
+                                     left=le.tag, right=re_.tag,
+                                     detail=("element type at this position differs — content "
+                                             "was reordered during round-trip")))
+            continue
+
+        # Same tag at this position — compare attributes by kind.
+        if le.tag == "DefaultStyle":
+            attrs = _DEFAULTSTYLE_ATTRS
+        elif le.tag == "ITEXT":
+            attrs = _ITEXT_ATTRS
+        elif le.tag == "var":
+            attrs = _VAR_ATTRS
+        elif le.tag in ("para", "trail"):
+            # Already covered by _compare_storytext_paragraphs (PARENT, ALIGN,
+            # LINESP, LINESPMode). Skip to avoid double-reporting.
+            continue
+        else:
+            # breakline / tab / breakcol / breakframe — no attributes in
+            # Scribus's model; nothing further to compare.
+            continue
+
+        for attr in attrs:
+            lv = le.attrib.get(attr)
+            rv = re_.attrib.get(attr)
+            if lv == rv:
+                continue
+            if lv is None or rv is None:
+                # CH="" present on left but absent on right (or vice versa)
+                # is allowed: an ITEXT without CH defaults to empty text.
+                if le.tag == "ITEXT" and attr == "CH" and (lv == "" or rv == ""):
+                    continue
+                issues.append(Issue(SEVERITY_CRITICAL, "storytext-element-attr-missing",
+                                     path=f"{path} StoryText[{idx}] <{le.tag}>",
+                                     attr=attr,
+                                     left=lv if lv is not None else "(absent)",
+                                     right=rv if rv is not None else "(absent)",
+                                     detail=("attribute present on one side, absent on the other "
+                                             "— round-trip dropped or invented an attribute")))
+            else:
+                # Numeric attributes (FONTSIZE, KERN, LINESP) tolerate up to
+                # 0.001 difference; everything else compares verbatim.
+                if attr in ("FONTSIZE", "KERN", "LINESP"):
+                    try:
+                        if abs(float(lv) - float(rv)) < 0.001:
+                            continue
+                    except ValueError:
+                        pass
+                issues.append(Issue(SEVERITY_WARNING, "storytext-element-attr-value-mismatch",
+                                     path=f"{path} StoryText[{idx}] <{le.tag}>",
+                                     attr=attr, left=lv, right=rv,
+                                     detail="attribute value differs"))
 
 
 def _compare_palette(left_doc, right_doc, tag: str, key_attr: str,
