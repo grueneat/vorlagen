@@ -327,7 +327,7 @@ class ArticleHeadline:
     y_mm: float = 30
     w_mm: float = 190
     h_mm: float = 18
-    fcolor: str = Color.WHITE
+    fcolor: str = Color.BLACK   # inside-newspaper articles default to black on white
 
     def emit(self) -> Iterable:
         anchor, x, y = _resolve_pos(self.pos, self.x_mm, self.y_mm)
@@ -354,7 +354,7 @@ class ArticleBody:
     y_mm: float = 50
     w_mm: float = 190
     h_mm: float = 200
-    fcolor: str = Color.WHITE
+    fcolor: str = Color.BLACK   # newspaper body default is black on white
 
     def emit(self) -> Iterable:
         anchor, x, y = _resolve_pos(self.pos, self.x_mm, self.y_mm)

@@ -1,0 +1,222 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<SCRIBUSUTF8NEW Version="1.6.5">
+  <DOCUMENT ANZPAGES="4" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" BleedTop="8.503937" BleedBottom="8.503937" BleedLeft="8.503937" BleedRight="8.503937" ORIENTATION="0" PAGESIZE="Custom" FIRSTPAGENUM="1" BOOK="0" FIRSTLEFT="0" AUTOSPALTEN="1" ABSTSPALTEN="11" UNITS="1" TITLE="Zeitung Mini Smoke" AUTHOR="Die Grünen Niederösterreich" COMMENTS="DSL-built template — smoke-zeitung-mini" KEYWORDS="" PUBLISHER="" DOCDATE="" DOCTYPE="" DOCFORMAT="" DOCIDENT="" DOCSOURCE="" DOCLANGINFO="" DOCRELATION="" DOCCOVER="" DOCRIGHTS="" DOCCONTRIB="" DEFFONT="Gotham Narrow Book" DEFSIZE="12" DSAVE="0" AUTOSAVE="0" AUTOSAVETIME="10" AUTOSAVECOUNT="1" AUTOSAVEKEEP="0" AUTOSAVEINDOCDIR="1" AUTOSAVEDIR="" ScratchTop="20.0" ScratchLeft="100.0" ScratchRight="100" ScratchBottom="20" GapHorizontal="0" GapVertical="40.0" PAGEC="#ffffff" MARGC="#0033ff" RANDF="0" currentProfile="Default">
+    <CheckProfile Name="Default" ignoreErrors="0" autoCheck="1" checkGlyphs="1" checkOrphans="1" checkOverflow="1" checkPictures="1" checkPartFilledImageFrames="0" checkResolution="1" checkTransparency="1" minResolution="144" maxResolution="4800" checkAnnotations="0" checkRasterPDF="1" checkForGIF="1" ignoreOffLayers="0" checkOffConflictLayers="0" checkNotCMYKOrSpot="0" checkDeviceColorsAndOutputIntent="0" checkFontNotEmbedded="0" checkFontIsOpenType="0" checkAppliedMasterDifferentSide="1" checkEmptyTextFrames="1"/>
+    <COLOR NAME="Black" SPACE="CMYK" C="0" M="0" Y="0" K="100"/>
+    <COLOR NAME="White" SPACE="CMYK" C="0" M="0" Y="0" K="0"/>
+    <COLOR NAME="Registration" SPACE="CMYK" C="100" M="100" Y="100" K="100" Register="1"/>
+    <COLOR NAME="Dunkelgrün" SPACE="CMYK" C="85" M="35" Y="95" K="10"/>
+    <COLOR NAME="Hellgrün" SPACE="CMYK" C="69" M="0" Y="100" K="0"/>
+    <COLOR NAME="Gelb" SPACE="CMYK" C="0" M="0" Y="100" K="0"/>
+    <COLOR NAME="Magenta" SPACE="CMYK" C="0" M="100" Y="0" K="0"/>
+    <CHARSTYLE CNAME="" FONT="Gotham Narrow Book" FONTSIZE="12" FCOLOR="Black"/>
+    <STYLE NAME="ci/default" ALIGN="0" LINESP="13.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="12.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/headline-ultra" PARENT="ci/default" ALIGN="1" LINESP="23.000000" LINESPMode="2" FONT="Gotham Narrow Ultra" FONTSIZE="27.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/headline-vollkorn-italic" PARENT="ci/default" ALIGN="1" LINESP="23.000000" LINESPMode="2" FONT="Vollkorn Black Italic" FONTSIZE="27.0" FCOLOR="Gelb" LANGUAGE="de"/>
+    <STYLE NAME="ci/body-12" PARENT="ci/default" ALIGN="1" LINESP="13.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="12.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/body-11" PARENT="ci/default" ALIGN="0" LINESP="12.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="11.0" FCOLOR="Black" LANGUAGE="de"/>
+    <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="5.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/stoerer" PARENT="ci/default" ALIGN="1" LINESP="11.000000" LINESPMode="2" FONT="Gotham Narrow Ultra" FONTSIZE="10.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/cta" PARENT="ci/default" ALIGN="1" LINESP="13.000000" LINESPMode="2" FONT="Gotham Narrow Bold" FONTSIZE="13.0" FCOLOR="White" LANGUAGE="de"/>
+    <TableStyle NAME="Default Table Style"/>
+    <CellStyle NAME="Default Cell Style"/>
+    <LAYERS NUMMER="0" LEVEL="0" NAME="Hintergrund" SICHTBAR="1" DRUCKEN="1" EDIT="1" SELECT="1" FLOW="1" TRANS="1" BLEND="0" OUTL="0" LAYERC="#000000"/>
+    <LAYERS NUMMER="1" LEVEL="1" NAME="Bilder" SICHTBAR="1" DRUCKEN="1" EDIT="1" SELECT="1" FLOW="1" TRANS="1" BLEND="0" OUTL="0" LAYERC="#000000"/>
+    <LAYERS NUMMER="2" LEVEL="2" NAME="Text" SICHTBAR="1" DRUCKEN="1" EDIT="1" SELECT="1" FLOW="1" TRANS="1" BLEND="0" OUTL="0" LAYERC="#000000"/>
+    <LAYERS NUMMER="3" LEVEL="3" NAME="Hilfslinien" SICHTBAR="0" DRUCKEN="0" EDIT="1" SELECT="1" FLOW="1" TRANS="1" BLEND="0" OUTL="0" LAYERC="#000000"/>
+    <Printer firstUse="1"/>
+    <PDF Articles="0" Bookmarks="0" Compress="1" CompressMethod="0" Quality="0" EmbedPDF="0" Version="16" Resolution="300" Binding="0" PicRes="300" Grayscale="0" UseProfiles="0" UseProfiles2="0" Intent="1" MirrorH="0" MirrorV="0" openAction=""/>
+    <DocItemAttributes/>
+    <TablesOfContents/>
+    <NotesStyles/>
+    <Sections>
+      <Section Number="0" Name="Section 1" From="0" To="3" Type="Type_1_2_3" Start="1" Reversed="0" Active="1" FillChar="" FieldWidth="0"/>
+    </Sections>
+    <PageSets>
+      <Set Name="Single Page" FirstPage="0" Rows="1" Columns="1" GapHorizontal="0" GapBelow="40" GapVertical="0"/>
+      <Set Name="Facing Pages" FirstPage="1" Rows="1" Columns="2" GapHorizontal="0" GapBelow="40" GapVertical="0">
+        <PageNames Name="Left Page"/>
+        <PageNames Name="Right Page"/>
+      </Set>
+      <Set Name="3-Fold" FirstPage="0" Rows="1" Columns="3" GapHorizontal="0" GapBelow="40" GapVertical="0">
+        <PageNames Name="Left Page"/>
+        <PageNames Name="Middle"/>
+        <PageNames Name="Right Page"/>
+      </Set>
+      <Set Name="4-Fold" FirstPage="0" Rows="1" Columns="4" GapHorizontal="0" GapBelow="40" GapVertical="0">
+        <PageNames Name="Left Page"/>
+        <PageNames Name="Middle Left"/>
+        <PageNames Name="Middle Right"/>
+        <PageNames Name="Right Page"/>
+      </Set>
+    </PageSets>
+    <MASTERPAGE PAGEXPOS="895.275591" PAGEYPOS="1783.779528" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" Size="Custom" Orientation="0" LEFT="0" PRESET="0" VerticalGuides="" HorizontalGuides="" AGhorizontalAutoGap="0" AGverticalAutoGap="0" AGhorizontalAutoCount="1" AGverticalAutoCount="1" AGhorizontalAutoRefer="0" AGverticalAutoRefer="0" AGSelection="0 0 0 0" pageEffectDuration="1" pageViewDuration="1" effectType="0" Dm="0" M="0" Di="0" NAM="Normal" MNAM="" NUM="2"/>
+    <MASTERPAGE PAGEXPOS="895.275591" PAGEYPOS="20.000000" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" Size="Custom" Orientation="0" LEFT="0" PRESET="0" VerticalGuides="" HorizontalGuides="" AGhorizontalAutoGap="0" AGverticalAutoGap="0" AGhorizontalAutoCount="1" AGverticalAutoCount="1" AGhorizontalAutoRefer="0" AGverticalAutoRefer="0" AGSelection="0 0 0 0" pageEffectDuration="1" pageViewDuration="1" effectType="0" Dm="0" M="0" Di="0" NAM="artikel-3col" MNAM="" NUM="0"/>
+    <MASTERPAGE PAGEXPOS="895.275591" PAGEYPOS="901.889764" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" Size="Custom" Orientation="0" LEFT="0" PRESET="0" VerticalGuides="" HorizontalGuides="" AGhorizontalAutoGap="0" AGverticalAutoGap="0" AGhorizontalAutoCount="1" AGverticalAutoCount="1" AGhorizontalAutoRefer="0" AGverticalAutoRefer="0" AGSelection="0 0 0 0" pageEffectDuration="1" pageViewDuration="1" effectType="0" Dm="0" M="0" Di="0" NAM="titelseite" MNAM="" NUM="1"/>
+    <PAGE PAGEXPOS="100.000000" PAGEYPOS="20.000000" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" Size="Custom" Orientation="0" LEFT="0" PRESET="0" VerticalGuides="" HorizontalGuides="" AGhorizontalAutoGap="0" AGverticalAutoGap="0" AGhorizontalAutoCount="1" AGverticalAutoCount="1" AGhorizontalAutoRefer="0" AGverticalAutoRefer="0" AGSelection="0 0 0 0" pageEffectDuration="1" pageViewDuration="1" effectType="0" Dm="0" M="0" Di="0" NAM="" MNAM="titelseite" NUM="0"/>
+    <PAGE PAGEXPOS="100.000000" PAGEYPOS="901.889764" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" Size="Custom" Orientation="0" LEFT="0" PRESET="0" VerticalGuides="" HorizontalGuides="" AGhorizontalAutoGap="0" AGverticalAutoGap="0" AGhorizontalAutoCount="1" AGverticalAutoCount="1" AGhorizontalAutoRefer="0" AGverticalAutoRefer="0" AGSelection="0 0 0 0" pageEffectDuration="1" pageViewDuration="1" effectType="0" Dm="0" M="0" Di="0" NAM="" MNAM="artikel-3col" NUM="1"/>
+    <PAGE PAGEXPOS="100.000000" PAGEYPOS="1783.779528" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" Size="Custom" Orientation="0" LEFT="0" PRESET="0" VerticalGuides="" HorizontalGuides="" AGhorizontalAutoGap="0" AGverticalAutoGap="0" AGhorizontalAutoCount="1" AGverticalAutoCount="1" AGhorizontalAutoRefer="0" AGverticalAutoRefer="0" AGSelection="0 0 0 0" pageEffectDuration="1" pageViewDuration="1" effectType="0" Dm="0" M="0" Di="0" NAM="" MNAM="artikel-3col" NUM="2"/>
+    <PAGE PAGEXPOS="100.000000" PAGEYPOS="2665.669291" PAGEWIDTH="595.275591" PAGEHEIGHT="841.889764" BORDERLEFT="28.346457" BORDERRIGHT="28.346457" BORDERTOP="28.346457" BORDERBOTTOM="28.346457" Size="Custom" Orientation="0" LEFT="0" PRESET="0" VerticalGuides="" HorizontalGuides="" AGhorizontalAutoGap="0" AGverticalAutoGap="0" AGhorizontalAutoCount="1" AGverticalAutoCount="1" AGhorizontalAutoRefer="0" AGverticalAutoRefer="0" AGSelection="0 0 0 0" pageEffectDuration="1" pageViewDuration="1" effectType="0" Dm="0" M="0" Di="0" NAM="" MNAM="artikel-3col" NUM="3"/>
+    <MASTEROBJECT XPOS="1419.685039" YPOS="842.047244" ItemID="100000000" PTYPE="6" WIDTH="42.519685" HEIGHT="11.338583" FRTYPE="0" CLIPEDIT="0" PCOLOR="Gelb" PCOLOR2="None" PWIDTH="0.000000" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" path="M0 0 L42.520 0 L42.520 11.339 L0 11.339 L0 0 Z" copath="M0 0 L42.520 0 L42.520 11.339 L0 11.339 L0 0 Z" gXpos="1419.685039" gYpos="842.047244" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Master: Footer-Akzent" OnMasterPage="artikel-3col"/>
+    <PAGEOBJECT XPOS="105.669291" YPOS="25.669291" OwnPage="0" ItemID="100000001" PTYPE="4" WIDTH="583.937008" HEIGHT="11.338583" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" copath="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" gXpos="105.669291" gYpos="25.669291" gWidth="0" gHeight="0" LAYER="3" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Label: Titelseite">
+      <StoryText>
+        <DefaultStyle PARENT="ci/impressum" LINESPMode="2"/>
+        <ITEXT CH="BEISPIELSEITE — Titelseite" FCOLOR="Magenta"/>
+        <trail PARENT="ci/impressum"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="62.519685" OwnPage="0" ItemID="100000002" PTYPE="4" WIDTH="538.582677" HEIGHT="59.527559" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L538.583 0 L538.583 59.528 L0 59.528 L0 0 Z" copath="M0 0 L538.583 0 L538.583 59.528 L0 59.528 L0 0 Z" gXpos="128.346457" gYpos="62.519685" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Zeitungsname">
+      <StoryText>
+        <DefaultStyle PARENT="ci/headline-ultra" LINESPMode="2"/>
+        <ITEXT CH="[Zeitungsname]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/headline-ultra"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="124.881890" OwnPage="0" ItemID="100000003" PTYPE="4" WIDTH="538.582677" HEIGHT="17.007874" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L538.583 0 L538.583 17.008 L0 17.008 L0 0 Z" copath="M0 0 L538.583 0 L538.583 17.008 L0 17.008 L0 0 Z" gXpos="128.346457" gYpos="124.881890" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Monat/Ausgabe">
+      <StoryText>
+        <DefaultStyle PARENT="ci/impressum" LINESPMode="2"/>
+        <ITEXT CH="[Monat / Ausgabe]" FCOLOR="White"/>
+        <trail PARENT="ci/impressum"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="246.771654" OwnPage="0" ItemID="100000004" PTYPE="4" WIDTH="538.582677" HEIGHT="226.771654" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L538.583 0 L538.583 226.772 L0 226.772 L0 0 Z" copath="M0 0 L538.583 0 L538.583 226.772 L0 226.772 L0 0 Z" gXpos="128.346457" gYpos="246.771654" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Headline 4-zeilig (Brand-Wechselfarbe)">
+      <StoryText>
+        <DefaultStyle PARENT="ci/headline-ultra" LINESPMode="2"/>
+        <ITEXT CH="[Titel-Headline 1]" FCOLOR="White"/>
+        <para PARENT="ci/headline-ultra"/>
+        <ITEXT CH="[Vollkorn-Akzent]" FCOLOR="Gelb"/>
+        <para PARENT="ci/headline-ultra"/>
+        <ITEXT CH="[Headline 3]" FCOLOR="White"/>
+        <para PARENT="ci/headline-ultra"/>
+        <ITEXT CH="[Vollkorn-Schluss]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/headline-ultra"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="530.236220" OwnPage="0" ItemID="100000005" PTYPE="4" WIDTH="168.188976" HEIGHT="25.511811" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" copath="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" gXpos="128.346457" gYpos="530.236220" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 1 Headline">
+      <StoryText>
+        <DefaultStyle PARENT="ci/cta" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 1 Headline]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/cta"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="558.582677" OwnPage="0" ItemID="100000006" PTYPE="4" WIDTH="168.188976" HEIGHT="198.425197" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 198.425 L0 198.425 L0 0 Z" copath="M0 0 L168.189 0 L168.189 198.425 L0 198.425 L0 0 Z" gXpos="128.346457" gYpos="558.582677" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 1 Body">
+      <StoryText>
+        <DefaultStyle PARENT="ci/body-11" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 1 Body — kurzer Anriss zum Artikel]" FCOLOR="White"/>
+        <trail PARENT="ci/body-11"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="313.543307" YPOS="530.236220" OwnPage="0" ItemID="100000007" PTYPE="4" WIDTH="168.188976" HEIGHT="25.511811" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" copath="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" gXpos="313.543307" gYpos="530.236220" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 2 Headline">
+      <StoryText>
+        <DefaultStyle PARENT="ci/cta" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 2 Headline]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/cta"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="313.543307" YPOS="558.582677" OwnPage="0" ItemID="100000008" PTYPE="4" WIDTH="168.188976" HEIGHT="198.425197" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 198.425 L0 198.425 L0 0 Z" copath="M0 0 L168.189 0 L168.189 198.425 L0 198.425 L0 0 Z" gXpos="313.543307" gYpos="558.582677" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 2 Body">
+      <StoryText>
+        <DefaultStyle PARENT="ci/body-11" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 2 Body — kurzer Anriss zum Artikel]" FCOLOR="White"/>
+        <trail PARENT="ci/body-11"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="498.740157" YPOS="530.236220" OwnPage="0" ItemID="100000009" PTYPE="4" WIDTH="168.188976" HEIGHT="25.511811" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" copath="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" gXpos="498.740157" gYpos="530.236220" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 3 Headline">
+      <StoryText>
+        <DefaultStyle PARENT="ci/cta" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 3 Headline]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/cta"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="498.740157" YPOS="558.582677" OwnPage="0" ItemID="100000010" PTYPE="4" WIDTH="168.188976" HEIGHT="198.425197" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 198.425 L0 198.425 L0 0 Z" copath="M0 0 L168.189 0 L168.189 198.425 L0 198.425 L0 0 Z" gXpos="498.740157" gYpos="558.582677" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 3 Body">
+      <StoryText>
+        <DefaultStyle PARENT="ci/body-11" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 3 Body — kurzer Anriss zum Artikel]" FCOLOR="White"/>
+        <trail PARENT="ci/body-11"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="105.669291" YPOS="907.559055" OwnPage="1" ItemID="100000011" PTYPE="4" WIDTH="583.937008" HEIGHT="11.338583" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" copath="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" gXpos="105.669291" gYpos="907.559055" gWidth="0" gHeight="0" LAYER="3" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Label: Beispiel: Hauptartikel 3-spaltig">
+      <StoryText>
+        <DefaultStyle PARENT="ci/impressum" LINESPMode="2"/>
+        <ITEXT CH="BEISPIELSEITE — Beispiel: Hauptartikel 3-spaltig" FCOLOR="Magenta"/>
+        <trail PARENT="ci/impressum"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="958.582677" OwnPage="1" ItemID="100000012" PTYPE="4" WIDTH="538.582677" HEIGHT="51.023622" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L538.583 0 L538.583 51.024 L0 51.024 L0 0 Z" copath="M0 0 L538.583 0 L538.583 51.024 L0 51.024 L0 0 Z" gXpos="128.346457" gYpos="958.582677" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Artikel-Headline">
+      <StoryText>
+        <DefaultStyle PARENT="ci/headline-ultra" LINESPMode="2"/>
+        <ITEXT CH="[Hauptartikel-Headline]" FCOLOR="Black"/>
+        <trail PARENT="ci/headline-ultra"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="1043.622047" OwnPage="1" ItemID="100000013" PTYPE="4" WIDTH="538.582677" HEIGHT="623.622047" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="3" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L538.583 0 L538.583 623.622 L0 623.622 L0 0 Z" copath="M0 0 L538.583 0 L538.583 623.622 L0 623.622 L0 0 Z" gXpos="128.346457" gYpos="1043.622047" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Artikel-Body (3-spaltig)">
+      <StoryText>
+        <DefaultStyle PARENT="ci/body-11" LINESPMode="2"/>
+        <ITEXT CH="[Artikel-Body — Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.]" FCOLOR="Black"/>
+        <trail PARENT="ci/body-11"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="105.669291" YPOS="1789.448819" OwnPage="2" ItemID="100000014" PTYPE="4" WIDTH="583.937008" HEIGHT="11.338583" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" copath="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" gXpos="105.669291" gYpos="1789.448819" gWidth="0" gHeight="0" LAYER="3" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Label: Beispiel: Drei Artikel nebeneinander">
+      <StoryText>
+        <DefaultStyle PARENT="ci/impressum" LINESPMode="2"/>
+        <ITEXT CH="BEISPIELSEITE — Beispiel: Drei Artikel nebeneinander" FCOLOR="Magenta"/>
+        <trail PARENT="ci/impressum"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="1840.472441" OwnPage="2" ItemID="100000015" PTYPE="4" WIDTH="168.188976" HEIGHT="25.511811" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" copath="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" gXpos="128.346457" gYpos="1840.472441" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 1 Headline">
+      <StoryText>
+        <DefaultStyle PARENT="ci/cta" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 1 Headline]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/cta"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="1868.818898" OwnPage="2" ItemID="100000016" PTYPE="4" WIDTH="168.188976" HEIGHT="340.157480" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 340.157 L0 340.157 L0 0 Z" copath="M0 0 L168.189 0 L168.189 340.157 L0 340.157 L0 0 Z" gXpos="128.346457" gYpos="1868.818898" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 1 Body">
+      <StoryText>
+        <DefaultStyle PARENT="ci/body-11" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 1 Body — kurzer Anriss zum Artikel]" FCOLOR="White"/>
+        <trail PARENT="ci/body-11"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="313.543307" YPOS="1840.472441" OwnPage="2" ItemID="100000017" PTYPE="4" WIDTH="168.188976" HEIGHT="25.511811" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" copath="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" gXpos="313.543307" gYpos="1840.472441" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 2 Headline">
+      <StoryText>
+        <DefaultStyle PARENT="ci/cta" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 2 Headline]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/cta"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="313.543307" YPOS="1868.818898" OwnPage="2" ItemID="100000018" PTYPE="4" WIDTH="168.188976" HEIGHT="340.157480" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 340.157 L0 340.157 L0 0 Z" copath="M0 0 L168.189 0 L168.189 340.157 L0 340.157 L0 0 Z" gXpos="313.543307" gYpos="1868.818898" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 2 Body">
+      <StoryText>
+        <DefaultStyle PARENT="ci/body-11" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 2 Body — kurzer Anriss zum Artikel]" FCOLOR="White"/>
+        <trail PARENT="ci/body-11"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="498.740157" YPOS="1840.472441" OwnPage="2" ItemID="100000019" PTYPE="4" WIDTH="168.188976" HEIGHT="25.511811" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" copath="M0 0 L168.189 0 L168.189 25.512 L0 25.512 L0 0 Z" gXpos="498.740157" gYpos="1840.472441" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 3 Headline">
+      <StoryText>
+        <DefaultStyle PARENT="ci/cta" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 3 Headline]" FCOLOR="Gelb"/>
+        <trail PARENT="ci/cta"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="498.740157" YPOS="1868.818898" OwnPage="2" ItemID="100000020" PTYPE="4" WIDTH="168.188976" HEIGHT="340.157480" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L168.189 0 L168.189 340.157 L0 340.157 L0 0 Z" copath="M0 0 L168.189 0 L168.189 340.157 L0 340.157 L0 0 Z" gXpos="498.740157" gYpos="1868.818898" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Teaser 3 Body">
+      <StoryText>
+        <DefaultStyle PARENT="ci/body-11" LINESPMode="2"/>
+        <ITEXT CH="[Teaser 3 Body — kurzer Anriss zum Artikel]" FCOLOR="White"/>
+        <trail PARENT="ci/body-11"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="105.669291" YPOS="2671.338583" OwnPage="3" ItemID="100000021" PTYPE="4" WIDTH="583.937008" HEIGHT="11.338583" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" copath="M0 0 L583.937 0 L583.937 11.339 L0 11.339 L0 0 Z" gXpos="105.669291" gYpos="2671.338583" gWidth="0" gHeight="0" LAYER="3" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Label: Impressum + Postvermerk">
+      <StoryText>
+        <DefaultStyle PARENT="ci/impressum" LINESPMode="2"/>
+        <ITEXT CH="BEISPIELSEITE — Impressum + Postvermerk" FCOLOR="Magenta"/>
+        <trail PARENT="ci/impressum"/>
+      </StoryText>
+    </PAGEOBJECT>
+    <PAGEOBJECT XPOS="128.346457" YPOS="3345.984252" OwnPage="3" ItemID="100000022" PTYPE="4" WIDTH="226.771654" HEIGHT="113.385827" FRTYPE="0" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338583" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L226.772 0 L226.772 113.386 L0 113.386 L0 0 Z" copath="M0 0 L226.772 0 L226.772 113.386 L0 113.386 L0 0 Z" gXpos="128.346457" gYpos="3345.984252" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" ANNAME="Impressum (Block)">
+      <StoryText>
+        <DefaultStyle PARENT="ci/impressum" LINESPMode="2"/>
+        <ITEXT CH="Impressum: Medieninhaber und Herausgeber: Die Grünen Niederösterreich, Daniel-Gran-Straße 48, 3100 St. Pölten. · Druck: Druckerei mit Postanschrift · Evtl. Hinweis auf Umweltzeichen wenn zutreffend" FCOLOR="White"/>
+        <trail PARENT="ci/impressum"/>
+      </StoryText>
+    </PAGEOBJECT>
+  </DOCUMENT>
+</SCRIBUSUTF8NEW>

@@ -84,12 +84,16 @@ class Page:
     bleed_mm: float = 3.0
     margins_mm: tuple[float, float, float, float] = (10, 10, 10, 10)  # L,R,T,B
     master_name: str = ""    # MNAM — empty resolves to "Normal"
-    label: str = ""          # for Sections-based naming in Page Panel
+    label: str = ""          # human-readable hint, rendered as a non-printing
+                             # TextFrame on Hilfslinien layer when set (since
+                             # Scribus has no per-page string label attribute)
     items: list = field(default_factory=list)
     own_page: int = 0        # set by Document at save time
     page_xpos_pt: float = 0  # scratch-canvas offset, set by Document
     page_ypos_pt: float = 0
     is_left: bool = False    # for facing-pages layout
+    is_master: bool = False  # True for MasterPage, False for doc page
+    master_id: str = ""      # NAM for MASTERPAGE; empty for doc pages
 
     def add(self, item) -> "Page":
         """Add a primitive or block to this page. Blocks (anything with an
@@ -130,6 +134,35 @@ class Document:
     SCRATCH_LEFT = 100.0
     GAP_VERTICAL = 40.0  # gap between stacked pages in scratch space
 
+    def add_master(self, name: str = "Normal",
+                   size: str | tuple[float, float] = "A4",
+                   orientation: str = "portrait",
+                   bleed_mm: float = 3.0,
+                   margins_mm: tuple[float, float, float, float] = (10, 10, 10, 10),
+                   facing: str = "right") -> Page:
+        """Define a master page. Items added to it appear on every doc page
+        whose master attribute matches `name`. `facing` is 'left' or 'right'
+        — controls the LEFT attribute (0=right, 1=left) for facing-pages
+        layouts.
+
+        Master pages are stacked off to the side of the doc pages on the
+        scratch canvas; Scribus normalises positions on next save.
+        """
+        if any(m.master_id == name for m in self.masters):
+            raise ValueError(f"Master page named {name!r} already exists")
+        w_pt, h_pt = resolve_size(size, orientation)
+        m = Page(
+            width_pt=w_pt, height_pt=h_pt, bleed_mm=bleed_mm, margins_mm=margins_mm,
+            master_name="", label=name, own_page=len(self.masters),
+            # Place masters in a separate column to the right of doc pages
+            page_xpos_pt=self.SCRATCH_LEFT + w_pt + 200,
+            page_ypos_pt=self.SCRATCH_TOP + len(self.masters) * (h_pt + self.GAP_VERTICAL),
+            is_left=(facing == "left"),
+            is_master=True, master_id=name,
+        )
+        self.masters.append(m)
+        return m
+
     def add_page(self, size: str | tuple[float, float] = "A4",
                  orientation: str = "portrait",
                  bleed_mm: float = 3.0,
@@ -167,6 +200,22 @@ class Document:
     def _build_xml(self) -> etree._Element:
         if not self.pages:
             raise ValueError("Document has no pages — call add_page() first")
+
+        # Ensure a "Normal" master page exists (any page MNAM that doesn't
+        # match a master defaults to "Normal", which must exist).
+        if not any(m.master_id == "Normal" for m in self.masters):
+            normal = Page(
+                width_pt=self.pages[0].width_pt,
+                height_pt=self.pages[0].height_pt,
+                bleed_mm=self.pages[0].bleed_mm,
+                margins_mm=self.pages[0].margins_mm,
+                master_name="", label="Normal", own_page=len(self.masters),
+                page_xpos_pt=self.SCRATCH_LEFT + self.pages[0].width_pt + 200,
+                page_ypos_pt=self.SCRATCH_TOP + len(self.masters) * (self.pages[0].height_pt + self.GAP_VERTICAL),
+                is_master=True, master_id="Normal",
+            )
+            self.masters.insert(0, normal)
+
         # Use the first page's dimensions as the document defaults (Scribus convention)
         first = self.pages[0]
         page_w_pt = first.width_pt
@@ -184,17 +233,35 @@ class Document:
         self._emit_sections(doc)
         self._emit_pagesets(doc)
 
-        # MASTERPAGEs first
-        for idx, m in enumerate(self.masters):
-            self._emit_masterpage(doc, m, idx)
+        # 1. MASTERPAGE elements
+        for m in self.masters:
+            self._emit_masterpage(doc, m)
 
-        # PAGEs next
+        # 2. PAGE elements
         for p in self.pages:
             self._emit_page(doc, p)
 
-        # MASTEROBJECTs (none yet — for v1)
-        # PAGEOBJECTs (flatten items)
+        # 3. MASTEROBJECTs — items on master pages, bound by OnMasterPage="<NAM>"
+        for m in self.masters:
+            for item in m.items:
+                self._emit_master_item(doc, item, m)
+
+        # 4. PAGEOBJECTs — items on doc pages, bound by OwnPage=<int>
         for p in self.pages:
+            # If the page has a label, render it as a non-printing TextFrame
+            # on the Hilfslinien layer at the very top of the page so the
+            # variant is identifiable when scrolling the document.
+            if p.label:
+                from .primitives import TextFrame
+                hilfslinien_idx = next((i for i, l in enumerate(self.ci.layers)
+                                         if l.name == "Hilfslinien"), 3)
+                label_frame = TextFrame(
+                    x_mm=2, y_mm=2, w_mm=p.width_pt / MM_TO_PT - 4, h_mm=4,
+                    text=f"BEISPIELSEITE — {p.label}",
+                    style="ci/impressum", fcolor="Magenta",
+                    layer=hilfslinien_idx, anname=f"Label: {p.label}",
+                )
+                self._emit_page_item(doc, label_frame, p)
             for item in p.items:
                 self._emit_page_item(doc, item, p)
 
@@ -412,19 +479,30 @@ class Document:
                 pname.set("Name", pn)
 
     # -- masterpages and pages -------------------------------------------
-    def _emit_masterpage(self, doc, m: Page, idx: int) -> None:
-        attrs = self._page_attrs(m, idx)
-        attrs["NAM"] = m.label or f"Master{idx}"
-        attrs["MNAM"] = ""
-        attrs["NUM"] = str(idx)
-        el = etree.SubElement(doc, "MASTERPAGE", attrib=attrs)
+    def _emit_masterpage(self, doc, m: Page) -> None:
+        attrs = self._page_attrs(m, m.own_page)
+        attrs["NAM"] = m.master_id
+        attrs["MNAM"] = ""  # masters never reference another master
+        attrs["NUM"] = str(m.own_page)
+        etree.SubElement(doc, "MASTERPAGE", attrib=attrs)
 
     def _emit_page(self, doc, p: Page) -> None:
         attrs = self._page_attrs(p, p.own_page)
-        attrs["NAM"] = ""  # empty NAM marks doc page (loader uses non-empty NAM as master discriminator)
-        attrs["MNAM"] = p.master_name  # empty resolves to "Normal"
+        attrs["NAM"] = ""  # empty NAM marks doc page (non-empty = master discriminator)
+        attrs["MNAM"] = p.master_name or "Normal"
         attrs["NUM"] = str(p.own_page)
-        el = etree.SubElement(doc, "PAGE", attrib=attrs)
+        etree.SubElement(doc, "PAGE", attrib=attrs)
+
+    def _emit_master_item(self, doc, item, master: Page) -> None:
+        """Same as _emit_page_item but renames the element to MASTEROBJECT
+        and binds via OnMasterPage instead of OwnPage."""
+        node = item.to_pageobject(self._idgen, master)
+        node.tag = "MASTEROBJECT"
+        # Replace OwnPage with OnMasterPage="<NAM>"
+        if "OwnPage" in node.attrib:
+            del node.attrib["OwnPage"]
+        node.set("OnMasterPage", master.master_id)
+        doc.append(node)
 
     def _page_attrs(self, p: Page, idx: int) -> dict[str, str]:
         ml, mr, mt, mb = p.margins_mm
