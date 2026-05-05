@@ -238,15 +238,36 @@ class Document:
                  label: str = "") -> Page:
         w_pt, h_pt = resolve_size(size, orientation)
         own_page = len(self.pages)
-        # Page Y position = ScratchTop + cumulative previous page heights + gaps.
-        # Page X position = ScratchLeft (single-page stacking; facing pages use columns).
+        # Single-page stacking: every page sits in the left column, stacked
+        # vertically with GapVertical between rows.
         page_x = self.SCRATCH_LEFT
         page_y = self.SCRATCH_TOP + own_page * (h_pt + self.GAP_VERTICAL)
         if self.facing_pages:
-            # Even index = left column, odd = right column. Two pages per row.
-            is_left = (own_page % 2 == 0)
-            page_x = self.SCRATCH_LEFT if is_left else self.SCRATCH_LEFT + w_pt
-            page_y = self.SCRATCH_TOP + (own_page // 2) * (h_pt + self.GAP_VERTICAL)
+            # Facing pages with PageSets <Set Name="Facing Pages" FirstPage="1">
+            # — the first doc page sits ALONE in the right column on row 0
+            # (cover), then every subsequent pair (1,2), (3,4), ... shares a
+            # row with the left page in the left column and the right page in
+            # the right column. The Y stride is PageHeight + GapVertical.
+            #
+            # Row indices: page 0 → row 0 (right, alone); page 1 → row 1 (left);
+            # page 2 → row 1 (right); page 3 → row 2 (left); page 4 → row 2 (right); ...
+            # Side: page 0 → right; odd index → left; even index (>0) → right.
+            if own_page == 0:
+                row = 0
+                side_left = False  # cover stands on the right column
+            else:
+                row = ((own_page - 1) // 2) + 1
+                side_left = ((own_page - 1) % 2 == 0)
+            page_x = (self.SCRATCH_LEFT if side_left
+                      else self.SCRATCH_LEFT + w_pt)
+            page_y = self.SCRATCH_TOP + row * (h_pt + self.GAP_VERTICAL)
+            # The per-PAGE LEFT attribute is informational; the actual side is
+            # determined by PageSets columns + master's LEFT. Match the
+            # original Scribus convention of writing LEFT="0" on every doc
+            # page (verified against gruene-zeitung-vorlage-original.sla, all
+            # 14 pages have LEFT="0"). Templates that rely on facing-page side
+            # use master_name lookup, not the per-page LEFT bit.
+            is_left = False
         else:
             is_left = False
         page = Page(
