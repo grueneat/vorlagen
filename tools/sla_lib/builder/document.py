@@ -519,15 +519,16 @@ class Document:
             "BleedRight": _fmt_num(mm_to_pt(bleed)),
             "ORIENTATION": "0",  # 0=portrait, 1=landscape
             "PAGESIZE": "Custom",
-            "FIRSTPAGENUM": str(self.first_page_num),
             "BOOK": "1" if self.facing_pages else "0",
-            "FIRSTLEFT": "0",
+            # FIRSTPAGENUM/FIRSTLEFT are obsolete legacy fields — Scribus 1.6
+            # uses FIRSTNUM instead. Originals don't carry FIRSTPAGENUM or
+            # FIRSTLEFT, so the DSL omits them too.
             "AUTOSPALTEN": "1",
             "ABSTSPALTEN": f"{self.column_gap_default_pt:g}",
             "UNITS": "1",  # 1=mm
             "TITLE": self.title,
             "AUTHOR": self.author,
-            "COMMENTS": f"DSL-built template — {self.template_id}",
+            "COMMENTS": "",
             "KEYWORDS": "",
             "PUBLISHER": "",
             "DOCDATE": "",
@@ -540,12 +541,9 @@ class Document:
             "DOCCOVER": "",
             "DOCRIGHTS": "",
             "DOCCONTRIB": "",
-            # Both DEFFONT/DEFSIZE (legacy DSL fields) and DFONT/DSIZE
-            # (what Scribus actually reads) are emitted; Scribus 1.6 looks
-            # for DFONT specifically when rendering text frames whose ITEXT
-            # has no explicit FONT.
-            "DEFFONT": self.deffont,
-            "DEFSIZE": f"{self.defsize:g}",
+            # DFONT/DSIZE are what Scribus 1.6 actually reads when a text
+            # frame's ITEXT has no explicit FONT/FONTSIZE. The originals
+            # emit only these (no DEFFONT/DEFSIZE), so we follow suit.
             "DFONT": self.deffont,
             "DSIZE": f"{self.defsize:g}",
             # Document language — used by hyphenation engine and as the
@@ -573,13 +571,15 @@ class Document:
             "HCMS": "1" if self.hcms else "0",
             "showBleed": "1",
             "FIRSTNUM": "1",
-            "DSAVE": "0",
-            "AUTOSAVE": "0",
-            "AUTOSAVETIME": "10",
-            "AUTOSAVECOUNT": "1",
-            "AUTOSAVEKEEP": "0",
-            "AUTOSAVEINDOCDIR": "1",
-            "AUTOSAVEDIR": "",
+            # AutoSave state — emitted with Scribus's camelCase naming
+            # (matches the originals on save). DSAVE and the all-uppercase
+            # AUTOSAVE/AUTOSAVECOUNT/... variants are obsolete and dropped.
+            "AutoSave": "1",
+            "AutoSaveTime": "600000",
+            "AutoSaveCount": "1",
+            "AutoSaveKeep": "0",
+            "AUtoSaveInDocDir": "1",
+            "AutoSaveDir": "",
             "ScratchTop": str(self.SCRATCH_TOP),
             "ScratchLeft": str(self.SCRATCH_LEFT),
             "ScratchRight": "100",
@@ -591,11 +591,15 @@ class Document:
             "RANDF": "0",
             "currentProfile": "Default",
         }
-        # Converter pass-through: any DOCUMENT attribute not explicitly handled
-        # above gets emitted verbatim. Existing keys win (the DSL's own
-        # constants take precedence over surprise overrides).
+        # Converter pass-through: ``extra_doc_attrs`` overrides the DSL's
+        # own hardcoded defaults so the rebuilt SLA can preserve quirky
+        # doc-level fields verbatim (PENLINE="Green", MARGC="#0000ff",
+        # PAGESIZE="A4", camelCase AutoSave variants, etc.). The DSL's
+        # defaults are still emitted for keys the converter does NOT
+        # provide; only when the converter explicitly captures a value
+        # does it replace the default.
         for k, v in self.extra_doc_attrs.items():
-            attrs.setdefault(k, v)
+            attrs[k] = v
         return attrs
 
     def _emit_check_profiles(self, doc) -> None:

@@ -300,6 +300,14 @@ class _Frame:
     fill_rule: Optional[int] = None
     corner_radius_mm: float = 0
     soft_shadow: Optional[SoftShadow] = None
+    # CLIPEDIT="1" in Scribus marks a frame whose clipping path has been
+    # manually edited (Scribus then leaves the path alone on size change
+    # instead of auto-regenerating it). Round-tripping this flag preserves
+    # the original's clip-edit state — the Zeitung carries it on 87 of 146
+    # frames, and Scribus subtly renormalises clip paths when the flag is
+    # absent on load, which causes character-level glyph drift in the
+    # rendered PDF.
+    clip_edit: bool = False
 
     def _xy_pt(self, page) -> tuple[float, float]:
         """Return absolute XPOS/YPOS in scratch canvas space."""
@@ -417,7 +425,7 @@ class TextFrame(_Frame):
             "ItemID": str(item_id),
             "PTYPE": "4",
             "WIDTH": _fmt_num(w_pt), "HEIGHT": _fmt_num(h_pt),
-            "CLIPEDIT": "0",
+            "CLIPEDIT": "1" if self.clip_edit else "0",
             "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
@@ -567,7 +575,7 @@ class ImageFrame(_Frame):
             "ItemID": str(idgen.next()),
             "PTYPE": "2",
             "WIDTH": _fmt_num(w_pt), "HEIGHT": _fmt_num(h_pt),
-            "CLIPEDIT": "0",
+            "CLIPEDIT": "1" if self.clip_edit else "0",
             "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1",
             "LOCALSCX": _fmt_num(scx), "LOCALSCY": _fmt_num(scy),
@@ -629,7 +637,7 @@ class Polygon(_Frame):
             "ItemID": str(idgen.next()),
             "PTYPE": "6",
             "WIDTH": _fmt_num(w_pt), "HEIGHT": _fmt_num(h_pt),
-            "CLIPEDIT": "0",
+            "CLIPEDIT": "1" if self.clip_edit else "0",
             "PCOLOR": self.fill,
             "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
@@ -698,7 +706,7 @@ class Line:
             "ItemID": str(idgen.next()),
             "PTYPE": "5",
             "WIDTH": _fmt_num(length), "HEIGHT": "1",
-            "FRTYPE": "3", "CLIPEDIT": "0",
+            "FRTYPE": "3", "CLIPEDIT": "1" if self.clip_edit else "0",
             "PCOLOR": "None", "PCOLOR2": self.color,
             "PWIDTH": _fmt_num(self.width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",

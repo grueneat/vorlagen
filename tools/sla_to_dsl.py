@@ -562,6 +562,8 @@ def _convert_pageobject(po: etree._Element,
         common_kwargs["rotation_deg"] = rot
     if anname:
         common_kwargs["anname"] = anname
+    if po.attrib.get("CLIPEDIT") == "1":
+        common_kwargs["clip_edit"] = True
     if frtype == "3":
         # Pass the original path verbatim for byte-equivalent round-trip.
         common_kwargs["custom_path"] = po.attrib.get("path", "")
@@ -853,29 +855,31 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
     # (ALAYER, AUTOL, BaseC, CPICT, DPIn*, etc.) to be present on first read;
     # without them, text frames render with broken paragraph styling and PDF
     # export silently drops content.
+    # Set of DOCUMENT-level attributes the DSL emits authoritatively from
+    # explicit Document(...) kwargs. Anything not in this set flows through
+    # ``extra_doc_attrs`` verbatim so the rebuilt SLA preserves the
+    # original's quirky doc-level fields (PENLINE / MARGC / GROUPC /
+    # currentProfile / camelCase AutoSave variants / etc.) without the
+    # DSL substituting its own hardcoded defaults.
+    #
+    # The reduced set here covers ONLY the attributes the DSL Document
+    # constructor maps from explicit kwargs (page geometry, bleed,
+    # facing-pages flag, default font/size, language, page color). Every
+    # other doc-level attribute the original carries — including ones the
+    # DSL also has hardcoded (PEN, BRUSH, PAGESIZE, AUTOMATIC, etc.) —
+    # passes through extras and OVERRIDES the DSL hardcode.
     DSL_HANDLED_DOC_ATTRS = {
         "ANZPAGES", "PAGEWIDTH", "PAGEHEIGHT",
         "BORDERLEFT", "BORDERRIGHT", "BORDERTOP", "BORDERBOTTOM",
         "BleedTop", "BleedBottom", "BleedLeft", "BleedRight",
-        "ORIENTATION", "PAGESIZE", "FIRSTPAGENUM", "BOOK", "FIRSTLEFT",
+        "ORIENTATION", "FIRSTPAGENUM", "BOOK", "FIRSTLEFT",
         "AUTOSPALTEN", "ABSTSPALTEN", "UNITS",
         "TITLE", "AUTHOR", "COMMENTS", "KEYWORDS", "PUBLISHER",
         "DOCDATE", "DOCTYPE", "DOCFORMAT", "DOCIDENT", "DOCSOURCE",
         "DOCLANGINFO", "DOCRELATION", "DOCCOVER", "DOCRIGHTS", "DOCCONTRIB",
         "DEFFONT", "DEFSIZE", "DFONT", "DSIZE",
-        "DSAVE", "AUTOSAVE", "AUTOSAVETIME", "AUTOSAVECOUNT", "AUTOSAVEKEEP",
-        "AUTOSAVEINDOCDIR", "AUTOSAVEDIR",
-        "AutoSave", "AutoSaveTime", "AutoSaveCount", "AutoSaveKeep",
-        "AUtoSaveInDocDir", "AutoSaveDir",
-        "ScratchTop", "ScratchLeft", "ScratchRight", "ScratchBottom",
-        "GapHorizontal", "GapVertical",
-        "PAGEC", "MARGC", "RANDF", "currentProfile",
-        "LANGUAGE",
-        "PEN", "BRUSH", "PENLINE", "PENTEXT", "PENSHADE", "BRUSHSHADE",
-        "LINESHADE", "PICTSHADE",
-        "AUTOMATIC", "AUTOCHECK", "BASEGRID", "BASEO", "STIL", "STILLINE",
-        "WIDTH", "WIDTHLINE", "GROUPC", "HCMS", "showBleed", "FIRSTNUM",
-        "FIRSTPAGENUM",
+        "LANGUAGE", "HCMS", "showBleed", "FIRSTNUM",
+        "PAGEC",
     }
     extras: dict[str, str] = {
         k: v for k, v in doc_elem.attrib.items()
