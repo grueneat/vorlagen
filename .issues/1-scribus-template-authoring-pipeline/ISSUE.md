@@ -1,7 +1,7 @@
 ---
 id: '1'
 title: Scribus template authoring pipeline
-status: open
+status: done
 priority: high
 labels:
 - foundation
