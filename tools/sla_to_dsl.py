@@ -40,6 +40,7 @@ _THIS = Path(__file__).resolve()
 sys.path.insert(0, str(_THIS.parent))
 
 from sla_lib import SLADocument  # noqa: E402
+from sla_lib.builder.primitives import PARAGRAPH_OVERRIDE_ATTRS as _PARA_OVERRIDE_ATTRS  # noqa: E402
 
 ROOT = _THIS.parent.parent
 CI_YAML = ROOT / "shared" / "ci.yml"
@@ -435,14 +436,30 @@ def _build_runs(story_elem: etree._Element) -> list[dict]:
                 runs.append(cur)
                 cur = {"text": ""}
             cur["separator"] = tag
-            # The <para/> element may carry PARENT="<paragraph style>" specifying
-            # the style for the paragraph that's just ending. We attach it to
-            # the run as paragraph_style; the DSL emitter will copy it onto the
-            # emitted <para PARENT=.../> element.
+            # The <para/> element may carry PARENT="<paragraph style>" plus
+            # per-paragraph attribute overrides (ALIGN, LINESP, LINESPMode)
+            # that override the named style for this paragraph only. PARENT
+            # is the existing paragraph_style field; the rest are captured
+            # into paragraph_attrs and re-emitted by the DSL builder. Per
+            # CONTEXT.md D6 we raise on any attribute that has no typed
+            # representation rather than silently dropping it (which is the
+            # bug PR #3 had: ALIGN="0" overrides on Headlines were dropped,
+            # centering lines that should have been left-aligned).
             if tag == "para":
+                handled = {"PARENT"} | _PARA_OVERRIDE_ATTRS
+                for k in child.attrib.keys():
+                    if k not in handled:
+                        raise UnhandledElement(
+                            f"<para> carries unhandled attribute {k!r}={child.attrib[k]!r}; "
+                            f"extend PARAGRAPH_OVERRIDE_ATTRS in tools/sla_lib/builder/primitives.py"
+                        )
                 parent_attr = child.attrib.get("PARENT")
                 if parent_attr is not None:
                     cur["paragraph_style"] = parent_attr
+                overrides = {k: v for k, v in child.attrib.items()
+                              if k in _PARA_OVERRIDE_ATTRS}
+                if overrides:
+                    cur["paragraph_attrs"] = overrides
         elif tag == "var":
             varname = child.attrib.get("name")
             if cur is None:
@@ -514,8 +531,24 @@ def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
                 if "LINESPMode" in ds.attrib:
                     text_kwargs["default_linesp_mode"] = int(ds.attrib["LINESPMode"])
             tr = story.find("trail")
-            if tr is not None and "PARENT" in tr.attrib:
-                text_kwargs["trail_style"] = tr.attrib["PARENT"]
+            if tr is not None:
+                # Strict-mode: the trail can carry PARENT plus the same
+                # per-paragraph override attributes the <para> element does
+                # (ALIGN/LINESP/LINESPMode). Any other attribute means we
+                # found something unhandled — raise per CONTEXT.md D6.
+                handled = {"PARENT"} | _PARA_OVERRIDE_ATTRS
+                for k in tr.attrib.keys():
+                    if k not in handled:
+                        raise UnhandledElement(
+                            f"<trail> carries unhandled attribute {k!r}={tr.attrib[k]!r}; "
+                            f"extend PARAGRAPH_OVERRIDE_ATTRS in tools/sla_lib/builder/primitives.py"
+                        )
+                if "PARENT" in tr.attrib:
+                    text_kwargs["trail_style"] = tr.attrib["PARENT"]
+                trail_overrides = {k: v for k, v in tr.attrib.items()
+                                    if k in _PARA_OVERRIDE_ATTRS}
+                if trail_overrides:
+                    text_kwargs["trail_attrs"] = trail_overrides
             runs = _build_runs(story)
         if "ALIGN" in po.attrib:
             text_kwargs["text_align"] = int(po.attrib["ALIGN"])
