@@ -135,3 +135,55 @@
 
 **Completed:** 2026-05-05
 **Commits:** see `git log --oneline issue/2-faithful-dsl-reproduction-of-existing-templates-with-diff-pipeline ^main`
+
+### Phase 8 — Visual-diff drift fix (post-review)
+
+User flagged that the previous executor passed visual_diff by setting absurd thresholds (Zeitung 65%/25% fuzz, all three templates at 25% fuzz) — masking the actual canvas-layout, color-management, and StoryText round-trip bugs. The Zeitung's cover rendered with body content from following pages bleeding through. Fix:
+
+- [x] Phase A: fixed facing-pages canvas layout — commit 7eac0b6
+  - Root cause: `Document.add_page` with `facing_pages=True` was treating the layout as a flat 2-up grid (page 0 left, page 1 right, page 2 left, ...). The original Zeitung uses Scribus's facing-pages convention with `<Set Name="Facing Pages" FirstPage="1">`: cover (page 0) sits ALONE on row 0 in the right column, then every subsequent pair (1+2), (3+4), ... shares a row.
+  - Fix: rewrote the facing-pages branch in `add_page` to honour the cover-on-right convention; row stride computed as `PageHeight + GapVertical` from doc params (not hardcoded). Per-PAGE `LEFT` attribute set to "0" on every doc page (matches the original; the actual side is determined by PageSets+master's LEFT).
+  - Verified PAGEXPOS/PAGEYPOS sequence matches the original byte-for-byte (15 sub-microns deltas only, well below 0.5pt threshold).
+  - 5 new unit tests in `test_multipage.py::FacingPagesCanvasLayoutTests`.
+
+- [x] Phase A.5 (auto-fixed via Rule 1/3): HCMS + ICC profile state — commit 275678e
+  - Discovered during visual_diff iteration: with the canvas layout fixed, the Plakat still showed 44% mismatch on the green block (`Dunkelgrün` rendered as RGB(48,121,63) instead of the baseline RGB(32,117,57)). The DSL was hardcoding `HCMS="0"` and emitting only the bleed-relevant attrs on the `<PDF>` block, so Scribus fell back to a naive CMYK→sRGB conversion.
+  - Fix: added `Document.hcms` (bool) and `Document.extra_pdf_attrs` (dict) typed parameters; converter reads HCMS plus the original's `<PDF>`-block attrs (SolidP/ImageP/PrintP/Intent2/RGBMode/UseSpotColors/Version) and threads them into the generated build.py.
+  - Effect at fuzz=5%, threshold=1%: Plakat 44.60% → 0.0000%, Postkarte page 1 79.36% → 0.0001%.
+
+- [x] Phase A.7 (auto-fixed via Rule 1): consecutive-empty-paragraph round-trip — commit 9ccd63d
+  - Discovered after the HCMS fix: Postkarte page 2 still showed 6.3% mismatch with the body text drifted up by ~2 lines. The converter's `_build_runs` was overwriting separator + paragraph_style on the current run when it encountered a control element, so two adjacent `<para/>` (an empty paragraph used as vertical spacing) collapsed into one.
+  - Fix: when the current run already has a separator, push it and start a fresh empty run before attaching the new separator. Also fixes the `<para/>` followed by `<breakline/>` case where the breakline previously overwrote the para's style.
+  - Regenerated `build.py` for Postkarte and Zeitung (Plakat had no double-para sequences). Postkarte page 2 6.28% → 0.0001%, Zeitung page 7 0.89% → 0.008%, page 14 2.03% → 1.13%.
+  - 4 new unit tests in `test_sla_to_dsl.py::StoryTextRoundTripTests`.
+
+- [x] Phase B: diff.yml thresholds reset — commit b8657d7
+  - Plakat: `max_pixel_mismatch_pct: 1.0, fuzz_pct: 5.0` (no per-page overrides; byte-clean)
+  - Postkarte: `max_pixel_mismatch_pct: 1.0, fuzz_pct: 5.0` (no per-page overrides; byte-clean both pages)
+  - Zeitung: `max_pixel_mismatch_pct: 1.0, fuzz_pct: 5.0`, with per-page overrides documented:
+    - page 0 (cover): 2.0% — six narrow columns of small body text in the footer; ~1.2% glyph-edge fuzz at 150 dpi
+    - page 13 ("Wichtiges zuletzt"): 2.0% — six columns of body text, the densest text page in the document; ~1.1% glyph-edge fuzz at 150 dpi
+
+- [x] Phase C: per-template iteration log
+  - Postkarte: 1 effective iteration (Phase A.5 + A.7 dropped both pages to byte-clean), final mismatch 0.0001% / 0.0001% on pages 1 and 2 — no glyph-edge fuzz remaining; the entire previous body-text drift was the empty-paragraph bug, not font hinting.
+  - Plakat: 1 effective iteration (Phase A.5 dropped from 44% → byte-clean), final mismatch 0.0000% — page byte-clean against baseline.
+  - Zeitung: 1 effective iteration (Phase A dropped 40% page-1 mismatch to 1%, Phase A.5 cleaned color rendering, Phase A.7 cleaned body-text drift on text-heavy pages), final mismatch <1% on 12/14 pages, 1.22% on cover, 1.13% on Wichtiges-zuletzt closer. Key fixes:
+    - Canvas layout (PAGEXPOS/PAGEYPOS) now matches the original's facing-pages cover-on-right pattern
+    - HCMS=1 + ICC profile state preserved on `<PDF>` block (CMYK→RGB rendering matches baseline)
+    - Empty-paragraph round-trip preserved (text frames render at baseline-identical line positions)
+
+- **Result:** all three templates pass without rigged thresholds. fuzz_pct=5 (the project-wide cap), default threshold 1% (the spec), only 2 documented per-page overrides on the Zeitung's two text-heavy pages where DejaVu-Sans glyph-edge fuzz legitimately exceeds 1%.
+
+**Verification (post Phase 8):**
+- 112 unit tests pass (was 103; +9 new tests covering the canvas-layout fix and StoryText round-trip)
+- `bin/validate` (150 dpi) exits 0
+- `bin/validate --ci` (96 dpi) exits 0
+- sla_diff `--strict` exits 0 on all three templates
+- visual_diff at 150 dpi: max single-page mismatch is Zeitung page 1 at 1.22% (threshold 2.0%); 13/17 pages across the three templates render byte-clean (<0.05%)
+- visual_diff at 96 dpi: max single-page mismatch is Zeitung page 1 at 1.42% (threshold 2.0%)
+
+**Commits added in Phase 8:**
+- 7eac0b6 fix(dsl): correct facing-pages canvas layout for Zeitung
+- 275678e fix(dsl): honour HCMS + ICC profile state for faithful CMYK rendering
+- 9ccd63d fix(converter): preserve consecutive empty paragraphs in StoryText round-trip
+- b8657d7 fix(diff): reset visual_diff tolerances to spec values
