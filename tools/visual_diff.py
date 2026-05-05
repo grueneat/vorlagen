@@ -112,11 +112,15 @@ def _run(cmd: list[str], *, allow_nonzero: bool = False, env: Optional[dict] = N
 def render_sla_to_pdf(sla_path: Path, pdf_path: Path) -> None:
     """Render an SLA to PDF via the sanctioned headless pipeline.
 
-    Mirrors tools/gallery_build.py invocation: explicit screen geometry +
-    UTF-8 locale env. Scribus on Ubuntu CI exits 0 without writing the
-    PDF if the locale is unset, so we also assert the output exists.
+    Mirrors tools/gallery_build.py invocation: absolute paths, explicit
+    screen geometry, UTF-8 locale env. Scribus on Ubuntu CI exits 0
+    without writing the PDF if the output path is relative (it changes
+    cwd internally on openDoc), so we resolve to absolute paths and
+    assert the output exists afterwards.
     """
     pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    sla_abs = sla_path.resolve()
+    pdf_abs = pdf_path.resolve()
     repo = Path(__file__).resolve().parent.parent
     env = {
         **os.environ,
@@ -129,13 +133,13 @@ def render_sla_to_pdf(sla_path: Path, pdf_path: Path) -> None:
             "xvfb-run", "-a", "--server-args=-screen 0 1024x768x24",
             "scribus", "-g", "-ns", "-py",
             str(repo / "tools" / "_export_pdf.py"),
-            str(sla_path), str(pdf_path),
+            str(sla_abs), str(pdf_abs),
         ],
         env=env,
     )
-    if not pdf_path.exists():
+    if not pdf_abs.exists():
         raise RuntimeError(
-            f"render_sla_to_pdf: scribus exited 0 but produced no PDF at {pdf_path}"
+            f"render_sla_to_pdf: scribus exited 0 but produced no PDF at {pdf_abs}"
         )
 
 
