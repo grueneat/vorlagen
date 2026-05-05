@@ -1,14 +1,16 @@
 # Auto-generated from plakat-a1-hochformat-original.sla by tools/sla_to_dsl.py.
 # Hand-edit thereafter; this file is the source of truth.
 
+import sys
 from pathlib import Path
 
-from sla_lib.builder import (
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[1] / 'tools'))
+
+from sla_lib.builder import (  # noqa: E402
     Document, TextFrame, ImageFrame, Polygon, Run,
     DocumentLayer, ParaStyle, CharStyle, SoftShadow,
 )
-
-HERE = Path(__file__).resolve().parent
 
 doc = Document(
     title='',
