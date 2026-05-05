@@ -16,19 +16,19 @@
 - [x] Task 2.3: A6 postcard skeleton (templates/_smoke/postcard-a6/) — renders cleanly with bg, headline, störer, CTA, impressum (commit 8d08f98)
 
 ### Phase 3 — Block Primitives
-- [ ] Task 3.1: Block: Headline4Line
-- [ ] Task 3.2: Block: StoererBadge
-- [ ] Task 3.3: Block: ImpressumLine and ImpressumBlock
-- [ ] Task 3.4: Block: SocialHandlesVertical
-- [ ] Task 3.5: Block: LogoCorner
-- [ ] Task 3.6: Block: EventDetails
-- [ ] Task 3.7: Block: Masthead (Zeitung)
-- [ ] Task 3.8: Block: ContentTeasers
-- [ ] Task 3.9: Block: ArticleHeadline + ArticleBody (multi-column)
+- [x] Task 3.1: Block: Headline4Line — alternating white/yellow, 4 ITEXT runs (commit 6425e6f)
+- [x] Task 3.2: Block: StoererBadge — magenta ellipse + 3-line rotated text overlay (commit 6425e6f)
+- [x] Task 3.3: Block: ImpressumLine + ImpressumBlock — default brand impressum text (commit 6425e6f)
+- [x] Task 3.4: Block: SocialHandlesVertical — 4-line social handles (commit 6425e6f)
+- [x] Task 3.5: Block: LogoCorner — corner-anchored ImageFrame referencing shared/logos/ (commit 6425e6f)
+- [x] Task 3.6: Block: EventDetails — date/time/venue/address, 1 or 2 columns (commit 6425e6f)
+- [x] Task 3.7: Block: Masthead — newspaper title + issue label (commit 6425e6f)
+- [x] Task 3.8: Block: ContentTeasers — N-column grid of teaser articles (commit 6425e6f)
+- [x] Task 3.9: Block: ArticleHeadline + ArticleBody — multi-column body with NEXTITEM linking (commit 6425e6f)
 
 ### Phase 4 — Multi-page DSL (depends on research-04)
-- [ ] Task 4.1: Add Document.add_master() and Document.add_page()
-- [ ] Task 4.2: Add column grid + helper guides on master pages
+- [x] Task 4.1: Document.add_master + multi-page emission (commit 5876ce9). Single-column working; facing-pages has known XObject ref bugs deferred.
+- [ ] Task 4.2: Column grid as Hilfslinien deferred — masters carry footer accents instead
 
 ### Phase 5 — Block Extraction Tooling
 - [ ] Task 5.1: tools/extract_block.py
@@ -39,9 +39,9 @@
 - [ ] Task 6.2: tools/author.py — Markdown brief → Layout-YAML → DSL
 
 ### Phase 7 — Migrate Existing Templates
-- [ ] Task 7.1: Re-build Postkarte via DSL
-- [ ] Task 7.2: Build Zeitung as multi-page DSL skeleton
-- [ ] Task 7.3: Plakat family from one DSL
+- [x] Task 7.1: Postkarte rebuilt via DSL — 2 pages, all blocks brand-correct
+- [x] Task 7.2: Zeitung built — 9 example pages, 6 masters, single SLA file
+- [x] Task 7.3: Plakat-Event family — A0/A1/A2/A3 from one build.py
 
 ### Phase 8 — Astro Gallery + GitHub Pages
 - [ ] Task 8.1: Set up site/ Astro project
