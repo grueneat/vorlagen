@@ -617,6 +617,12 @@ class ImageFrame(_Frame):
             "ROT": _fmt_num(self.rotation_deg),
         }
         if is_inline:
+            # Pagenumber=0 explicitly emitted to match the original SLA's
+            # full attribute set on inline image frames. Scribus reads this
+            # before isInlineImage; emitting both preserves byte-equivalence
+            # at this attribute (functionally a no-op since 0 is the
+            # default for ImageFrame's "image-of-page" reference).
+            attrs["Pagenumber"] = "0"
             attrs["isInlineImage"] = "1"
             attrs["inlineImageExt"] = self.inline_image_ext or "png"
             attrs["ImageData"] = self.inline_image_data
