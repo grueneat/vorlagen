@@ -215,10 +215,11 @@ page0.add(TextFrame(
     custom_path='M0 0 L0 70.0188 L153.779 70.0188 L153.779 0 L0 0 Z',
     fill_rule=0,
     trail_style='Fließtext ',
+    trail_attrs={'ALIGN': '0'},
     col_gap_mm=4.233333,
     runs=[
-        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
+        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
         Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius', fcolor='White', fshade=100),
     ],
 ))
@@ -287,9 +288,9 @@ page0.add(TextFrame(
     fill_rule=0,
     col_gap_mm=3.867223,
     runs=[
-        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß'),
+        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß', paragraph_attrs={'ALIGN': '0'}),
     ],
 ))
 
@@ -304,9 +305,9 @@ page0.add(TextFrame(
     fill_rule=0,
     col_gap_mm=3.867223,
     runs=[
-        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext '),
+        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '0'}),
     ],
 ))
 
@@ -321,9 +322,9 @@ page0.add(TextFrame(
     fill_rule=0,
     col_gap_mm=3.867223,
     runs=[
-        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext '),
+        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '0'}),
     ],
 ))
 
@@ -338,9 +339,9 @@ page0.add(TextFrame(
     fill_rule=0,
     col_gap_mm=3.867223,
     runs=[
-        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext '),
+        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '0'}),
     ],
 ))
 
@@ -355,9 +356,9 @@ page0.add(TextFrame(
     fill_rule=0,
     col_gap_mm=3.867223,
     runs=[
-        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext '),
+        Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Inhaltsheadline', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', fcolor='White', fshade=100, separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '0'}),
     ],
 ))
 
@@ -1128,17 +1129,17 @@ _chain6_0 = TextFrame(
     text_align=3,
     col_gap_mm=4.233333,
     runs=[
-        Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift'),
-        Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext '),
-        Run(text='Quaecep erfernatur adit, volut faciend estibusda pediosaes minctem oditatur? Qui as et inimus. io beat fugitatia qui od magnihi lluptam usciatio. Optatinverit am laborporrum quas atur, conet et de officte nihicab orrorrum ut debis eium endes nonsent.', separator='para', paragraph_style='Fließtext '),
-        Run(text='Em aut vid que vellacc aborisi tatiur sunt, commolupitia as voluptas min natincium quat hilit, sit elestiasiti re ma non comnim diam is inctotat.', separator='para', paragraph_style='Fließtext '),
-        Run(text='Haribusam alit quo doluptatem nonectiistis milit ratur aut alistori vellori ', separator='para', paragraph_style='Fließtext '),
-        Run(text='On porecae. ', separator='para', paragraph_style='Zwischenüberschrift'),
-        Run(text='Et od eseque eos alic temperaectem ratumqu iandae parum, ulpat am laborporrum quas atur, conet et de officte nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.', separator='para', paragraph_style='Fließtext '),
-        Run(text='Magnatet, as erfero cum que maximintem est exped molestiusti audis sedem corporemped que lanto im audam adist ratius, sitatur?', separator='para', paragraph_style='Fließtext '),
-        Run(text='Gentorrum eum re re dus', separator='para', paragraph_style='Zwischenüberschrift'),
-        Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', separator='para', paragraph_style='Fließtext '),
-        Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext '),
+        Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Quaecep erfernatur adit, volut faciend estibusda pediosaes minctem oditatur? Qui as et inimus. io beat fugitatia qui od magnihi lluptam usciatio. Optatinverit am laborporrum quas atur, conet et de officte nihicab orrorrum ut debis eium endes nonsent.', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Em aut vid que vellacc aborisi tatiur sunt, commolupitia as voluptas min natincium quat hilit, sit elestiasiti re ma non comnim diam is inctotat.', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Haribusam alit quo doluptatem nonectiistis milit ratur aut alistori vellori ', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='On porecae. ', separator='para', paragraph_style='Zwischenüberschrift', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Et od eseque eos alic temperaectem ratumqu iandae parum, ulpat am laborporrum quas atur, conet et de officte nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Magnatet, as erfero cum que maximintem est exped molestiusti audis sedem corporemped que lanto im audam adist ratius, sitatur?', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Gentorrum eum re re dus', separator='para', paragraph_style='Zwischenüberschrift', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
+        Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
     ],
 )
 page6.add(_chain6_0)
@@ -1324,6 +1325,7 @@ page7.add(TextFrame(
     layer=0,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
+    trail_attrs={'ALIGN': '1'},
     col_gap_mm=0,
     runs=[
         Run(text='Vorname Nachname', separator='para', paragraph_style='Headline in grünem Kasten'),
@@ -1593,6 +1595,7 @@ page8.add(TextFrame(
     layer=0,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
+    trail_attrs={'ALIGN': '1'},
     col_gap_mm=0,
     runs=[
         Run(text='Leonore Gewessler', fcolor='Hellgrün', fshade=100),
@@ -1632,6 +1635,7 @@ page8.add(TextFrame(
     layer=0,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
+    trail_attrs={'ALIGN': '1'},
     col_gap_mm=0,
     runs=[
         Run(text='Leonore Gewessler', fcolor='White', fshade=100),
@@ -1914,6 +1918,7 @@ page10.add(TextFrame(
     layer=0,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
+    trail_attrs={'ALIGN': '1'},
     col_gap_mm=0,
     runs=[
         Run(text='Leonore Gewessler', fcolor='Hellgrün', fshade=100),
@@ -2238,6 +2243,7 @@ page12.add(TextFrame(
     layer=0,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
+    trail_attrs={'ALIGN': '1'},
     col_gap_mm=0,
     runs=[
         Run(text='Leonore Gewessler', fcolor='White', fshade=100),
@@ -2320,8 +2326,8 @@ page13.add(TextFrame(
     col_gap_mm=3.867223,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten'),
-        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten'),
+        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
         Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß'),
     ],
 ))
@@ -2338,8 +2344,8 @@ page13.add(TextFrame(
     col_gap_mm=3.867223,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten'),
-        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten'),
+        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
         Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß'),
     ],
 ))
@@ -2356,8 +2362,8 @@ page13.add(TextFrame(
     col_gap_mm=3.867223,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten'),
-        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten'),
+        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
         Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß'),
     ],
 ))
@@ -2374,8 +2380,8 @@ page13.add(TextFrame(
     col_gap_mm=3.867223,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten'),
-        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten'),
+        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
         Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß'),
     ],
 ))
@@ -2392,8 +2398,8 @@ page13.add(TextFrame(
     col_gap_mm=3.867223,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten'),
-        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten'),
+        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
         Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß'),
     ],
 ))
@@ -2410,8 +2416,8 @@ page13.add(TextFrame(
     col_gap_mm=3.867223,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
-        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten'),
-        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten'),
+        Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
+        Run(text='Location, Ort', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
         Run(text='Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet', separator='para', paragraph_style='Fließtext weiß'),
     ],
 ))

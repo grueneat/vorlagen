@@ -94,11 +94,11 @@
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Hier steht eine erste"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Inhaltsheadline"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius" FCOLOR="White" FSHADE="100"/>
-        <trail PARENT="Fließtext "/>
+        <trail PARENT="Fließtext " ALIGN="0"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1162.503155" YPOS="549.991005" OwnPage="0" ItemID="100000046" PTYPE="6" WIDTH="102.610894" HEIGHT="98.082570" CLIPEDIT="0" PCOLOR="Magenta" PWIDTH="1.000000" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" gXpos="1162.503155" gYpos="549.991005" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="1" path="M51.305 0 C79.641 0 102.611 21.957 102.611 49.041 C102.611 76.126 79.641 98.083 51.305 98.083 C22.970 98.083 0 76.126 0 49.041 C0 21.957 22.970 0 51.305 0 Z" copath="M51.305 0 C79.641 0 102.611 21.957 102.611 49.041 C102.611 76.126 79.641 98.083 51.305 98.083 C22.970 98.083 0 76.126 0 49.041 C0 21.957 22.970 0 51.305 0 Z" PCOLOR2="Magenta"/>
@@ -111,7 +111,6 @@
         <para PARENT="Schrift Störer  "/>
         <ITEXT CH="Störer."/>
         <para PARENT="Schrift Störer  "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="939.338583" YPOS="411.747887" OwnPage="0" ItemID="100000048" PTYPE="2" WIDTH="107.149606" HEIGHT="107.149606" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="0.043878" LOCALSCY="0.043878" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" PFILE="assets/frame_01.png" PRFILE="sRGB display profile (ICC v2.2)" IRENDER="0" gXpos="939.338583" gYpos="411.747887" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L107.150 0 L107.150 107.150 L0 107.150 L0 0 Z" copath="M0 0 L107.150 0 L107.150 107.150 L0 107.150 L0 0 Z"/>
@@ -120,67 +119,61 @@
         <DefaultStyle/>
         <ITEXT CH="zugestellt durch: ÖSTERREICHISCHE POST AG " FCOLOR="White" FSHADE="50"/>
         <para PARENT="Zustellerhinweis (Post)"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="751.259843" YPOS="657.795276" OwnPage="0" ItemID="100000050" PTYPE="4" WIDTH="153.779528" HEIGHT="69.469520" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="751.259843" gYpos="657.795276" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 69.4696 L153.78 69.4696 L153.78 0 L0 0 Z" copath="M0 0 L0 69.4696 L153.78 69.4696 L153.78 0 L0 0 Z" fillRule="0" ANNAME="u14c">
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Hier steht eine erste"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Inhaltsheadline"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet"/>
-        <para PARENT="Fließtext weiß"/>
-        <trail/>
+        <para PARENT="Fließtext weiß" ALIGN="0"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1080.787402" YPOS="656.585897" OwnPage="0" ItemID="100000051" PTYPE="4" WIDTH="153.779528" HEIGHT="72.660552" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="1080.787402" gYpos="656.585897" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 72.6606 L153.78 72.6606 L153.78 0 L0 0 Z" copath="M0 0 L0 72.6606 L153.78 72.6606 L153.78 0 L0 0 Z" fillRule="0" ANNAME="u1c1">
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Hier steht eine erste"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Inhaltsheadline"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet" FCOLOR="White" FSHADE="100"/>
-        <para PARENT="Fließtext "/>
-        <trail/>
+        <para PARENT="Fließtext " ALIGN="0"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="751.259843" YPOS="735.191401" OwnPage="0" ItemID="100000052" PTYPE="4" WIDTH="153.779528" HEIGHT="66.717113" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="751.259843" gYpos="735.191401" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 66.7172 L153.78 66.7172 L153.78 0 L0 0 Z" copath="M0 0 L0 66.7172 L153.78 66.7172 L153.78 0 L0 0 Z" fillRule="0" ANNAME="u165">
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Hier steht eine erste"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Inhaltsheadline"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet" FCOLOR="White" FSHADE="100"/>
-        <para PARENT="Fließtext "/>
-        <trail/>
+        <para PARENT="Fließtext " ALIGN="0"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="916.023622" YPOS="733.870300" OwnPage="0" ItemID="100000053" PTYPE="4" WIDTH="153.779528" HEIGHT="68.038214" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="916.023622" gYpos="733.870300" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 68.0383 L153.78 68.0383 L153.78 0 L0 0 Z" copath="M0 0 L0 68.0383 L153.78 68.0383 L153.78 0 L0 0 Z" fillRule="0" ANNAME="u1aa">
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Hier steht eine erste"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Inhaltsheadline"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet" FCOLOR="White" FSHADE="100"/>
-        <para PARENT="Fließtext "/>
-        <trail/>
+        <para PARENT="Fließtext " ALIGN="0"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1080.787402" YPOS="733.209748" OwnPage="0" ItemID="100000054" PTYPE="4" WIDTH="153.779528" HEIGHT="68.698766" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="1080.787402" gYpos="733.209748" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 68.6988 L153.78 68.6988 L153.78 0 L0 0 Z" copath="M0 0 L0 68.6988 L153.78 68.6988 L153.78 0 L0 0 Z" fillRule="0" ANNAME="u1d9">
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Hier steht eine erste"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Inhaltsheadline"/>
-        <para PARENT="Inhaltsheadline Titelseite"/>
+        <para PARENT="Inhaltsheadline Titelseite" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet" FCOLOR="White" FSHADE="100"/>
-        <para PARENT="Fließtext "/>
-        <trail/>
+        <para PARENT="Fließtext " ALIGN="0"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1157.788360" YPOS="41.952868" OwnPage="0" ItemID="100000055" PTYPE="4" WIDTH="109.651377" HEIGHT="34.348623" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="1157.788360" gYpos="41.952868" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L109.651 0 L109.651 34.349 L0 34.349 L0 0 Z" copath="M0 0 L109.651 0 L109.651 34.349 L0 34.349 L0 0 Z">
@@ -197,7 +190,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="1272.519685" OwnPage="1" ItemID="100000000" PTYPE="4" WIDTH="154.958740" HEIGHT="414.566929" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="1272.519685" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000001" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 414.565 L154.958 414.565 L154.958 0 L0 0 Z" copath="M0 0 L0 414.565 L154.958 414.565 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2f23">
@@ -224,7 +216,6 @@
         <ITEXT CH="Ari arum volupis dolent mosapie nduciliant apid qui odis ilit, sant sus mindaes verum,  ad essi quo excepero voluptatur simus, net dollaci accatecusciditibus abo. Nam unt aut ab id mi, omnimin esti senis voluptas quae dolorum quis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland." FONTSIZE="12"/>
         <ITEXT CH=" nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper."/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.171737" YPOS="1272.519685" OwnPage="1" ItemID="100000001" PTYPE="4" WIDTH="154.958740" HEIGHT="414.566929" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.171737" gYpos="1272.519685" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000002" BACKITEM="100000000" ROT="0.000000" FRTYPE="3" path="M0 0 L0 414.565 L154.958 414.565 L154.958 0 L0 0 Z" copath="M0 0 L0 414.565 L154.958 414.565 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2f23 (2)">
@@ -316,7 +307,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="749.971337" YPOS="1348.513466" OwnPage="2" ItemID="100000061" PTYPE="4" WIDTH="481.884094" HEIGHT="79.266061" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="749.971337" gYpos="1348.513466" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L481.884 0 L481.884 79.266 L0 79.266 L0 0 Z" copath="M0 0 L481.884 0 L481.884 79.266 L0 79.266 L0 0 Z">
@@ -351,7 +341,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH=""/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="915.434016" YPOS="1441.322835" OwnPage="2" ItemID="100000007" PTYPE="4" WIDTH="154.958740" HEIGHT="73.978974" CLIPEDIT="0" PWIDTH="1.011899" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="915.434016" gYpos="1441.322835" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000008" BACKITEM="100000006" ROT="0.000000" FRTYPE="3" path="M0 0 L0 73.979 L154.958 73.979 L154.958 0 L0 0 Z" copath="M0 0 L0 73.979 L154.958 73.979 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2d5c (2)">
@@ -373,7 +362,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="1924.182855" OwnPage="3" ItemID="100000009" PTYPE="4" WIDTH="154.958000" HEIGHT="285.485715" CLIPEDIT="0" PWIDTH="1.011899" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="1924.182855" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000010" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 285.486 L154.958 285.486 L154.958 0 L0 0 Z" copath="M0 0 L0 285.486 L154.958 285.486 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2d5c (4)">
@@ -401,7 +389,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland."/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.155591" YPOS="1924.182855" OwnPage="3" ItemID="100000010" PTYPE="4" WIDTH="154.958000" HEIGHT="285.484765" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.155591" gYpos="1924.182855" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000011" BACKITEM="100000009" ROT="0.000000" FRTYPE="3" path="M0 0 L0 285.485 L154.958 285.485 L154.958 0 L0 0 Z" copath="M0 0 L0 285.485 L154.958 285.485 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (2)">
@@ -454,7 +441,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland."/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.535433" YPOS="2279.842520" OwnPage="3" ItemID="100000068" PTYPE="6" WIDTH="318.047000" HEIGHT="289.134000" CLIPEDIT="0" PCOLOR="Dunkelgrün" PWIDTH="0.000000" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" gXpos="320.535433" gYpos="2279.842520" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 289.134 L318.047 289.134 L318.047 0 L0 0 Z" copath="M0 0 L0 289.134 L318.047 289.134 L318.047 0 L0 0 Z" fillRule="0" ANNAME="u1529"/>
@@ -463,7 +449,6 @@
         <DefaultStyle/>
         <ITEXT CH="Nequia volupti omnienthi-cipsa dem eossece atiati dollit oditius nonsequunt aspietGenti rerchil igendis santem assum verum qui re culparuntia nonsecab iuntioriost, temporum re periberum endit officil il id et faceatem quatusdanto con pero id quati quunt fuga. Ut inctotas corion reptatiis modit ditae ex excest mo beriost quam ad que senis est undus iunti doluptas re occus et ut oditat et voluptatecte por atis etur soluptur, id qui nost faccate culparum re aperum re sin nem necto ipitatat volut et moluptasimus num eatur ad eiuscil ignihil idus di nosanis unt fugia audis sam, cuptaqu issunto essinctem. Itae parum audae comni cumque pos poris dio ipit doles est, ulparibusam est alignis as ipientus et ut labora quis ducipiciis ex et hilluptam, corecullo to doluptas earum natem a idebite ntiandi non re ped exceptatur? Sed quia."/>
         <para PARENT="Fließtext in grünem Kasten"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="344.913366" YPOS="2290.127810" OwnPage="3" ItemID="100000070" PTYPE="4" WIDTH="269.291132" HEIGHT="46.899082" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="344.913366" gYpos="2290.127810" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 46.8991 L269.291 46.8991 L269.291 0 L0 0 Z" copath="M0 0 L0 46.8991 L269.291 46.8991 L269.291 0 L0 0 Z" fillRule="0" ANNAME="u1544">
@@ -473,7 +458,6 @@
         <para PARENT="Headline in grünem Kasten"/>
         <ITEXT CH="zum Text."/>
         <para PARENT="Headline in grünem Kasten"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1249.400497" YPOS="2591.960629" OwnPage="4" ItemID="100000071" PTYPE="4" WIDTH="36.213914" HEIGHT="26.873144" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="9.092018" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="1249.400497" gYpos="2591.960629" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z" copath="M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2d45 (5)">
@@ -482,7 +466,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="751.968504" YPOS="1840.472441" OwnPage="4" ItemID="100000072" PTYPE="4" WIDTH="481.884094" HEIGHT="78.266061" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="751.968504" gYpos="1840.472441" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L481.884 0 L481.884 78.266 L0 78.266 L0 0 Z" copath="M0 0 L481.884 0 L481.884 78.266 L0 78.266 L0 0 Z">
@@ -560,7 +543,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="2722.362205" OwnPage="5" ItemID="100000075" PTYPE="4" WIDTH="481.884094" HEIGHT="79.266061" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="2722.362205" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L481.884 0 L481.884 79.266 L0 79.266 L0 0 Z" copath="M0 0 L481.884 0 L481.884 79.266 L0 79.266 L0 0 Z">
@@ -621,7 +603,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland." FONTSIZE="11.7"/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.433355" YPOS="2809.522621" OwnPage="5" ItemID="100000016" PTYPE="4" WIDTH="154.960061" HEIGHT="349.889907" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.433355" gYpos="2809.522621" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000017" BACKITEM="100000015" ROT="0.000000" FRTYPE="3" path="M0 0 L0 349.89 L154.96 349.89 L154.96 0 L0 0 Z" copath="M0 0 L0 349.89 L154.96 349.89 L154.96 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (6)">
@@ -669,7 +650,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland." FONTSIZE="12"/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="914.960630" YPOS="2771.008860" OwnPage="6" ItemID="100000079" PTYPE="6" WIDTH="318.898001" HEIGHT="351.037908" CLIPEDIT="0" PCOLOR="Dunkelgrün" PWIDTH="0.000000" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" gXpos="914.960630" gYpos="2771.008860" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 351.038 L318.898 351.038 L318.898 0 L0 0 Z" copath="M0 0 L0 351.038 L318.898 351.038 L318.898 0 L0 0 Z" fillRule="0" ANNAME="u6ad"/>
@@ -691,28 +671,27 @@
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Perem la posseditatur "/>
-        <para PARENT="Zwischenüberschrift"/>
+        <para PARENT="Zwischenüberschrift" ALIGN="3"/>
         <ITEXT CH="Aianeptas es re iliaes dolupta"/>
-        <para PARENT="Fließtext "/>
+        <para PARENT="Fließtext " ALIGN="3"/>
         <ITEXT CH="Quaecep erfernatur adit, volut faciend estibusda pediosaes minctem oditatur? Qui as et inimus. io beat fugitatia qui od magnihi lluptam usciatio. Optatinverit am laborporrum quas atur, conet et de officte nihicab orrorrum ut debis eium endes nonsent."/>
-        <para PARENT="Fließtext "/>
+        <para PARENT="Fließtext " ALIGN="3"/>
         <ITEXT CH="Em aut vid que vellacc aborisi tatiur sunt, commolupitia as voluptas min natincium quat hilit, sit elestiasiti re ma non comnim diam is inctotat."/>
-        <para PARENT="Fließtext "/>
+        <para PARENT="Fließtext " ALIGN="3"/>
         <ITEXT CH="Haribusam alit quo doluptatem nonectiistis milit ratur aut alistori vellori "/>
-        <para PARENT="Fließtext "/>
+        <para PARENT="Fließtext " ALIGN="3"/>
         <ITEXT CH="On porecae. "/>
-        <para PARENT="Zwischenüberschrift"/>
+        <para PARENT="Zwischenüberschrift" ALIGN="3"/>
         <ITEXT CH="Et od eseque eos alic temperaectem ratumqu iandae parum, ulpat am laborporrum quas atur, conet et de officte nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper."/>
-        <para PARENT="Fließtext "/>
+        <para PARENT="Fließtext " ALIGN="3"/>
         <ITEXT CH="Magnatet, as erfero cum que maximintem est exped molestiusti audis sedem corporemped que lanto im audam adist ratius, sitatur?"/>
-        <para PARENT="Fließtext "/>
+        <para PARENT="Fließtext " ALIGN="3"/>
         <ITEXT CH="Gentorrum eum re re dus"/>
-        <para PARENT="Zwischenüberschrift"/>
+        <para PARENT="Zwischenüberschrift" ALIGN="3"/>
         <ITEXT CH="Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident."/>
-        <para PARENT="Fließtext "/>
+        <para PARENT="Fließtext " ALIGN="3"/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland."/>
-        <para PARENT="Fließtext "/>
-        <trail/>
+        <para PARENT="Fließtext " ALIGN="3"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="915.433228" YPOS="3247.265741" OwnPage="6" ItemID="100000019" PTYPE="4" WIDTH="154.959939" HEIGHT="208.733250" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="915.433228" gYpos="3247.265741" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000020" BACKITEM="100000018" ROT="0.000000" FRTYPE="3" path="M0 0 L0 208.733 L154.96 208.733 L154.96 0 L0 0 Z" copath="M0 0 L0 208.733 L154.96 208.733 L154.96 0 L0 0 Z" fillRule="0" ALIGN="3" ANNAME="Kopie von u2da1 (8)">
@@ -746,7 +725,6 @@
         <breakline/>
         <ITEXT CH="Itae pm est alignis as ipientus et ut labora quis ducipiciis ex et hilluptam, corecullo to doluptas earum natem a idebite ntiandi non re ped exceptatur? Sed quia."/>
         <para PARENT="Fließtext in grünem Kasten"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="939.763780" YPOS="2787.559055" OwnPage="6" ItemID="100000083" PTYPE="4" WIDTH="269.291339" HEIGHT="50.165402" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="939.763780" gYpos="2787.559055" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 50.1655 L269.291 50.1655 L269.291 0 L0 0 Z" copath="M0 0 L0 50.1655 L269.291 50.1655 L269.291 0 L0 0 Z" fillRule="0" ANNAME="u6e8">
@@ -754,7 +732,6 @@
         <DefaultStyle/>
         <ITEXT CH="Grüne Kästen eignen sich hervorragend für Aufzählungen und Listen. Im Text unten sind die Tabulatoren schon eingestelt."/>
         <para PARENT="Headline in grünem Kasten"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1249.400497" YPOS="3473.850393" OwnPage="6" ItemID="100000084" PTYPE="4" WIDTH="36.213914" HEIGHT="26.873144" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="9.092018" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="1249.400497" gYpos="3473.850393" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z" copath="M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2d45 (8)">
@@ -763,7 +740,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="3604.251969" OwnPage="7" ItemID="100000085" PTYPE="4" WIDTH="481.884094" HEIGHT="79.266061" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="3604.251969" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L481.884 0 L481.884 79.266 L0 79.266 L0 0 Z" copath="M0 0 L481.884 0 L481.884 79.266 L0 79.266 L0 0 Z">
@@ -822,7 +798,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland." FONTSIZE="11.7"/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.433355" YPOS="3691.412385" OwnPage="7" ItemID="100000022" PTYPE="4" WIDTH="154.959999" HEIGHT="395.413305" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.433355" gYpos="3691.412385" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000023" BACKITEM="100000021" ROT="0.000000" FRTYPE="3" path="M0 0 L0 395.413 L154.96 395.413 L154.96 0 L0 0 Z" copath="M0 0 L0 395.413 L154.96 395.413 L154.96 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (10)">
@@ -844,7 +819,7 @@
         <ITEXT CH="Vorname Nachname"/>
         <para PARENT="Headline in grünem Kasten"/>
         <ITEXT CH="Funktion, Gemeinde"/>
-        <trail PARENT="Fließtext in grünem Kasten"/>
+        <trail PARENT="Fließtext in grünem Kasten" ALIGN="1"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="178.700788" YPOS="4164.770642" OwnPage="7" ItemID="100000088" PTYPE="4" WIDTH="285.665556" HEIGHT="146.055047" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="178.700788" gYpos="4164.770642" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L285.666 0 L285.666 146.055 L0 146.055 L0 0 Z" copath="M0 0 L285.666 0 L285.666 146.055 L0 146.055 L0 0 Z">
@@ -861,7 +836,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="751.968504" YPOS="3652.898624" OwnPage="8" ItemID="100000091" PTYPE="4" WIDTH="154.958000" HEIGHT="265.999014" CLIPEDIT="0" PWIDTH="1.011899" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="751.968504" gYpos="3652.898624" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 265.999 L154.958 265.999 L154.958 0 L0 0 Z" copath="M0 0 L0 265.999 L154.958 265.999 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2d5c (11)">
@@ -889,7 +863,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland." FONTSIZE="12"/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1078.897951" YPOS="3652.898624" OwnPage="8" ItemID="100000092" PTYPE="6" WIDTH="154.960679" HEIGHT="141.782760" CLIPEDIT="0" PCOLOR="Dunkelgrün" PWIDTH="0.000000" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" gXpos="1078.897951" gYpos="3652.898624" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 141.783 L154.961 141.783 L154.961 0 L0 0 Z" copath="M0 0 L0 141.783 L154.961 141.783 L154.961 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u6ad"/>
@@ -956,7 +929,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="915.433355" YPOS="3652.898624" OwnPage="8" ItemID="100000096" PTYPE="4" WIDTH="154.960061" HEIGHT="265.999014" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="915.433355" gYpos="3652.898624" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 265.999 L154.96 265.999 L154.96 0 L0 0 Z" copath="M0 0 L0 265.999 L154.96 265.999 L154.96 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (14)">
@@ -1004,7 +976,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland." FONTSIZE="11.7"/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1078.897951" YPOS="3806.835511" OwnPage="8" ItemID="100000097" PTYPE="4" WIDTH="154.960679" HEIGHT="112.062127" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="1078.897951" gYpos="3806.835511" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 112.062 L154.96 112.062 L154.96 0 L0 0 Z" copath="M0 0 L0 112.062 L154.96 112.062 L154.96 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (15)">
@@ -1032,7 +1003,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland."/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="936.766408" YPOS="4247.082570" OwnPage="8" ItemID="100000098" PTYPE="4" WIDTH="112.293578" HEIGHT="70.018347" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="936.766408" gYpos="4247.082570" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L112.294 0 L112.294 70.018 L0 70.018 L0 0 Z" copath="M0 0 L112.294 0 L112.294 70.018 L0 70.018 L0 0 Z">
@@ -1046,7 +1016,7 @@
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Leonore Gewessler" FCOLOR="Hellgrün" FSHADE="100"/>
-        <trail PARENT="Fließtext in grünem Kasten"/>
+        <trail PARENT="Fließtext in grünem Kasten" ALIGN="1"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="976.380613" YPOS="4217.853861" OwnPage="8" ItemID="100000100" PTYPE="2" WIDTH="33.065169" HEIGHT="29.673697" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="0.027554" LOCALSCY="0.027554" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" PFILE="assets/frame_02.png" PRFILE="sRGB display profile (ICC v2.2)" IRENDER="0" gXpos="976.380613" gYpos="4217.853861" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L33.065 0 L33.065 29.674 L0 29.674 L0 0 Z" copath="M0 0 L33.065 0 L33.065 29.674 L0 29.674 L0 0 Z"/>
@@ -1061,7 +1031,7 @@
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Leonore Gewessler" FCOLOR="White" FSHADE="100"/>
-        <trail PARENT="Fließtext in grünem Kasten"/>
+        <trail PARENT="Fließtext in grünem Kasten" ALIGN="1"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="1139.845220" YPOS="3665.799734" OwnPage="8" ItemID="100000103" PTYPE="2" WIDTH="33.066142" HEIGHT="27.775559" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="0.027555" LOCALSCY="0.027555" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" PFILE="assets/frame_03.png" PRFILE="sRGB display profile (ICC v2.2)" IRENDER="0" gXpos="1139.845220" gYpos="3665.799734" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L33.066 0 L33.066 27.776 L0 27.776 L0 0 Z" copath="M0 0 L33.066 0 L33.066 27.776 L0 27.776 L0 0 Z"/>
@@ -1071,7 +1041,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="4569.852147" OwnPage="9" ItemID="100000027" PTYPE="4" WIDTH="154.958000" HEIGHT="346.625232" CLIPEDIT="0" PWIDTH="1.011899" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="4569.852147" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000028" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 346.626 L154.958 346.626 L154.958 0 L0 0 Z" copath="M0 0 L0 346.626 L154.958 346.626 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2d5c (13)">
@@ -1119,7 +1088,6 @@
         <para PARENT="Fließtext "/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland." FONTSIZE="11.7"/>
         <para PARENT="Fließtext "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.155591" YPOS="4569.852147" OwnPage="9" ItemID="100000028" PTYPE="4" WIDTH="154.958000" HEIGHT="347.946333" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.155591" gYpos="4569.852147" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000029" BACKITEM="100000027" ROT="0.000000" FRTYPE="3" path="M0 0 L0 347.947 L154.958 347.947 L154.958 0 L0 0 Z" copath="M0 0 L0 347.947 L154.958 347.947 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (16)">
@@ -1147,7 +1115,6 @@
         <DefaultStyle/>
         <ITEXT CH="Nequia volupti omnienthi-cipsa dem eossece atiati dollit oditius nonsequunt aspietGenti rerchil igendis santem assum verum qui re culparuntia nonsecab iuntioriost, temporum re periberum endit officil il id et faceatem quatusdanto con pero id quati quunt fuga. Ut inctotas corion reptatiis modit ditae ex excest mo beriost quam ad que senis est undus iunti doluptas re occus et ut oditat et voluptatecte por atis etur soluptur, id qui nost faccate culparum re aperum re sin nem necto ipitatat volut et moluptasimus num eatur ad eiuscil ignihil idus di nosanis unt fugia audis sam, cuptaqu issunto essinctem. Itae parum audae comni cumque pos poris dio ipit doles est, ulparibusam est alignis as ipientus et ut labora quis ducipiciis ex et hilluptam, corecullo to doluptas earum natem a idebite ntiandi non re ped exceptatur? Sed quia." FONTSIZE="11"/>
         <para PARENT="Fließtext in grünem Kasten"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="181.070846" YPOS="4935.797102" OwnPage="9" ItemID="100000108" PTYPE="4" WIDTH="269.291132" HEIGHT="46.899082" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="181.070846" gYpos="4935.797102" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 46.8991 L269.291 46.8991 L269.291 0 L0 0 Z" copath="M0 0 L0 46.8991 L269.291 46.8991 L269.291 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u1544">
@@ -1157,7 +1124,6 @@
         <para PARENT="Headline in grünem Kasten"/>
         <ITEXT CH="zum Text." FONTSIZE="12"/>
         <para PARENT="Headline in grünem Kasten"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="695.275591" YPOS="4429.448819" OwnPage="9" ItemID="100000109" PTYPE="2" WIDTH="595.275591" HEIGHT="357.560671" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" PFILE="" PRFILE="sRGB display profile (ICC v2.2)" IRENDER="0" gXpos="695.275591" gYpos="4429.448819" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L595.276 0 L595.276 357.561 L0 357.561 L0 0 Z" copath="M0 0 L595.276 0 L595.276 357.561 L0 357.561 L0 0 Z"/>
@@ -1247,7 +1213,7 @@
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Leonore Gewessler" FCOLOR="Hellgrün" FSHADE="100"/>
-        <trail PARENT="Fließtext in grünem Kasten"/>
+        <trail PARENT="Fließtext in grünem Kasten" ALIGN="1"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="812.915889" YPOS="4992.743625" OwnPage="10" ItemID="100000114" PTYPE="2" WIDTH="33.065169" HEIGHT="29.673697" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="0.027554" LOCALSCY="0.027554" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" PFILE="assets/frame_04.png" PRFILE="sRGB display profile (ICC v2.2)" IRENDER="0" gXpos="812.915889" gYpos="4992.743625" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L33.065 0 L33.065 29.674 L0 29.674 L0 0 Z" copath="M0 0 L33.065 0 L33.065 29.674 L0 29.674 L0 0 Z"/>
@@ -1258,7 +1224,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="5451.741911" OwnPage="11" ItemID="100000033" PTYPE="4" WIDTH="154.958000" HEIGHT="441.029361" CLIPEDIT="0" PWIDTH="1.011899" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="5451.741911" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000034" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 441.03 L154.958 441.03 L154.958 0 L0 0 Z" copath="M0 0 L0 441.03 L154.958 441.03 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2d5c (16)">
@@ -1306,7 +1271,6 @@
         <para PARENT="Fließtext weiß"/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland."/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.155591" YPOS="5451.741911" OwnPage="11" ItemID="100000034" PTYPE="4" WIDTH="154.958000" HEIGHT="439.708260" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.155591" gYpos="5451.741911" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000035" BACKITEM="100000033" ROT="0.000000" FRTYPE="3" path="M0 0 L0 439.709 L154.958 439.709 L154.958 0 L0 0 Z" copath="M0 0 L0 439.709 L154.958 439.709 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (20)">
@@ -1375,7 +1339,6 @@
         <para PARENT="Fließtext weiß"/>
         <ITEXT CH="Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland."/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="915.431181" YPOS="5418.496044" OwnPage="12" ItemID="100000037" PTYPE="4" WIDTH="154.958000" HEIGHT="269.850413" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.999999" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="915.431181" gYpos="5418.496044" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="100000038" BACKITEM="100000036" ROT="0.000000" FRTYPE="3" path="M0 0 L0 269.851 L154.958 269.851 L154.958 0 L0 0 Z" copath="M0 0 L0 269.851 L154.958 269.851 L154.958 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u2da1 (22)">
@@ -1403,7 +1366,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="751.968504" YPOS="5701.715306" OwnPage="12" ItemID="100000122" PTYPE="4" WIDTH="481.890127" HEIGHT="97.182332" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="751.968504" gYpos="5701.715306" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L481.890 0 L481.890 97.182 L0 97.182 L0 0 Z" copath="M0 0 L481.890 0 L481.890 97.182 L0 97.182 L0 0 Z">
@@ -1453,7 +1415,7 @@
       <StoryText>
         <DefaultStyle/>
         <ITEXT CH="Leonore Gewessler" FCOLOR="White" FSHADE="100"/>
-        <trail PARENT="Fließtext in grünem Kasten"/>
+        <trail PARENT="Fließtext in grünem Kasten" ALIGN="1"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="976.380125" YPOS="5982.579261" OwnPage="12" ItemID="100000125" PTYPE="2" WIDTH="33.066142" HEIGHT="27.775559" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="0.027555" LOCALSCY="0.027555" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" PFILE="assets/frame_05.png" PRFILE="sRGB display profile (ICC v2.2)" IRENDER="0" gXpos="976.380125" gYpos="5982.579261" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L33.066 0 L33.066 27.776 L0 27.776 L0 0 Z" copath="M0 0 L33.066 0 L33.066 27.776 L0 27.776 L0 0 Z"/>
@@ -1465,7 +1427,6 @@
         <ITEXT CH=""/>
         <para PARENT="Seitenzahl"/>
         <var name="pgno"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="6249.921260" OwnPage="13" ItemID="100000129" PTYPE="4" WIDTH="481.884094" HEIGHT="100.005831" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0.000000" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="6249.921260" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L481.884 0 L481.884 100.006 L0 100.006 L0 0 Z" copath="M0 0 L481.884 0 L481.884 100.006 L0 100.006 L0 0 Z">
@@ -1481,12 +1442,11 @@
         <ITEXT CH="Zum Beispiel Events"/>
         <para PARENT="Inhaltsheadline Titelseite"/>
         <ITEXT CH="Datum, Uhrzeit"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Location, Ort"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet"/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="156.692913" YPOS="6422.023622" OwnPage="13" ItemID="100000131" PTYPE="4" WIDTH="153.779528" HEIGHT="97.977322" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.692913" gYpos="6422.023622" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" copath="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u14c (2)">
@@ -1495,12 +1455,11 @@
         <ITEXT CH="Zum Beispiel Events"/>
         <para PARENT="Inhaltsheadline Titelseite"/>
         <ITEXT CH="Datum, Uhrzeit"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Location, Ort"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet"/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.744826" YPOS="6310.023623" OwnPage="13" ItemID="100000132" PTYPE="4" WIDTH="153.779528" HEIGHT="97.977322" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.744826" gYpos="6310.023623" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" copath="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u14c (3)">
@@ -1509,12 +1468,11 @@
         <ITEXT CH="Zum Beispiel Events"/>
         <para PARENT="Inhaltsheadline Titelseite"/>
         <ITEXT CH="Datum, Uhrzeit"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Location, Ort"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet"/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="320.744826" YPOS="6422.023622" OwnPage="13" ItemID="100000133" PTYPE="4" WIDTH="153.779528" HEIGHT="97.977322" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="320.744826" gYpos="6422.023622" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" copath="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u14c (4)">
@@ -1523,12 +1481,11 @@
         <ITEXT CH="Zum Beispiel Events"/>
         <para PARENT="Inhaltsheadline Titelseite"/>
         <ITEXT CH="Datum, Uhrzeit"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Location, Ort"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet"/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="484.207874" YPOS="6310.023623" OwnPage="13" ItemID="100000134" PTYPE="4" WIDTH="153.779528" HEIGHT="97.977322" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="484.207874" gYpos="6310.023623" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" copath="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u14c (5)">
@@ -1537,12 +1494,11 @@
         <ITEXT CH="Zum Beispiel Events"/>
         <para PARENT="Inhaltsheadline Titelseite"/>
         <ITEXT CH="Datum, Uhrzeit"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Location, Ort"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet"/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="484.207874" YPOS="6422.023622" OwnPage="13" ItemID="100000135" PTYPE="4" WIDTH="153.779528" HEIGHT="97.977322" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="10.962207" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="484.207874" gYpos="6422.023622" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="3" path="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" copath="M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z" fillRule="0" ANNAME="Kopie von u14c (6)">
@@ -1551,12 +1507,11 @@
         <ITEXT CH="Zum Beispiel Events"/>
         <para PARENT="Inhaltsheadline Titelseite"/>
         <ITEXT CH="Datum, Uhrzeit"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Location, Ort"/>
-        <para PARENT="Headline in grünem Kasten"/>
+        <para PARENT="Headline in grünem Kasten" ALIGN="0"/>
         <ITEXT CH="Nequia volupti omnient hicipsa dem eossece atiati dollit oditius nonsequunt aspiet"/>
         <para PARENT="Fließtext weiß"/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="574.227566" YPOS="6564.219353" OwnPage="13" ItemID="100000136" PTYPE="6" WIDTH="102.610894" HEIGHT="98.082570" CLIPEDIT="0" PCOLOR="Magenta" PWIDTH="1.000000" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" gXpos="574.227566" gYpos="6564.219353" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="1" path="M51.305 0 C79.641 0 102.611 21.957 102.611 49.041 C102.611 76.126 79.641 98.083 51.305 98.083 C22.970 98.083 0 76.126 0 49.041 C0 21.957 22.970 0 51.305 0 Z" copath="M51.305 0 C79.641 0 102.611 21.957 102.611 49.041 C102.611 76.126 79.641 98.083 51.305 98.083 C22.970 98.083 0 76.126 0 49.041 C0 21.957 22.970 0 51.305 0 Z" PCOLOR2="Magenta"/>
@@ -1569,7 +1524,6 @@
         <para PARENT="Schrift Störer  "/>
         <ITEXT CH="Störer."/>
         <para PARENT="Schrift Störer  "/>
-        <trail/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="127.880104" YPOS="6520.220474" OwnPage="13" ItemID="100000138" PTYPE="2" WIDTH="89.980923" HEIGHT="91.119923" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="0.189833" LOCALSCY="0.189833" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" PFILE="assets/frame_06.png" PRFILE="sRGB display profile (ICC v2.2)" IRENDER="0" gXpos="127.880104" gYpos="6520.220474" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0.000000" FRTYPE="0" path="M0 0 L89.981 0 L89.981 91.120 L0 91.120 L0 0 Z" copath="M0 0 L89.981 0 L89.981 91.120 L0 91.120 L0 0 Z"/>
