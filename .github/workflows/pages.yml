@@ -20,24 +20,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install Scribus 1.6.x (from Debian trixie via apt; Ubuntu repos lag)
-      - name: Install Scribus + headless deps
+      # Install Scribus 1.6.5 from the official AppImage (Ubuntu repos ship
+      # 1.5.8 which cannot read 1.6.x SLA files; the Debian trixie route
+      # fails on Ubuntu runners because the trixie GPG keys aren't bundled).
+      # The AppImage is extracted so libfuse2 isn't required at runtime.
+      - name: Install Scribus 1.6.5 + headless deps
+        env:
+          SCRIBUS_VERSION: 1.6.5
+          SCRIBUS_URL: https://master.dl.sourceforge.net/project/scribus/scribus/1.6.5/scribus-1.6.5-linux-x86_64.AppImage?viasf=1
         run: |
-          sudo bash -c 'echo "deb http://deb.debian.org/debian trixie main" > /etc/apt/sources.list.d/trixie.list'
-          sudo bash -c 'cat > /etc/apt/preferences.d/99-trixie <<EOF
-          Package: *
-          Pin: release n=trixie
-          Pin-Priority: 100
-
-          Package: scribus scribus-data
-          Pin: release n=trixie
-          Pin-Priority: 990
-          EOF'
+          set -euo pipefail
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-            -t trixie scribus scribus-data
-          sudo apt-get install -y -qq xvfb poppler-utils ghostscript \
-            python3-lxml python3-yaml
+            xvfb poppler-utils ghostscript python3-lxml python3-yaml
+          # Download + extract AppImage (no FUSE required when extracted)
+          sudo curl -fsSL -o /opt/scribus.AppImage "$SCRIBUS_URL"
+          sudo chmod +x /opt/scribus.AppImage
+          cd /opt
+          sudo /opt/scribus.AppImage --appimage-extract >/dev/null
+          # Provide a wrapper that points to the extracted AppRun
+          printf '#!/bin/sh\nexec /opt/squashfs-root/AppRun "$@"\n' \
+            | sudo tee /usr/local/bin/scribus >/dev/null
+          sudo chmod +x /usr/local/bin/scribus
+          # Sanity: writes "Scribus 1.6.5" then exits non-zero on headless
+          # because Qt can't find a display; that's fine, we use xvfb-run.
+          xvfb-run -a --server-args="-screen 0 800x600x24" \
+            scribus --version 2>&1 | head -3 || true
 
       - name: Build all templates via DSL
         run: |
