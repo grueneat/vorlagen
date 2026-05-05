@@ -139,7 +139,8 @@ class Document:
                  deffont: str = "Gotham Narrow Book",
                  defsize: float = 12,
                  first_page_num: int = 1,
-                 palette_replaces_ci: bool = False) -> None:
+                 palette_replaces_ci: bool = False,
+                 extra_doc_attrs: Optional[dict[str, str]] = None) -> None:
         self.title = title
         self.template_id = template_id
         self.author = author
@@ -153,6 +154,11 @@ class Document:
         self.defsize: float = defsize
         self.first_page_num: int = first_page_num
         self.palette_replaces_ci: bool = palette_replaces_ci
+        # Extra DOCUMENT-level attributes the converter passes through
+        # verbatim. Useful for round-tripping locale/runtime fields like
+        # ALAYER, AUTOL, BaseC, CPICT, ICC profile names, calligraphic-pen
+        # widths, etc. that Scribus assumes present on first read.
+        self.extra_doc_attrs: dict[str, str] = dict(extra_doc_attrs) if extra_doc_attrs else {}
         self._idgen = _IdGen()
         # Per-document overrides — empty == fall back to CI defaults.
         self._layers_override: list[DocumentLayer] = list(layers) if layers else []
@@ -390,7 +396,7 @@ class Document:
         first = self.pages[0]
         ml, mr, mt, mb = first.margins_mm
         bleed = first.bleed_mm
-        return {
+        attrs = {
             "ANZPAGES": str(len(self.pages)),
             "PAGEWIDTH": f"{w_pt:.6f}",
             "PAGEHEIGHT": f"{h_pt:.6f}",
@@ -425,8 +431,39 @@ class Document:
             "DOCCOVER": "",
             "DOCRIGHTS": "",
             "DOCCONTRIB": "",
+            # Both DEFFONT/DEFSIZE (legacy DSL fields) and DFONT/DSIZE
+            # (what Scribus actually reads) are emitted; Scribus 1.6 looks
+            # for DFONT specifically when rendering text frames whose ITEXT
+            # has no explicit FONT.
             "DEFFONT": self.deffont,
             "DEFSIZE": f"{self.defsize:g}",
+            "DFONT": self.deffont,
+            "DSIZE": f"{self.defsize:g}",
+            # Document language — used by hyphenation engine and as the
+            # default for paragraph styles that omit LANGUAGE.
+            "LANGUAGE": "de",
+            # Default character / paragraph fill colors (Scribus expects these)
+            "PEN": "Black",
+            "BRUSH": "None",
+            "PENLINE": "Black",
+            "PENTEXT": "Black",
+            "PENSHADE": "100",
+            "BRUSHSHADE": "100",
+            "LINESHADE": "100",
+            "PICTSHADE": "100",
+            # Misc render flags Scribus checks
+            "AUTOMATIC": "1",
+            "AUTOCHECK": "0",
+            "BASEGRID": "13",
+            "BASEO": "0",
+            "STIL": "1",
+            "STILLINE": "1",
+            "WIDTH": "1",
+            "WIDTHLINE": "5",
+            "GROUPC": "1",
+            "HCMS": "0",
+            "showBleed": "1",
+            "FIRSTNUM": "1",
             "DSAVE": "0",
             "AUTOSAVE": "0",
             "AUTOSAVETIME": "10",
@@ -445,6 +482,12 @@ class Document:
             "RANDF": "0",
             "currentProfile": "Default",
         }
+        # Converter pass-through: any DOCUMENT attribute not explicitly handled
+        # above gets emitted verbatim. Existing keys win (the DSL's own
+        # constants take precedence over surprise overrides).
+        for k, v in self.extra_doc_attrs.items():
+            attrs.setdefault(k, v)
+        return attrs
 
     def _emit_check_profiles(self, doc) -> None:
         cp = etree.SubElement(doc, "CheckProfile")
@@ -694,17 +737,24 @@ class Document:
             el.set("LAYERC", "#000000")
 
     def _emit_printer_pdf_stubs(self, doc) -> None:
-        # Minimal Printer + PDF blocks Scribus expects to be present
+        # Minimal Printer + PDF blocks Scribus expects to be present.
+        # The PDF block includes the document-level bleed (BBottom/BLeft/BRight/
+        # BTop) and useDocBleeds=1 so PDF export honours the SLA's bleed setting
+        # — without these the rendered PDF page would crop to the trim box and
+        # visual_diff would fail with "raster size mismatch" against the
+        # baseline (which was rendered from the same SLA-with-bleed source).
         pr = etree.SubElement(doc, "Printer")
         pr.set("firstUse", "1")
         pdf = etree.SubElement(doc, "PDF")
+        bleed = self.pages[0].bleed_mm if self.pages else 3.0
+        bleed_pt = mm_to_pt(bleed)
         pdf.set("Articles", "0")
         pdf.set("Bookmarks", "0")
         pdf.set("Compress", "1")
         pdf.set("CompressMethod", "0")
         pdf.set("Quality", "0")
         pdf.set("EmbedPDF", "0")
-        pdf.set("Version", "16")  # PDF 1.6
+        pdf.set("Version", "16")
         pdf.set("Resolution", "300")
         pdf.set("Binding", "0")
         pdf.set("PicRes", "300")
@@ -715,6 +765,19 @@ class Document:
         pdf.set("MirrorH", "0")
         pdf.set("MirrorV", "0")
         pdf.set("openAction", "")
+        # Bleed + marks — drives PDF page-with-bleed dimensions
+        pdf.set("BBottom", _fmt_num(bleed_pt))
+        pdf.set("BLeft", _fmt_num(bleed_pt))
+        pdf.set("BRight", _fmt_num(bleed_pt))
+        pdf.set("BTop", _fmt_num(bleed_pt))
+        pdf.set("useDocBleeds", "1")
+        pdf.set("cropMarks", "1")
+        pdf.set("bleedMarks", "1")
+        pdf.set("colorMarks", "0")
+        pdf.set("docInfoMarks", "0")
+        pdf.set("registrationMarks", "0")
+        pdf.set("markLength", _fmt_num(bleed_pt))
+        pdf.set("markOffset", _fmt_num(bleed_pt))
         # DocItemAttributes / TablesOfContents minimal
         etree.SubElement(doc, "DocItemAttributes")
         etree.SubElement(doc, "TablesOfContents")

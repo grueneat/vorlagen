@@ -425,6 +425,14 @@ def _build_runs(story_elem: etree._Element) -> list[dict]:
             if cur is None:
                 cur = {"text": ""}
             cur["separator"] = tag
+            # The <para/> element may carry PARENT="<paragraph style>" specifying
+            # the style for the paragraph that's just ending. We attach it to
+            # the run as paragraph_style; the DSL emitter will copy it onto the
+            # emitted <para PARENT=.../> element.
+            if tag == "para":
+                parent_attr = child.attrib.get("PARENT")
+                if parent_attr is not None:
+                    cur["paragraph_style"] = parent_attr
         elif tag == "var":
             varname = child.attrib.get("name")
             if cur is None:
@@ -479,12 +487,26 @@ def _convert_pageobject(po: etree._Element, page_origin_pt: tuple[float, float],
         _check_unhandled_attrs(po, ptype, f"ANNAME={anname!r}")
         story = po.find("StoryText")
         runs: list[dict] = []
+        text_kwargs = dict(common_kwargs)
+        if "PCOLOR" in po.attrib:
+            text_kwargs["fill"] = po.attrib["PCOLOR"]
+        if "PCOLOR2" in po.attrib:
+            text_kwargs["line_color"] = po.attrib["PCOLOR2"]
+        if "PWIDTH" in po.attrib:
+            lw = float(po.attrib["PWIDTH"])
+            if abs(lw) > 1e-6:
+                text_kwargs["line_width_pt"] = lw
         if story is not None:
             ds = story.find("DefaultStyle")
-            if ds is not None and "PARENT" in ds.attrib:
-                common_kwargs["style"] = ds.attrib["PARENT"]
+            if ds is not None:
+                if "PARENT" in ds.attrib:
+                    text_kwargs["style"] = ds.attrib["PARENT"]
+                if "LINESPMode" in ds.attrib:
+                    text_kwargs["default_linesp_mode"] = int(ds.attrib["LINESPMode"])
+            tr = story.find("trail")
+            if tr is not None and "PARENT" in tr.attrib:
+                text_kwargs["trail_style"] = tr.attrib["PARENT"]
             runs = _build_runs(story)
-        text_kwargs = dict(common_kwargs)
         if "ALIGN" in po.attrib:
             text_kwargs["text_align"] = int(po.attrib["ALIGN"])
         if "COLUMNS" in po.attrib and po.attrib["COLUMNS"] != "1":
@@ -656,9 +678,47 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
     )
     facing = (doc_elem.attrib.get("BOOK", "0") == "1")
     column_gap_pt = float(doc_elem.attrib.get("ABSTSPALTEN", "11"))
-    deffont = doc_elem.attrib.get("DEFFONT", "Gotham Narrow Book")
-    defsize = float(doc_elem.attrib.get("DEFSIZE", "12"))
-    first_page_num = int(doc_elem.attrib.get("FIRSTPAGENUM", "1"))
+    # DEFFONT is the legacy DSL field; Scribus actually reads DFONT.
+    deffont = (doc_elem.attrib.get("DFONT")
+                or doc_elem.attrib.get("DEFFONT", "Gotham Narrow Book"))
+    defsize = float(doc_elem.attrib.get("DSIZE",
+                                          doc_elem.attrib.get("DEFSIZE", "12")))
+    first_page_num = int(doc_elem.attrib.get("FIRSTPAGENUM",
+                                                doc_elem.attrib.get("FIRSTNUM", "1")))
+
+    # Pass-through every DOCUMENT-level attribute the DSL doesn't construct
+    # itself. Scribus expects a long tail of locale/runtime defaults
+    # (ALAYER, AUTOL, BaseC, CPICT, DPIn*, etc.) to be present on first read;
+    # without them, text frames render with broken paragraph styling and PDF
+    # export silently drops content.
+    DSL_HANDLED_DOC_ATTRS = {
+        "ANZPAGES", "PAGEWIDTH", "PAGEHEIGHT",
+        "BORDERLEFT", "BORDERRIGHT", "BORDERTOP", "BORDERBOTTOM",
+        "BleedTop", "BleedBottom", "BleedLeft", "BleedRight",
+        "ORIENTATION", "PAGESIZE", "FIRSTPAGENUM", "BOOK", "FIRSTLEFT",
+        "AUTOSPALTEN", "ABSTSPALTEN", "UNITS",
+        "TITLE", "AUTHOR", "COMMENTS", "KEYWORDS", "PUBLISHER",
+        "DOCDATE", "DOCTYPE", "DOCFORMAT", "DOCIDENT", "DOCSOURCE",
+        "DOCLANGINFO", "DOCRELATION", "DOCCOVER", "DOCRIGHTS", "DOCCONTRIB",
+        "DEFFONT", "DEFSIZE", "DFONT", "DSIZE",
+        "DSAVE", "AUTOSAVE", "AUTOSAVETIME", "AUTOSAVECOUNT", "AUTOSAVEKEEP",
+        "AUTOSAVEINDOCDIR", "AUTOSAVEDIR",
+        "AutoSave", "AutoSaveTime", "AutoSaveCount", "AutoSaveKeep",
+        "AUtoSaveInDocDir", "AutoSaveDir",
+        "ScratchTop", "ScratchLeft", "ScratchRight", "ScratchBottom",
+        "GapHorizontal", "GapVertical",
+        "PAGEC", "MARGC", "RANDF", "currentProfile",
+        "LANGUAGE",
+        "PEN", "BRUSH", "PENLINE", "PENTEXT", "PENSHADE", "BRUSHSHADE",
+        "LINESHADE", "PICTSHADE",
+        "AUTOMATIC", "AUTOCHECK", "BASEGRID", "BASEO", "STIL", "STILLINE",
+        "WIDTH", "WIDTHLINE", "GROUPC", "HCMS", "showBleed", "FIRSTNUM",
+        "FIRSTPAGENUM",
+    }
+    extras: dict[str, str] = {
+        k: v for k, v in doc_elem.attrib.items()
+        if k not in DSL_HANDLED_DOC_ATTRS
+    }
 
     ci_color_names = _load_ci_color_names()
 
@@ -706,6 +766,11 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         f'    first_page_num={first_page_num},',
         f'    palette_replaces_ci=True,',
     ]
+    if extras:
+        # Sort for stable output across runs
+        items = ", ".join(f"{_py_value(k)}: {_py_value(v)}"
+                          for k, v in sorted(extras.items()))
+        doc_kwargs.append(f"    extra_doc_attrs={{{items}}},")
     if layer_lines:
         doc_kwargs.append("    layers=[")
         for ll in layer_lines:

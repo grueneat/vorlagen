@@ -92,6 +92,7 @@ class Run:
     underline_position: Optional[int] = None  # TXTULP
     strike_position: Optional[int] = None     # TXTSTP
     char_style: Optional[str] = None          # CPARENT
+    paragraph_style: Optional[str] = None     # PARENT on the trailing <para/> element
     separator: Optional[str] = None           # "para" | "breakline" | "tab" | ...
     var: Optional[str] = None                 # "pgno"
 
@@ -248,6 +249,12 @@ class TextFrame(_Frame):
     columns: int = 1
     col_gap_mm: float = 4
     text_align: Optional[int] = None  # ALIGN attribute (vertical text align override)
+    default_linesp_mode: Optional[int] = None  # DefaultStyle LINESPMode attribute
+    trail_style: Optional[str] = None  # PARENT on the closing <trail/> element
+                                       # (style for the final unterminated paragraph)
+    fill: Optional[str] = None        # PCOLOR (frame background fill)
+    line_color: Optional[str] = None  # PCOLOR2 (frame border color)
+    line_width_pt: float = 0          # PWIDTH
     next_item: Optional["TextFrame"] = field(default=None, repr=False, compare=False)
     # Internal: pre-allocated ItemID for chain ordering. Set by Document._build_xml.
     _preallocated_id: Optional[int] = field(default=None, repr=False, compare=False)
@@ -269,7 +276,8 @@ class TextFrame(_Frame):
             "ItemID": str(item_id),
             "PTYPE": "4",
             "WIDTH": f"{w_pt:.6f}", "HEIGHT": f"{h_pt:.6f}",
-            "CLIPEDIT": "0", "PWIDTH": "0",
+            "CLIPEDIT": "0",
+            "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
             "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
@@ -286,6 +294,10 @@ class TextFrame(_Frame):
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=rect_path, default_frtype="0")
         _apply_soft_shadow(attrs, self.soft_shadow)
+        if self.fill is not None:
+            attrs["PCOLOR"] = self.fill
+        if self.line_color is not None:
+            attrs["PCOLOR2"] = self.line_color
         if self.text_align is not None:
             attrs["ALIGN"] = str(self.text_align)
         if self.anname:
@@ -295,6 +307,8 @@ class TextFrame(_Frame):
         ds = etree.SubElement(story, "DefaultStyle")
         if self.style:
             ds.set("PARENT", self.style)
+        if self.default_linesp_mode is not None:
+            ds.set("LINESPMode", str(self.default_linesp_mode))
 
         # Emit ITEXT runs
         if self.runs:
@@ -307,8 +321,9 @@ class TextFrame(_Frame):
                 # Separator between this run and the next
                 if r.separator == "para":
                     para = etree.SubElement(story, "para")
-                    if self.style:
-                        para.set("PARENT", self.style)
+                    style_attr = r.paragraph_style or self.style
+                    if style_attr:
+                        para.set("PARENT", style_attr)
                 elif r.separator == "breakline":
                     etree.SubElement(story, "breakline")
                 elif r.separator == "tab":
@@ -326,10 +341,13 @@ class TextFrame(_Frame):
             it.set("CH", self.text)
             if self.fcolor:
                 it.set("FCOLOR", self.fcolor)
-        # Trail keeps Scribus happy (carries final paragraph style)
+        # Trail terminates StoryText. Its PARENT is the paragraph style
+        # for the final (unterminated) paragraph — required for Scribus to
+        # render the last paragraph correctly.
         trail = etree.SubElement(story, "trail")
-        if self.style:
-            trail.set("PARENT", self.style)
+        trail_parent = self.trail_style if self.trail_style is not None else self.style
+        if trail_parent:
+            trail.set("PARENT", trail_parent)
         return po
 
 
