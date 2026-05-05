@@ -1,99 +1,163 @@
-#!/usr/bin/env python3
-"""Build the Event-Plakat family — A0, A1, A2, A3 from one DSL definition.
+# Auto-generated from plakat-a1-hochformat-original.sla by tools/sla_to_dsl.py.
+# Hand-edit thereafter; this file is the source of truth.
 
-Output: templates/plakat-event/{a0,a1,a2,a3}.sla — same design at four
-sizes, font scales proportionally.
-
-Each plakat has:
-  - Logo top-right
-  - Big 4-line brand headline
-  - Event details (date / time / venue / address) in 2-column layout
-  - Anmelde-URL line
-  - Impressum line at bottom
-"""
-import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools"))
-
-from sla_lib.builder import (  # noqa: E402
-    Document, Color, Style, TextFrame, Polygon, blocks,
+from sla_lib.builder import (
+    Document, TextFrame, ImageFrame, Polygon, Run,
+    DocumentLayer, ParaStyle, CharStyle, SoftShadow,
 )
 
+HERE = Path(__file__).resolve().parent
 
-# Page sizes in mm (portrait orientation), keyed by short name
-SIZES = {
-    "a0": ("A0", (841, 1189)),
-    "a1": ("A1", (594, 841)),
-    "a2": ("A2", (420, 594)),
-    "a3": ("A3", (297, 420)),
-}
+doc = Document(
+    title='',
+    template_id='plakat-event',
+    author='',
+    facing_pages=False,
+    column_gap_default_pt=11,
+    deffont='Gotham Narrow Book',
+    defsize=12,
+    first_page_num=1,
+    palette_replaces_ci=True,
+    layers=[
+        DocumentLayer(name='Hintergrund', visible=True, printable=True, editable=True, flow=True, transparent=1, blend=0, outline=False, layer_color='#000000'),
+    ],
+)
 
+doc.add_color('Black', cmyk=(0, 0, 0, 100))
+doc.add_color('Dunkelgrün', cmyk=(85, 35, 95, 10))
+doc.add_color('Gelb', cmyk=(0, 0, 100, 0))
+doc.add_color('Registration', cmyk=(100, 100, 100, 100), register=True)
+doc.add_color('White', cmyk=(0, 0, 0, 0))
 
-def build_one(size_iso: str, w_mm: float, h_mm: float, out_path: Path) -> None:
-    doc = Document(
-        title=f"Event-Plakat {size_iso}",
-        template_id=f"plakat-event-{size_iso.lower()}",
-    )
-    page = doc.add_page(size=size_iso, orientation="portrait", bleed_mm=3,
-                         margins_mm=(20, 20, 20, 20))
+doc.add_char_style(CharStyle(name='Default Character Style', font='Gotham Narrow Black', fcolor='Black', fontfeatures='', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
+doc.add_para_style(ParaStyle(name='Default Paragraph Style', bcolor='None', bullet='0', linesp=15, space_before_pt=0, space_after_pt=0, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, paragraph_effect_offset=0, align=0, linesp_mode=0, drop_lines=2, hyph_consecutive_lines=2, direction=0, bshade=100, numeration=0, drop_cap=False, is_default=True))
+doc.add_para_style(ParaStyle(name='Headlineweiß', font='Gotham Narrow Ultra', fcolor='White', language='de', fontfeatures='-clig', features='', fontsize=160, linesp=150, kern=1, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=0, linesp_mode=0, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, baseline_offset=0))
+doc.add_para_style(ParaStyle(name='Überschrift gelb', font='Vollkorn Black Italic', fcolor='Gelb', language='de', bcolor='None', fontfeatures='-clig', features='', fontsize=160, linesp=150, space_after_pt=0, kern=2.5, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=0, linesp_mode=0, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1))
+doc.add_para_style(ParaStyle(name='Fließtext', font='Gotham Narrow Book', fcolor='White', language='de', fontfeatures='-clig', fontsize=50, linesp_mode=1))
+doc.add_para_style(ParaStyle(name='Impressum', font='Gotham Narrow Book', language='de', fontfeatures='-clig', fontsize=20, linesp=20, linesp_mode=0))
 
-    # Bottom 40% green block
-    block_h = h_mm * 0.42
-    page.add(Polygon(
-        x_mm=-3, y_mm=h_mm - block_h, w_mm=w_mm + 6, h_mm=block_h + 3,
-        fill=Color.DUNKELGRUEN, layer=0,
-        anname="Hintergrund unten (Dunkelgrün)",
-    ))
+doc.add_master(
+    name='Normal',
+    size=(594, 841),
+    bleed_mm=3,
+    margins_mm=(14.111111, 14.111111, 14.111111, 14.111111),
+    facing='right',
+)
 
-    # Logo top-right (size scales with format)
-    logo_size = w_mm * 0.18
-    page.add(blocks.LogoCorner(corner="top-right", variant="weiss",
-                                size_mm=logo_size, margin_mm=w_mm * 0.04))
+page0 = doc.add_page(
+    size=(594, 841),
+    bleed_mm=3,
+    margins_mm=(14.111111, 14.111111, 14.111111, 14.111111),
+    master='Normal',
+)
 
-    # Headline in the green block — DSL Headline4Line, dimensions scaled
-    head_w = w_mm * 0.85
-    head_h = block_h * 0.65
-    page.add(blocks.Headline4Line(
-        lines=("[Event Headline 1]", "[Vollkorn-Akzent]",
-                "[Headline Zeile 3]", "[Vollkorn-Schluss]"),
-        x_mm=w_mm * 0.075, y_mm=h_mm - block_h + block_h * 0.05,
-        w_mm=head_w, h_mm=head_h,
-    ))
+page0.add(TextFrame(
+    x_mm=0,
+    y_mm=413.939413,
+    w_mm=594,
+    h_mm=427.060587,
+    layer=0,
+    col_gap_mm=0,
+))
 
-    # Event details (2-column) at bottom of green block
-    page.add(blocks.EventDetails(
-        x_mm=w_mm * 0.075, y_mm=h_mm - block_h + head_h + block_h * 0.10,
-        w_mm=head_w, h_mm=block_h * 0.18, columns=2,
-    ))
+page0.add(TextFrame(
+    x_mm=32.620624,
+    y_mm=442.891248,
+    w_mm=491.280275,
+    h_mm=244.271193,
+    layer=0,
+    col_gap_mm=0,
+    runs=[
+        Run(text='Hier steht ', separator='para'),
+        Run(text='ei\xadne gro\xadße ', separator='para'),
+        Run(text='vier\xadzei\xadli\xadge ', separator='para'),
+        Run(text='Ü\xadber\xadschrift ', separator='para'),
+        Run(text='in Baden.'),
+    ],
+))
 
-    # Anmeldung URL near bottom edge
-    page.add(TextFrame(
-        x_mm=w_mm * 0.075, y_mm=h_mm - block_h * 0.10,
-        w_mm=head_w, h_mm=block_h * 0.05,
-        text="Anmeldung unter: [gruene.at/event-url]",
-        style=Style.CTA, fcolor=Color.WHITE, layer=2,
-        anname="Anmelde-URL",
-    ))
+page0.add(TextFrame(
+    x_mm=563.693455,
+    y_mm=832.688889,
+    w_mm=377.37599,
+    h_mm=21.0235,
+    layer=0,
+    rotation_deg=270,
+    col_gap_mm=0,
+    runs=[
+        Run(text='Impressum:', font='Gotham Narrow Bold', fcolor='White', fshade=100),
+        Run(text=' Medieninhaber und Herausgeber: Die Grünen Niederösterreich, Daniel-GranStraße 48, 3100 St. Pölten. ·  Druck: Druckerei mit Postanschrift · Evtl. Hinweis auf Umweltzeichens wenn zutreffend', fcolor='White', fshade=100),
+    ],
+))
 
-    # Impressum vertical-rotated on right edge (matches original Plakat A1 design)
-    page.add(TextFrame(
-        x_mm=w_mm - 5, y_mm=h_mm - block_h + 10, w_mm=block_h - 20, h_mm=4,
-        text=("Impressum: Medieninhaber und Herausgeber: Die Grünen "
-              "Niederösterreich, Daniel-Gran-Straße 48, 3100 St. Pölten."),
-        style=Style.IMPRESSUM, fcolor=Color.WHITE, layer=2,
-        rotation_deg=90, anname="Impressum (vertikal)",
-    ))
+page0.add(TextFrame(
+    x_mm=32.620624,
+    y_mm=772.916477,
+    w_mm=306.776147,
+    h_mm=34.488073,
+    layer=0,
+    col_gap_mm=0,
+    runs=[
+        Run(text='Anmeldung unter: gruene.at/tour'),
+    ],
+))
 
-    doc.save(out_path)
-    print(f"wrote {out_path} ({size_iso}, {w_mm:.0f}×{h_mm:.0f}mm)")
+page0.add(TextFrame(
+    x_mm=32.620624,
+    y_mm=700.391743,
+    w_mm=233.027523,
+    h_mm=41.797558,
+    layer=0,
+    col_gap_mm=0,
+    runs=[
+        Run(text='Freitag, 20. Februar', separator='para'),
+        Run(text='18:00 - 21:00'),
+    ],
+))
 
+page0.add(TextFrame(
+    x_mm=277.66201,
+    y_mm=700.391743,
+    w_mm=235.940367,
+    h_mm=41.797558,
+    layer=0,
+    col_gap_mm=0,
+    runs=[
+        Run(text='Wirtshaus im Batzenhäusl', separator='para'),
+        Run(text='Theaterplatz 9, 2500 Baden'),
+    ],
+))
 
-def build_all(out_dir: Path) -> None:
-    for short, (iso, (w, h)) in SIZES.items():
-        build_one(iso, w, h, out_dir / f"{short}.sla")
+page0.add(ImageFrame(
+    x_mm=0,
+    y_mm=0,
+    w_mm=594,
+    h_mm=413.939413,
+    layer=0,
+    image='',
+))
 
+page0.add(ImageFrame(
+    x_mm=0.494343,
+    y_mm=574.742843,
+    w_mm=372.80288,
+    h_mm=133.46549,
+    layer=0,
+    image='assets/frame_01.png',
+    local_scale=(0.978485, 0.978485),
+))
 
-if __name__ == "__main__":
-    build_all(Path(__file__).parent)
+page0.add(ImageFrame(
+    x_mm=451.44,
+    y_mm=35.64,
+    w_mm=107.1,
+    h_mm=107.1,
+    layer=0,
+    image='assets/frame_02.png',
+    local_scale=(0.12432, 0.12432),
+))
+
+doc.save(HERE / "template.sla")
+print(f"OK: {HERE / "template.sla"}")
