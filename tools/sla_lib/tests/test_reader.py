@@ -44,6 +44,57 @@ class ReaderSmokeTests(unittest.TestCase):
                 self.assertEqual(count_before, len(doc2.page_objects()))
 
 
+class IteratorTests(unittest.TestCase):
+    """Iterators used by sla_diff and sla_to_dsl. Counts come from RESEARCH.md
+    §Per-original inventory, all measured directly via lxml on the originals.
+    """
+
+    EXPECTED = {
+        # path: dict of (iterator name -> count)
+        "postkarte-vorlage-original.sla": {
+            "pages": 2, "masters": 1, "layers": 1, "colors": 8,
+            "styles": 9, "charstyles": 2,
+        },
+        "plakat-a1-hochformat-original.sla": {
+            "pages": 1, "masters": 1, "layers": 1, "colors": 5,
+            "styles": 5, "charstyles": 1,
+        },
+        "gruene-zeitung-vorlage-original.sla": {
+            "pages": 14, "masters": 2, "layers": 1, "colors": 8,
+            "styles": 23, "charstyles": 1,
+        },
+    }
+
+    def test_iter_counts_match_inventory(self):
+        for p in ORIGINALS:
+            with self.subTest(p.name):
+                exp = self.EXPECTED[p.name]
+                doc = SLADocument(p)
+                self.assertEqual(len(list(doc.iter_pages())), exp["pages"])
+                self.assertEqual(len(list(doc.iter_masters())), exp["masters"])
+                self.assertEqual(len(list(doc.iter_layers())), exp["layers"])
+                self.assertEqual(len(list(doc.iter_colors())), exp["colors"])
+                self.assertEqual(len(list(doc.iter_styles())), exp["styles"])
+                self.assertEqual(len(list(doc.iter_charstyles())), exp["charstyles"])
+
+    def test_iter_pages_returns_elements_in_document_order(self):
+        doc = SLADocument(ORIGINALS[2])  # Zeitung 14 pages
+        nums = [int(p.attrib.get("NUM", "-1")) for p in doc.iter_pages()]
+        self.assertEqual(nums, list(range(14)))
+
+    def test_iter_styles_yields_style_elements(self):
+        doc = SLADocument(ORIGINALS[1])  # Postkarte
+        names = [s.attrib.get("NAME", "") for s in doc.iter_styles()]
+        # Postkarte has these distinct style names per RESEARCH.md
+        self.assertIn("Fließtext", names)
+        self.assertIn("Headline sehr wichtig", names)
+
+    def test_iter_colors_includes_per_doc_custom(self):
+        doc = SLADocument(ORIGINALS[1])  # Postkarte: has Green RGB 153,102,51
+        names = [c.attrib.get("NAME") for c in doc.iter_colors()]
+        self.assertIn("Green", names)
+
+
 class EditorTests(unittest.TestCase):
     def test_unnamed_frames_yield_no_slots(self):
         # Originals have no ANNAME slots yet — slot list should be empty.
