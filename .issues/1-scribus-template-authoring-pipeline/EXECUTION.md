@@ -11,9 +11,9 @@
 - [x] Task 1.2: Implement tools/check_ci.py validator — flags Postkarte's RGB-Green and 8 legacy style names; exit-1 on drift (commit ab5cca5)
 
 ### Phase 2 — DSL Foundation (single-page first)
-- [ ] Task 2.1: Create tools/sla_lib/builder/ package skeleton
-- [ ] Task 2.2: Add primitives: TextFrame, ImageFrame, Polygon, Line
-- [ ] Task 2.3: First DSL example: A6 postcard skeleton
+- [x] Task 2.1: Create tools/sla_lib/builder/ package skeleton — Document/Page/Color/Style enums (commit 8d08f98)
+- [x] Task 2.2: Add primitives: TextFrame, ImageFrame, Polygon, Line — anchored, mm-based, layer-aware (commit 8d08f98)
+- [x] Task 2.3: A6 postcard skeleton (templates/_smoke/postcard-a6/) — renders cleanly with bg, headline, störer, CTA, impressum (commit 8d08f98)
 
 ### Phase 3 — Block Primitives
 - [ ] Task 3.1: Block: Headline4Line
