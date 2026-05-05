@@ -140,7 +140,9 @@ class Document:
                  defsize: float = 12,
                  first_page_num: int = 1,
                  palette_replaces_ci: bool = False,
-                 extra_doc_attrs: Optional[dict[str, str]] = None) -> None:
+                 hcms: bool = False,
+                 extra_doc_attrs: Optional[dict[str, str]] = None,
+                 extra_pdf_attrs: Optional[dict[str, str]] = None) -> None:
         self.title = title
         self.template_id = template_id
         self.author = author
@@ -154,11 +156,24 @@ class Document:
         self.defsize: float = defsize
         self.first_page_num: int = first_page_num
         self.palette_replaces_ci: bool = palette_replaces_ci
+        # HCMS=1 enables Scribus's color-management-system rendering: CMYK
+        # colors are translated through the configured ICC profiles
+        # (DPInCMYK / DPPr) on draw + PDF export. With HCMS=0 Scribus uses a
+        # naive CMYK→sRGB conversion that produces visibly different RGB
+        # values for the same CMYK input. The originals all have HCMS=1, so
+        # the converter sets this to True to match the baseline rendering.
+        self.hcms: bool = hcms
         # Extra DOCUMENT-level attributes the converter passes through
         # verbatim. Useful for round-tripping locale/runtime fields like
         # ALAYER, AUTOL, BaseC, CPICT, ICC profile names, calligraphic-pen
         # widths, etc. that Scribus assumes present on first read.
         self.extra_doc_attrs: dict[str, str] = dict(extra_doc_attrs) if extra_doc_attrs else {}
+        # Extra PDF-element attributes the converter passes through verbatim.
+        # The CMS-relevant set (SolidP / ImageP / PrintP / Intent / RGBMode /
+        # UseSpotColors / Version / etc.) drives what ICC profile Scribus
+        # uses on PDF export; without them, Scribus falls back to a naive
+        # CMYK→sRGB conversion that mismatches the baseline rendering.
+        self.extra_pdf_attrs: dict[str, str] = dict(extra_pdf_attrs) if extra_pdf_attrs else {}
         self._idgen = _IdGen()
         # Per-document overrides — empty == fall back to CI defaults.
         self._layers_override: list[DocumentLayer] = list(layers) if layers else []
@@ -482,7 +497,7 @@ class Document:
             "WIDTH": "1",
             "WIDTHLINE": "5",
             "GROUPC": "1",
-            "HCMS": "0",
+            "HCMS": "1" if self.hcms else "0",
             "showBleed": "1",
             "FIRSTNUM": "1",
             "DSAVE": "0",
@@ -799,6 +814,23 @@ class Document:
         pdf.set("registrationMarks", "0")
         pdf.set("markLength", _fmt_num(bleed_pt))
         pdf.set("markOffset", _fmt_num(bleed_pt))
+        # Pass-through any extra PDF attributes the converter captured from
+        # the original (ICC profile names, Intent2, RGBMode, UseSpotColors,
+        # Version, etc.). When ``hcms=True`` the converter's extras win over
+        # the DSL defaults — the original's PDF state is what produced the
+        # frozen baseline, so faithful round-trip requires honouring it
+        # exactly. Bleed-related attrs (BBottom/BLeft/BRight/BTop/useDocBleeds/
+        # cropMarks/bleedMarks/markLength/markOffset) are guarded so the
+        # converter cannot accidentally undo the bleed-emit fix.
+        BLEED_GUARDED = {
+            "BBottom", "BLeft", "BRight", "BTop",
+            "useDocBleeds", "cropMarks", "bleedMarks",
+            "markLength", "markOffset",
+        }
+        for k, v in self.extra_pdf_attrs.items():
+            if k in BLEED_GUARDED:
+                continue
+            pdf.set(k, v)
         # DocItemAttributes / TablesOfContents minimal
         etree.SubElement(doc, "DocItemAttributes")
         etree.SubElement(doc, "TablesOfContents")

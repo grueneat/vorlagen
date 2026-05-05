@@ -685,6 +685,7 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
                                           doc_elem.attrib.get("DEFSIZE", "12")))
     first_page_num = int(doc_elem.attrib.get("FIRSTPAGENUM",
                                                 doc_elem.attrib.get("FIRSTNUM", "1")))
+    hcms = (doc_elem.attrib.get("HCMS", "0") == "1")
 
     # Pass-through every DOCUMENT-level attribute the DSL doesn't construct
     # itself. Scribus expects a long tail of locale/runtime defaults
@@ -719,6 +720,28 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         k: v for k, v in doc_elem.attrib.items()
         if k not in DSL_HANDLED_DOC_ATTRS
     }
+
+    # Capture the original's <PDF> block attrs so the DSL emits the same
+    # ICC profile state on PDF export. Without SolidP/ImageP/PrintP/Intent2/
+    # RGBMode/UseSpotColors/Version, Scribus falls back to a naive CMYK→sRGB
+    # conversion that mismatches the baseline rendering even when HCMS=1.
+    pdf_extras: dict[str, str] = {}
+    pdf_elem = doc_elem.find("PDF")
+    if pdf_elem is not None:
+        # The DSL already authoritatively emits these — don't override.
+        DSL_HANDLED_PDF_ATTRS = {
+            "Articles", "Bookmarks", "Compress", "CompressMethod", "Quality",
+            "EmbedPDF", "Resolution", "Binding", "PicRes", "Grayscale",
+            "MirrorH", "MirrorV", "openAction",
+            # Bleed-emit guard set (also enforced server-side).
+            "BBottom", "BLeft", "BRight", "BTop",
+            "useDocBleeds", "cropMarks", "bleedMarks",
+            "markLength", "markOffset",
+        }
+        for k, v in pdf_elem.attrib.items():
+            if k in DSL_HANDLED_PDF_ATTRS:
+                continue
+            pdf_extras[k] = v
 
     ci_color_names = _load_ci_color_names()
 
@@ -765,12 +788,17 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         f'    defsize={_py_value(defsize)},',
         f'    first_page_num={first_page_num},',
         f'    palette_replaces_ci=True,',
+        f'    hcms={hcms},',
     ]
     if extras:
         # Sort for stable output across runs
         items = ", ".join(f"{_py_value(k)}: {_py_value(v)}"
                           for k, v in sorted(extras.items()))
         doc_kwargs.append(f"    extra_doc_attrs={{{items}}},")
+    if pdf_extras:
+        items = ", ".join(f"{_py_value(k)}: {_py_value(v)}"
+                          for k, v in sorted(pdf_extras.items()))
+        doc_kwargs.append(f"    extra_pdf_attrs={{{items}}},")
     if layer_lines:
         doc_kwargs.append("    layers=[")
         for ll in layer_lines:
