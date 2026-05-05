@@ -361,6 +361,19 @@ def _resolve_xy_mm(elem: etree._Element, page_origin_pt: tuple[float, float]) ->
     return xpos / PT_PER_MM, ypos / PT_PER_MM, w / PT_PER_MM, h / PT_PER_MM
 
 
+def _resolve_xy_pt(elem: etree._Element) -> tuple[float, float, float, float]:
+    """Return (xpos_pt, ypos_pt, width_pt, height_pt) verbatim from the
+    PAGEOBJECT element. Used by the converter for byte-equivalent round-trip
+    on frames where mm ↔ pt round-tripping introduces sub-ulp drift in
+    the printed repr (e.g. inline images with HEIGHT="27.7755590551181")."""
+    return (
+        float(elem.attrib.get("XPOS", "0")),
+        float(elem.attrib.get("YPOS", "0")),
+        float(elem.attrib.get("WIDTH", "0")),
+        float(elem.attrib.get("HEIGHT", "0")),
+    )
+
+
 def _check_unhandled_attrs(elem: etree._Element, ptype: str, label: str) -> None:
     for k in elem.attrib.keys():
         if k in PAGEOBJECT_HANDLED_PRIM:
@@ -551,12 +564,21 @@ def _convert_pageobject(po: etree._Element,
     anname = po.attrib.get("ANNAME", "")
     safe = _safe_filename(anname)
     x_mm, y_mm, w_mm, h_mm = _resolve_xy_mm(po, page_origin_pt)
+    xpos_pt, ypos_pt, width_pt, height_pt = _resolve_xy_pt(po)
     rot = float(po.attrib.get("ROT", "0"))
     layer = int(po.attrib.get("LAYER", "0"))
 
     common_kwargs: dict = {
         "x_mm": x_mm, "y_mm": y_mm, "w_mm": w_mm, "h_mm": h_mm,
         "layer": layer,
+        # Verbatim pt overrides bypass mm ↔ pt round-tripping in the
+        # emit path so XPOS/YPOS/WIDTH/HEIGHT bytes exactly match the
+        # original SLA (matters for sub-ulp-precision inline image
+        # frames). Carrying both x_mm and xpos_pt is intentional:
+        # x_mm is what a human author would write; xpos_pt is the
+        # converter's exact-repro hint.
+        "xpos_pt": xpos_pt, "ypos_pt": ypos_pt,
+        "width_pt": width_pt, "height_pt": height_pt,
     }
     if rot:
         common_kwargs["rotation_deg"] = rot

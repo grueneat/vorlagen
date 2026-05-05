@@ -308,9 +308,26 @@ class _Frame:
     # absent on load, which causes character-level glyph drift in the
     # rendered PDF.
     clip_edit: bool = False
+    # Verbatim XPOS/YPOS/WIDTH/HEIGHT in pt overrides for byte-equivalent
+    # round-trip. The default mm ↔ pt conversion (x_mm * MM_TO_PT) is
+    # round-trip stable for most values, but a handful of inline-image
+    # frames in the Zeitung carry HEIGHT="27.7755590551181" (13-digit
+    # repr) while the round-trip through mm gives "27.775559055118098"
+    # (17-digit). The values differ at sub-ulp (1e-15) level — invisible
+    # in rendering but enough to make the rebuilt SLA non-byte-equivalent
+    # at this attribute. The converter sets these to the original
+    # attribute strings so the emit path skips mm ↔ pt entirely for
+    # round-trip frames.
+    xpos_pt: Optional[float] = None
+    ypos_pt: Optional[float] = None
+    width_pt: Optional[float] = None
+    height_pt: Optional[float] = None
 
     def _xy_pt(self, page) -> tuple[float, float]:
         """Return absolute XPOS/YPOS in scratch canvas space."""
+        # Verbatim pt overrides bypass the mm ↔ pt round-trip entirely.
+        if self.xpos_pt is not None and self.ypos_pt is not None:
+            return self.xpos_pt, self.ypos_pt
         if self.anchor is not None:
             local_x, local_y = resolve_anchor(self.anchor, page.width_pt, page.height_pt,
                                               mm_to_pt(self.w_mm), mm_to_pt(self.h_mm))
@@ -318,6 +335,12 @@ class _Frame:
             local_x = mm_to_pt(self.x_mm)
             local_y = mm_to_pt(self.y_mm)
         return page.page_xpos_pt + local_x, page.page_ypos_pt + local_y
+
+    def _wh_pt(self) -> tuple[float, float]:
+        """Return WIDTH/HEIGHT in pt, honouring verbatim overrides."""
+        if self.width_pt is not None and self.height_pt is not None:
+            return self.width_pt, self.height_pt
+        return mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
 
 
 def _apply_shape_attrs(attrs: dict, frame: _Frame, w_pt: float, h_pt: float,
@@ -416,7 +439,7 @@ class TextFrame(_Frame):
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
-        w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
+        w_pt, h_pt = self._wh_pt()
         item_id = self._preallocated_id if self._preallocated_id is not None else idgen.next()
         rect_path = _format_rect_path(w_pt, h_pt)
         attrs = {
@@ -563,7 +586,7 @@ class ImageFrame(_Frame):
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
-        w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
+        w_pt, h_pt = self._wh_pt()
         rect_path = _format_rect_path(w_pt, h_pt)
         is_inline = self.inline_image_data is not None
         pfile = "" if is_inline else (self.image or self.src)
@@ -624,7 +647,7 @@ class Polygon(_Frame):
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
-        w_pt, h_pt = mm_to_pt(self.w_mm), mm_to_pt(self.h_mm)
+        w_pt, h_pt = self._wh_pt()
         if self.shape == "ellipse":
             default_path = self._ellipse_path(w_pt, h_pt)
             default_frtype = "1"  # FRTYPE=1 = ellipse
