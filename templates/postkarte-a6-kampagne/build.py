@@ -19,12 +19,20 @@ doc = Document(
     deffont='Gotham Narrow Book',
     defsize=12,
     first_page_num=1,
+    palette_replaces_ci=True,
     layers=[
         DocumentLayer(name='Hintergrund', visible=True, printable=True, editable=True, flow=True, transparent=1, blend=0, outline=False, layer_color='#000000'),
     ],
 )
 
+doc.add_color('Black', cmyk=(0, 0, 0, 100))
+doc.add_color('Dunkelgrün', cmyk=(85, 35, 95, 10))
+doc.add_color('Gelb', cmyk=(0, 0, 100, 0))
 doc.add_color('Green', rgb=(153, 102, 51))
+doc.add_color('Hellgrün', cmyk=(69, 0, 100, 0))
+doc.add_color('Magenta', cmyk=(0, 100, 0, 0))
+doc.add_color('Registration', cmyk=(100, 100, 100, 100), register=True)
+doc.add_color('White', cmyk=(0, 0, 0, 0))
 
 doc.add_char_style(CharStyle(name='Default Character Style', font='Gotham Narrow Black', fcolor='Black', fontfeatures='', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
 doc.add_char_style(CharStyle(name='Default Character Style (2)', font='Gotham Narrow Book', fcolor='Black', fontfeatures='-clig', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0))

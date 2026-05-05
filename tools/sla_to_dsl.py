@@ -679,7 +679,8 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         layer_lines.append("DocumentLayer(" + ", ".join(
             f"{k}={_py_value(v)}" for k, v in kwargs.items()) + ")")
 
-    # Build Document(...) constructor
+    # Build Document(...) constructor — palette_replaces_ci so the emitted
+    # SLA's COLOR list exactly matches the original (no leaked CI colors).
     doc_kwargs = [
         f'    title={_py_value(doc_elem.attrib.get("TITLE", ""))},',
         f'    template_id={_py_value(template_id)},',
@@ -689,6 +690,7 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         f'    deffont={_py_value(deffont)},',
         f'    defsize={_py_value(defsize)},',
         f'    first_page_num={first_page_num},',
+        f'    palette_replaces_ci=True,',
     ]
     if layer_lines:
         doc_kwargs.append("    layers=[")
@@ -701,14 +703,11 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
     code.line(")")
     code.line("")
 
-    # Per-document colors (those NOT in shared/ci.yml)
-    extra_colors_emitted = []
+    # Colors — emit every COLOR from the original (palette_replaces_ci=True
+    # means the CI brand stack is suppressed; what we register here is what
+    # gets written). Order matches the original.
     for c in sla.iter_colors():
         name, kwargs = _convert_color(c)
-        if name in ci_color_names:
-            continue
-        extra_colors_emitted.append(name)
-        # Format: doc.add_color("Green", rgb=(...))
         rgb = kwargs.get("rgb")
         cmyk = kwargs.get("cmyk")
         extra = ""
@@ -720,7 +719,7 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
             code.line(f'doc.add_color({_py_value(name)}, rgb={_py_value(rgb)}{extra})')
         else:
             code.line(f'doc.add_color({_py_value(name)}, cmyk={_py_value(cmyk)}{extra})')
-    if extra_colors_emitted:
+    if list(sla.iter_colors()):
         code.line("")
 
     # Char styles

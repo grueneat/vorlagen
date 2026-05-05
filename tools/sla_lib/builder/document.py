@@ -138,7 +138,8 @@ class Document:
                  unit: str = "mm",
                  deffont: str = "Gotham Narrow Book",
                  defsize: float = 12,
-                 first_page_num: int = 1) -> None:
+                 first_page_num: int = 1,
+                 palette_replaces_ci: bool = False) -> None:
         self.title = title
         self.template_id = template_id
         self.author = author
@@ -151,6 +152,7 @@ class Document:
         self.deffont: str = deffont
         self.defsize: float = defsize
         self.first_page_num: int = first_page_num
+        self.palette_replaces_ci: bool = palette_replaces_ci
         self._idgen = _IdGen()
         # Per-document overrides — empty == fall back to CI defaults.
         self._layers_override: list[DocumentLayer] = list(layers) if layers else []
@@ -473,11 +475,15 @@ class Document:
     def _emit_colors(self, doc) -> None:
         # Scribus 1.6 expects per-channel integer attributes (C/M/Y/K) for
         # CMYK colors; native-RGB colors emit SPACE="RGB" with R/G/B.
-        # Document-local colors registered via add_color() take precedence
-        # over CI palette entries with the same NAME.
-        all_colors: dict[str, BrandColor] = dict(self.ci.colors)
-        for cname, c in self._extra_colors.items():
-            all_colors[cname] = c
+        # When ``palette_replaces_ci=True``, only colors explicitly registered
+        # via ``add_color`` are emitted. Otherwise, CI brand colors merge with
+        # document-local extras (extras win on name collision).
+        if self.palette_replaces_ci:
+            all_colors: dict[str, BrandColor] = dict(self._extra_colors)
+        else:
+            all_colors = dict(self.ci.colors)
+            for cname, c in self._extra_colors.items():
+                all_colors[cname] = c
         for cname, c in all_colors.items():
             el = etree.SubElement(doc, "COLOR")
             el.set("NAME", cname)

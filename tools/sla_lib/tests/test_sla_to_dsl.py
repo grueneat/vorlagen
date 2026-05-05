@@ -94,5 +94,30 @@ class PostkarteConverterFreshRun(unittest.TestCase):
             shutil.rmtree(tmp, ignore_errors=True)
 
 
+class PlakatRoundTrip(unittest.TestCase):
+    """Plakat reproduction: 9 frames, 7 soft-hyphens, 90-deg rotation, 0 chains."""
+
+    TEMPLATE_DIR = ROOT / "templates" / "plakat-event"
+    ORIGINAL = ROOT / "plakat-a1-hochformat-original.sla"
+
+    def test_diff_against_original_clean(self):
+        sla = _run_build(self.TEMPLATE_DIR / "build.py")
+        report = _diff_clean(self.ORIGINAL, sla)
+        self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
+                         msg=f"critical: {[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_CRITICAL]}")
+        self.assertEqual(report.summary[sla_diff.SEVERITY_WARNING], 0,
+                         msg=f"warning: {[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_WARNING]}")
+
+    def test_soft_hyphens_byte_preserved(self):
+        sla_path = _run_build(self.TEMPLATE_DIR / "build.py")
+        b = sla_path.read_bytes()
+        # \xad as UTF-8 is two bytes: 0xC2 0xAD. Plakat has 7 soft-hyphens
+        # split across "ei<shy>ne", "vier<shy>zei<shy>li<shy>ge", and
+        # "Ü<shy>ber<shy>schrift".
+        self.assertIn(b"ei\xc2\xadne", b)
+        self.assertIn(b"vier\xc2\xadzei\xc2\xadli\xc2\xadge", b)
+        self.assertIn(b"\xc3\x9c\xc2\xadber\xc2\xadschrift", b)
+
+
 if __name__ == "__main__":
     unittest.main()

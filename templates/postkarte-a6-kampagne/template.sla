@@ -3,13 +3,13 @@
   <DOCUMENT ANZPAGES="2" PAGEWIDTH="297.637795" PAGEHEIGHT="419.527559" BORDERLEFT="40.000000" BORDERRIGHT="40.000000" BORDERTOP="40.000000" BORDERBOTTOM="40.000000" BleedTop="8.503937" BleedBottom="8.503937" BleedLeft="8.503937" BleedRight="8.503937" ORIENTATION="0" PAGESIZE="Custom" FIRSTPAGENUM="1" BOOK="0" FIRSTLEFT="0" AUTOSPALTEN="1" ABSTSPALTEN="11" UNITS="1" TITLE="" AUTHOR="" COMMENTS="DSL-built template — postkarte-a6-kampagne" KEYWORDS="" PUBLISHER="" DOCDATE="" DOCTYPE="" DOCFORMAT="" DOCIDENT="" DOCSOURCE="" DOCLANGINFO="" DOCRELATION="" DOCCOVER="" DOCRIGHTS="" DOCCONTRIB="" DEFFONT="Gotham Narrow Book" DEFSIZE="12" DSAVE="0" AUTOSAVE="0" AUTOSAVETIME="10" AUTOSAVECOUNT="1" AUTOSAVEKEEP="0" AUTOSAVEINDOCDIR="1" AUTOSAVEDIR="" ScratchTop="20.0" ScratchLeft="100.0" ScratchRight="100" ScratchBottom="20" GapHorizontal="0" GapVertical="40.0" PAGEC="#ffffff" MARGC="#0033ff" RANDF="0" currentProfile="Default">
     <CheckProfile Name="Default" ignoreErrors="0" autoCheck="1" checkGlyphs="1" checkOrphans="1" checkOverflow="1" checkPictures="1" checkPartFilledImageFrames="0" checkResolution="1" checkTransparency="1" minResolution="144" maxResolution="4800" checkAnnotations="0" checkRasterPDF="1" checkForGIF="1" ignoreOffLayers="0" checkOffConflictLayers="0" checkNotCMYKOrSpot="0" checkDeviceColorsAndOutputIntent="0" checkFontNotEmbedded="0" checkFontIsOpenType="0" checkAppliedMasterDifferentSide="1" checkEmptyTextFrames="1"/>
     <COLOR NAME="Black" SPACE="CMYK" C="0" M="0" Y="0" K="100"/>
-    <COLOR NAME="White" SPACE="CMYK" C="0" M="0" Y="0" K="0"/>
-    <COLOR NAME="Registration" SPACE="CMYK" C="100" M="100" Y="100" K="100" Register="1"/>
     <COLOR NAME="Dunkelgrün" SPACE="CMYK" C="85" M="35" Y="95" K="10"/>
-    <COLOR NAME="Hellgrün" SPACE="CMYK" C="69" M="0" Y="100" K="0"/>
     <COLOR NAME="Gelb" SPACE="CMYK" C="0" M="0" Y="100" K="0"/>
-    <COLOR NAME="Magenta" SPACE="CMYK" C="0" M="100" Y="0" K="0"/>
     <COLOR NAME="Green" SPACE="RGB" R="153" G="102" B="51"/>
+    <COLOR NAME="Hellgrün" SPACE="CMYK" C="69" M="0" Y="100" K="0"/>
+    <COLOR NAME="Magenta" SPACE="CMYK" C="0" M="100" Y="0" K="0"/>
+    <COLOR NAME="Registration" SPACE="CMYK" C="100" M="100" Y="100" K="100" Register="1"/>
+    <COLOR NAME="White" SPACE="CMYK" C="0" M="0" Y="0" K="0"/>
     <CHARSTYLE DefaultStyle="1" CNAME="Default Character Style" FONT="Gotham Narrow Black" FCOLOR="Black" FONTFEATURES="" FEATURES="inherit" LANGUAGE="de" SCOLOR="Black" BGCOLOR="None" FONTSIZE="12" KERN="0" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" FSHADE="100" HyphenWordMin="3" SSHADE="100" BGSHADE="100" TXTSHX="5" TXTSHY="-5" TXTOUT="1" SCALEH="100" SCALEV="100" BASEO="0"/>
     <CHARSTYLE CNAME="Default Character Style (2)" FONT="Gotham Narrow Book" FCOLOR="Black" FONTFEATURES="-clig" FEATURES="inherit" LANGUAGE="de" SCOLOR="Black" BGCOLOR="None" FONTSIZE="12" KERN="0" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" FSHADE="100" HyphenWordMin="3" SSHADE="100" BGSHADE="100" TXTSHX="5" TXTSHY="-5" TXTOUT="1" SCALEH="100" SCALEV="100" BASEO="0"/>
     <STYLE DefaultStyle="1" NAME="Default Paragraph Style" ALIGN="0" LINESPMode="0" DROPLIN="2" HyphenConsecutiveLines="2" DIRECTION="0" BSHADE="100" Numeration="0" LINESP="15" VOR="0" NACH="0" FIRST="0" INDENT="0" RMARGIN="0" ParagraphEffectOffset="0" BCOLOR="None" Bullet="0" DROP="0"/>
