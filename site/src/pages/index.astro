@@ -4,16 +4,23 @@ import { getCollection } from 'astro:content';
 
 const templates = await getCollection('templates');
 templates.sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+// Astro's import.meta.env.BASE_URL ends with a slash and equals the base
+// config (currently '/vorlagen/'). Asset paths emitted by gallery_build.py
+// start with '/templates/...' — strip the leading '/' so we don't get
+// '//templates/...' when joining.
+const BASE = import.meta.env.BASE_URL;
+const url = (p: string) => BASE + p.replace(/^\//, '');
 ---
 <Base title="Vorlagen-Galerie">
   <h1>Vorlagen-Galerie</h1>
   <p>Skelett-Vorlagen für Postkarten, Plakate und Zeitungen. Datei runterladen, in Scribus öffnen, eigene Inhalte einsetzen.</p>
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
     {templates.map(t => (
-      <a href={`/templates/${t.id}/`} style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;">
+      <a href={url(`templates/${t.id}/`)} style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;">
         {t.data._previews && t.data._previews.length > 0 && (
           <div style="aspect-ratio: 3 / 4; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-            <img src={t.data._previews[0].src} alt={t.data.title} loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            <img src={url(t.data._previews[0].src)} alt={t.data.title} loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
           </div>
         )}
         <div style="padding: 1rem;">

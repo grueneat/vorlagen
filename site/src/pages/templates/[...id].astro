@@ -8,9 +8,12 @@ export async function getStaticPaths() {
 }
 const { t } = Astro.props;
 const { Content } = await render(t);
+
+const BASE = import.meta.env.BASE_URL;
+const url = (p: string) => BASE + p.replace(/^\//, '');
 ---
 <Base title={t.data.title}>
-  <p><a href="/">← Zurück zur Galerie</a></p>
+  <p><a href={url('/')}>← Zurück zur Galerie</a></p>
   <h1>{t.data.title}</h1>
   <p>{t.data.description}</p>
 
@@ -18,7 +21,7 @@ const { Content } = await render(t);
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin: 2rem 0;">
       {t.data._previews.map(p => (
         <div style="background: white; padding: 0.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
-          <img src={p.src} alt={p.label} loading="lazy" style="width: 100%; height: auto; display: block;" />
+          <img src={url(p.src)} alt={p.label} loading="lazy" style="width: 100%; height: auto; display: block;" />
           <div style="text-align: center; font-size: 0.8em; margin-top: 0.5rem; color: #666;">{p.label}</div>
         </div>
       ))}
@@ -30,7 +33,7 @@ const { Content } = await render(t);
     {t.data._downloads && t.data._downloads.map(d => (
       <li>
         <strong>{d.label}</strong>:
-        <a href={d.sla}>SLA</a> · <a href={d.pdf}>Vorschau-PDF</a>
+        <a href={url(d.sla)}>SLA</a> · <a href={url(d.pdf)}>Vorschau-PDF</a>
       </li>
     ))}
   </ul>

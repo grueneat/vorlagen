@@ -1,5 +1,6 @@
 ---
 const { title } = Astro.props;
+const BASE = import.meta.env.BASE_URL;
 ---
 <html lang="de">
   <head>
@@ -37,7 +38,7 @@ const { title } = Astro.props;
     </style>
   </head>
   <body>
-    <header><h1><a href="/">Grüne Vorlagen NÖ</a></h1></header>
+    <header><h1><a href={BASE}>Grüne Vorlagen NÖ</a></h1></header>
     <main>
       <slot />
     </main>
