@@ -916,13 +916,22 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
     pdf_elem = doc_elem.find("PDF")
     if pdf_elem is not None:
         # The DSL already authoritatively emits these — don't override.
+        # Closed set of PDF-element attributes the DSL emits authoritatively.
+        # Anything outside this set flows through extra_pdf_attrs verbatim
+        # so the rebuilt SLA's PDF block byte-matches the original. Keeping
+        # this list small ensures we don't silently substitute different
+        # render-affecting values (e.g. PicRes=300 instead of the
+        # original's 600 — the picture-rendering resolution drives how
+        # inline images rasterise on PDF export).
         DSL_HANDLED_PDF_ATTRS = {
-            "Articles", "Bookmarks", "Compress", "CompressMethod", "Quality",
-            "EmbedPDF", "Resolution", "Binding", "PicRes", "Grayscale",
+            "Articles", "Bookmarks", "Compress", "Quality",
+            "EmbedPDF", "Resolution", "Binding", "Grayscale",
             "MirrorH", "MirrorV", "openAction",
-            # Bleed-emit guard set (also enforced server-side).
+            # Bleed dimensions emitted from the page's bleed_mm; the rest of
+            # the bleed-marks suite (useDocBleeds / cropMarks / bleedMarks /
+            # colorMarks / etc.) flows through extras so we honour the
+            # original's choice (some originals carry bleedMarks="0").
             "BBottom", "BLeft", "BRight", "BTop",
-            "useDocBleeds", "cropMarks", "bleedMarks",
             "markLength", "markOffset",
         }
         for k, v in pdf_elem.attrib.items():

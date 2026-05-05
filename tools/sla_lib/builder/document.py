@@ -893,15 +893,15 @@ class Document:
         pdf.set("markOffset", _fmt_num(bleed_pt))
         # Pass-through any extra PDF attributes the converter captured from
         # the original (ICC profile names, Intent2, RGBMode, UseSpotColors,
-        # Version, etc.). When ``hcms=True`` the converter's extras win over
-        # the DSL defaults — the original's PDF state is what produced the
-        # frozen baseline, so faithful round-trip requires honouring it
-        # exactly. Bleed-related attrs (BBottom/BLeft/BRight/BTop/useDocBleeds/
-        # cropMarks/bleedMarks/markLength/markOffset) are guarded so the
-        # converter cannot accidentally undo the bleed-emit fix.
+        # Version, PicRes, useDocBleeds, etc.). The converter's extras win
+        # over the DSL defaults — the original's PDF state is what produced
+        # the frozen baseline, so faithful round-trip requires honouring it
+        # exactly. Bleed dimensions (BBottom/BLeft/BRight/BTop/markLength/
+        # markOffset) are still guarded — they are derived from the page's
+        # bleed_mm and overriding them via extras would silently
+        # de-synchronise the PDF page bbox from the SLA's bleed setting.
         BLEED_GUARDED = {
             "BBottom", "BLeft", "BRight", "BTop",
-            "useDocBleeds", "cropMarks", "bleedMarks",
             "markLength", "markOffset",
         }
         for k, v in self.extra_pdf_attrs.items():
