@@ -51,49 +51,34 @@ RUN echo "deb http://deb.debian.org/debian trixie main" \
 
 # Brand fonts (proprietary Gotham Narrow, OFL Vollkorn). Source files live at
 # /root/workspace/fonts/ (gitignored; user-controlled drop zone) and are NOT
-# part of the public repo. This layer only fires when the build context contains
-# a fonts/ directory (local dev container built from /root/workspace). When
-# fonts/ is absent (CI runners, public clones), the staging dir is empty and we
-# no-op gracefully — those builds produce DejaVu-only renders.
-#
-# Sanity probe at the end fails LOUD if fonts/ was present but the install did
-# not register the expected font count, protecting against silent DejaVu fallback
-# in the dev container.
+# part of the public repo. The build context must contain `fonts/` — this is
+# a rendering image, fonts are required for correct output. Build fails loudly
+# if the install does not register the expected font count.
 #
 # See docs/render-fidelity.md for the full font-pipeline documentation.
-COPY fonts* /tmp/fonts-staging/
-RUN set -e; \
-    if [ -d /tmp/fonts-staging ] && [ -n "$(ls -A /tmp/fonts-staging 2>/dev/null)" ]; then \
-        mkdir -p /usr/local/share/fonts/gruene; \
-        find /tmp/fonts-staging -type f \( -iname '*.otf' -o -iname '*.ttf' \) \
-            -exec install -m 644 {} /usr/local/share/fonts/gruene/ \; ; \
-        fc-cache -f; \
-        N=$(fc-list | grep -ciE 'gotham narrow|vollkorn' || true); \
-        if [ "$N" -lt 5 ]; then \
-            echo "FONT INSTALL FAILED: only $N font faces registered (expected >= 5)" >&2; \
-            exit 1; \
-        fi; \
-        echo "Brand fonts installed: $N faces"; \
-    else \
-        echo "No fonts/ in build context -- DejaVu-only image (CI / public clone path)"; \
-    fi; \
+COPY fonts/ /tmp/fonts-staging/
+RUN set -e && \
+    mkdir -p /usr/local/share/fonts/gruene && \
+    find /tmp/fonts-staging -type f \( -iname '*.otf' -o -iname '*.ttf' \) \
+        -exec install -m 644 {} /usr/local/share/fonts/gruene/ \; && \
+    fc-cache -f && \
+    N=$(fc-list | grep -ciE 'gotham narrow|vollkorn' || true) && \
+    if [ "$N" -lt 5 ]; then \
+        echo "FONT INSTALL FAILED: only $N font faces registered (expected >= 5)" >&2; \
+        exit 1; \
+    fi && \
+    echo "Brand fonts installed: $N faces" && \
     rm -rf /tmp/fonts-staging
 
 # Fontconfig family-name alias for Vollkorn Black Italic. Scribus SLAs reference
 # this font by its full name as a family ("Vollkorn Black Italic"); the static
 # file registers as family=Vollkorn + style="Black Italic". Without this alias,
 # fontconfig cannot match the lookup and Scribus falls back to DejaVu.
-# The alias-resolution check is gated on Vollkorn being installed so this layer
-# does not fail in font-less CI builds.
 COPY shared/fonts/50-vollkorn-family-alias.conf /etc/fonts/conf.d/50-vollkorn-family-alias.conf
 RUN fc-cache -f && \
-    if fc-list | grep -qiE 'vollkorn'; then \
-        fc-match "Vollkorn Black Italic" | grep -qi 'Vollkorn-BlackItalic' || \
-            { echo "Vollkorn alias not resolving to Vollkorn-BlackItalic.ttf" >&2; exit 1; }; \
-        echo "Vollkorn alias OK: $(fc-match 'Vollkorn Black Italic')"; \
-    else \
-        echo "Vollkorn not installed -- skipping alias resolution check"; \
-    fi
+    fc-match "Vollkorn Black Italic" | grep -qi 'Vollkorn-BlackItalic' || \
+        { echo "Vollkorn alias not resolving to Vollkorn-BlackItalic.ttf" >&2; exit 1; } && \
+    echo "Vollkorn alias OK: $(fc-match 'Vollkorn Black Italic')"
 
 # Allow ImageMagick to read/write PDF (Debian's policy.xml blocks PDF by default).
 # We need this for compare/convert in visual diff workflows.
