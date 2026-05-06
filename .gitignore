@@ -9,9 +9,9 @@ node_modules/
 .worktrees/
 
 # Brand fonts — proprietary, never commit to public repo.
-# Local copies live at workspace root; they're installed into fontconfig
-# during dev-container build (see Dockerfile.claude).
-Gotham Narrow/
+# Local copies live at /root/workspace/fonts/; they're installed into
+# fontconfig during dev-container build (see Dockerfile.claude).
+fonts/
 *.otf
 *.ttf
 *.ttc
