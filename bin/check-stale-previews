@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""bin/check-stale-previews — gallery preview staleness gate (issue #4).
+
+See tools/check_stale_previews.py for implementation. This shim keeps the
+helpers unit-testable from tools/sla_lib/tests/.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+from check_stale_previews import main  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
