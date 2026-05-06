@@ -17,6 +17,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../gruene-zeitung-vorlage-original.sla
+previews_for_sla: 23ea1bed2afd5b4beb05ca33aefa020fba33f735dd5f95d819eac4dae4ef646d
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style
@@ -104,33 +105,15 @@ _previews:
 - label: Seite 9
   src: /templates/zeitung-a4-grun/page-09.png
 - label: Seite 10
-  src: /templates/zeitung-a4-grun/page-1.png
-- label: Seite 11
   src: /templates/zeitung-a4-grun/page-10.png
-- label: Seite 12
+- label: Seite 11
   src: /templates/zeitung-a4-grun/page-11.png
-- label: Seite 13
+- label: Seite 12
   src: /templates/zeitung-a4-grun/page-12.png
-- label: Seite 14
+- label: Seite 13
   src: /templates/zeitung-a4-grun/page-13.png
-- label: Seite 15
+- label: Seite 14
   src: /templates/zeitung-a4-grun/page-14.png
-- label: Seite 16
-  src: /templates/zeitung-a4-grun/page-2.png
-- label: Seite 17
-  src: /templates/zeitung-a4-grun/page-3.png
-- label: Seite 18
-  src: /templates/zeitung-a4-grun/page-4.png
-- label: Seite 19
-  src: /templates/zeitung-a4-grun/page-5.png
-- label: Seite 20
-  src: /templates/zeitung-a4-grun/page-6.png
-- label: Seite 21
-  src: /templates/zeitung-a4-grun/page-7.png
-- label: Seite 22
-  src: /templates/zeitung-a4-grun/page-8.png
-- label: Seite 23
-  src: /templates/zeitung-a4-grun/page-9.png
 ---
 
 # Grüne Zeitung A4 — Skelett-Vorlage

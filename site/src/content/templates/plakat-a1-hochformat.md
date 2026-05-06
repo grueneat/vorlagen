@@ -21,6 +21,11 @@ build:
   - a2.sla
   - a3.sla
 original_sla: ../../plakat-a1-hochformat-original.sla
+previews_for_sla:
+  a0: 0decb29f9b2f0e7d9fc90f2d6dc9843f7ea277fc9584ad6b3c65061e9f9e0fdc
+  a1: b8c47ffe403f7dc9e32e1eb228fde19b33f331172bd916fa20feb7b6cc626a5d
+  a2: fa145c1eae37a53e9bbc2a26d865145f524f2ed221047cde57c300fea3954121
+  a3: 20c991fcd459ef36ddb6a08e41fb03fa88c074ed798853aa60e60661348d0c48
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style
@@ -96,13 +101,13 @@ _downloads:
   pdf: /templates/plakat-a1-hochformat/a3.pdf
 _previews:
 - label: A0
-  src: /templates/plakat-a1-hochformat/a0-page-1.png
+  src: /templates/plakat-a1-hochformat/a0-page-01.png
 - label: A1
-  src: /templates/plakat-a1-hochformat/a1-page-1.png
+  src: /templates/plakat-a1-hochformat/a1-page-01.png
 - label: A2
-  src: /templates/plakat-a1-hochformat/a2-page-1.png
+  src: /templates/plakat-a1-hochformat/a2-page-01.png
 - label: A3
-  src: /templates/plakat-a1-hochformat/a3-page-1.png
+  src: /templates/plakat-a1-hochformat/a3-page-01.png
 ---
 
 # Event-Plakat (A0/A1/A2/A3 Familie)

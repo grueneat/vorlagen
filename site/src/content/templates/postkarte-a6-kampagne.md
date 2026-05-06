@@ -5,6 +5,7 @@ title: Kampagnen-Postkarte A6
 format: A6
 orientation: portrait
 pages: 2
+preview_dpi: 100
 audience:
 - bezirksgruppe
 - landesgruppe
@@ -18,6 +19,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../postkarte-vorlage-original.sla
+previews_for_sla: f8bcd668ecfec76a285243145d2ce91e2c67be8c3a51906b998ba38300a94d00
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style
@@ -90,9 +92,9 @@ _downloads:
   pdf: /templates/postkarte-a6-kampagne/preview.pdf
 _previews:
 - label: Seite 1
-  src: /templates/postkarte-a6-kampagne/page-1.png
+  src: /templates/postkarte-a6-kampagne/page-01.png
 - label: Seite 2
-  src: /templates/postkarte-a6-kampagne/page-2.png
+  src: /templates/postkarte-a6-kampagne/page-02.png
 ---
 
 # Kampagnen-Postkarte A6

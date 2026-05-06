@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
-"""Walk templates/, generate per-template gallery content for the Astro site.
+"""Walk templates/, copy gallery artifacts to site/public/templates/<id>/, and
+write Astro frontmatter for each.
 
-For each templates/<id>/ folder:
+Issue #4: rendering moved to bin/render-gallery (which the maintainer runs
+locally before committing). This script is now copy-only and fails loudly if
+expected committed artifacts are missing for a template — that signals the
+maintainer forgot to run bin/render-gallery before pushing.
+
+For each templates/<id>/ directory:
   - Reads meta.yml
-  - Renders preview PDF via tools/render.py (if not already there)
-  - Generates per-page PNG thumbnails via pdftoppm
+  - Globs committed preview.pdf + page-*.png (non-family) or per-size
+    <code>.sla/.pdf/<code>-page-*.png (family) from templates/<id>/
+  - Copies them to site/public/templates/<id>/
   - Writes site/src/content/templates/<id>.md with frontmatter from meta.yml
-  - Copies preview PDF and PNGs to site/public/templates/<id>/
+  - Embeds README.md in the content if present
+
+If any expected artifact is missing, exits 1 with a clear FATAL message that
+directs the maintainer to run bin/render-gallery locally first.
 """
 from __future__ import annotations
-import os
+
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -23,30 +32,17 @@ SITE_CONTENT = ROOT / "site" / "src" / "content" / "templates"
 SITE_PUBLIC = ROOT / "site" / "public" / "templates"
 
 
-def render_pdf(template_dir: Path, sla_path: Path, pdf_path: Path) -> bool:
-    """Render an SLA to PDF if PDF is missing or older. Return True on success."""
-    if pdf_path.exists() and pdf_path.stat().st_mtime > sla_path.stat().st_mtime:
-        return True
-    pdf_path.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [
-        "xvfb-run", "-a", "--server-args=-screen 0 1024x768x24",
-        "scribus", "-g", "-ns", "-py", str(ROOT / "tools" / "_export_pdf.py"),
-        str(sla_path), str(pdf_path), "screen",
-    ]
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8",
-           "LC_ALL": "C.UTF-8", "LANG": "C.UTF-8"}
-    r = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300)
-    return pdf_path.exists()
-
-
-def pdf_to_pngs(pdf_path: Path, out_prefix: Path, dpi: int = 80) -> list[Path]:
-    """Convert PDF to per-page PNGs at given DPI. Returns sorted list of PNGs."""
-    out_prefix.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["pdftoppm", "-r", str(dpi), "-png", str(pdf_path), str(out_prefix)],
-        check=False, capture_output=True,
+def _fail_missing(tid: str, sla: Path, pdf: Path, pngs: list) -> None:
+    """Exit with a FATAL message when required gallery artifacts are missing."""
+    sys.exit(
+        f"FATAL: gallery artifacts missing for template '{tid}':\n"
+        f"  SLA exists:  {sla.exists()}  ({sla})\n"
+        f"  PDF exists:  {pdf.exists()}  ({pdf})\n"
+        f"  PNG count:   {len(pngs)}  (glob: {sla.parent}/page-*.png)\n"
+        f"\nThis script (tools/gallery_build.py) is copy-only after issue #4.\n"
+        f"Run `bin/render-gallery` locally to produce these artifacts, then\n"
+        f"`git add templates/ site/public/ && git commit`."
     )
-    return sorted(out_prefix.parent.glob(f"{out_prefix.name}-*.png"))
 
 
 def process_template(tdir: Path) -> dict | None:
@@ -56,6 +52,8 @@ def process_template(tdir: Path) -> dict | None:
         return None
     with open(meta_path, "r", encoding="utf-8") as f:
         meta = yaml.safe_load(f)
+    if not isinstance(meta, dict):
+        return None
     tid = meta["id"]
     is_family = meta.get("type") == "family"
 
@@ -63,48 +61,49 @@ def process_template(tdir: Path) -> dict | None:
     public_dir.mkdir(parents=True, exist_ok=True)
 
     if is_family:
-        # Family: render each size separately
         downloads = []
         previews = []
         for size in meta.get("sizes", []):
             code = size["code"]
             sla = tdir / f"{code}.sla"
-            if not sla.exists():
-                continue
             pdf = tdir / f"{code}.pdf"
-            render_pdf(tdir, sla, pdf)
+            page_pngs = sorted(tdir.glob(f"{code}-page-*.png"))
+            if not (sla.exists() and pdf.exists() and page_pngs):
+                _fail_missing(tid, sla, pdf, page_pngs)
             shutil.copy(sla, public_dir / sla.name)
             shutil.copy(pdf, public_dir / pdf.name)
-            png_prefix = public_dir / f"{code}-page"
-            pngs = pdf_to_pngs(pdf, png_prefix, dpi=40)
+            for p in page_pngs:
+                shutil.copy(p, public_dir / p.name)
             downloads.append({
                 "label": f"{size['format']} ({size['mm'][0]}×{size['mm'][1]}mm)",
                 "sla": f"/templates/{tid}/{code}.sla",
                 "pdf": f"/templates/{tid}/{code}.pdf",
             })
-            if pngs:
-                previews.append({"label": size["format"],
-                                  "src": f"/templates/{tid}/{pngs[0].name}"})
+            previews.append({
+                "label": size["format"],
+                "src": f"/templates/{tid}/{page_pngs[0].name}",
+            })
         meta["_downloads"] = downloads
         meta["_previews"] = previews
     else:
         sla = tdir / "template.sla"
-        if not sla.exists():
-            return None
         pdf = tdir / "preview.pdf"
-        render_pdf(tdir, sla, pdf)
+        page_pngs = sorted(tdir.glob("page-*.png"))
+        if not (sla.exists() and pdf.exists() and page_pngs):
+            _fail_missing(tid, sla, pdf, page_pngs)
         shutil.copy(sla, public_dir / "template.sla")
         shutil.copy(pdf, public_dir / "preview.pdf")
-        png_prefix = public_dir / "page"
-        pngs = pdf_to_pngs(pdf, png_prefix, dpi=80)
+        for p in page_pngs:
+            shutil.copy(p, public_dir / p.name)
         meta["_downloads"] = [{
             "label": "Vollständig (SLA + PDF)",
             "sla": f"/templates/{tid}/template.sla",
             "pdf": f"/templates/{tid}/preview.pdf",
         }]
-        meta["_previews"] = [{"label": f"Seite {i+1}",
-                               "src": f"/templates/{tid}/{p.name}"}
-                              for i, p in enumerate(pngs)]
+        meta["_previews"] = [
+            {"label": f"Seite {i+1}", "src": f"/templates/{tid}/{p.name}"}
+            for i, p in enumerate(page_pngs)
+        ]
     return meta
 
 
