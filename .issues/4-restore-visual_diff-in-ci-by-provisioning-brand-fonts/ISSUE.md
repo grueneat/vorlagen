@@ -1,7 +1,7 @@
 ---
 id: '4'
 title: Local render pipeline that commits gallery artifacts; CI becomes pure shipper
-status: open
+status: done
 priority: high
 labels:
 - rendering
