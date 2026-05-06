@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""bin/check-fontsizes — fail-loud regression check for fractional ITEXT FONTSIZE
+inside PAGEOBJECT subtrees of any SLA file.
+
+Scope: PAGEOBJECT only. FRAMEOBJECT (orphan/pasteboard, OwnPage=-1) and
+MASTEROBJECT are ignored — those are dropped by tools/sla_diff.py:drop_frameobjects
+and aren't rendered onto pages. The Zeitung SLA has 42 FONTSIZE="11.7" strings
+in FRAMEOBJECT elements (inert pasteboard text frames); these are intentionally
+not flagged.
+
+Background (D1): The Zeitung template originally had FONTSIZE="11.7" on 97
+PAGEOBJECT ITEXTs (a mouse-wheel-nudge error in Scribus). User's Scribus 1.6.4
+silently rounds 11.7 -> 11.0 in PDF output; our Scribus 1.6.3 honored 11.7
+literally, drifting ~233,000 px across 4 pages. The fix is always at the SLA
+source (open in Scribus, correct to an integer, re-save), never in the renderer.
+See docs/render-fidelity.md "The fix-typos-at-the-source principle" for context.
+
+Usage:
+    bin/check-fontsizes [<sla>...]      # default: all *-original.sla at repo root
+Exit:
+    0 -- clean
+    1 -- at least one fractional FONTSIZE found in a PAGEOBJECT subtree
+"""
+import sys
+from pathlib import Path
+from lxml import etree
+
+
+def check(paths: list) -> int:
+    bad = []
+    for p in paths:
+        if not p.exists():
+            print(f"warning: {p} does not exist; skipping", file=sys.stderr)
+            continue
+        tree = etree.parse(str(p))
+        doc = tree.getroot().find("DOCUMENT")
+        if doc is None:
+            print(f"warning: {p} has no DOCUMENT element; skipping", file=sys.stderr)
+            continue
+        for po in doc.findall("PAGEOBJECT"):
+            for it in po.iter("ITEXT"):
+                fs = it.get("FONTSIZE", "")
+                if "." in fs:
+                    bad.append(
+                        f"{p}: PAGEOBJECT[OwnPage={po.get('OwnPage', '?')}] "
+                        f"ITEXT FONTSIZE={fs!r}"
+                    )
+    if bad:
+        print(
+            "Fractional FONTSIZE found in rendered text (PAGEOBJECT scope):",
+            file=sys.stderr,
+        )
+        for b in bad:
+            print(f"  {b}", file=sys.stderr)
+        print(
+            "\nFix at the source: open the SLA in Scribus, correct the FONTSIZE on "
+            "the\nflagged frames to an integer point size, and re-save. "
+            "See docs/render-fidelity.md\n"
+            '"The fix-typos-at-the-source principle" for context.',
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+def main() -> int:
+    args = [Path(p) for p in sys.argv[1:]]
+    if not args:
+        repo = Path(__file__).resolve().parent.parent
+        args = sorted(repo.glob("*-original.sla"))
+        if not args:
+            print("no *-original.sla files found at repo root", file=sys.stderr)
+            return 1
+    return check(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -21,6 +21,14 @@ fi
 OUT_BASE="build/validation"
 mkdir -p "$OUT_BASE"
 
+echo "=== preflight: bin/check-fontsizes ==="
+if ! "$ROOT/bin/check-fontsizes"; then
+    echo "preflight FAILED — fix fractional FONTSIZE in SLA before continuing" >&2
+    exit 1
+fi
+echo "preflight: PASS"
+echo
+
 EXIT=0
 for tdir in templates/*/; do
     if [ ! -f "$tdir/meta.yml" ]; then
