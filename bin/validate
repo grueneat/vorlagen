@@ -29,6 +29,14 @@ fi
 echo "preflight: PASS"
 echo
 
+echo "=== preflight: bin/check-stale-previews ==="
+if ! "$ROOT/bin/check-stale-previews"; then
+    echo "preflight FAILED — gallery previews are stale; refusing to validate" >&2
+    exit 1
+fi
+echo "preflight: PASS"
+echo
+
 EXIT=0
 for tdir in templates/*/; do
     if [ ! -f "$tdir/meta.yml" ]; then

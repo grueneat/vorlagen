@@ -185,6 +185,71 @@ Expect 0 px per page. If a page drifts:
 
 ---
 
+## Local-only rendering: why CI never renders templates
+
+All gallery artifacts (preview PDFs and page PNGs) are produced by the maintainer running `bin/render-gallery` in the dev container and then committing the result. CI never invokes Scribus, never installs brand fonts, and never rasterises.
+
+### Why this architecture
+
+Three options were evaluated at the end of issue #3:
+
+- **Option A (CI font provisioning):** Install proprietary Gotham Narrow on GitHub Actions runners via a private font secret or private package registry. Rejected: adds secret management complexity, couples render quality to CI runner OS, and still requires human review of every gallery diff.
+- **Option B (local render, CI as pure shipper — chosen):** Single render path in the dev container. CI ships committed artifacts unchanged. One code path → no environment-drift source → deterministic output.
+- **Option C (hybrid):** Render on first push in CI, skip if unchanged. Rejected: adds caching complexity and the same environment-drift risk as Option A.
+
+The chosen architecture (B) is documented in CONTEXT.md D1–D7 and locked as issue #4.
+
+### Stale-preview gate
+
+`bin/check-stale-previews` runs as both a CI gate (first command in the `Validate reproductions` step of `.github/workflows/pages.yml`) and a `bin/validate` preflight. It hashes each committed `templates/<id>/template.sla` (or per-size `<code>.sla` for the plakat family) and compares against the SHA256 recorded in `meta.yml::previews_for_sla`. A mismatch exits 1 with an actionable message:
+
+```
+stale: postkarte-a6-kampagne; template.sla hash mismatch
+  recorded: <old-sha256>
+  current:  <new-sha256>
+Fix by running locally: bin/render-gallery && git add templates/ site/public/ && git commit
+```
+
+This means CI will catch the case where a maintainer pushes an SLA change without re-running `bin/render-gallery`.
+
+### Idempotency
+
+The pipeline strips non-deterministic PDF metadata from every rendered PDF before committing. Scribus embeds a wall-clock `/CreationDate`, `/ModDate`, and `/ID` array in the PDF trailer, and randomises XMP metadata attribute order across renders. `bin/render-gallery` applies a length-preserving byte-level replacement: timestamps are fixed to `D:20000101000000Z`, the ID array to all-zeros, and the XMP packet is rewritten with canonical attribute order. Two consecutive runs on an unchanged SLA produce byte-identical PDFs and no git diff.
+
+---
+
+## Maintainer workflow
+
+This is the 5-step loop for adding or updating templates:
+
+1. **Edit the SLA or build script.** Change `templates/<id>/build.py` (e.g. update a placeholder, adjust layout) or directly edit `templates/<id>/template.sla`.
+2. **Run `bin/render-gallery` from the repo root** (inside the dev container):
+   ```bash
+   bin/render-gallery              # all templates
+   bin/render-gallery postkarte-a6-kampagne   # single template
+   ```
+   This runs `build.py → render → scrub → rasterise → sla_diff --strict → visual_diff → hash`. On success it writes the artifacts to `templates/<id>/` and mirrors them to `site/public/templates/<id>/`.
+3. **Review the result locally.** Open `templates/<id>/preview.pdf` and `page-NN.png` files in a viewer. Check `bin/validate` exit code.
+4. **Commit and push:**
+   ```bash
+   git add templates/ site/public/
+   git commit -m "feat(templates): update <id> — <description>"
+   git push
+   ```
+5. **CI runs structural gate + stale-preview check.** If green, GitHub Pages deploys the updated gallery.
+
+### Per-template artifact manifest
+
+| Template | PDF | PNGs | DPI | PNG width |
+|---|---|---|---|---|
+| `postkarte-a6-kampagne` | `preview.pdf` | `page-01.png`, `page-02.png` | 100 | ~485 px |
+| `zeitung-a4-grun` | `preview.pdf` | `page-01.png` ... `page-14.png` | 50 | ~449 px |
+| `plakat-a1-hochformat` | `a0.pdf`, `a1.pdf`, `a2.pdf`, `a3.pdf` | `a0-page-01.png` ... `a3-page-01.png` | 50 | varies |
+
+The `preview_dpi:` field in `meta.yml` controls the PNG rasterisation DPI. Default is 50. The postcard uses 100 because A6 at 50 dpi is only 243 px wide (below the 360 px retina-thumbnail target).
+
+---
+
 ## Out of scope (tracked elsewhere)
 
 ### ECI ICC profiles
@@ -193,13 +258,19 @@ The SLAs reference `Adobe RGB (1998)` and `PSO Uncoated ISO12647 (ECI)` ICC prof
 
 ### CI font provisioning
 
-CI runners (GitHub Actions) do not have access to the proprietary Gotham Narrow fonts. The `validate-reproductions` step in `.github/workflows/pages.yml` runs `sla_diff --strict` (structural gate) but currently skips `visual_diff`. This is tracked in a separate follow-up issue. See the TODO comment in `pages.yml` for the issue reference.
+Permanently out of scope per issue #4 D7 (Local-only rendering pipeline). CI runners never install brand fonts, never call Scribus, and never produce gallery artifacts. See "Local-only rendering: why CI never renders templates" above for the architectural rationale.
 
 ### Bundling Gotham Narrow in the public repo
 
 License-blocked. Gotham Narrow is proprietary (Hoefler & Co.). The gitignore blocks `*.otf`, `*.ttf`, `*.ttc` and `/fonts/` to prevent accidental commits.
 
 ---
+
+## See also
+
+- `bin/render-gallery` — local pipeline entry point; runs build → render → scrub → rasterise → sla_diff → visual_diff → hash → mirror.
+- `bin/check-stale-previews` — staleness preflight; compares committed SLA SHA256 against `meta.yml::previews_for_sla`.
+- `bin/validate` — full local validation: `check-fontsizes` + `check-stale-previews` + `sla_diff --strict` + `visual_diff` at 150 dpi.
 
 ## Cross-references
 

@@ -16,6 +16,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
+previews_for_sla: 23ea1bed2afd5b4beb05ca33aefa020fba33f735dd5f95d819eac4dae4ef646d
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
