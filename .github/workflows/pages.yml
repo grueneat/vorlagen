@@ -90,7 +90,7 @@ jobs:
       - name: Run unit tests
         run: python3 -m unittest discover tools/sla_lib/tests
 
-      - name: Validate reproductions (sla_diff + visual_diff)
+      - name: Validate reproductions (sla_diff)
         run: |
           set -euo pipefail
           mkdir -p build/validation
@@ -112,22 +112,15 @@ jobs:
               --right "$tdir/template.sla" \
               --json "build/validation/$tid/sla_diff.json" \
               --strict
-            echo "=== visual_diff $tid (96 dpi) ==="
-            python3 tools/visual_diff.py \
-              "$tdir/template.sla" \
-              --baseline "$tdir/baseline.pdf" \
-              --tolerance "$tdir/diff.yml" \
-              --dpi 96 \
-              --out "build/validation/$tid/"
+            # NOTE: visual_diff is intentionally NOT run in CI. CI lacks the
+            # proprietary Gotham Narrow brand fonts; rendering DSL output
+            # without them and comparing against font-bundled baseline.pdf
+            # would fail catastrophically. Structural sla_diff above is the
+            # gate. See docs/render-fidelity.md "Out of scope" for context.
+            # TODO: restore visual_diff in CI once brand fonts are
+            # provisioned via a license-clean private channel (tracked in
+            # issue #4: 4-restore-visual_diff-in-ci-by-provisioning-brand-fonts).
           done
-
-      - name: Upload visual-diff composites on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: visual-diff-composites
-          path: build/validation/*/composite-page-*.png
-          if-no-files-found: ignore
 
       - name: Run brand validator
         run: |
