@@ -7,3 +7,11 @@ __pycache__/
 node_modules/
 .DS_Store
 .worktrees/
+
+# Brand fonts — proprietary, never commit to public repo.
+# Local copies live at workspace root; they're installed into fontconfig
+# during dev-container build (see Dockerfile.claude).
+Gotham Narrow/
+*.otf
+*.ttf
+*.ttc
