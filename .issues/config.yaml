@@ -1,0 +1,66 @@
+# Issue system config (issue-cli)
+#
+# This file controls how `/issue:*` skills + the `issue-cli` tool behave for
+# this repo. Schema: issue.config.Config dataclass. Edits land via PR.
+
+# ---- Per-stage LLM model selection (CF-034) -------------------------------
+# Resolution order: per-stage YAML field > top-level `model` > built-in
+# default (research=opus, plan=opus, execute=sonnet).
+#
+# `model:` (legacy single-model field) is intentionally OMITTED so the
+# per-stage fields below take effect cleanly. The CLI flag `--model X`
+# (e.g. `cloop --model haiku`) is the all-stages override for one run.
+#
+# Rationale (issue:init skill defaults):
+#   - opus for research:  open-ended synthesis, codebase reading, surfacing
+#     blind spots — the highest-leverage stage to spend on.
+#   - opus for plan:      structured generation under load; the plan IS the
+#     prompt the executor consumes verbatim.
+#   - sonnet for execute: bounded code edits under a clear plan; faster +
+#     cheaper without quality loss for well-specified tasks.
+research_model: opus
+plan_model: opus
+execute_model: sonnet
+
+# ---- Issue source ---------------------------------------------------------
+# We mirror new issues to GitHub Issues at the configured repo. The
+# `/issue:new` skill calls `issue-cli sync github create` which writes
+# source/source_id/source_url back into ISSUE.md frontmatter.
+source:
+  type: github
+  repo: GrueneAT/vorlagen
+  sync_on_create: true
+
+github:
+  repo: GrueneAT/vorlagen
+
+# ---- Branch naming --------------------------------------------------------
+# Matches the existing branch shape (issue/1-..., issue/2-..., issue/3-...).
+# Tokens: {slug} already includes the numeric id prefix from issue-cli.
+naming:
+  branch: "issue/{slug}"
+  prefix: ""
+  separator: "-"
+
+# ---- Commit format --------------------------------------------------------
+# Existing convention seen in main's history (e.g. `3: docs(issues): create
+# issue 3-...`, `2: chore(issue): mark issue done`): numeric-id prefix
+# followed by Conventional Commit body.
+commits:
+  format: conventional
+  prefix: true
+
+# ---- Workflow flags -------------------------------------------------------
+# commit_artifacts=true: discuss/research/plan/execute artifacts (CONTEXT.md,
+# RESEARCH.md, PLAN.md, EXECUTION.md) live on the feature branch and ship
+# with the PR. False would keep them at workspace root only.
+commit_artifacts: true
+
+# Worktree management — issue-cli creates feature branches in .worktrees/
+# rooted at the workspace.
+worktrees: true
+worktree_dir: ".worktrees"
+
+# Codebase-map staleness — `/issue:work` warns if `.issues/MAP.md` is older
+# than this many days. We don't generate MAP.md yet; placeholder.
+staleness_days: 7
