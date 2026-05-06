@@ -201,7 +201,7 @@ The chosen architecture (B) is documented in CONTEXT.md D1–D7 and locked as is
 
 ### Stale-preview gate
 
-`bin/check-stale-previews` runs as both a CI gate (first command in the `Validate reproductions` step of `.github/workflows/pages.yml`) and a `bin/validate` preflight. It hashes each committed `templates/<id>/template.sla` (or per-size `<code>.sla` for the plakat family) and compares against the SHA256 recorded in `meta.yml::previews_for_sla`. A mismatch exits 1 with an actionable message:
+`bin/check-stale-previews` runs as both a CI gate (first command in the `Validate reproductions` step of `.github/workflows/pages.yml`) and a `bin/validate` preflight. It hashes each committed `templates/<id>/template.sla` and compares against the SHA256 recorded in `meta.yml::previews_for_sla`. A mismatch exits 1 with an actionable message:
 
 ```
 stale: postkarte-a6-kampagne; template.sla hash mismatch
@@ -244,7 +244,7 @@ This is the 5-step loop for adding or updating templates:
 |---|---|---|---|---|
 | `postkarte-a6-kampagne` | `preview.pdf` | `page-01.png`, `page-02.png` | 100 | ~485 px |
 | `zeitung-a4-grun` | `preview.pdf` | `page-01.png` ... `page-14.png` | 50 | ~449 px |
-| `plakat-a1-hochformat` | `a0.pdf`, `a1.pdf`, `a2.pdf`, `a3.pdf` | `a0-page-01.png` ... `a3-page-01.png` | 50 | varies |
+| `plakat-a1-hochformat` | `preview.pdf` | `page-01.png` | 50 | ~1170 px |
 
 The `preview_dpi:` field in `meta.yml` controls the PNG rasterisation DPI. Default is 50. The postcard uses 100 because A6 at 50 dpi is only 243 px wide (below the 360 px retina-thumbnail target).
 

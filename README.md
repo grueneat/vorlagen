@@ -12,8 +12,8 @@ templates/
 │   ├── meta.yml              # Metadaten + Slot-Hinweise
 │   └── README.md
 ├── plakat-a1-hochformat/     # A1 Veranstaltungs-Plakat (faithful DSL reproduction)
-│   ├── build.py              # eine DSL → 4 SLAs
-│   ├── a0.sla a1.sla a2.sla a3.sla
+│   ├── build.py              # DSL-Definition (source of truth)
+│   ├── template.sla          # build artifact, in Scribus zu öffnen
 │   ├── meta.yml
 │   └── README.md
 └── zeitung-a4-grun/          # 9 Beispielseiten in einer Multi-Page-SLA

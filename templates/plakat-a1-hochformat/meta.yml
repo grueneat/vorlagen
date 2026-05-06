@@ -1,24 +1,19 @@
 id: plakat-a1-hochformat
 version: 0.1.0
-title: Event-Plakat (Familie)
-type: family
+title: Event-Plakat A1
+type: single
 audience: [bezirksgruppe, landesgruppe, ortsgruppe]
 description: >
   Veranstaltungs-Plakat für Events, Mahnwachen, Stammtische, Kundgebungen.
-  Verfügbar als A0, A1, A2, A3 — gleiche Gestaltung, skaliert für die
-  jeweilige Größe. Eine build.py-Definition erzeugt alle vier SLAs.
+  A1 Hochformat (594×841 mm). Für andere Druckgrößen direkt im Druckdialog
+  skalieren — die Vektor-Inhalte bleiben dabei verlustfrei.
 build:
   script: build.py
   output: template.sla
-  outputs: [a0.sla, a1.sla, a2.sla, a3.sla]
 
 # Round-trip validation (issue #2)
 original_sla: ../../plakat-a1-hochformat-original.sla
-previews_for_sla:
-  a0: 0decb29f9b2f0e7d9fc90f2d6dc9843f7ea277fc9584ad6b3c65061e9f9e0fdc
-  a1: b8c47ffe403f7dc9e32e1eb228fde19b33f331172bd916fa20feb7b6cc626a5d
-  a2: fa145c1eae37a53e9bbc2a26d865145f524f2ed221047cde57c300fea3954121
-  a3: 20c991fcd459ef36ddb6a08e41fb03fa88c074ed798853aa60e60661348d0c48
+previews_for_sla: cff461714e044eb343b7593bf7b0de2d40a5bb38a458d62db80359748902a3b4
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
@@ -27,11 +22,7 @@ ci_overrides:
     - "Fließtext"
     - "Impressum"
   non_ci_colors: []
-sizes:
-  - { code: a0, format: A0, mm: [841, 1189] }
-  - { code: a1, format: A1, mm: [594, 841] }
-  - { code: a2, format: A2, mm: [420, 594] }
-  - { code: a3, format: A3, mm: [297, 420] }
+
 slots:
   headline:
     type: text
@@ -60,6 +51,7 @@ slots:
     type: text
     description: Impressum (vertikal am rechten Rand)
     anname: "Impressum (vertikal)"
+
 preflight:
   bleed_mm: 3
   cmyk_only: true

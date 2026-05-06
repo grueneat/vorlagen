@@ -1,31 +1,22 @@
 ---
 id: plakat-a1-hochformat
 version: 0.1.0
-title: Event-Plakat (Familie)
-type: family
+title: Event-Plakat A1
+type: single
 audience:
 - bezirksgruppe
 - landesgruppe
 - ortsgruppe
 description: 'Veranstaltungs-Plakat für Events, Mahnwachen, Stammtische, Kundgebungen.
-  Verfügbar als A0, A1, A2, A3 — gleiche Gestaltung, skaliert für die jeweilige Größe.
-  Eine build.py-Definition erzeugt alle vier SLAs.
+  A1 Hochformat (594×841 mm). Für andere Druckgrößen direkt im Druckdialog skalieren
+  — die Vektor-Inhalte bleiben dabei verlustfrei.
 
   '
 build:
   script: build.py
   output: template.sla
-  outputs:
-  - a0.sla
-  - a1.sla
-  - a2.sla
-  - a3.sla
 original_sla: ../../plakat-a1-hochformat-original.sla
-previews_for_sla:
-  a0: 0decb29f9b2f0e7d9fc90f2d6dc9843f7ea277fc9584ad6b3c65061e9f9e0fdc
-  a1: b8c47ffe403f7dc9e32e1eb228fde19b33f331172bd916fa20feb7b6cc626a5d
-  a2: fa145c1eae37a53e9bbc2a26d865145f524f2ed221047cde57c300fea3954121
-  a3: 20c991fcd459ef36ddb6a08e41fb03fa88c074ed798853aa60e60661348d0c48
+previews_for_sla: cff461714e044eb343b7593bf7b0de2d40a5bb38a458d62db80359748902a3b4
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style
@@ -34,27 +25,6 @@ ci_overrides:
   - Fließtext
   - Impressum
   non_ci_colors: []
-sizes:
-- code: a0
-  format: A0
-  mm:
-  - 841
-  - 1189
-- code: a1
-  format: A1
-  mm:
-  - 594
-  - 841
-- code: a2
-  format: A2
-  mm:
-  - 420
-  - 594
-- code: a3
-  format: A3
-  mm:
-  - 297
-  - 420
 slots:
   headline:
     type: text
@@ -87,50 +57,27 @@ preflight:
   bleed_mm: 3
   cmyk_only: true
 _downloads:
-- label: A0 (841×1189mm)
-  sla: /templates/plakat-a1-hochformat/a0.sla
-  pdf: /templates/plakat-a1-hochformat/a0.pdf
-- label: A1 (594×841mm)
-  sla: /templates/plakat-a1-hochformat/a1.sla
-  pdf: /templates/plakat-a1-hochformat/a1.pdf
-- label: A2 (420×594mm)
-  sla: /templates/plakat-a1-hochformat/a2.sla
-  pdf: /templates/plakat-a1-hochformat/a2.pdf
-- label: A3 (297×420mm)
-  sla: /templates/plakat-a1-hochformat/a3.sla
-  pdf: /templates/plakat-a1-hochformat/a3.pdf
+- label: Vollständig (SLA + PDF)
+  sla: /templates/plakat-a1-hochformat/template.sla
+  pdf: /templates/plakat-a1-hochformat/preview.pdf
 _previews:
-- label: A0
-  src: /templates/plakat-a1-hochformat/a0-page-01.png
-- label: A1
-  src: /templates/plakat-a1-hochformat/a1-page-01.png
-- label: A2
-  src: /templates/plakat-a1-hochformat/a2-page-01.png
-- label: A3
-  src: /templates/plakat-a1-hochformat/a3-page-01.png
+- label: Seite 1
+  src: /templates/plakat-a1-hochformat/page-01.png
 ---
 
-# Event-Plakat (A0/A1/A2/A3 Familie)
+# Event-Plakat A1
 
-Vier SLA-Dateien aus einer DSL-Definition — gleicher Entwurf, vier Größen.
+A1 Hochformat (594 × 841 mm) — DSL-built reproduction of `plakat-a1-hochformat-original.sla`.
 
 ## So nutzt du die Vorlage
 
-1. Größe wählen: a0.sla / a1.sla / a2.sla / a3.sla.
-2. In Scribus öffnen.
-3. Inhalte ersetzen — Headline, Datum, Ort, URL.
-4. Logo platzieren (Bilder-Frame oben rechts, ANNAME "Logo (top-right, weiss)").
-5. PDF exportieren.
+1. `template.sla` in Scribus öffnen.
+2. Inhalte ersetzen — Headline, Datum, Ort, URL.
+3. Logo platzieren (Bilder-Frame oben rechts, ANNAME "Logo (top-right, weiss)").
+4. PDF exportieren.
 
-## Wann welche Größe?
-
-| Größe | Verwendung |
-|---|---|
-| A0 (84 × 119 cm) | City-Lights, Großflächen, Litfaßsäulen |
-| A1 (59 × 84 cm)  | Schaufenster, Anschlagsäulen |
-| A2 (42 × 59 cm)  | Veranstaltungsorte innen, Eingänge |
-| A3 (30 × 42 cm)  | Aushangtafeln, Lokale, Café |
+Für andere Druckgrößen einfach im Scribus- oder Druckdialog skalieren — die Vektor-Inhalte bleiben dabei verlustfrei.
 
 ## Anpassung der Vorlage
 
-`build.py` definiert Layout für alle vier Größen. Editieren + `python3 build.py` regeneriert alle.
+`build.py` ist auto-generiert von `tools/sla_to_dsl.py` aus `plakat-a1-hochformat-original.sla`. Hand-Edits werden bei der nächsten Regeneration überschrieben — direkt im Original SLA editieren oder den Konverter erneut laufen lassen.
