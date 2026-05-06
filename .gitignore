@@ -11,7 +11,9 @@ node_modules/
 # Brand fonts — proprietary, never commit to public repo.
 # Local copies live at /root/workspace/fonts/; they're installed into
 # fontconfig during dev-container build (see Dockerfile.claude).
-fonts/
+# Only the root-level fonts/ drop zone is blocked, not shared/fonts/
+# (which holds fontconfig config files, not font binaries).
+/fonts/
 *.otf
 *.ttf
 *.ttc
