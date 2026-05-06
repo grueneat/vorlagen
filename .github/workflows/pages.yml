@@ -90,10 +90,13 @@ jobs:
       - name: Run unit tests
         run: python3 -m unittest discover tools/sla_lib/tests
 
-      - name: Validate reproductions (sla_diff)
+      - name: Validate reproductions (sla_diff + stale-previews)
         run: |
           set -euo pipefail
           mkdir -p build/validation
+          # Preflight: gallery previews must match committed template.sla bytes.
+          # See docs/render-fidelity.md "Local-only rendering" — CI never renders templates.
+          python3 bin/check-stale-previews
           for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4-grun; do
             tid=$(basename "$tdir")
             # Resolve original_sla relative to the template directory
@@ -112,14 +115,6 @@ jobs:
               --right "$tdir/template.sla" \
               --json "build/validation/$tid/sla_diff.json" \
               --strict
-            # NOTE: visual_diff is intentionally NOT run in CI. CI lacks the
-            # proprietary Gotham Narrow brand fonts; rendering DSL output
-            # without them and comparing against font-bundled baseline.pdf
-            # would fail catastrophically. Structural sla_diff above is the
-            # gate. See docs/render-fidelity.md "Out of scope" for context.
-            # TODO: restore visual_diff in CI once brand fonts are
-            # provisioned via a license-clean private channel (tracked in
-            # issue #4: 4-restore-visual_diff-in-ci-by-provisioning-brand-fonts).
           done
 
       - name: Run brand validator
