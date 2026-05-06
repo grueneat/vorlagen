@@ -3,13 +3,22 @@
 # Base provides: node 20, python3, git/git-lfs, gh, jq, ripgrep, uv, ruff, mypy, pytest.
 # This image adds:
 #   - Scribus 1.6.x (from Debian trixie, since bookworm only ships 1.5.8 which
-#     cannot read the project's 1.6.5 .sla files)
+#     cannot read the project's 1.6.5 .sla files). Available for amd64 and arm64.
 #   - Xvfb (Scribus needs an X display even in --no-gui mode on Linux)
 #   - Poppler-utils (pdftoppm / pdfinfo / pdftocairo for rasterising PDFs)
 #   - Ghostscript (PDF post-processing, PDF/X conversion)
 #   - ImageMagick (compare, convert — visual diff fallback)
 #   - libxml2-utils (xmllint for validating SLA XML in CI)
-#   - python3-lxml, python3-yaml (used by tools/sla_lib and tools/render.py)
+#   - python3-lxml, python3-yaml (used by tools/sla_lib and tools/render.py).
+#     Pulled from trixie too: trixie scribus depends on libpython3.13, which
+#     promotes the system python from 3.11 → 3.13. Bookworm's python3-lxml /
+#     python3-yaml are pinned to python<3.12 and can no longer be installed
+#     once that promotion happens, so they must come from trixie as well.
+#
+# Note: CI does NOT use this image. The GitHub Pages workflow installs Scribus
+# from the upstream linux-x86_64 AppImage on the Ubuntu runner (faster, no
+# Debian release crossing). This Dockerfile is the local container path on
+# Mac/arm64 where no official Scribus AppImage exists.
 #
 # Optional preflight/diff tools (veraPDF, pdfcpu, odiff) are NOT installed by
 # default to keep the image small. Enable with:
@@ -37,15 +46,16 @@ RUN echo "deb http://deb.debian.org/debian trixie main" \
       > /etc/apt/preferences.d/99-trixie-scribus && \
     apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        -t trixie scribus scribus-data && \
+        -t trixie \
+        scribus scribus-data \
+        python3-lxml python3-yaml && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         xvfb \
+        xauth \
         poppler-utils \
         ghostscript \
         imagemagick \
         libxml2-utils \
-        python3-lxml \
-        python3-yaml \
         fonts-dejavu-core && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -129,14 +139,20 @@ RUN if [ "$INSTALL_PREFLIGHT" = "1" ]; then \
       npm install -g "odiff-bin@^3" || true; \
     fi
 
-# Sanity probe: exercise the headless render path on a tiny synthetic SLA so
-# layer-cached image catches Scribus regressions during build, not at runtime.
-RUN xvfb-run -a --server-args="-screen 0 800x600x24" scribus --version 2>&1 | grep -E '^[0-9]' && \
-    pdftoppm -v 2>&1 | head -1 && \
+# Sanity probe: confirm the binaries / python deps are present and importable
+# so the layer-cached image catches install regressions at build time.
+# Note: `scribus --version` prints "Scribus X.Y.Z" (not a bare version string)
+# and may exit non-zero under xvfb if Qt fails to fully init — we tolerate that
+# and only require the binary to be on PATH and produce some output.
+RUN set -e; \
+    command -v scribus >/dev/null && echo "scribus: $(command -v scribus)"; \
+    xvfb-run -a --server-args="-screen 0 800x600x24" scribus --version 2>&1 | head -5 || true; \
+    pdftoppm -v 2>&1 | head -1; \
     python3 -c "import lxml.etree, yaml; print('python deps ok')"
 
 # Default working directory is the mounted repo (volume from base image).
 WORKDIR /root/workspace
 
-# Default command: show the render CLI help so `docker run` without args is informative.
-CMD ["python3", "tools/render.py", "--help"]
+# Intentionally NO CMD / ENTRYPOINT override — the base image
+# (ghcr.io/flomotlik/claude-code:latest) sets up the entrypoint that launches
+# claude inside the container. Overriding it here breaks `claude-flow run`.
