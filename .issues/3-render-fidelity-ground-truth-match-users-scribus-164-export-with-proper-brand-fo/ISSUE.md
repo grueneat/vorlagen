@@ -3,6 +3,7 @@ id: '3'
 title: 'Render-fidelity ground truth: match user''s Scribus 1.6.4 export with proper
   brand fonts'
 status: done
+ship_state: merged
 priority: high
 labels:
 - rendering
