@@ -4,6 +4,7 @@ title: Kampagnen-Postkarte A6
 format: A6
 orientation: portrait
 pages: 2
+preview_dpi: 100
 audience: [bezirksgruppe, landesgruppe, ortsgruppe]
 description: >
   Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Badge),
@@ -23,6 +24,7 @@ build:
 # overrides for `tools/check_ci.py` allowing the document-local non-CI styles and
 # colors that the original Postkarte ships with.
 original_sla: ../../postkarte-vorlage-original.sla
+previews_for_sla: f8bcd668ecfec76a285243145d2ce91e2c67be8c3a51906b998ba38300a94d00
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"

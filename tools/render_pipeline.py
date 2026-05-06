@@ -45,6 +45,7 @@ EPOCH_DATE = b"D:20000101000000Z"   # 16 bytes; same as D:YYYYMMDDhhmmssZ
 FIXED_PDF_ID = b"00000000000000000000000000000000"  # 32 hex chars
 
 
+
 # ---------------------------------------------------------------------------
 # PDF byte-scrub for idempotent renders
 # ---------------------------------------------------------------------------
@@ -52,15 +53,33 @@ FIXED_PDF_ID = b"00000000000000000000000000000000"  # 32 hex chars
 def _scrub_pdf_metadata(p: Path) -> None:
     """Replace non-deterministic PDF metadata with fixed length-preserving values.
 
-    Scribus 1.6.x embeds:
-    - /CreationDate (D:YYYYMMDDhhmmssZ) in the Info dict
-    - /ModDate      (D:YYYYMMDDhhmmssZ) in the Info dict
-    - /ID [<32hex><32hex>]              in the trailer
+    Scribus 1.6.x embeds non-deterministic data in two locations:
 
-    All three vary per-run even on identical source SLAs. The substitution is
-    byte-length-preserving so xref byte offsets in the PDF remain valid.
-    Empirically verified: two renders 3s apart → after scrub → cmp says IDENTICAL.
-    (RESEARCH.md §Idempotency Strategy, lines 298-360)
+    1. PDF Info dict (in the object stream near the start):
+       - /CreationDate (D:YYYYMMDDhhmmssZ)
+       - /ModDate      (D:YYYYMMDDhhmmssZ)
+       - /ID [<32hex><32hex>]  (in the trailer)
+
+    2. XMP metadata packet (present for documents with metadata):
+       - xmp:CreateDate="YYYY-MM-DDThh:mm:ssZ"
+       - xmp:ModifyDate="YYYY-MM-DDThh:mm:ssZ"
+       - xmp:MetadataDate="YYYY-MM-DDThh:mm:ssZ"
+       - xmpMM:DocumentID="uuid:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+    All substitutions are byte-length-preserving:
+    - PDF dates: "D:YYYYMMDDhhmmssZ" = 16 bytes
+    - ISO 8601 XMP dates: "YYYY-MM-DDThh:mm:ssZ" = 20 bytes
+    - UUID: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" = 36 bytes
+    - PDF ID hex: 32 hex chars each
+    - XMP packet itself is padded to a fixed size for in-place editing.
+
+    The XMP attribute ORDER can also differ between renders (Scribus does not
+    guarantee attribute order for non-deterministic fields). However, since each
+    field has a unique name/length, the individual regex substitutions work even
+    if the order changes — they match the field regardless of position.
+
+    Empirically verified: postkarte (no XMP) and plakat/zeitung (with XMP)
+    both produce byte-identical output after this scrub.
     """
     data = p.read_bytes()
     data = re.sub(
@@ -78,7 +97,135 @@ def _scrub_pdf_metadata(p: Path) -> None:
         b"/ID [<" + FIXED_PDF_ID + b"><" + FIXED_PDF_ID + b">]",
         data,
     )
+    # Scribus also embeds an XMP metadata packet for some documents. The
+    # non-deterministic parts are timestamps AND the attribute ORDER within
+    # rdf:Description elements (Scribus doesn't guarantee ordering). Simple
+    # value substitution is insufficient because different attribute orders
+    # produce different bytes even with the same values. We canonicalize the
+    # full XMP packet content while preserving its total byte length
+    # (the packet is padded by Scribus for exactly this purpose).
+    data = _scrub_xmp_packet(data)
     p.write_bytes(data)
+
+
+def _scrub_xmp_packet(data: bytes) -> bytes:
+    """Canonicalize the XMP metadata packet to eliminate non-determinism.
+
+    Scribus 1.6.x embeds an XMP packet in some documents (not all). The packet
+    contains timestamps (xmp:CreateDate, xmp:ModifyDate, xmp:MetadataDate) and a
+    DocumentID UUID that vary per render, AND the attributes within rdf:Description
+    elements are randomly ordered. Both issues are resolved by replacing the entire
+    packet content with a canonical version that has:
+    - Fixed epoch timestamps
+    - Fixed all-zeros UUID
+    - Fixed canonical attribute order
+    - Preserved document-specific content (dc:title, dc:creator, dc:description)
+
+    The replacement is byte-length-preserving: the XMP packet is padded by Scribus
+    so its total size is fixed. We adjust the padding whitespace to compensate for
+    any size change in the XML content.
+
+    If no XMP packet is present (e.g. postkarte-a6-kampagne), returns data unchanged.
+    """
+    xmp_start = data.find(b'<?xpacket begin')
+    if xmp_start == -1:
+        return data  # No XMP packet; nothing to scrub.
+
+    # Find the end of the XMP packet.
+    end_marker_start = data.find(b'<?xpacket end', xmp_start)
+    end_marker_end = data.find(b'?>', end_marker_start) + 2
+    original_length = end_marker_end - xmp_start
+
+    # Decode the XMP XML content.
+    xmpmeta_end = data.find(b'</x:xmpmeta>', xmp_start)
+    xmp_xml = data[xmp_start:xmpmeta_end + len(b'</x:xmpmeta>')].decode('utf-8', errors='replace')
+
+    # Extract the dc: block (title/author/description — stable child elements).
+    dc_block_match = re.search(
+        r'<rdf:Description[^>]*dc:format="application/pdf"[^>]*>(.*?)</rdf:Description>',
+        xmp_xml,
+        re.DOTALL,
+    )
+    dc_inner = dc_block_match.group(1) if dc_block_match else ""
+
+    # Extract pdf:Producer value (may differ by Scribus version).
+    pdf_producer_match = re.search(r'pdf:Producer="([^"]*)"', xmp_xml)
+    pdf_producer = pdf_producer_match.group(1) if pdf_producer_match else "Scribus PDF Library 1.6.3"
+
+    # Build canonical XMP content with fixed attribute order.
+    canonical = (
+        '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>\n'
+        '<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Scribus PDF Library 1.6.3">\n'
+        '    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n'
+        '        <rdf:Description'
+        ' rdf:about=""'
+        ' xmlns:xmp="http://ns.adobe.com/xap/1.0/"'
+        ' xmp:CreateDate="2000-01-01T00:00:00Z"'
+        ' xmp:CreatorTool="Scribus 1.6.3"'
+        ' xmp:MetadataDate="2000-01-01T00:00:00Z"'
+        ' xmp:ModifyDate="2000-01-01T00:00:00Z"'
+        '/>\n'
+        '        <rdf:Description'
+        ' rdf:about=""'
+        ' xmlns:pdf="http://ns.adobe.com/pdf/1.3/"'
+        f' pdf:Keywords=""'
+        f' pdf:Producer="{pdf_producer}"'
+        ' pdf:Trapped="False"'
+        '/>\n'
+    )
+    if dc_inner:
+        canonical += (
+            '        <rdf:Description'
+            ' rdf:about=""'
+            ' dc:format="application/pdf"'
+            ' xmlns:dc="http://purl.org/dc/elements/1.1/"'
+            '>\n'
+            + dc_inner +
+            '        </rdf:Description>\n'
+        )
+    canonical += (
+        '        <rdf:Description'
+        ' rdf:about=""'
+        ' xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"'
+        ' xmpMM:DocumentID="uuid:00000000-0000-0000-0000-000000000000"'
+        ' xmpMM:RenditionClass="default"'
+        ' xmpMM:VersionID="1"'
+        '/>\n'
+        '    </rdf:RDF>\n'
+        '</x:xmpmeta>\n'
+    )
+    canonical_bytes = canonical.encode('utf-8')
+
+    # Pad with spaces to preserve the original packet length.
+    # (Scribus pads with lines of 100 spaces; we use the same style.)
+    end_marker = b"<?xpacket end='w'?>"
+    padding_needed = original_length - len(canonical_bytes) - len(end_marker)
+    if padding_needed < 0:
+        # Should not happen; log a warning but don't crash.
+        import sys as _sys
+        print(
+            f"WARNING: canonicalized XMP is larger than original by {-padding_needed} bytes; "
+            "truncating (idempotency may be affected).",
+            file=_sys.stderr,
+        )
+        canonical_bytes = canonical_bytes[:original_length - len(end_marker)]
+        padding_needed = 0
+
+    # Build padding: 100-space lines.
+    full_lines = padding_needed // 101  # 100 spaces + newline = 101 chars
+    remainder = padding_needed - full_lines * 101
+    padding = (b' ' * 100 + b'\n') * full_lines
+    if remainder > 1:
+        padding += b' ' * (remainder - 1) + b'\n'
+    elif remainder == 1:
+        padding += b'\n'
+
+    full_canonical = canonical_bytes + padding + end_marker
+    assert len(full_canonical) == original_length, (
+        f"XMP scrub length mismatch: {len(full_canonical)} != {original_length}"
+    )
+
+    return data[:xmp_start] + full_canonical + data[end_marker_end:]
 
 
 # ---------------------------------------------------------------------------
