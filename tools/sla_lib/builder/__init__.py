@@ -51,6 +51,7 @@ from .ci import Color, Style, load_ci
 from .document import Document, Page
 from .primitives import TextFrame, ImageFrame, Polygon, Line, Anchor, Run
 from .styles import DocumentLayer, ParaStyle, CharStyle, SoftShadow
+from .brand import Brand
 from . import blocks
 
 __all__ = [
@@ -69,5 +70,6 @@ __all__ = [
     "DocumentLayer",
     "SoftShadow",
     "load_ci",
+    "Brand",
     "blocks",
 ]
