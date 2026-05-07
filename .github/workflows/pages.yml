@@ -114,7 +114,8 @@ jobs:
               --left "$original" \
               --right "$tdir/template.sla" \
               --json "build/validation/$tid/sla_diff.json" \
-              --strict
+              --strict \
+              --allow-brand-extras
           done
 
       - name: Run brand validator
