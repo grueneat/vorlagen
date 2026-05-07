@@ -727,6 +727,112 @@ class StoryTextSequenceDiffTests(unittest.TestCase):
         self.assertEqual(seq_issues, [])
 
 
+class AllowBrandExtrasTests(unittest.TestCase):
+    """Tests for the --allow-brand-extras CLI flag.
+
+    The flag filters 'extra-style' and 'extra-layer' warnings (injected by
+    Brand.gruene_noe()) from the report before strict-mode exit-code logic
+    and before JSON/Markdown reporters run. Critical issues are unaffected.
+    """
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+
+    def _write_sla_with_extra_style(self, name: str, extra_style_name: str) -> Path:
+        """Write a synthetic SLA that has an extra STYLE element on the right."""
+        from lxml import etree as _et
+        target = self.tmp / name
+        root = _et.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
+        doc = _et.SubElement(root, "DOCUMENT")
+        doc.set("ANZPAGES", "1")
+        doc.set("PAGEWIDTH", "297.638")
+        doc.set("PAGEHEIGHT", "419.528")
+        for k in ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight"):
+            doc.set(k, "8.504")
+        page = _et.SubElement(doc, "PAGE")
+        page.set("NUM", "0"); page.set("PAGEXPOS", "100"); page.set("PAGEYPOS", "20")
+        page.set("MNAM", "Normal")
+        m = _et.SubElement(doc, "MASTERPAGE")
+        m.set("NAM", "Normal"); m.set("PAGEXPOS", "500"); m.set("PAGEYPOS", "20")
+        if extra_style_name:
+            style = _et.SubElement(doc, "STYLE")
+            style.set("NAME", extra_style_name)
+        _et.ElementTree(root).write(str(target), encoding="UTF-8", xml_declaration=True)
+        return target
+
+    def _write_sla_with_extra_layer(self, name: str, extra_layer_name: str) -> Path:
+        """Write a synthetic SLA that has an extra LAYERS element on the right."""
+        from lxml import etree as _et
+        target = self.tmp / name
+        root = _et.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
+        doc = _et.SubElement(root, "DOCUMENT")
+        doc.set("ANZPAGES", "1")
+        doc.set("PAGEWIDTH", "297.638")
+        doc.set("PAGEHEIGHT", "419.528")
+        for k in ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight"):
+            doc.set(k, "8.504")
+        page = _et.SubElement(doc, "PAGE")
+        page.set("NUM", "0"); page.set("PAGEXPOS", "100"); page.set("PAGEYPOS", "20")
+        page.set("MNAM", "Normal")
+        m = _et.SubElement(doc, "MASTERPAGE")
+        m.set("NAM", "Normal"); m.set("PAGEXPOS", "500"); m.set("PAGEYPOS", "20")
+        if extra_layer_name:
+            layer = _et.SubElement(doc, "LAYERS")
+            layer.set("NAME", extra_layer_name)
+            layer.set("NUMMER", "1")
+            layer.set("LEVEL", "1")
+        _et.ElementTree(root).write(str(target), encoding="UTF-8", xml_declaration=True)
+        return target
+
+    def test_allow_brand_extras_filters_extra_style_warning(self):
+        """--allow-brand-extras: extra-style warning is filtered out.
+
+        Without the flag: --strict exit 1 on extra-style warnings.
+        With the flag:    --strict exit 0 because extra-style warnings are removed.
+        """
+        left = self._write_sla_with_extra_style("left_no_style.sla", extra_style_name="")
+        right = self._write_sla_with_extra_style("right_extra_style.sla",
+                                                  extra_style_name="ci/headline-ultra")
+        # Without flag: --strict exits 1 because extra-style warning is present
+        rc_strict = sd.main(["--left", str(left), "--right", str(right), "--strict"])
+        self.assertEqual(rc_strict, 1, "Expected exit 1 from --strict with extra-style warning")
+        # With flag: --strict exits 0 because extra-style warning is filtered
+        rc_allowed = sd.main(["--left", str(left), "--right", str(right),
+                               "--strict", "--allow-brand-extras"])
+        self.assertEqual(rc_allowed, 0,
+                         "Expected exit 0 from --strict --allow-brand-extras with extra-style warning")
+
+    def test_allow_brand_extras_filters_extra_layer_warning(self):
+        """--allow-brand-extras: extra-layer warning is filtered out.
+
+        Without the flag: --strict exit 1 on extra-layer warnings.
+        With the flag:    --strict exit 0 because extra-layer warnings are removed.
+        """
+        left = self._write_sla_with_extra_layer("left_no_layer.sla", extra_layer_name="")
+        right = self._write_sla_with_extra_layer("right_extra_layer.sla",
+                                                  extra_layer_name="Bilder")
+        # Without flag: --strict exits 1 because extra-layer warning is present
+        rc_strict = sd.main(["--left", str(left), "--right", str(right), "--strict"])
+        self.assertEqual(rc_strict, 1, "Expected exit 1 from --strict with extra-layer warning")
+        # With flag: --strict exits 0 because extra-layer warning is filtered
+        rc_allowed = sd.main(["--left", str(left), "--right", str(right),
+                               "--strict", "--allow-brand-extras"])
+        self.assertEqual(rc_allowed, 0,
+                         "Expected exit 0 from --strict --allow-brand-extras with extra-layer warning")
+
+    def test_allow_brand_extras_does_not_suppress_critical(self):
+        """--allow-brand-extras must NOT suppress critical issues.
+
+        A page-count mismatch is critical regardless of the flag.
+        """
+        left = _write_synthetic_sla(self.tmp / "crit_left.sla", page_count=1)
+        right = _write_synthetic_sla(self.tmp / "crit_right.sla", page_count=2)
+        # With brand-extras flag: critical issues still cause exit 1
+        rc = sd.main(["--left", str(left), "--right", str(right),
+                      "--allow-brand-extras"])
+        self.assertEqual(rc, 1, "Critical issues must still fail even with --allow-brand-extras")
+
+
 class CLIIntegrationTests(unittest.TestCase):
     """Mirror the gate's manual checks: run sla_diff CLI on each original
     against itself, expect exit 0 and clean summary."""

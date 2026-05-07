@@ -1180,8 +1180,18 @@ def main(argv: Optional[list[str]] = None) -> int:
                     help="Emit Markdown. Path or '-' for stdout. Default reporter when no flag set.")
     ap.add_argument("--strict", action="store_true",
                     help="Exit 1 also when warnings are present (default: exit 1 on critical only).")
+    ap.add_argument("--allow-brand-extras", action="store_true",
+                    help="Filter out 'extra-style' and 'extra-layer' warnings injected by "
+                         "Brand profiles (e.g. Brand.gruene_noe()'s ci/* paragraph styles "
+                         "and Bilder/Text/Hilfslinien layers). Critical issues are unaffected.")
     args = ap.parse_args(argv)
     report = diff(args.left, args.right)
+
+    if args.allow_brand_extras:
+        report.issues = [
+            i for i in report.issues
+            if not (i.severity == SEVERITY_WARNING and i.code in ("extra-style", "extra-layer"))
+        ]
 
     # Default: print Markdown to stdout if no reporter selected.
     md_target = args.markdown

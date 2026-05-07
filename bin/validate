@@ -61,7 +61,8 @@ print(os.path.normpath(os.path.join('$tdir', rel)))
         --left "$original" \
         --right "${tdir}template.sla" \
         --json "$OUT_BASE/${tid}-sla_diff.json" \
-        --strict > /dev/null; then
+        --strict \
+        --allow-brand-extras > /dev/null; then
         echo "  sla_diff: FAIL"
         EXIT=1
     else
