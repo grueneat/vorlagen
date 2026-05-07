@@ -880,6 +880,66 @@ class AllowBrandExtrasTests(unittest.TestCase):
         self.assertEqual(rc_allowed, 0,
                          "Expected exit 0 from --strict --allow-brand-extras with extra-layer warning")
 
+    def _write_sla_with_layer(self, name: str, layer_name: str) -> Path:
+        """Write a minimal SLA at self.tmp/name with a single LAYERS NAME=layer_name."""
+        from lxml import etree as _et
+        target = self.tmp / name
+        root = _et.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
+        doc = _et.SubElement(root, "DOCUMENT")
+        doc.set("ANZPAGES", "1")
+        doc.set("PAGEWIDTH", "297.638")
+        doc.set("PAGEHEIGHT", "419.528")
+        for k in ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight"):
+            doc.set(k, "8.504")
+        page = _et.SubElement(doc, "PAGE")
+        page.set("NUM", "0"); page.set("PAGEXPOS", "100"); page.set("PAGEYPOS", "20")
+        page.set("MNAM", "Normal")
+        m = _et.SubElement(doc, "MASTERPAGE")
+        m.set("NAM", "Normal"); m.set("PAGEXPOS", "500"); m.set("PAGEYPOS", "20")
+        layer = _et.SubElement(doc, "LAYERS")
+        layer.set("NAME", layer_name)
+        layer.set("NUMMER", "0")
+        layer.set("LEVEL", "0")
+        _et.ElementTree(root).write(str(target), encoding="UTF-8", xml_declaration=True)
+        return target
+
+    def test_allow_brand_extras_filters_missing_layer_for_legacy_name(self):
+        """--allow-brand-extras: missing-layer warning for 'Ebene 1' is filtered out.
+
+        Without the flag: --strict exit 1 on missing-layer warning for 'Ebene 1'.
+        With the flag:    --strict exit 0 because 'Ebene 1' is in _LEGACY_LAYER_NAMES.
+        """
+        left = self._write_sla_with_layer("left_ebene1.sla", "Ebene 1")
+        right = self._write_sla_with_layer("right_hintergrund.sla", "Hintergrund")
+        # Without flag: --strict exits 1 because missing-layer warning is present
+        rc_strict = sd.main(["--left", str(left), "--right", str(right), "--strict"])
+        self.assertEqual(rc_strict, 1,
+                         "Expected exit 1 from --strict with missing-layer warning for 'Ebene 1'")
+        # With flag: --strict exits 0 because 'Ebene 1' is in _LEGACY_LAYER_NAMES
+        rc_allowed = sd.main(["--left", str(left), "--right", str(right),
+                               "--strict", "--allow-brand-extras"])
+        self.assertEqual(rc_allowed, 0,
+                         "Expected exit 0 from --strict --allow-brand-extras with legacy 'Ebene 1' missing-layer warning")
+
+    def test_allow_brand_extras_does_not_filter_missing_layer_for_arbitrary_name(self):
+        """--allow-brand-extras must NOT filter missing-layer for non-legacy layer names.
+
+        Only layer names in _LEGACY_LAYER_NAMES are filtered. An arbitrary layer
+        name that is NOT in the tuple must still cause exit 1 under
+        --strict --allow-brand-extras.
+        """
+        left = self._write_sla_with_layer("left_random_layer.sla", "SomeRandomLegacyX")
+        right = self._write_sla_with_layer("right_hintergrund2.sla", "Hintergrund")
+        # Without flag: --strict exits 1
+        rc_strict = sd.main(["--left", str(left), "--right", str(right), "--strict"])
+        self.assertEqual(rc_strict, 1,
+                         "Expected exit 1 from --strict with missing-layer warning")
+        # With flag: --strict STILL exits 1 because 'SomeRandomLegacyX' is not a legacy name
+        rc_allowed = sd.main(["--left", str(left), "--right", str(right),
+                               "--strict", "--allow-brand-extras"])
+        self.assertEqual(rc_allowed, 1,
+                         "Expected exit 1 from --strict --allow-brand-extras with non-legacy missing-layer warning")
+
     def test_allow_brand_extras_does_not_suppress_critical(self):
         """--allow-brand-extras must NOT suppress critical issues.
 

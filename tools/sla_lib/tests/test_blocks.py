@@ -85,6 +85,54 @@ class PageNumberTests(unittest.TestCase):
         self.assertGreater(len(xml), 100)
         self.assertIn("<SCRIBUSUTF8NEW", xml)
 
+    def test_page_number_default_emits_minimal_text_frame(self):
+        """Zero-kwarg PageNumber emits a frame without clip_edit and no var_attrs.
+
+        Guards backward compatibility — existing callers (Postkarte, Plakat) must not
+        regress when they use PageNumber without the new kwargs.
+        """
+        pn = PageNumber(x_mm=10, y_mm=280)
+        frames = list(pn.emit())
+        self.assertEqual(len(frames), 1)
+        tf = frames[0]
+        self.assertFalse(tf.clip_edit,
+                         "Default PageNumber must not set clip_edit=True")
+        self.assertIsNone(tf.runs[0].var_attrs,
+                          "Default PageNumber must not set var_attrs on inner Run")
+
+    def test_page_number_forwards_clip_edit_and_geometry_kwargs(self):
+        """PageNumber forwards clip_edit, line_width_pt, col_gap_mm to inner TextFrame."""
+        pn = PageNumber(
+            x_mm=8.51073047881968,
+            y_mm=283.69722222116576,
+            w_mm=12.775464220466706,
+            h_mm=9.480247708017236,
+            layer=0,
+            anname="Kopie von u2d45",
+            clip_edit=True,
+            line_width_pt=1,
+            col_gap_mm=3.207461712525627,
+        )
+        frames = list(pn.emit())
+        self.assertEqual(len(frames), 1)
+        tf = frames[0]
+        self.assertTrue(tf.clip_edit, "clip_edit must be forwarded to inner TextFrame")
+        self.assertEqual(tf.line_width_pt, 1,
+                         "line_width_pt must be forwarded to inner TextFrame")
+        self.assertAlmostEqual(tf.col_gap_mm, 3.207461712525627, places=10,
+                               msg="col_gap_mm must be forwarded verbatim without rounding")
+        self.assertEqual(tf.layer, 0)
+        self.assertEqual(tf.anname, "Kopie von u2d45")
+
+    def test_page_number_forwards_var_attrs_to_inner_run(self):
+        """PageNumber forwards var_attrs to the inner Run (white pgno on dark background)."""
+        pn = PageNumber(x_mm=10, y_mm=280, var_attrs={"FCOLOR": "White", "FSHADE": "100"})
+        frames = list(pn.emit())
+        self.assertEqual(len(frames), 1)
+        tf = frames[0]
+        self.assertEqual(tf.runs[0].var_attrs, {"FCOLOR": "White", "FSHADE": "100"},
+                         "var_attrs must be forwarded verbatim to the inner Run")
+
 
 # ---------------------------------------------------------------------------
 # Impressum

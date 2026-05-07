@@ -21,7 +21,7 @@ next major DSL revision.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Sequence, Iterable
+from typing import Mapping, Optional, Sequence, Iterable
 
 from .ci import Color, Style
 from .primitives import TextFrame, ImageFrame, Polygon, Anchor, Run
@@ -53,6 +53,10 @@ class PageNumber:
     Usage::
 
         page.add(PageNumber(x_mm=10, y_mm=280))
+        page.add(PageNumber(x_mm=8.51, y_mm=283.7, w_mm=12.78, h_mm=9.48,
+                            layer=0, anname='Kopie von u2d45',
+                            clip_edit=True, line_width_pt=1, col_gap_mm=3.207,
+                            var_attrs={'FCOLOR': 'White', 'FSHADE': '100'}))
     """
 
     x_mm: float = 10
@@ -62,23 +66,46 @@ class PageNumber:
     style: str = "Seitenzahl"
     layer: int = 2
     anname: str = "Seitenzahl"
+    # Trivial kwarg passthroughs (in scope per ISSUE.md "trivial kwarg passthrough"
+    # carve-out; needed for Zeitung's 12 PageNumber substitutions to preserve
+    # CLIPEDIT, COLGAP, LINEWIDTH attr fidelity and the 1 white-pgno var_attrs case).
+    clip_edit: bool = False
+    line_width_pt: Optional[float] = None
+    col_gap_mm: Optional[float] = None
+    var_attrs: Optional[Mapping[str, str]] = None
 
     def emit(self) -> Iterable:
-        yield TextFrame(
+        # Build the inner Run; only set var_attrs if non-None to avoid changing
+        # the Run literal shape on existing call sites.
+        run_kwargs: dict = dict(
+            text="",
+            has_itext=False,
+            var="pgno",
+            separator="para",
+            paragraph_style=self.style,
+        )
+        if self.var_attrs is not None:
+            run_kwargs["var_attrs"] = dict(self.var_attrs)
+
+        # Build the outer TextFrame; only forward kwargs whose value differs from
+        # default to avoid widening TextFrame's emitted SLA shape on existing callers.
+        tf_kwargs: dict = dict(
             x_mm=self.x_mm,
             y_mm=self.y_mm,
             w_mm=self.w_mm,
             h_mm=self.h_mm,
-            runs=[Run(
-                text="",
-                has_itext=False,
-                var="pgno",
-                separator="para",
-                paragraph_style=self.style,
-            )],
+            runs=[Run(**run_kwargs)],
             layer=self.layer,
             anname=self.anname,
         )
+        if self.clip_edit:
+            tf_kwargs["clip_edit"] = True
+        if self.line_width_pt is not None:
+            tf_kwargs["line_width_pt"] = self.line_width_pt
+        if self.col_gap_mm is not None:
+            tf_kwargs["col_gap_mm"] = self.col_gap_mm
+
+        yield TextFrame(**tf_kwargs)
 
 
 # ---------------------------------------------------------------------------

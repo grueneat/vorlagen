@@ -1,4 +1,4 @@
-# Auto-generated from gruene-zeitung-vorlage-original.sla by tools/sla_to_dsl.py.
+# Auto-generated from template.sla by tools/sla_to_dsl.py.
 # Hand-edit thereafter; this file is the source of truth.
 
 import sys
@@ -8,11 +8,13 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 
 from sla_lib.builder import (  # noqa: E402
-    Document, TextFrame, ImageFrame, Polygon, Run,
-    DocumentLayer, ParaStyle, CharStyle, SoftShadow,
+    Brand, Document, TextFrame, ImageFrame, Polygon, Run,
+    ParaStyle, CharStyle, SoftShadow,
 )
+from sla_lib.builder.blocks import ColumnTextStory, PageNumber  # noqa: E402
 
 doc = Document(
+    brand=Brand.gruene_noe(),
     title='',
     template_id='zeitung-a4-grun',
     author='',
@@ -21,25 +23,14 @@ doc = Document(
     deffont='Gotham Narrow Black',
     defsize=12,
     first_page_num=1,
-    palette_replaces_ci=True,
     hcms=True,
     doc_page_width_pt=595.275590551181,
     doc_page_height_pt=841.889763779528,
-    extra_doc_attrs={'ALAYER': '0', 'AUTOCHECK': '1', 'AUTOL': '100', 'AUTOMATIC': '1', 'AUtoSaveInDocDir': '1', 'AutoSave': '1', 'AutoSaveCount': '1', 'AutoSaveDir': '', 'AutoSaveKeep': '0', 'AutoSaveTime': '600000', 'BASEGRID': '13', 'BASEO': '0', 'BRUSH': 'None', 'BRUSHSHADE': '100', 'BaseC': '#c0c0c0', 'CPICT': 'None', 'CSPICT': 'None', 'DCOL': '1', 'DGAP': '0', 'DIIm': '0', 'DISc': '1', 'DPIn': 'sRGB display profile (ICC v2.2)', 'DPIn2': 'sRGB display profile (ICC v2.2)', 'DPIn3': 'ISO Coated v2 300% (basICColor)', 'DPInCMYK': 'ISO Coated v2 300% (basICColor)', 'DPPr': 'ISO Coated v2 300% (basICColor)', 'DPSFo': '0', 'DPSo': '0', 'DPbla': '1', 'DPgam': '0', 'DPuse': '1', 'EmbeddedPath': '0', 'EndArrow': '0', 'FirstLineOffset': '1', 'GRAB': '4', 'GROUPC': '3', 'GUIDELOCK': '0', 'GapHorizontal': '0', 'GapVertical': '39.9996850393701', 'GridType': '0', 'GuideC': '#000080', 'GuideRad': '9', 'HalfRes': '1', 'LINESHADE': '100', 'MAJGRID': '100.00062992126', 'MAJORC': '#00ff00', 'MARGC': '#0000ff', 'MINGRID': '20.0012598425197', 'MINORC': '#00ff00', 'PAGESIZE': 'A4', 'PASPECT': '1', 'PEN': 'Black', 'PENLINE': 'Green', 'PENSHADE': '100', 'PENTEXT': 'Black', 'PICTSCX': '1', 'PICTSCY': '1', 'PICTSHADE': '100', 'PICTSSHADE': '100', 'POLYC': '4', 'POLYCUR': '0', 'POLYF': '0.502045814642449', 'POLYIR': '0', 'POLYOCUR': '0', 'POLYR': '0', 'POLYS': '0', 'PRESET': '0', 'PSCALE': '1', 'RANDF': '0', 'SHOWBASE': '1', 'SHOWControl': '0', 'SHOWFRAME': '1', 'SHOWGRID': '0', 'SHOWGUIDES': '0', 'SHOWLAYERM': '0', 'SHOWLINK': '0', 'SHOWMARGIN': '0', 'SHOWPICT': '1', 'STIL': '1', 'STILLINE': '1', 'SUBJECT': '', 'ScratchBottom': '20.0012598425197', 'ScratchLeft': '100.00062992126', 'ScratchRight': '100.00062992126', 'ScratchTop': '20.0012598425197', 'SnapToElement': '0', 'SnapToGrid': '0', 'SnapToGuides': '0', 'StartArrow': '0', 'StrikeThruPos': '-1', 'StrikeThruWidth': '-1', 'StrokeText': 'Black', 'TabFill': '', 'TabWidth': '36', 'TextBackGround': 'None', 'TextBackGroundShade': '100', 'TextDistBottom': '0', 'TextDistLeft': '0', 'TextDistRight': '0', 'TextDistTop': '0', 'TextLineColor': 'None', 'TextLineShade': '100', 'TextPenShade': '100', 'TextStrokeShade': '100', 'UnderlinePos': '-1', 'UnderlineWidth': '-1', 'VHOCH': '33', 'VHOCHSC': '66', 'VKAPIT': '75', 'VTIEF': '33', 'VTIEFSC': '66', 'WIDTH': '1', 'WIDTHLINE': '5', 'arcStartAngle': '30', 'arcSweepAngle': '300', 'calligraphicPenAngle': '0', 'calligraphicPenFillColor': 'Black', 'calligraphicPenFillColorShade': '100', 'calligraphicPenLineColor': 'Black', 'calligraphicPenLineColorShade': '100', 'calligraphicPenLineWidth': '1', 'calligraphicPenStyle': '1', 'calligraphicPenWidth': '10', 'constrain': '15', 'currentProfile': 'PDF 1.4', 'dispX': '10.0006299212598', 'dispY': '10.0006299212598', 'renderStack': '2 0 4 1 3', 'rulerMode': '1', 'rulerXoffset': '0', 'rulerYoffset': '0', 'showcolborders': '1', 'showrulers': '1', 'spiralEndAngle': '1080', 'spiralFactor': '1.2', 'spiralStartAngle': '0'},
-    extra_pdf_attrs={'CMethod': '0', 'Clip': '0', 'Encrypt': '0', 'FontEmbedding': '0', 'ImageP': 'Adobe RGB (1998)', 'ImagePr': '0', 'InfoString': 'Grüne Zeitung Vorlage Scribus.sla', 'Intent': '1', 'Intent2': '0', 'PageLayout': '0', 'PassOwner': '', 'PassUser': '', 'Permissions': '-4', 'PicRes': '600', 'PresentMode': '0', 'PrintP': 'ISO Coated v2 300% (basICColor)', 'RGBMode': '0', 'RecalcPic': '1', 'RotateDeg': '0', 'SolidP': 'Adobe RGB (1998)', 'Thumbnails': '0', 'UseLayers': '0', 'UseLpi': '0', 'UseProfiles': '0', 'UseProfiles2': '1', 'UseSpotColors': '1', 'Version': '10', 'bleedMarks': '0', 'colorMarks': '0', 'cropMarks': '1', 'displayBookmarks': '0', 'displayFullscreen': '0', 'displayLayers': '0', 'displayThumbs': '0', 'doMultiFile': '0', 'docInfoMarks': '0', 'firstUse': '0', 'fitWindow': '0', 'hideMenuBar': '0', 'hideToolBar': '0', 'openAfterExport': '0', 'rangeSel': '0', 'rangeTxt': '', 'registrationMarks': '0', 'useDocBleeds': '0'},
-    layers=[
-        DocumentLayer(name='Ebene 1', visible=True, printable=True, editable=True, flow=False, transparent=1, blend=0, outline=False, layer_color='#000000'),
-    ],
+    extra_doc_attrs={'AUTOCHECK': '1', 'DPIn3': 'ISO Coated v2 300% (basICColor)', 'DPInCMYK': 'ISO Coated v2 300% (basICColor)', 'DPPr': 'ISO Coated v2 300% (basICColor)', 'GROUPC': '3', 'GapVertical': '39.9996850393701', 'GuideRad': '9', 'MAJGRID': '100.00062992126', 'MINGRID': '20.0012598425197', 'PAGESIZE': 'A4', 'POLYF': '0.502045814642449', 'SHOWBASE': '1', 'SHOWGRID': '0', 'SHOWGUIDES': '0', 'SHOWMARGIN': '0', 'ScratchBottom': '20.0012598425197', 'ScratchLeft': '100.00062992126', 'ScratchRight': '100.00062992126', 'ScratchTop': '20.0012598425197', 'calligraphicPenAngle': '0', 'dispX': '10.0006299212598', 'dispY': '10.0006299212598', 'renderStack': '2 0 4 1 3'},
+    extra_pdf_attrs={'ImageP': 'Adobe RGB (1998)', 'InfoString': 'Grüne Zeitung Vorlage Scribus.sla', 'PicRes': '600', 'PrintP': 'ISO Coated v2 300% (basICColor)', 'RGBMode': '0', 'RecalcPic': '1', 'SolidP': 'Adobe RGB (1998)', 'UseProfiles2': '1', 'Version': '10', 'bleedMarks': '0', 'useDocBleeds': '0'},
 )
 
-doc.add_color('Black', cmyk=(0, 0, 0, 100))
-doc.add_color('Dunkelgrün', cmyk=(85, 35, 95, 10))
-doc.add_color('Gelb', cmyk=(0, 0, 100, 0))
 doc.add_color('Green', rgb=(0, 255, 0))
-doc.add_color('Hellgrün', cmyk=(69, 0, 100, 0))
-doc.add_color('Magenta', cmyk=(0, 100, 0, 0))
-doc.add_color('Registration', cmyk=(100, 100, 100, 100), register=True)
-doc.add_color('White', cmyk=(0, 0, 0, 0))
 
 doc.add_char_style(CharStyle(name='Default Character Style', font='Gotham Narrow Book', fcolor='Black', fontfeatures='-clig', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
 doc.add_para_style(ParaStyle(name='Default Paragraph Style', font='Gotham Narrow Book', bcolor='None', fontfeatures='-clig', bullet='0', linesp=15, space_before_pt=0, space_after_pt=5, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, paragraph_effect_offset=0, align=0, linesp_mode=0, drop_lines=2, hyph_consecutive_lines=2, direction=0, bshade=100, numeration=0, drop_cap=False, is_default=True))
@@ -236,10 +227,6 @@ page0.add(ImageFrame(
     w_mm=209.9999999999361,
     h_mm=155.5669724770642,
     layer=0,
-    xpos_pt=695.276220472441,
-    ypos_pt=20.0012598425197,
-    width_pt=595.275590551,
-    height_pt=440.977244816875,
     image='',
     line_width_pt=1,
 ))
@@ -250,15 +237,9 @@ page0.add(Polygon(
     w_mm=148.60236941896014,
     h_mm=220.48928611111108,
     layer=0,
-    xpos_pt=1308.7319222714,
-    ypos_pt=460.978504659395,
-    width_pt=421.235062919887,
-    height_pt=625.009,
     rotation_deg=90,
     anname='u2950',
     clip_edit=True,
-    custom_path='M0 0 L0 625.009 L421.235 625.009 L421.235 0 L0 0 Z',
-    fill_rule=0,
     fill='Dunkelgrün',
 ))
 
@@ -268,14 +249,8 @@ page0.add(TextFrame(
     w_mm=158.0000000079098,
     h_mm=41.76698369011201,
     layer=0,
-    xpos_pt=768.977007862715,
-    ypos_pt=529.724770642202,
-    width_pt=447.874015770453,
-    height_pt=118.394599436538,
     anname='u2989',
     clip_edit=True,
-    custom_path='M0 0 L0 118.395 L447.874 118.395 L447.874 0 L0 0 Z',
-    fill_rule=0,
     default_style_attrs={'ALIGN': '1', 'LINESP': '15', 'FONT': 'Gotham Narrow Book', 'FONTSIZE': '30', 'FCOLOR': 'White'},
     trail_style='Titelseite Header',
     text_align=1,
@@ -292,14 +267,8 @@ page0.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=24.700917431192654,
     layer=0,
-    xpos_pt=916.024251968504,
-    ypos_pt=656.587155963303,
-    width_pt=153.779527559055,
-    height_pt=70.0183486238532,
     anname='u29b9',
     clip_edit=True,
-    custom_path='M0 0 L0 70.0188 L153.779 70.0188 L153.779 0 L0 0 Z',
-    fill_rule=0,
     default_style_attrs={'FONT': 'Gotham Narrow Book', 'FCOLOR': 'White'},
     trail_style='Fließtext ',
     trail_attrs={'ALIGN': '0'},
@@ -317,10 +286,6 @@ page0.add(Polygon(
     w_mm=36.198842807380124,
     h_mm=34.60135066258924,
     layer=0,
-    xpos_pt=1162.50378590179,
-    ypos_pt=549.992266127284,
-    width_pt=102.610892997298,
-    height_pt=98.0825688073396,
     fill='Magenta',
     line_color='Magenta',
     line_width_pt=1,
@@ -333,10 +298,6 @@ page0.add(TextFrame(
     w_mm=31.905402967990675,
     h_mm=24.779995885432033,
     layer=0,
-    xpos_pt=1166.36427002687,
-    ypos_pt=575.579401347613,
-    width_pt=90.4405123502098,
-    height_pt=70.2425080216971,
     rotation_deg=355,
     line_width_pt=1.00000000000002,
     col_gap_mm=0,
@@ -371,10 +332,6 @@ page0.add(TextFrame(
     w_mm=102.99816513761445,
     h_mm=8.222917431192649,
     layer=0,
-    xpos_pt=1260.70929133858,
-    ypos_pt=852.275229357799,
-    width_pt=291.963302752293,
-    height_pt=23.3090572852705,
     rotation_deg=270,
     line_width_pt=1,
     col_gap_mm=0,
@@ -389,14 +346,8 @@ page0.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=24.507302752293576,
     layer=0,
-    xpos_pt=751.260472440945,
-    ypos_pt=657.796535433071,
-    width_pt=153.779527559055,
-    height_pt=69.4695196128007,
     anname='u14c',
     clip_edit=True,
-    custom_path='M0 0 L0 69.4696 L153.78 69.4696 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
@@ -411,14 +362,8 @@ page0.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=25.633027522935745,
     layer=0,
-    xpos_pt=1080.78803149606,
-    ypos_pt=656.587155963303,
-    width_pt=153.779527559055,
-    height_pt=72.6605504587155,
     anname='u1c1',
     clip_edit=True,
-    custom_path='M0 0 L0 72.6606 L153.78 72.6606 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
@@ -433,14 +378,8 @@ page0.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=23.53631529604484,
     layer=0,
-    xpos_pt=751.260472440945,
-    ypos_pt=735.192660550459,
-    width_pt=153.779527559055,
-    height_pt=66.717114225009,
     anname='u165',
     clip_edit=True,
-    custom_path='M0 0 L0 66.7172 L153.78 66.7172 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
@@ -455,14 +394,8 @@ page0.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=24.002370341916436,
     layer=0,
-    xpos_pt=916.024251968504,
-    ypos_pt=733.871559633027,
-    width_pt=153.779527559055,
-    height_pt=68.0382151424403,
     anname='u1aa',
     clip_edit=True,
-    custom_path='M0 0 L0 68.0383 L153.78 68.0383 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
@@ -477,14 +410,8 @@ page0.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=24.23539786485218,
     layer=0,
-    xpos_pt=1080.78803149606,
-    ypos_pt=733.211009174312,
-    width_pt=153.779527559055,
-    height_pt=68.6987656011558,
     anname='u1d9',
     clip_edit=True,
-    custom_path='M0 0 L0 68.6988 L153.78 68.6988 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Hier steht eine erste', separator='para', paragraph_style='Inhaltsheadline Titelseite', paragraph_attrs={'ALIGN': '0'}),
@@ -499,10 +426,6 @@ page0.add(TextFrame(
     w_mm=38.68256880733945,
     h_mm=12.117431192660547,
     layer=0,
-    xpos_pt=1157.78899082569,
-    ypos_pt=41.954128440367,
-    width_pt=109.651376146789,
-    height_pt=34.348623853211,
     line_width_pt=1,
     trail_style='Monat/Ausgabe',
     col_gap_mm=0,
@@ -517,52 +440,55 @@ page1.add(ImageFrame(
     w_mm=209.9999999999361,
     h_mm=130.20731192714427,
     layer=0,
-    xpos_pt=100.00062992126,
-    ypos_pt=901.89070865989,
-    width_pt=595.275590551,
-    height_pt=369.091592864346,
     clip_edit=True,
-    custom_path='M0 0 L0 369.092 L595.275 369.092 L595.275 0 L0 0 Z',
-    fill_rule=0,
     image='',
 ))
 
-page1.add(TextFrame(
+page1.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.69722222116576,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=124.125535215552,
-    ypos_pt=1706.0718110191,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
-_chain1_0 = TextFrame(
-    x_mm=20.000000000000078,
-    y_mm=130.7499999999991,
-    w_mm=54.66599999999988,
-    h_mm=146.24999999999636,
-    layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=1272.52062991973,
-    width_pt=154.95874015748,
-    height_pt=414.566929133848,
-    anname='Kopie von u2f23',
-    clip_edit=True,
-    custom_path='M0 0 L0 414.565 L154.958 414.565 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
+page1.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+            x_mm=20.000000000000078,
+            y_mm=130.7499999999991,
+            w_mm=54.66599999999988,
+            h_mm=146.24999999999636,
+            layer=0,
+            anname='Kopie von u2f23',
+            clip_edit=True,
+            col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+            x_mm=77.6716963330383,
+            y_mm=130.7499999999991,
+            w_mm=54.66599999999988,
+            h_mm=146.24999999999636,
+            layer=0,
+            anname='Kopie von u2f23 (2)',
+            clip_edit=True,
+            col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+            x_mm=135.34339266607654,
+            y_mm=130.7499999999991,
+            w_mm=54.66599999999988,
+            h_mm=146.24999999999636,
+            layer=0,
+            anname='Kopie von u2f23 (3)',
+            clip_edit=True,
+            col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur aliandaeptas es re iliaes dolupta Quaecep erfernatur adit, volut faciend estibusda pediosaes minctem oditatur? Qui as et inimus. ', fontsize=12, separator='para', paragraph_style='Einleitungstext'),
         Run(text='Rio beat fugitatia qui od magnihi lluptam usciatio. Optatinverit am laborporrum quas atur, conet et de officte nihicab orrorrum ut debis eium endes nonsent.', fontsize=12, separator='para', paragraph_style='Fließtext '),
@@ -576,44 +502,7 @@ _chain1_0 = TextFrame(
         Run(text='Ari arum volupis dolent mosapie nduciliant apid qui odis ilit, sant sus mindaes verum,  ad essi quo excepero voluptatur simus, net dollaci accatecusciditibus abo. Nam unt aut ab id mi, omnimin esti senis voluptas quae dolorum quis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', fontsize=12),
         Run(text=' nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.', separator='para', paragraph_style='Fließtext '),
     ],
-)
-page1.add(_chain1_0)
-
-_chain1_1 = TextFrame(
-    x_mm=77.6716963330383,
-    y_mm=130.7499999999991,
-    w_mm=54.66599999999988,
-    h_mm=146.24999999999636,
-    layer=0,
-    xpos_pt=320.172367558219,
-    ypos_pt=1272.52062991973,
-    width_pt=154.95874015748,
-    height_pt=414.566929133848,
-    anname='Kopie von u2f23 (2)',
-    clip_edit=True,
-    custom_path='M0 0 L0 414.565 L154.958 414.565 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page1.add(_chain1_1)
-
-_chain1_2 = TextFrame(
-    x_mm=135.34339266607654,
-    y_mm=130.7499999999991,
-    w_mm=54.66599999999988,
-    h_mm=146.24999999999636,
-    layer=0,
-    xpos_pt=483.651191809351,
-    ypos_pt=1272.52062991973,
-    width_pt=154.95874015748,
-    height_pt=414.566929133848,
-    anname='Kopie von u2f23 (3)',
-    clip_edit=True,
-    custom_path='M0 0 L0 414.565 L154.958 414.565 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page1.add(_chain1_2)
+))
 
 page1.add(TextFrame(
     x_mm=20.000000000000078,
@@ -621,10 +510,6 @@ page1.add(TextFrame(
     w_mm=172.85594495412835,
     h_mm=48.23669724770661,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=1123.59633027523,
-    width_pt=489.985355775482,
-    height_pt=136.733944954129,
     line_width_pt=1,
     trail_style='Überschrift weiß',
     col_gap_mm=0,
@@ -633,23 +518,41 @@ page1.add(TextFrame(
     ],
 ))
 
-_chain0_0 = TextFrame(
-    x_mm=20.000999999967895,
-    y_mm=51.41465137668706,
-    w_mm=54.66589620445422,
-    h_mm=98.82941180107761,
-    layer=0,
-    xpos_pt=751.971968503665,
-    ypos_pt=1047.63302752294,
-    width_pt=154.958445933886,
-    height_pt=280.146364160535,
-    anname='u2d5c',
-    clip_edit=True,
-    custom_path='M0 0 L0 280.146 L154.958 280.146 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    trail_style='Fließtext ',
-    col_gap_mm=4.2333333333333325,
+page2.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000999999967895,
+        y_mm=51.41465137668706,
+        w_mm=54.66589620445422,
+        h_mm=98.82941180107761,
+        layer=0,
+        anname='u2d5c',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        trail_style='Fließtext ',
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66699999996813,
+        y_mm=51.41465137668706,
+        w_mm=54.66589620445422,
+        h_mm=98.82934220246953,
+        layer=0,
+        anname='u2da1',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.33299999996657,
+        y_mm=51.41465137668706,
+        w_mm=54.66589620445422,
+        h_mm=98.82930071943507,
+        layer=0,
+        anname='Kopie von u2da1',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Wir bleiben für Sie am Ball: ', separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Im Herbst haben wir uns mit Roman Gräbner, dem Hochwasserschutz-Verantwortlichen, intensiv über den Fortschritt der Renaturierung in Wöllersdorf informiert und ausgetauscht.', separator='para', paragraph_style='Fließtext '),
@@ -672,44 +575,8 @@ _chain0_0 = TextFrame(
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext '),
         Run(text='nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.'),
     ],
-)
-page2.add(_chain0_0)
+))
 
-_chain0_1 = TextFrame(
-    x_mm=77.66699999996813,
-    y_mm=51.41465137668706,
-    w_mm=54.66589620445422,
-    h_mm=98.82934220246953,
-    layer=0,
-    xpos_pt=915.43464566902,
-    ypos_pt=1047.63302752294,
-    width_pt=154.958445933886,
-    height_pt=280.146166873142,
-    anname='u2da1',
-    clip_edit=True,
-    custom_path='M0 0 L0 280.146 L154.958 280.146 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page2.add(_chain0_1)
-
-_chain0_2 = TextFrame(
-    x_mm=135.33299999996657,
-    y_mm=51.41465137668706,
-    w_mm=54.66589620445422,
-    h_mm=98.82930071943507,
-    layer=0,
-    xpos_pt=1078.89732283437,
-    ypos_pt=1047.63302752294,
-    width_pt=154.958445933886,
-    height_pt=280.146049283438,
-    anname='Kopie von u2da1',
-    clip_edit=True,
-    custom_path='M0 0 L0 280.146 L154.958 280.146 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page2.add(_chain0_2)
 
 page2.add(TextFrame(
     x_mm=20.000999999967895,
@@ -717,10 +584,6 @@ page2.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=751.971968503665,
-    ypos_pt=958.583622045717,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -730,25 +593,16 @@ page2.add(TextFrame(
     ],
 ))
 
-page2.add(TextFrame(
+page2.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.10833333227686,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=1249.40112576655,
-    ypos_pt=1710.0718110191,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (2)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page2.add(TextFrame(
@@ -757,10 +611,6 @@ page2.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=749.971968503665,
-    ypos_pt=1348.51441161598,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -770,22 +620,42 @@ page2.add(TextFrame(
     ],
 ))
 
-_chain2_0 = TextFrame(
-    x_mm=20.000999999968215,
-    y_mm=190.29999999999936,
-    w_mm=54.66599999999988,
-    h_mm=86.6999999999961,
-    layer=0,
-    xpos_pt=751.971968503666,
-    ypos_pt=1441.32377952603,
-    width_pt=154.95874015748,
-    height_pt=245.763779527548,
-    anname='Kopie von u2d5c',
-    clip_edit=True,
-    custom_path='M0 0 L0 245.764 L154.958 245.764 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
+page2.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000999999968215,
+        y_mm=190.29999999999936,
+        w_mm=54.66599999999988,
+        h_mm=86.6999999999961,
+        layer=0,
+        anname='Kopie von u2d5c',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66699999996813,
+        y_mm=190.29999999999936,
+        w_mm=54.66599999999988,
+        h_mm=26.09813761521765,
+        layer=0,
+        anname='Kopie von u2d5c (2)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.33299999996657,
+        y_mm=190.29999999999936,
+        w_mm=54.66599999999988,
+        h_mm=26.69999999999988,
+        layer=0,
+        anname='Kopie von u2d5c (3)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta ', separator='para', paragraph_style='Fließtext '),
@@ -799,46 +669,8 @@ _chain2_0 = TextFrame(
         Run(text='', has_itext=False, separator='para', paragraph_style='Fließtext '),
         Run(text='', has_itext=False, separator='para', paragraph_style='Fließtext '),
     ],
-)
-page2.add(_chain2_0)
+))
 
-_chain2_1 = TextFrame(
-    x_mm=77.66699999996813,
-    y_mm=190.29999999999936,
-    w_mm=54.66599999999988,
-    h_mm=26.09813761521765,
-    layer=0,
-    xpos_pt=915.43464566902,
-    ypos_pt=1441.32377952603,
-    width_pt=154.95874015748,
-    height_pt=73.9789727675461,
-    anname='Kopie von u2d5c (2)',
-    clip_edit=True,
-    custom_path='M0 0 L0 73.979 L154.958 73.979 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
-)
-page2.add(_chain2_1)
-
-_chain2_2 = TextFrame(
-    x_mm=135.33299999996657,
-    y_mm=190.29999999999936,
-    w_mm=54.66599999999988,
-    h_mm=26.69999999999988,
-    layer=0,
-    xpos_pt=1078.89732283437,
-    ypos_pt=1441.32377952603,
-    width_pt=154.95874015748,
-    height_pt=75.6850393700784,
-    anname='Kopie von u2d5c (3)',
-    clip_edit=True,
-    custom_path='M0 0 L0 75.6851 L154.958 75.6851 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
-)
-page2.add(_chain2_2)
 
 page2.add(ImageFrame(
     x_mm=77.66699999996813,
@@ -846,51 +678,56 @@ page2.add(ImageFrame(
     w_mm=112.33199999999975,
     h_mm=57.99999999999624,
     layer=0,
-    xpos_pt=915.43464566902,
-    ypos_pt=1522.67811023469,
-    width_pt=318.421417322834,
-    height_pt=164.409448818887,
     image='',
     line_width_pt=1,
 ))
 
-page3.add(TextFrame(
+page3.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.69722222116576,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=124.125535215552,
-    ypos_pt=2587.96125983647,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (3)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
-_chain3_0 = TextFrame(
-    x_mm=20.000000000000078,
-    y_mm=49.53117431300355,
-    w_mm=54.66573888888888,
-    h_mm=100.71301572195068,
-    layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=1924.18348623853,
-    width_pt=154.958,
-    height_pt=285.485713857498,
-    anname='Kopie von u2d5c (4)',
-    clip_edit=True,
-    custom_path='M0 0 L0 285.486 L154.958 285.486 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
+page3.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000078,
+        y_mm=49.53117431300355,
+        w_mm=54.66573888888888,
+        h_mm=100.71301572195068,
+        layer=0,
+        anname='Kopie von u2d5c (4)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66599999999997,
+        y_mm=49.53117431300355,
+        w_mm=54.66573888888888,
+        h_mm=100.71268052140327,
+        layer=0,
+        anname='Kopie von u2da1 (2)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.33199999999982,
+        y_mm=110.81741284511295,
+        w_mm=54.66599999999988,
+        h_mm=39.42658715486655,
+        layer=0,
+        anname='Kopie von u2da1 (3)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext '),
@@ -904,44 +741,8 @@ _chain3_0 = TextFrame(
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', separator='para', paragraph_style='Fließtext '),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext '),
     ],
-)
-page3.add(_chain3_0)
+))
 
-_chain3_1 = TextFrame(
-    x_mm=77.66599999999997,
-    y_mm=49.53117431300355,
-    w_mm=54.66573888888888,
-    h_mm=100.71268052140327,
-    layer=0,
-    xpos_pt=320.156220472441,
-    ypos_pt=1924.18348623853,
-    width_pt=154.958,
-    height_pt=285.484763682718,
-    anname='Kopie von u2da1 (2)',
-    clip_edit=True,
-    custom_path='M0 0 L0 285.485 L154.958 285.485 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page3.add(_chain3_1)
-
-_chain3_2 = TextFrame(
-    x_mm=135.33199999999982,
-    y_mm=110.81741284511295,
-    w_mm=54.66599999999988,
-    h_mm=39.42658715486655,
-    layer=0,
-    xpos_pt=483.618897637795,
-    ypos_pt=2097.90825688073,
-    width_pt=154.95874015748,
-    height_pt=111.76040453348,
-    anname='Kopie von u2da1 (3)',
-    clip_edit=True,
-    custom_path='M0 0 L0 111.76 L154.958 111.76 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page3.add(_chain3_2)
 
 page3.add(TextFrame(
     x_mm=20.000000000000078,
@@ -949,10 +750,6 @@ page3.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=1840.47307086309,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -968,10 +765,6 @@ page3.add(ImageFrame(
     w_mm=74.66799999993626,
     h_mm=58.158088754618625,
     layer=0,
-    xpos_pt=483.618897637795,
-    ypos_pt=1924.18348623853,
-    width_pt=211.657322834465,
-    height_pt=164.857574422541,
     clip_edit=True,
     image='',
     line_width_pt=1,
@@ -983,10 +776,6 @@ page3.add(TextFrame(
     w_mm=168.2341111111111,
     h_mm=15.108238533187789,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=2218.89826771348,
-    width_pt=476.884094488189,
-    height_pt=42.8265029287213,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1002,14 +791,8 @@ page3.add(TextFrame(
     w_mm=54.66599999999988,
     h_mm=108.95400815602166,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=2262.0163779497,
-    width_pt=154.95874015748,
-    height_pt=308.8460073714,
     anname='Kopie von u2d5c (5)',
     clip_edit=True,
-    custom_path='M0 0 L0 308.847 L154.958 308.847 L154.958 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1.01189873869794,
     col_gap_mm=4.2333333333333325,
     runs=[
@@ -1032,14 +815,8 @@ page3.add(Polygon(
     w_mm=112.1999138888903,
     h_mm=102.00004999997776,
     layer=0,
-    xpos_pt=320.536062992126,
-    ypos_pt=2279.84314961012,
-    width_pt=318.047000000004,
-    height_pt=289.133999999937,
     anname='u1529',
     clip_edit=True,
-    custom_path='M0 0 L0 289.134 L318.047 289.134 L318.047 0 L0 0 Z',
-    fill_rule=0,
     fill='Dunkelgrün',
 ))
 
@@ -1049,14 +826,8 @@ page3.add(TextFrame(
     w_mm=94.99992708957792,
     h_mm=73.32023265304802,
     layer=0,
-    xpos_pt=344.913997038395,
-    ypos_pt=2344.93220326484,
-    width_pt=269.291131907465,
-    height_pt=207.836879961396,
     anname='u152b',
     clip_edit=True,
-    custom_path='M0 0 L0 207.837 L269.291 207.837 L269.291 0 L0 0 Z',
-    fill_rule=0,
     columns=2,
     col_gap_mm=3.867223014347416,
     runs=[
@@ -1070,14 +841,8 @@ page3.add(TextFrame(
     w_mm=94.99992708957792,
     h_mm=16.544954128440388,
     layer=0,
-    xpos_pt=344.913997038395,
-    ypos_pt=2290.12844036697,
-    width_pt=269.291131907465,
-    height_pt=46.8990825688074,
     anname='u1544',
     clip_edit=True,
-    custom_path='M0 0 L0 46.8991 L269.291 46.8991 L269.291 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Headline in einem grünen Kasten. Kann auch mehrzeilig sein, aber achte auf den Abstand ', separator='para', paragraph_style='Headline in grünem Kasten'),
@@ -1085,25 +850,16 @@ page3.add(TextFrame(
     ],
 ))
 
-page4.add(TextFrame(
+page4.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.1083333322769,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=1249.40112576655,
-    ypos_pt=2591.96125983647,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (5)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page4.add(TextFrame(
@@ -1112,10 +868,6 @@ page4.add(TextFrame(
     w_mm=169.998,
     h_mm=27.610527012713057,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=1840.47307086309,
-    width_pt=481.884094488189,
-    height_pt=78.2660608234386,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1125,23 +877,41 @@ page4.add(TextFrame(
     ],
 ))
 
-_chain4_0 = TextFrame(
-    x_mm=20.000000000000103,
-    y_mm=49.298146790069794,
-    w_mm=54.66646598862249,
-    h_mm=136.55438610427518,
-    layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=1923.52293577982,
-    width_pt=154.960061070111,
-    height_pt=387.083299193221,
-    anname='Kopie von u2d5c (6)',
-    clip_edit=True,
-    custom_path='M0 0 L0 387.083 L154.96 387.083 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    trail_style='Fließtext ',
-    col_gap_mm=4.2333333333333325,
+page4.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000103,
+        y_mm=49.298146790069794,
+        w_mm=54.66646598862249,
+        h_mm=136.55438610427518,
+        layer=0,
+        anname='Kopie von u2d5c (6)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        trail_style='Fließtext ',
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66676700569862,
+        y_mm=49.298146790069794,
+        w_mm=54.66646598862249,
+        h_mm=136.5539316138138,
+        layer=0,
+        anname='Kopie von u2da1 (4)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.3335340113834,
+        y_mm=49.298146790069794,
+        w_mm=54.66646598861613,
+        h_mm=136.5539316138138,
+        layer=0,
+        anname='Kopie von u2da1 (5)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', fontsize=12, separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta ', fontsize=12, separator='para', paragraph_style='Fließtext '),
@@ -1166,44 +936,8 @@ _chain4_0 = TextFrame(
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', fontsize=12, separator='para', paragraph_style='Fließtext '),
         Run(text='nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.', fontsize=12),
     ],
-)
-page4.add(_chain4_0)
+))
 
-_chain4_1 = TextFrame(
-    x_mm=77.66676700569862,
-    y_mm=49.298146790069794,
-    w_mm=54.66646598862249,
-    h_mm=136.5539316138138,
-    layer=0,
-    xpos_pt=915.433985212823,
-    ypos_pt=1923.52293577982,
-    width_pt=154.960061070111,
-    height_pt=387.082010873803,
-    anname='Kopie von u2da1 (4)',
-    clip_edit=True,
-    custom_path='M0 0 L0 387.082 L154.96 387.082 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page4.add(_chain4_1)
-
-_chain4_2 = TextFrame(
-    x_mm=135.3335340113834,
-    y_mm=49.298146790069794,
-    w_mm=54.66646598861613,
-    h_mm=136.5539316138138,
-    layer=0,
-    xpos_pt=1078.89883656752,
-    ypos_pt=1923.52293577982,
-    width_pt=154.960061070093,
-    height_pt=387.082010873803,
-    anname='Kopie von u2da1 (5)',
-    clip_edit=True,
-    custom_path='M0 0 L0 387.082 L154.96 387.082 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page4.add(_chain4_2)
 
 page4.add(ImageFrame(
     x_mm=0,
@@ -1211,33 +945,20 @@ page4.add(ImageFrame(
     w_mm=209.9999999999361,
     h_mm=108.11836697086034,
     layer=0,
-    xpos_pt=695.27622047226,
-    ypos_pt=2319.19266055046,
-    width_pt=595.275590551,
-    height_pt=306.477260704801,
     image='',
     line_width_pt=1,
 ))
 
-page5.add(TextFrame(
+page5.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211657,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=124.125535215552,
-    ypos_pt=3469.85070865384,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (4)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page5.add(TextFrame(
@@ -1246,10 +967,6 @@ page5.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=2722.36251968046,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1259,22 +976,40 @@ page5.add(TextFrame(
     ],
 ))
 
-_chain5_0 = TextFrame(
-    x_mm=20.097222222158408,
-    y_mm=50.748257901719796,
-    w_mm=54.66646598862249,
-    h_mm=226.89760448521898,
-    layer=0,
-    xpos_pt=156.969133858087,
-    ypos_pt=2809.52293577982,
-    width_pt=154.960061070111,
-    height_pt=643.174311926605,
-    anname='Kopie von u2d5c (7)',
-    clip_edit=True,
-    custom_path='M0 0 L0 643.174 L154.96 643.174 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
+page5.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.097222222158408,
+        y_mm=50.748257901719796,
+        w_mm=54.66646598862249,
+        h_mm=226.89760448521898,
+        layer=0,
+        anname='Kopie von u2d5c (7)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.76398922785695,
+        y_mm=50.748257901719796,
+        w_mm=54.66646598862249,
+        h_mm=123.43338430173266,
+        layer=0,
+        anname='Kopie von u2da1 (6)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.43075623354207,
+        y_mm=50.748257901719796,
+        w_mm=54.66646598861613,
+        h_mm=123.89943934760416,
+        layer=0,
+        anname='Kopie von u2da1 (7)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', fontsize=12, separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta ', fontsize=12, separator='para', paragraph_style='Fließtext '),
@@ -1301,44 +1036,8 @@ _chain5_0 = TextFrame(
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', fontsize=12, separator='para', paragraph_style='Fließtext '),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', fontsize=12, separator='para', paragraph_style='Fließtext '),
     ],
-)
-page5.add(_chain5_0)
+))
 
-_chain5_1 = TextFrame(
-    x_mm=77.76398922785695,
-    y_mm=50.748257901719796,
-    w_mm=54.66646598862249,
-    h_mm=123.43338430173266,
-    layer=0,
-    xpos_pt=320.433985212823,
-    ypos_pt=2809.52293577982,
-    width_pt=154.960061070111,
-    height_pt=349.88990825688,
-    anname='Kopie von u2da1 (6)',
-    clip_edit=True,
-    custom_path='M0 0 L0 349.89 L154.96 349.89 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page5.add(_chain5_1)
-
-_chain5_2 = TextFrame(
-    x_mm=135.43075623354207,
-    y_mm=50.748257901719796,
-    w_mm=54.66646598861613,
-    h_mm=123.89943934760416,
-    layer=0,
-    xpos_pt=483.898836567521,
-    ypos_pt=2809.52293577982,
-    width_pt=154.960061070093,
-    height_pt=351.211009174311,
-    anname='Kopie von u2da1 (7)',
-    clip_edit=True,
-    custom_path='M0 0 L0 351.211 L154.96 351.211 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page5.add(_chain5_2)
 
 page5.add(ImageFrame(
     x_mm=77.76398922785695,
@@ -1346,10 +1045,6 @@ page5.add(ImageFrame(
     w_mm=112.33323299430126,
     h_mm=84.1229357798164,
     layer=0,
-    xpos_pt=320.433985212823,
-    ypos_pt=3166.67889908257,
-    width_pt=318.424912424791,
-    height_pt=238.45871559633,
     image='',
     line_width_pt=1,
 ))
@@ -1360,10 +1055,6 @@ page5.add(TextFrame(
     w_mm=112.33323299430126,
     h_mm=14.645862386937715,
     layer=0,
-    xpos_pt=320.433985212823,
-    ypos_pt=3413.18141731825,
-    width_pt=318.424912424791,
-    height_pt=41.5158303881699,
     line_width_pt=1,
     trail_style='Bildunterschrift weiß',
     col_gap_mm=0,
@@ -1378,14 +1069,8 @@ page6.add(TextFrame(
     w_mm=54.66573888888888,
     h_mm=127.46605504587183,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=2771.00917431193,
-    width_pt=154.958,
-    height_pt=361.321100917432,
     anname='Kopie von u2d5c (8)',
     clip_edit=True,
-    custom_path='M0 0 L0 361.321 L154.958 361.321 L154.958 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1.01189873869794,
     col_gap_mm=4.2333333333333325,
     runs=[
@@ -1409,14 +1094,8 @@ page6.add(Polygon(
     w_mm=112.50012777777778,
     h_mm=123.83837320388564,
     layer=0,
-    xpos_pt=914.96125984252,
-    ypos_pt=2771.00917431193,
-    width_pt=318.898,
-    height_pt=351.037908294479,
     anname='u6ad',
     clip_edit=True,
-    custom_path='M0 0 L0 351.038 L318.898 351.038 L318.898 0 L0 0 Z',
-    fill_rule=0,
     fill='Dunkelgrün',
 ))
 
@@ -1426,10 +1105,6 @@ page6.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=2722.36251968046,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1445,10 +1120,6 @@ page6.add(TextFrame(
     w_mm=170.0001277778416,
     h_mm=27.730724772258746,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=3154.78771653085,
-    width_pt=481.890125984433,
-    height_pt=78.6067788819933,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1458,24 +1129,44 @@ page6.add(TextFrame(
     ],
 ))
 
-_chain6_0 = TextFrame(
-    x_mm=20.000000000000103,
-    y_mm=205.1743027539097,
-    w_mm=54.66642311192423,
-    h_mm=73.63669724771401,
-    layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=3247.26605504587,
-    width_pt=154.959939529864,
-    height_pt=208.73394495415,
-    anname='Kopie von u2d5c (10)',
-    clip_edit=True,
-    custom_path='M0 0 L0 208.734 L154.96 208.734 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01191140411581,
-    default_style_attrs={'ALIGN': '3'},
-    text_align=3,
-    col_gap_mm=4.2333333333333325,
+page6.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000103,
+        y_mm=205.1743027539097,
+        w_mm=54.66642311192423,
+        h_mm=73.63669724771401,
+        layer=0,
+        anname='Kopie von u2d5c (10)',
+        clip_edit=True,
+        line_width_pt=1.01191140411581,
+        default_style_attrs={'ALIGN': '3'},
+        text_align=3,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66672177576585,
+        y_mm=205.1743027539097,
+        w_mm=54.66642311192423,
+        h_mm=73.63645216458299,
+        layer=0,
+        anname='Kopie von u2da1 (8)',
+        clip_edit=True,
+        text_align=3,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.3334435515306,
+        y_mm=204.7082477080385,
+        w_mm=54.666684226303374,
+        h_mm=74.10261334880548,
+        layer=0,
+        anname='Kopie von u2da1 (9)',
+        clip_edit=True,
+        text_align=3,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift', paragraph_attrs={'ALIGN': '3'}),
         Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
@@ -1489,46 +1180,8 @@ _chain6_0 = TextFrame(
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext ', paragraph_attrs={'ALIGN': '3'}),
     ],
-)
-page6.add(_chain6_0)
+))
 
-_chain6_1 = TextFrame(
-    x_mm=77.66672177576585,
-    y_mm=205.1743027539097,
-    w_mm=54.66642311192423,
-    h_mm=73.63645216458299,
-    layer=0,
-    xpos_pt=915.43385700199,
-    ypos_pt=3247.26605504587,
-    width_pt=154.959939529864,
-    height_pt=208.733250230314,
-    anname='Kopie von u2da1 (8)',
-    clip_edit=True,
-    custom_path='M0 0 L0 208.733 L154.96 208.733 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    text_align=3,
-    col_gap_mm=4.2333333333333325,
-)
-page6.add(_chain6_1)
-
-_chain6_2 = TextFrame(
-    x_mm=135.3334435515306,
-    y_mm=204.7082477080385,
-    w_mm=54.666684226303374,
-    h_mm=74.10261334880548,
-    layer=0,
-    xpos_pt=1078.89858014589,
-    ypos_pt=3245.94495412844,
-    width_pt=154.960679696608,
-    height_pt=210.054652012362,
-    anname='Kopie von u2da1 (9)',
-    clip_edit=True,
-    custom_path='M0 0 L0 210.054 L154.96 210.054 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    text_align=3,
-    col_gap_mm=4.2333333333333325,
-)
-page6.add(_chain6_2)
 
 page6.add(TextFrame(
     x_mm=86.25000000000003,
@@ -1536,14 +1189,8 @@ page6.add(TextFrame(
     w_mm=94.99999999999993,
     h_mm=94.14748707988173,
     layer=0,
-    xpos_pt=939.764409448638,
-    ypos_pt=2843.83420984772,
-    width_pt=269.291338582677,
-    height_pt=266.874766525649,
     anname='u6d0',
     clip_edit=True,
-    custom_path='M0 0 L0 266.875 L269.291 266.875 L269.291 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit oditius nonsequunt aspietGenti rerchil igendis santem assum.', separator='breakline'),
@@ -1563,39 +1210,24 @@ page6.add(TextFrame(
     w_mm=94.99999999999993,
     h_mm=17.697238533726736,
     layer=0,
-    xpos_pt=939.764409448638,
-    ypos_pt=2787.55937007416,
-    width_pt=269.291338582677,
-    height_pt=50.1654005680443,
     anname='u6e8',
     clip_edit=True,
-    custom_path='M0 0 L0 50.1655 L269.291 50.1655 L269.291 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Grüne Kästen eignen sich hervorragend für Aufzählungen und Listen. Im Text unten sind die Tabulatoren schon eingestelt.', separator='para', paragraph_style='Headline in grünem Kasten'),
     ],
 ))
 
-page6.add(TextFrame(
+page6.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.1083333322768,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=1249.40112576655,
-    ypos_pt=3473.85070865384,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (8)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page7.add(TextFrame(
@@ -1604,10 +1236,6 @@ page7.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=3604.25196849783,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1617,22 +1245,40 @@ page7.add(TextFrame(
     ],
 ))
 
-_chain7_0 = TextFrame(
-    x_mm=20.097222222158408,
-    y_mm=50.748257901719796,
-    w_mm=54.666444444444444,
-    h_mm=140.25174209828134,
-    layer=0,
-    xpos_pt=156.969133858087,
-    ypos_pt=3691.41238459719,
-    width_pt=154.96,
-    height_pt=397.563993349459,
-    anname='Kopie von u2d5c (9)',
-    clip_edit=True,
-    custom_path='M0 0 L0 397.564 L154.96 397.564 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
+page7.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.097222222158408,
+        y_mm=50.748257901719796,
+        w_mm=54.666444444444444,
+        h_mm=140.25174209828134,
+        layer=0,
+        anname='Kopie von u2d5c (9)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.76398922785695,
+        y_mm=50.748257901719796,
+        w_mm=54.666444444444444,
+        h_mm=139.4930265041067,
+        layer=0,
+        anname='Kopie von u2da1 (10)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.43075623354207,
+        y_mm=50.748257901719796,
+        w_mm=54.666444444444444,
+        h_mm=139.7260540270426,
+        layer=0,
+        anname='Kopie von u2da1 (11)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', fontsize=12, separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta ', fontsize=12, separator='para', paragraph_style='Fließtext '),
@@ -1658,44 +1304,8 @@ _chain7_0 = TextFrame(
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', fontsize=12, separator='para', paragraph_style='Fließtext '),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', fontsize=12, separator='para', paragraph_style='Fließtext '),
     ],
-)
-page7.add(_chain7_0)
+))
 
-_chain7_1 = TextFrame(
-    x_mm=77.76398922785695,
-    y_mm=50.748257901719796,
-    w_mm=54.666444444444444,
-    h_mm=139.4930265041067,
-    layer=0,
-    xpos_pt=320.433985212823,
-    ypos_pt=3691.41238459719,
-    width_pt=154.96,
-    height_pt=395.413303476208,
-    anname='Kopie von u2da1 (10)',
-    clip_edit=True,
-    custom_path='M0 0 L0 395.413 L154.96 395.413 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page7.add(_chain7_1)
-
-_chain7_2 = TextFrame(
-    x_mm=135.43075623354207,
-    y_mm=50.748257901719796,
-    w_mm=54.666444444444444,
-    h_mm=139.7260540270426,
-    layer=0,
-    xpos_pt=483.898836567521,
-    ypos_pt=3691.41238459719,
-    width_pt=154.96,
-    height_pt=396.073853934924,
-    anname='Kopie von u2da1 (11)',
-    clip_edit=True,
-    custom_path='M0 0 L0 396.074 L154.96 396.074 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page7.add(_chain7_2)
 
 page7.add(Polygon(
     x_mm=20.000000000000078,
@@ -1703,14 +1313,8 @@ page7.add(Polygon(
     w_mm=169.99999999993594,
     h_mm=81.99999999757472,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=4100.31496062916,
-    width_pt=481.889763779346,
-    height_pt=232.440944875015,
     anname='u918',
     clip_edit=True,
-    custom_path='M0 0 L0 232.441 L481.89 232.441 L481.89 0 L0 0 Z',
-    fill_rule=0,
     fill='Dunkelgrün',
 ))
 
@@ -1720,10 +1324,6 @@ page7.add(TextFrame(
     w_mm=68.27706422018358,
     h_mm=16.408256882889493,
     layer=0,
-    xpos_pt=224.763552698115,
-    ypos_pt=4111.65354330098,
-    width_pt=193.54128440367,
-    height_pt=46.5115943137025,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
     trail_attrs={'ALIGN': '1'},
@@ -1740,10 +1340,6 @@ page7.add(TextFrame(
     w_mm=100.77645973496412,
     h_mm=51.524974515800324,
     layer=0,
-    xpos_pt=178.701417322835,
-    ypos_pt=4164.77064220183,
-    width_pt=285.665555154229,
-    height_pt=146.05504587156,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
     col_gap_mm=0,
@@ -1758,33 +1354,20 @@ page7.add(ImageFrame(
     w_mm=51.345915392456746,
     h_mm=76.35277777723881,
     layer=0,
-    xpos_pt=481.697247706422,
-    ypos_pt=4116.32283463956,
-    width_pt=145.547476703027,
-    height_pt=216.433070864614,
     image='',
     line_width_pt=1,
 ))
 
-page7.add(TextFrame(
+page7.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211659,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=124.125535215552,
-    ypos_pt=4351.74015747121,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (6)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page8.add(TextFrame(
@@ -1793,14 +1376,8 @@ page8.add(TextFrame(
     w_mm=54.66573888888888,
     h_mm=93.83854128278676,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=3652.8986231293,
-    width_pt=154.958,
-    height_pt=265.999014659868,
     anname='Kopie von u2d5c (11)',
     clip_edit=True,
-    custom_path='M0 0 L0 265.999 L154.958 265.999 L154.958 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1.01189873869794,
     col_gap_mm=4.2333333333333325,
     runs=[
@@ -1824,14 +1401,8 @@ page8.add(Polygon(
     w_mm=54.666684226303374,
     h_mm=50.0178073399871,
     layer=0,
-    xpos_pt=1078.89858014589,
-    ypos_pt=3652.8986231293,
-    width_pt=154.960679696608,
-    height_pt=141.782760963743,
     anname='Kopie von u6ad',
     clip_edit=True,
-    custom_path='M0 0 L0 141.783 L154.961 141.783 L154.961 0 L0 0 Z',
-    fill_rule=0,
     fill='Dunkelgrün',
 ))
 
@@ -1841,10 +1412,6 @@ page8.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=3604.25196849783,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1860,10 +1427,6 @@ page8.add(TextFrame(
     w_mm=170.0001277778416,
     h_mm=27.031192660550467,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=3937.93577981651,
-    width_pt=481.890125984433,
-    height_pt=76.6238532110092,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -1873,23 +1436,41 @@ page8.add(TextFrame(
     ],
 ))
 
-_chain8_0 = TextFrame(
-    x_mm=20.000000000000103,
-    y_mm=167.40458715812034,
-    w_mm=54.66642311192423,
-    h_mm=111.40641284350521,
-    layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=4022.09174311927,
-    width_pt=154.959939529864,
-    height_pt=315.797705698125,
-    anname='Kopie von u2d5c (12)',
-    clip_edit=True,
-    custom_path='M0 0 L0 315.798 L154.96 315.798 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01191140411581,
-    trail_style='Fließtext ',
-    col_gap_mm=4.2333333333333325,
+page8.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000103,
+        y_mm=167.40458715812034,
+        w_mm=54.66642311192423,
+        h_mm=111.40641284350521,
+        layer=0,
+        anname='Kopie von u2d5c (12)',
+        clip_edit=True,
+        line_width_pt=1.01191140411581,
+        trail_style='Fließtext ',
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66672177576585,
+        y_mm=169.2688073416048,
+        w_mm=54.66642311192423,
+        h_mm=64.73119265839475,
+        layer=0,
+        anname='Kopie von u2da1 (12)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.3334435515306,
+        y_mm=169.00000000000134,
+        w_mm=54.666684226303374,
+        h_mm=109.81086105684373,
+        layer=0,
+        anname='Kopie von u2da1 (13)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext '),
@@ -1905,64 +1486,19 @@ _chain8_0 = TextFrame(
         Run(text='auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.', separator='para', paragraph_style='Fließtext '),
         Run(text='Magnatet, as erfero cum que maximintem est exped...nihicab orr dolor aut lamusciis ideles atatem quodiatet qui consedi t ex et reiienem et ius pera cone liti auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.'),
     ],
-)
-page8.add(_chain8_0)
+))
 
-_chain8_1 = TextFrame(
-    x_mm=77.66672177576585,
-    y_mm=169.2688073416048,
-    w_mm=54.66642311192423,
-    h_mm=64.73119265839475,
-    layer=0,
-    xpos_pt=915.43385700199,
-    ypos_pt=4027.37614678899,
-    width_pt=154.959939529864,
-    height_pt=183.489994937182,
-    anname='Kopie von u2da1 (12)',
-    clip_edit=True,
-    custom_path='M0 0 L0 183.49 L154.96 183.49 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page8.add(_chain8_1)
 
-_chain8_2 = TextFrame(
-    x_mm=135.3334435515306,
-    y_mm=169.00000000000134,
-    w_mm=54.666684226303374,
-    h_mm=109.81086105684373,
-    layer=0,
-    xpos_pt=1078.89858014589,
-    ypos_pt=4026.61417322224,
-    width_pt=154.960679696608,
-    height_pt=311.274881735935,
-    anname='Kopie von u2da1 (13)',
-    clip_edit=True,
-    custom_path='M0 0 L0 311.274 L154.96 311.274 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page8.add(_chain8_2)
-
-page8.add(TextFrame(
+page8.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.10833333227697,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=1249.40112576655,
-    ypos_pt=4355.74015747121,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (9)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page8.add(TextFrame(
@@ -1971,14 +1507,8 @@ page8.add(TextFrame(
     w_mm=54.66646598862249,
     h_mm=93.83854128278676,
     layer=0,
-    xpos_pt=915.433985212823,
-    ypos_pt=3652.8986231293,
-    width_pt=154.960061070111,
-    height_pt=265.999014659868,
     anname='Kopie von u2da1 (14)',
     clip_edit=True,
-    custom_path='M0 0 L0 265.999 L154.96 265.999 L154.96 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=4.2333333333333325,
     runs=[
         Run(text='Perem la posseditatur ', fontsize=12, separator='para', paragraph_style='Zwischenüberschrift'),
@@ -2011,14 +1541,8 @@ page8.add(TextFrame(
     w_mm=54.666684226303374,
     h_mm=39.53302752078024,
     layer=0,
-    xpos_pt=1078.89858014589,
-    ypos_pt=3806.83551253341,
-    width_pt=154.960679696608,
-    height_pt=112.062125255755,
     anname='Kopie von u2da1 (15)',
     clip_edit=True,
-    custom_path='M0 0 L0 112.062 L154.96 112.062 L154.96 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=4.2333333333333325,
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift'),
@@ -2041,10 +1565,6 @@ page8.add(TextFrame(
     w_mm=39.614678899082435,
     h_mm=24.700917431192547,
     layer=0,
-    xpos_pt=936.767037776096,
-    ypos_pt=4247.08256880734,
-    width_pt=112.293577981651,
-    height_pt=70.0183486238529,
     line_width_pt=1,
     trail_style='Zitat grüner Text',
     col_gap_mm=0,
@@ -2059,10 +1579,6 @@ page8.add(TextFrame(
     w_mm=45.44036697247696,
     h_mm=4.844954130595952,
     layer=0,
-    xpos_pt=928.510157042151,
-    ypos_pt=4320.1653543246,
-    width_pt=128.807339449541,
-    height_pt=13.733728244209,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
     trail_attrs={'ALIGN': '1'},
@@ -2096,10 +1612,6 @@ page8.add(TextFrame(
     w_mm=39.614678899082435,
     h_mm=24.700917431192547,
     layer=0,
-    xpos_pt=1100.23213100337,
-    ypos_pt=3694.08256880734,
-    width_pt=112.293577981651,
-    height_pt=70.0183486238529,
     line_width_pt=1,
     trail_style='Zitat weißer Text',
     col_gap_mm=0,
@@ -2114,10 +1626,6 @@ page8.add(TextFrame(
     w_mm=45.44036697247696,
     h_mm=4.844954130595952,
     layer=0,
-    xpos_pt=1091.97525026942,
-    ypos_pt=3770.1653543246,
-    width_pt=128.807339449541,
-    height_pt=13.733728244209,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
     trail_attrs={'ALIGN': '1'},
@@ -2145,43 +1653,52 @@ page8.add(ImageFrame(
     local_scale=(0.0275551181102362, 0.0275551181102362),
 ))
 
-page9.add(TextFrame(
+page9.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211657,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=124.125535215552,
-    ypos_pt=5233.62960628858,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (7)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
-_chain9_0 = TextFrame(
-    x_mm=20.000000000000078,
-    y_mm=49.531174313003305,
-    w_mm=54.66573888888888,
-    h_mm=122.28167890069918,
-    layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=4569.85183269064,
-    width_pt=154.958,
-    height_pt=346.625231529541,
-    anname='Kopie von u2d5c (13)',
-    clip_edit=True,
-    custom_path='M0 0 L0 346.626 L154.958 346.626 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
+page9.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000078,
+        y_mm=49.531174313003305,
+        w_mm=54.66573888888888,
+        h_mm=122.28167890069918,
+        layer=0,
+        anname='Kopie von u2d5c (13)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66599999999997,
+        y_mm=49.531174313003305,
+        w_mm=54.66573888888888,
+        h_mm=122.747733946571,
+        layer=0,
+        anname='Kopie von u2da1 (16)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.33199999999982,
+        y_mm=49.24037614948349,
+        w_mm=54.66599999999988,
+        h_mm=229.29908256880705,
+        layer=0,
+        anname='Kopie von u2da1 (17)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', fontsize=12, separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta', fontsize=12, separator='para', paragraph_style='Fließtext '),
@@ -2205,44 +1722,8 @@ _chain9_0 = TextFrame(
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', fontsize=12, separator='para', paragraph_style='Fließtext '),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', fontsize=12, separator='para', paragraph_style='Fließtext '),
     ],
-)
-page9.add(_chain9_0)
+))
 
-_chain9_1 = TextFrame(
-    x_mm=77.66599999999997,
-    y_mm=49.531174313003305,
-    w_mm=54.66573888888888,
-    h_mm=122.747733946571,
-    layer=0,
-    xpos_pt=320.156220472441,
-    ypos_pt=4569.85183269064,
-    width_pt=154.958,
-    height_pt=347.946332446973,
-    anname='Kopie von u2da1 (16)',
-    clip_edit=True,
-    custom_path='M0 0 L0 347.947 L154.958 347.947 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page9.add(_chain9_1)
-
-_chain9_2 = TextFrame(
-    x_mm=135.33199999999982,
-    y_mm=49.24037614948349,
-    w_mm=54.66599999999988,
-    h_mm=229.29908256880705,
-    layer=0,
-    xpos_pt=483.618897637795,
-    ypos_pt=4569.02752293578,
-    width_pt=154.95874015748,
-    height_pt=649.981651376146,
-    anname='Kopie von u2da1 (17)',
-    clip_edit=True,
-    custom_path='M0 0 L0 649.979 L154.958 649.979 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page9.add(_chain9_2)
 
 page9.add(TextFrame(
     x_mm=20.000000000000078,
@@ -2250,10 +1731,6 @@ page9.add(TextFrame(
     w_mm=169.998,
     h_mm=27.963304790490763,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=4486.1414173152,
-    width_pt=481.884094488189,
-    height_pt=79.2660608234384,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift Dunkelgrün',
@@ -2269,14 +1746,8 @@ page9.add(Polygon(
     w_mm=112.1999138888903,
     h_mm=102.00004999997776,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=4925.51149606223,
-    width_pt=318.047000000004,
-    height_pt=289.133999999937,
     anname='Kopie von u1529',
     clip_edit=True,
-    custom_path='M0 0 L0 289.134 L318.047 289.134 L318.047 0 L0 0 Z',
-    fill_rule=0,
     fill='Dunkelgrün',
 ))
 
@@ -2286,14 +1757,8 @@ page9.add(TextFrame(
     w_mm=94.99992708957792,
     h_mm=73.32023265304802,
     layer=0,
-    xpos_pt=181.071477353356,
-    ypos_pt=4990.60054971695,
-    width_pt=269.291131907465,
-    height_pt=207.836879961396,
     anname='Kopie von u152b',
     clip_edit=True,
-    custom_path='M0 0 L0 207.837 L269.291 207.837 L269.291 0 L0 0 Z',
-    fill_rule=0,
     columns=2,
     col_gap_mm=3.867223014347416,
     runs=[
@@ -2307,14 +1772,8 @@ page9.add(TextFrame(
     w_mm=94.99992708957792,
     h_mm=16.544954128440388,
     layer=0,
-    xpos_pt=181.071477353356,
-    ypos_pt=4935.79678681908,
-    width_pt=269.291131907465,
-    height_pt=46.8990825688074,
     anname='Kopie von u1544',
     clip_edit=True,
-    custom_path='M0 0 L0 46.8991 L269.291 46.8991 L269.291 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Headline in einem grünen Kasten. Kann auch mehrzeilig sein, aber achte auf den Abstand ', fontsize=12, separator='para', paragraph_style='Headline in grünem Kasten'),
@@ -2328,31 +1787,45 @@ page9.add(ImageFrame(
     w_mm=209.9999999999361,
     h_mm=126.13945871829057,
     layer=0,
-    xpos_pt=695.27622047226,
-    ypos_pt=4429.44850392937,
-    width_pt=595.275590551,
-    height_pt=357.560670382556,
     image='',
     line_width_pt=1,
 ))
 
-_chain10_0 = TextFrame(
-    x_mm=20.000000000000103,
-    y_mm=133.3633119292999,
-    w_mm=54.66642311192423,
-    h_mm=62.636688070700274,
-    layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=4807.48623853211,
-    width_pt=154.959939529864,
-    height_pt=177.552816578363,
-    anname='Kopie von u2d5c (14)',
-    clip_edit=True,
-    custom_path='M0 0 L0 177.553 L154.96 177.553 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01191140411581,
-    trail_style='Fließtext ',
-    col_gap_mm=4.2333333333333325,
+page10.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000103,
+        y_mm=133.3633119292999,
+        w_mm=54.66642311192423,
+        h_mm=62.636688070700274,
+        layer=0,
+        anname='Kopie von u2d5c (14)',
+        clip_edit=True,
+        line_width_pt=1.01191140411581,
+        trail_style='Fließtext ',
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66672177576585,
+        y_mm=132.1981743146203,
+        w_mm=54.66642311192423,
+        h_mm=146.80182568537916,
+        layer=0,
+        anname='Kopie von u2da1 (18)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.3334435515306,
+        y_mm=132.0000000000011,
+        w_mm=54.666684226303374,
+        h_mm=58.99999999999965,
+        layer=0,
+        anname='Kopie von u2da1 (19)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift'),
         Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext '),
@@ -2368,44 +1841,8 @@ _chain10_0 = TextFrame(
         Run(text='auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.', separator='para', paragraph_style='Fließtext '),
         Run(text='Magnatet, as erfero cum que maximintem est exped...'),
     ],
-)
-page10.add(_chain10_0)
+))
 
-_chain10_1 = TextFrame(
-    x_mm=77.66672177576585,
-    y_mm=132.1981743146203,
-    w_mm=54.66642311192423,
-    h_mm=146.80182568537916,
-    layer=0,
-    xpos_pt=915.43385700199,
-    ypos_pt=4804.18348623853,
-    width_pt=154.959939529864,
-    height_pt=416.131159423122,
-    anname='Kopie von u2da1 (18)',
-    clip_edit=True,
-    custom_path='M0 0 L0 416.131 L154.96 416.131 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page10.add(_chain10_1)
-
-_chain10_2 = TextFrame(
-    x_mm=135.3334435515306,
-    y_mm=132.0000000000011,
-    w_mm=54.666684226303374,
-    h_mm=58.99999999999965,
-    layer=0,
-    xpos_pt=1078.89858014589,
-    ypos_pt=4803.62173227583,
-    width_pt=154.960679696608,
-    height_pt=167.244094488188,
-    anname='Kopie von u2da1 (19)',
-    clip_edit=True,
-    custom_path='M0 0 L0 167.244 L154.96 167.244 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page10.add(_chain10_2)
 
 page10.add(TextFrame(
     x_mm=20.000000000000103,
@@ -2413,14 +1850,8 @@ page10.add(TextFrame(
     w_mm=54.66642311192423,
     h_mm=36.602335369374984,
     layer=0,
-    xpos_pt=751.969133858087,
-    ypos_pt=5117.28440366973,
-    width_pt=154.959939529864,
-    height_pt=103.754651440748,
     anname='Kopie von u2d5c (15)',
     clip_edit=True,
-    custom_path='M0 0 L0 103.755 L154.96 103.755 L154.96 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1.01191140411581,
     trail_style='Fließtext ',
     col_gap_mm=4.2333333333333325,
@@ -2447,10 +1878,6 @@ page10.add(ImageFrame(
     w_mm=66.58809174299142,
     h_mm=94.42751375823458,
     layer=0,
-    xpos_pt=1101.79816513761,
-    ypos_pt=5003.66972477064,
-    width_pt=188.753645885645,
-    height_pt=267.668542936728,
     image='',
     line_width_pt=1,
 ))
@@ -2461,10 +1888,6 @@ page10.add(TextFrame(
     w_mm=39.614678899082435,
     h_mm=24.700917431192547,
     layer=0,
-    xpos_pt=773.302314632194,
-    ypos_pt=5021.97201762471,
-    width_pt=112.293577981651,
-    height_pt=70.0183486238529,
     line_width_pt=1,
     trail_style='Zitat grüner Text',
     col_gap_mm=0,
@@ -2479,10 +1902,6 @@ page10.add(TextFrame(
     w_mm=45.44036697247696,
     h_mm=4.844954130595952,
     layer=0,
-    xpos_pt=765.045433898249,
-    ypos_pt=5097.05480314197,
-    width_pt=128.807339449541,
-    height_pt=13.733728244209,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
     trail_attrs={'ALIGN': '1'},
@@ -2516,52 +1935,57 @@ page11.add(ImageFrame(
     w_mm=210.7990642201835,
     h_mm=213.91926605504602,
     layer=0,
-    xpos_pt=100.00062992126,
-    ypos_pt=5310.82568807339,
-    width_pt=597.54065448241,
-    height_pt=606.385321100918,
     image='',
     fill='Dunkelgrün',
     line_width_pt=1,
 ))
 
-page11.add(TextFrame(
+page11.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.69722222116604,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=124.125535215552,
-    ypos_pt=6115.51905510595,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (10)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
-_chain11_0 = TextFrame(
-    x_mm=20.000000000000078,
-    y_mm=49.531174313003625,
-    w_mm=54.66573888888888,
-    h_mm=155.58535780032088,
-    layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=5451.74128150801,
-    width_pt=154.958,
-    height_pt=441.029360693823,
-    anname='Kopie von u2d5c (16)',
-    clip_edit=True,
-    custom_path='M0 0 L0 441.03 L154.958 441.03 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
+page11.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000078,
+        y_mm=49.531174313003625,
+        w_mm=54.66573888888888,
+        h_mm=155.58535780032088,
+        layer=0,
+        anname='Kopie von u2d5c (16)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66599999999997,
+        y_mm=49.531174313003625,
+        w_mm=54.66573888888888,
+        h_mm=155.11930275444902,
+        layer=0,
+        anname='Kopie von u2da1 (20)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.33199999999982,
+        y_mm=49.24037614948381,
+        w_mm=54.66599999999988,
+        h_mm=154.24496330329123,
+        layer=0,
+        anname='Kopie von u2da1 (21)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift weiß'),
         Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext weiß'),
@@ -2585,44 +2009,8 @@ _chain11_0 = TextFrame(
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', separator='para', paragraph_style='Fließtext weiß'),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext weiß'),
     ],
-)
-page11.add(_chain11_0)
+))
 
-_chain11_1 = TextFrame(
-    x_mm=77.66599999999997,
-    y_mm=49.531174313003625,
-    w_mm=54.66573888888888,
-    h_mm=155.11930275444902,
-    layer=0,
-    xpos_pt=320.156220472441,
-    ypos_pt=5451.74128150801,
-    width_pt=154.958,
-    height_pt=439.708259776391,
-    anname='Kopie von u2da1 (20)',
-    clip_edit=True,
-    custom_path='M0 0 L0 439.709 L154.958 439.709 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page11.add(_chain11_1)
-
-_chain11_2 = TextFrame(
-    x_mm=135.33199999999982,
-    y_mm=49.24037614948381,
-    w_mm=54.66599999999988,
-    h_mm=154.24496330329123,
-    layer=0,
-    xpos_pt=483.618897637795,
-    ypos_pt=5450.91697175315,
-    width_pt=154.95874015748,
-    height_pt=437.229817237676,
-    anname='Kopie von u2da1 (21)',
-    clip_edit=True,
-    custom_path='M0 0 L0 437.228 L154.958 437.228 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page11.add(_chain11_2)
 
 page11.add(TextFrame(
     x_mm=20.000000000000078,
@@ -2630,10 +2018,6 @@ page11.add(TextFrame(
     w_mm=169.998,
     h_mm=35.27983486561883,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=5368.03086613257,
-    width_pt=481.884094488189,
-    height_pt=100.00583111514,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift weiß',
@@ -2649,10 +2033,6 @@ page11.add(ImageFrame(
     w_mm=209.99999999999994,
     h_mm=83.26144953805078,
     layer=0,
-    xpos_pt=100.00062992126,
-    ypos_pt=5917.21100917431,
-    width_pt=595.275590551181,
-    height_pt=236.016707351955,
     image='',
     line_width_pt=1,
 ))
@@ -2663,32 +2043,46 @@ page11.add(ImageFrame(
     w_mm=210.7990642201835,
     h_mm=297.1807155930968,
     layer=0,
-    xpos_pt=695.276220472441,
-    ypos_pt=5310.82568807339,
-    width_pt=597.54065448241,
-    height_pt=842.402028452873,
     image='',
     fill='Dunkelgrün',
     line_width_pt=1,
     local_offset_mm=(0.3303109072374783, -0.3257155930969475),
 ))
 
-_chain12_0 = TextFrame(
-    x_mm=20.000000000000103,
-    y_mm=37.802770645436674,
-    w_mm=54.66573888888888,
-    h_mm=99.03669724770661,
-    layer=0,
-    xpos_pt=751.969133858268,
-    ypos_pt=5418.49541284404,
-    width_pt=154.958,
-    height_pt=280.733944954129,
-    anname='Kopie von u2d5c (17)',
-    clip_edit=True,
-    custom_path='M0 0 L0 280.734 L154.958 280.734 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01189873869794,
-    col_gap_mm=4.2333333333333325,
+page12.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000103,
+        y_mm=37.802770645436674,
+        w_mm=54.66573888888888,
+        h_mm=99.03669724770661,
+        layer=0,
+        anname='Kopie von u2d5c (17)',
+        clip_edit=True,
+        line_width_pt=1.01189873869794,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66599999999997,
+        y_mm=37.802770645436674,
+        w_mm=54.66573888888888,
+        h_mm=95.197229354565,
+        layer=0,
+        anname='Kopie von u2da1 (22)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.33200000000124,
+        y_mm=37.00000000000025,
+        w_mm=54.66599999999988,
+        h_mm=94.47983486561873,
+        layer=0,
+        anname='Kopie von u2da1 (23)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift weiß'),
         Run(text='Aianeptas es re iliaes dolupta', separator='para', paragraph_style='Fließtext weiß'),
@@ -2712,44 +2106,8 @@ _chain12_0 = TextFrame(
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.', separator='para', paragraph_style='Fließtext weiß'),
         Run(text='Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.', separator='para', paragraph_style='Fließtext weiß'),
     ],
-)
-page12.add(_chain12_0)
+))
 
-_chain12_1 = TextFrame(
-    x_mm=77.66599999999997,
-    y_mm=37.802770645436674,
-    w_mm=54.66573888888888,
-    h_mm=95.197229354565,
-    layer=0,
-    xpos_pt=915.431811023622,
-    ypos_pt=5418.49541284404,
-    width_pt=154.958,
-    height_pt=269.850413918452,
-    anname='Kopie von u2da1 (22)',
-    clip_edit=True,
-    custom_path='M0 0 L0 269.851 L154.958 269.851 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page12.add(_chain12_1)
-
-_chain12_2 = TextFrame(
-    x_mm=135.33200000000124,
-    y_mm=37.00000000000025,
-    w_mm=54.66599999999988,
-    h_mm=94.47983486561873,
-    layer=0,
-    xpos_pt=1078.89448818898,
-    ypos_pt=5416.21984251052,
-    width_pt=154.95874015748,
-    height_pt=267.816854737187,
-    anname='Kopie von u2da1 (23)',
-    clip_edit=True,
-    custom_path='M0 0 L0 267.816 L154.958 267.816 L154.958 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page12.add(_chain12_2)
 
 page12.add(TextFrame(
     x_mm=20.000000000000103,
@@ -2757,10 +2115,6 @@ page12.add(TextFrame(
     w_mm=169.998,
     h_mm=17.56974312249954,
     layer=0,
-    xpos_pt=751.969133858268,
-    ypos_pt=5368.03086613257,
-    width_pt=481.884094488189,
-    height_pt=49.8039962527546,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift weiß',
@@ -2770,25 +2124,17 @@ page12.add(TextFrame(
     ],
 ))
 
-page12.add(TextFrame(
+page12.add(PageNumber(
     x_mm=195.48295270104086,
     y_mm=285.10833333227714,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=1249.40112576673,
-    ypos_pt=6119.51905510595,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (11)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', var_attrs={'FCOLOR': 'White', 'FSHADE': '100'}, separator='para', paragraph_style='Seitenzahl'),
-    ],
+    var_attrs={'FCOLOR': 'White', 'FSHADE': '100'},
 ))
 
 page12.add(TextFrame(
@@ -2797,10 +2143,6 @@ page12.add(TextFrame(
     w_mm=170.0001277778416,
     h_mm=34.283766562574144,
     layer=0,
-    xpos_pt=751.969133858268,
-    ypos_pt=5701.71467745125,
-    width_pt=481.890125984433,
-    height_pt=97.182330413596,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift weiß',
@@ -2810,23 +2152,41 @@ page12.add(TextFrame(
     ],
 ))
 
-_chain13_0 = TextFrame(
-    x_mm=20.000000000000103,
-    y_mm=170.6284587188311,
-    w_mm=54.66642311192423,
-    h_mm=109.98899082568825,
-    layer=0,
-    xpos_pt=751.969133858268,
-    ypos_pt=5795.00917431193,
-    width_pt=154.959939529864,
-    height_pt=311.779816513762,
-    anname='Kopie von u2d5c (18)',
-    clip_edit=True,
-    custom_path='M0 0 L0 311.78 L154.96 311.78 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    line_width_pt=1.01191140411581,
-    trail_style='Fließtext weiß',
-    col_gap_mm=4.2333333333333325,
+page12.add(ColumnTextStory(
+    frames=[
+        TextFrame(
+        x_mm=20.000000000000103,
+        y_mm=170.6284587188311,
+        w_mm=54.66642311192423,
+        h_mm=109.98899082568825,
+        layer=0,
+        anname='Kopie von u2d5c (18)',
+        clip_edit=True,
+        line_width_pt=1.01191140411581,
+        trail_style='Fließtext weiß',
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=77.66672177576585,
+        y_mm=169.26880734160494,
+        w_mm=54.66642311192423,
+        h_mm=64.73119265839475,
+        layer=0,
+        anname='Kopie von u2da1 (24)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+        TextFrame(
+        x_mm=135.3334435515302,
+        y_mm=169.00000000000134,
+        w_mm=54.666684226303374,
+        h_mm=109.81086105684373,
+        layer=0,
+        anname='Kopie von u2da1 (25)',
+        clip_edit=True,
+        col_gap_mm=4.2333333333333325,
+        ),
+    ],
     runs=[
         Run(text='Perem la posseditatur ', separator='para', paragraph_style='Zwischenüberschrift weiß'),
         Run(text='Aianeptas es re iliaes doluptaQuaecep erfernatur adit, volut faciend estibusda pediosaes minctem oditatur? Qui as et inimus. io beat fugitatia qui od magnihi lluptam usciatio. Optatinverit am laborporrum quas atur, conet et de officte nihicab orrorrum ut debis eium endes nonsent.Em aut vid que vellacc aborisi tatiur sunt, commolupitia as voluptas min natincium quat hilit, sit elestiasiti re ma non comnim diam is inctotat.Haribusam alit quo doluptatem.', separator='para', paragraph_style='Fließtext weiß'),
@@ -2835,44 +2195,8 @@ _chain13_0 = TextFrame(
         Run(text='Gentorrum eum re re dus', separator='para', paragraph_style='Zwischenüberschrift weiß'),
         Run(text='Ium rerit dolendaerest hicilig endenimped qsenis voluptas qut am laborporrum quas atur, conet et de officte niuis andi doloritatet paritati ecullitatem hillendi nonsed mm quodiatet qui consedi t ex et reiiagnihil idigenimusae et, voluptur? Quia dolupta ipident.Ari abo. Nam unt aut ab uis andi doloritatet paritati dist, qui aligeni mendita eceribus, occullo incium utem expland.auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.Magnatet, as erfero cum que maximintem est exped...xpland.auusaectem qui nem et doluptata illa pratur moluptatia sande xceper.Magnatet, as erfero cum que maximintem '),
     ],
-)
-page12.add(_chain13_0)
+))
 
-_chain13_1 = TextFrame(
-    x_mm=77.66672177576585,
-    y_mm=169.26880734160494,
-    w_mm=54.66642311192423,
-    h_mm=64.73119265839475,
-    layer=0,
-    xpos_pt=915.433857002171,
-    ypos_pt=5791.15504442373,
-    width_pt=154.959939529864,
-    height_pt=183.489994937182,
-    anname='Kopie von u2da1 (24)',
-    clip_edit=True,
-    custom_path='M0 0 L0 183.49 L154.96 183.49 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page12.add(_chain13_1)
-
-_chain13_2 = TextFrame(
-    x_mm=135.3334435515302,
-    y_mm=169.00000000000134,
-    w_mm=54.666684226303374,
-    h_mm=109.81086105684373,
-    layer=0,
-    xpos_pt=1078.89858014607,
-    ypos_pt=5790.39307085698,
-    width_pt=154.960679696608,
-    height_pt=311.274881735935,
-    anname='Kopie von u2da1 (25)',
-    clip_edit=True,
-    custom_path='M0 0 L0 311.274 L154.96 311.274 L154.96 0 L0 0 Z',
-    fill_rule=0,
-    col_gap_mm=4.2333333333333325,
-)
-page12.add(_chain13_2)
 
 page12.add(TextFrame(
     x_mm=85.19259388218659,
@@ -2880,10 +2204,6 @@ page12.add(TextFrame(
     w_mm=39.614678899082435,
     h_mm=24.700917431192547,
     layer=0,
-    xpos_pt=936.767037776277,
-    ypos_pt=6010.86146644208,
-    width_pt=112.293577981651,
-    height_pt=70.0183486238529,
     line_width_pt=1,
     trail_style='Zitat weißer Text',
     col_gap_mm=0,
@@ -2898,10 +2218,6 @@ page12.add(TextFrame(
     w_mm=45.44036697247696,
     h_mm=4.844954130595952,
     layer=0,
-    xpos_pt=928.510157042332,
-    ypos_pt=6082.94425195934,
-    width_pt=128.807339449541,
-    height_pt=13.733728244209,
     line_width_pt=1,
     trail_style='Fließtext in grünem Kasten',
     trail_attrs={'ALIGN': '1'},
@@ -2935,10 +2251,6 @@ page13.add(ImageFrame(
     w_mm=209.99999999999994,
     h_mm=147.36327522612436,
     layer=0,
-    xpos_pt=100.00062992126,
-    ypos_pt=6617.39449541284,
-    width_pt=595.275590551181,
-    height_pt=417.722669932321,
     image='',
     line_width_pt=1,
 ))
@@ -2949,35 +2261,22 @@ page13.add(ImageFrame(
     w_mm=210.7990642201835,
     h_mm=152.61377064220179,
     layer=0,
-    xpos_pt=100.00062992126,
-    ypos_pt=6192.71513689229,
-    width_pt=597.54065448241,
-    height_pt=432.605964025139,
     image='',
     fill='Dunkelgrün',
     line_width_pt=1,
     local_offset_mm=(1.0939347604485252, -0.7605759429155533),
 ))
 
-page13.add(TextFrame(
+page13.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211657,
     w_mm=12.775464220466706,
     h_mm=9.480247708017236,
     layer=0,
-    xpos_pt=124.125535215552,
-    ypos_pt=6997.40850392485,
-    width_pt=36.2139143257324,
-    height_pt=26.8731431093402,
     anname='Kopie von u2d45 (12)',
     clip_edit=True,
-    custom_path='M0 0 L0 26.8732 L36.2139 26.8732 L36.2139 0 L0 0 Z',
-    fill_rule=0,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page13.add(TextFrame(
@@ -2986,10 +2285,6 @@ page13.add(TextFrame(
     w_mm=169.998,
     h_mm=35.27983486561883,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=6249.92031495147,
-    width_pt=481.884094488189,
-    height_pt=100.00583111514,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Überschrift weiß',
@@ -3005,14 +2300,8 @@ page13.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=34.56422222545544,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=6310.02267715619,
-    width_pt=153.779527559055,
-    height_pt=97.9773228438107,
     anname='Kopie von u14c',
     clip_edit=True,
-    custom_path='M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
@@ -3028,14 +2317,8 @@ page13.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=34.56422222545544,
     layer=0,
-    xpos_pt=156.693543307087,
-    ypos_pt=6422.02267715619,
-    width_pt=153.779527559055,
-    height_pt=97.9773228438107,
     anname='Kopie von u14c (2)',
     clip_edit=True,
-    custom_path='M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
@@ -3051,14 +2334,8 @@ page13.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=34.56422222545544,
     layer=0,
-    xpos_pt=320.745456692914,
-    ypos_pt=6310.02267715619,
-    width_pt=153.779527559055,
-    height_pt=97.9773228438107,
     anname='Kopie von u14c (3)',
     clip_edit=True,
-    custom_path='M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
@@ -3074,14 +2351,8 @@ page13.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=34.56422222545544,
     layer=0,
-    xpos_pt=320.745456692914,
-    ypos_pt=6422.02267715619,
-    width_pt=153.779527559055,
-    height_pt=97.9773228438107,
     anname='Kopie von u14c (4)',
     clip_edit=True,
-    custom_path='M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
@@ -3097,14 +2368,8 @@ page13.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=34.56422222545544,
     layer=0,
-    xpos_pt=484.208503937007,
-    ypos_pt=6310.02267715619,
-    width_pt=153.779527559055,
-    height_pt=97.9773228438107,
     anname='Kopie von u14c (5)',
     clip_edit=True,
-    custom_path='M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
@@ -3120,14 +2385,8 @@ page13.add(TextFrame(
     w_mm=54.24999999999995,
     h_mm=34.56422222545544,
     layer=0,
-    xpos_pt=484.208503937007,
-    ypos_pt=6422.02267715619,
-    width_pt=153.779527559055,
-    height_pt=97.9773228438107,
     anname='Kopie von u14c (6)',
     clip_edit=True,
-    custom_path='M0 0 L0 97.9774 L153.78 97.9774 L153.78 0 L0 0 Z',
-    fill_rule=0,
     col_gap_mm=3.867223014347416,
     runs=[
         Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
@@ -3143,10 +2402,6 @@ page13.add(Polygon(
     w_mm=36.198842807380124,
     h_mm=34.60135066258924,
     layer=0,
-    xpos_pt=574.228195350609,
-    ypos_pt=6564.2184078504,
-    width_pt=102.610892997298,
-    height_pt=98.0825688073396,
     fill='Magenta',
     line_color='Magenta',
     line_width_pt=1,
@@ -3159,10 +2414,6 @@ page13.add(TextFrame(
     w_mm=31.905402967990675,
     h_mm=24.779995885432033,
     layer=0,
-    xpos_pt=578.088679475689,
-    ypos_pt=6589.80554307073,
-    width_pt=90.4405123502098,
-    height_pt=70.2425080216971,
     rotation_deg=355,
     line_width_pt=1.00000000000002,
     col_gap_mm=0,
@@ -3197,10 +2448,6 @@ page13.add(TextFrame(
     w_mm=103.46422018348632,
     h_mm=30.471532106858525,
     layer=0,
-    xpos_pt=255.522935779817,
-    ypos_pt=6530.22935779817,
-    width_pt=293.284403669725,
-    height_pt=86.3759965233785,
     line_width_pt=1,
     trail_style='Impressum',
     col_gap_mm=0,
@@ -3211,34 +2458,6 @@ page13.add(TextFrame(
     ],
 ))
 
-_chain0_0.link_to(_chain0_1)
-_chain0_1.link_to(_chain0_2)
-_chain1_0.link_to(_chain1_1)
-_chain1_1.link_to(_chain1_2)
-_chain2_0.link_to(_chain2_1)
-_chain2_1.link_to(_chain2_2)
-_chain3_0.link_to(_chain3_1)
-_chain3_1.link_to(_chain3_2)
-_chain4_0.link_to(_chain4_1)
-_chain4_1.link_to(_chain4_2)
-_chain5_0.link_to(_chain5_1)
-_chain5_1.link_to(_chain5_2)
-_chain6_0.link_to(_chain6_1)
-_chain6_1.link_to(_chain6_2)
-_chain7_0.link_to(_chain7_1)
-_chain7_1.link_to(_chain7_2)
-_chain8_0.link_to(_chain8_1)
-_chain8_1.link_to(_chain8_2)
-_chain9_0.link_to(_chain9_1)
-_chain9_1.link_to(_chain9_2)
-_chain10_0.link_to(_chain10_1)
-_chain10_1.link_to(_chain10_2)
-_chain11_0.link_to(_chain11_1)
-_chain11_1.link_to(_chain11_2)
-_chain12_0.link_to(_chain12_1)
-_chain12_1.link_to(_chain12_2)
-_chain13_0.link_to(_chain13_1)
-_chain13_1.link_to(_chain13_2)
 
 doc.save(HERE / "template.sla")
 print(f"OK: {HERE / "template.sla"}")
