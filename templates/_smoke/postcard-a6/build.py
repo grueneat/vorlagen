@@ -18,17 +18,17 @@ def build(out_path: Path) -> None:
                      fill=Color.DUNKELGRUEN, layer=0,
                      anname="Hintergrund-Vollfläche"))
 
-    page.add(blocks.Headline4Line(
+    page.add(blocks.legacy.Headline4Line(
         lines=("[Zeile 1]", "[Zeile 2 Vollkorn]", "[Zeile 3]", "[Zeile 4 Vollkorn]"),
         x_mm=8, y_mm=38, w_mm=89, h_mm=66,
     ))
 
-    page.add(blocks.StoererBadge(
+    page.add(blocks.legacy.StoererBadge(
         text=("[Stör 1]", "[Stör 2]", "[Stör 3]"),
         x_mm=72, y_mm=10, diameter_mm=22, rotation_deg=8,
     ))
 
-    page.add(blocks.ImpressumLine(x_mm=8, y_mm=140, w_mm=89))
+    page.add(blocks.legacy.ImpressumLine(x_mm=8, y_mm=140, w_mm=89))
 
     doc.save(out_path)
     print(f"wrote {out_path}")
