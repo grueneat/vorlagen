@@ -119,7 +119,6 @@ class PageNumberTests(unittest.TestCase):
         self.assertTrue(tf.clip_edit, "clip_edit must be forwarded to inner TextFrame")
         self.assertEqual(tf.line_width_pt, 1,
                          "line_width_pt must be forwarded to inner TextFrame")
-        import pytest
         self.assertAlmostEqual(tf.col_gap_mm, 3.207461712525627, places=10,
                                msg="col_gap_mm must be forwarded verbatim without rounding")
         self.assertEqual(tf.layer, 0)
