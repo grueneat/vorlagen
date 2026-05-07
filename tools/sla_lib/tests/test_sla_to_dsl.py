@@ -65,9 +65,17 @@ class PostkarteRoundTrip(unittest.TestCase):
         self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
                          msg=f"critical issues: "
                              f"{[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_CRITICAL]}")
-        self.assertEqual(report.summary[sla_diff.SEVERITY_WARNING], 0,
-                         msg=f"warning issues: "
-                             f"{[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_WARNING]}")
+        # build.py now uses brand=Brand.gruene_noe() which injects ci/* paragraph styles
+        # and brand layers — these extra-style / extra-layer warnings are additive-only
+        # (do not change rendering) and are tolerated the same way as PostkarteConverterFreshRun.
+        non_brand_warnings = [
+            i for i in report.issues
+            if i.severity == sla_diff.SEVERITY_WARNING
+            and not (i.code in ("extra-style", "extra-layer"))
+        ]
+        self.assertEqual(non_brand_warnings, [],
+                         msg=f"unexpected warning issues: "
+                             f"{[i.short() for i in non_brand_warnings]}")
 
 
 class PostkarteConverterFreshRun(unittest.TestCase):

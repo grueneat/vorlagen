@@ -378,6 +378,7 @@ def _run_sla_diff_strict(tid: str, tdir: Path, meta: dict) -> int:
             "--left", str(original_abs),
             "--right", str(template_sla),
             "--strict",
+            "--allow-brand-extras",
         ],
         capture_output=True,
         text=True,
