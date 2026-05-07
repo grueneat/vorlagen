@@ -157,6 +157,12 @@ class Anchor:
         )
         return _parse_legacy_anchor(spec)
 
+    @classmethod
+    def from_page(cls, where: str, x_offset_mm: float = 0, y_offset_mm: float = 0) -> "Anchor":
+        """DEPRECATED: Create anchor from page corner with optional offsets."""
+        # For simplicity, we just use the (x, y) tuple legacy form
+        return cls.from_legacy((x_offset_mm, y_offset_mm))
+
 
 def _parse_legacy_anchor(spec: "Union[str, tuple]") -> Anchor:
     """Internal parser for legacy anchor specs (no warning emitted here)."""
@@ -846,6 +852,7 @@ class Polygon(_Frame):
     layer: int = 0                    # default Hintergrund
     shape: str = "rectangle"          # 'rectangle' | 'ellipse'
     fill_shade: int = 100             # SHADE — emitted when != 100
+    dash_pattern: Optional[tuple[float, ...]] = None  # (dash, gap, ...) in pt
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
@@ -881,6 +888,10 @@ class Polygon(_Frame):
             attrs["PCOLOR2"] = self.line_color
         if self.fill_shade != 100:
             attrs["SHADE"] = str(self.fill_shade)
+        if self.dash_pattern:
+            attrs["DASHS"] = " ".join(_fmt_num(v) for v in self.dash_pattern)
+            attrs["NUMDASH"] = str(len(self.dash_pattern))
+            attrs["DASHOFF"] = "0"
         if self.anname:
             attrs["ANNAME"] = self.anname
         return etree.Element("PAGEOBJECT", attrib=attrs)

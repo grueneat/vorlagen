@@ -20,11 +20,13 @@ next major DSL revision.
 """
 from __future__ import annotations
 
+import math
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Mapping, Optional, Sequence, Iterable
 
 from .ci import Color, Style
-from .primitives import TextFrame, ImageFrame, Polygon, Anchor, Run
+from .primitives import TextFrame, ImageFrame, Polygon, Anchor, Run, pack_inline_image
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +361,215 @@ class ColumnTextStory:
         for i in range(len(frames) - 1):
             frames[i].link_to(frames[i + 1])
         yield from frames
+
+
+# ---------------------------------------------------------------------------
+# Block 6: WahlkreuzSymbol
+# Spec: templates/_specs/SCHEMA.md §6 (D12 background-color contract)
+# ---------------------------------------------------------------------------
+@dataclass
+class WahlkreuzSymbol:
+    """Wahlkreuz im Kreis (yellow cross + white circle).
+
+    The PNG asset has a white outer circle. On a white background the circle
+    disappears — only the yellow cross stays visible. Per D12, this block draws
+    a colored background polygon BEFORE placing the ImageFrame, so the white
+    ring stays visible. Default background: Dunkelgruen.
+
+    Source asset: shared/assets/wahlkreuz.png (RGBA 1200x1299).
+    """
+
+    pos: Anchor
+    size: tuple[float, float] = (55, 55)     # (w_mm, h_mm)
+    background_color: str = "Dunkelgrün"    # D12: never White, never Gelb
+    background_padding_mm: float = 4.0
+    anname: str = "Wahlkreuz"
+
+    def emit(self, page=None) -> Iterable:
+        # D12 Enforcement
+        if self.background_color in ("White", "Gelb"):
+            raise ValueError(
+                f"D12 violation: Wahlkreuz background_color cannot be '{self.background_color}'. "
+                "Must be a colored brand color (Dunkelgrün, Hellgrün, or Magenta) so the "
+                "white circle remains visible."
+            )
+
+        w, h = self.size
+        p = self.background_padding_mm
+
+        # Background fill
+        yield Polygon(
+            anchor=self.pos,
+            w_mm=w + 2 * p,
+            h_mm=h + 2 * p,
+            fill=self.background_color,
+            x_mm=-p,
+            y_mm=-p,  # Offset relative to anchor
+            anname=f"{self.anname} (Hintergrund)",
+        )
+
+        # Wahlkreuz Image
+        asset_path = Path("shared/assets/wahlkreuz.png")
+        if not asset_path.exists():
+            # Fallback for testing/CI if file missing in unexpected CWD
+            asset_path = (
+                Path(__file__).resolve().parents[3]
+                / "shared"
+                / "assets"
+                / "wahlkreuz.png"
+            )
+
+        with open(asset_path, "rb") as f:
+            img_bytes = f.read()
+
+        data, ext = pack_inline_image(img_bytes, "png")
+        yield ImageFrame(
+            anchor=self.pos,
+            w_mm=w,
+            h_mm=h,
+            inline_image_data=data,
+            inline_image_ext=ext,
+            scale_type=0,  # free / aspect-locked
+            anname=self.anname,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Block 7: FoldLine
+# Spec: templates/_specs/SCHEMA.md §7
+# ---------------------------------------------------------------------------
+@dataclass
+class FoldLine:
+    """Strichlierte Falz-Linie auf 'Falz'-Layer mit Spot-Color-Stroke."""
+
+    start_mm: tuple[float, float]
+    end_mm: tuple[float, float]
+    layer_name: str = "Falz"
+    spot_color: str = "Falz"
+    line_width_pt: float = 0.5
+    dash_pattern: tuple[float, float] = (3.0, 1.5)
+    anname: str = "Falzlinie"
+
+    def emit(self, page=None) -> Iterable:
+        yield Polygon(
+            custom_path=[self.start_mm, self.end_mm],
+            layer=self.layer_name,
+            line_color=self.spot_color,
+            line_width_pt=self.line_width_pt,
+            dash_pattern=self.dash_pattern,
+            fill="None",
+            anname=self.anname,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Block 8: DieCut
+# Spec: templates/_specs/SCHEMA.md §7
+# ---------------------------------------------------------------------------
+@dataclass
+class DieCut:
+    """Geschlossener Stanzpfad auf 'Stanzkontur'-Layer."""
+
+    path_mm: list[tuple[float, float]]
+    layer_name: str = "Stanzkontur"
+    spot_color: str = "Stanzkontur"
+    line_width_pt: float = 0.25
+    anname: str = "Stanzkontur"
+
+    def emit(self, page=None) -> Iterable:
+        path = list(self.path_mm)
+        if path and path[0] != path[-1]:
+            path.append(path[0])  # Close the loop
+        yield Polygon(
+            custom_path=path,
+            layer=self.layer_name,
+            line_color=self.spot_color,
+            line_width_pt=self.line_width_pt,
+            fill="None",
+            anname=self.anname,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Block 9: FoldedPanel
+# ---------------------------------------------------------------------------
+@dataclass
+class FoldedPanel:
+    """Wrapper for a single panel of a folded flyer."""
+
+    panel_index: int  # 0-based
+    panel_count: int  # 3 for DIN-lang
+    panel_size_mm: tuple[float, float]  # (99, 210) for DIN-lang vertical
+    has_fold_right: bool = True
+    children: list = field(default_factory=list)
+
+    def emit(self, page=None) -> Iterable:
+        for child in self.children:
+            if hasattr(child, "emit"):
+                yield from child.emit(page)
+            else:
+                yield child
+
+        if self.has_fold_right:
+            w, h = self.panel_size_mm
+            x = (self.panel_index + 1) * w
+            yield from FoldLine(
+                start_mm=(x, 0),
+                end_mm=(x, h),
+                anname=f"Falz Panel {self.panel_index}",
+            ).emit(page)
+
+
+# ---------------------------------------------------------------------------
+# Block 10: DoorHangerCutout
+# Spec: templates/_specs/wahltag-tueranhaenger.md
+# ---------------------------------------------------------------------------
+@dataclass
+class DoorHangerCutout:
+    """Standard door-hanger outer + handle-hole stanzpfad."""
+
+    page_size_mm: tuple[float, float] = (105, 250)
+    hole_diameter_mm: float = 35
+    hole_top_offset_mm: float = 25
+
+    def emit(self, page=None) -> Iterable:
+        w, h = self.page_size_mm
+        # Outer rectangle
+        path = [(0, 0), (w, 0), (w, h), (0, h), (0, 0)]
+
+        # Hole (circular, approximated)
+        d = self.hole_diameter_mm
+        r = d / 2
+        cx = w / 2
+        cy = self.hole_top_offset_mm + r
+
+        segments = 36
+        hole_path = []
+        for i in range(segments + 1):
+            angle = 2 * math.pi * i / segments
+            hx = cx + r * math.cos(angle)
+            hy = cy + r * math.sin(angle)
+            hole_path.append((hx, hy))
+
+        yield from DieCut(path_mm=path, anname="Stanzkontur Außen").emit(page)
+        yield from DieCut(path_mm=hole_path, anname="Stanzkontur Loch").emit(page)
+
+
+# ---------------------------------------------------------------------------
+# Block 11: TableTentFold
+# Spec: templates/_specs/infostand-tent-card-a5-quer.md
+# ---------------------------------------------------------------------------
+@dataclass
+class TableTentFold:
+    """A4 quer folded into A5 tent: emits horizontal Falz-line at center."""
+
+    page_size_mm: tuple[float, float] = (297, 210)
+
+    def emit(self, page=None) -> Iterable:
+        w, h = self.page_size_mm
+        yield from FoldLine(
+            start_mm=(0, h / 2), end_mm=(w, h / 2), anname="Mittelfalz (horizontal)"
+        ).emit(page)
 
 
 # ---------------------------------------------------------------------------
