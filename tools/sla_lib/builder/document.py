@@ -716,25 +716,44 @@ class Document:
             cs.set("FONTSIZE", "12")
             cs.set("FCOLOR", "Black")
 
-        # If the document registered its own paragraph styles, emit those
-        # using only-non-None semantics (PARENT inheritance preserved).
-        # Otherwise, fall back to the CI brand style stack as before.
-        if self._extra_para_styles:
+        # Paragraph-style emission order (additive, Codex A-1 fix):
+        #
+        # Mirrors _emit_colors: palette_replaces_ci=True (including the brand
+        # path, which forces this flag True) means _extra_para_styles is the
+        # sole source.  palette_replaces_ci=False means CI brand stack is the
+        # base, with _extra_para_styles additive on top (custom style wins on
+        # name collision).
+        #
+        # Pre-fix behavior had an unconditional early `return` after emitting
+        # _extra_para_styles regardless of palette_replaces_ci.  This meant
+        # a template that added even one custom style (palette_replaces_ci=False)
+        # would silently drop the entire CI stack — making the CI styles
+        # invisible to Scribus on round-trip.
+        if self.palette_replaces_ci:
+            # palette_replaces_ci=True: only emit explicitly registered styles.
+            # Brand path: brand CI styles are in _extra_para_styles already.
             for ps in self._extra_para_styles.values():
                 self._emit_para_style(doc, ps)
-            return
-        for sname, s in self.ci.styles.items():
-            st = etree.SubElement(doc, "STYLE")
-            st.set("NAME", sname)
-            if s.parent:
-                st.set("PARENT", s.parent)
-            st.set("ALIGN", str(s.align))
-            st.set("LINESP", f"{s.linesp:.6f}")
-            st.set("LINESPMode", "2")
-            st.set("FONT", s.font)
-            st.set("FONTSIZE", f"{s.fontsize:.1f}")
-            st.set("FCOLOR", s.fcolor)
-            st.set("LANGUAGE", s.language)
+        else:
+            # palette_replaces_ci=False: CI stack is the base; custom styles
+            # are additive (custom name shadows CI name).
+            ci_overridden = set(self._extra_para_styles)
+            for sname, s in self.ci.styles.items():
+                if sname in ci_overridden:
+                    continue  # template override takes precedence
+                st = etree.SubElement(doc, "STYLE")
+                st.set("NAME", sname)
+                if s.parent:
+                    st.set("PARENT", s.parent)
+                st.set("ALIGN", str(s.align))
+                st.set("LINESP", f"{s.linesp:.6f}")
+                st.set("LINESPMode", "2")
+                st.set("FONT", s.font)
+                st.set("FONTSIZE", f"{s.fontsize:.1f}")
+                st.set("FCOLOR", s.fcolor)
+                st.set("LANGUAGE", s.language)
+            for ps in self._extra_para_styles.values():
+                self._emit_para_style(doc, ps)
 
     def _emit_char_style(self, doc, cs_obj: CharStyle) -> None:
         cs = etree.SubElement(doc, "CHARSTYLE")

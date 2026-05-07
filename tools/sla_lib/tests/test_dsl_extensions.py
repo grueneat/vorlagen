@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from sla_lib.builder import (  # noqa: E402
-    Document, TextFrame, ImageFrame, Polygon, Run,
+    Document, TextFrame, ImageFrame, Polygon, Run, Anchor,
     ParaStyle, CharStyle, DocumentLayer, SoftShadow,
 )
 
@@ -186,7 +186,11 @@ class ParaStyleTests(unittest.TestCase):
                                     is_default=True))
         d.pages[0].add(TextFrame(x_mm=10, y_mm=10, w_mm=20, h_mm=10, text="hi"))
         root = _build_to_tree(d)
-        st = root.find("DOCUMENT").find("STYLE")
+        # With additive emission, CI styles come first; find by name.
+        styles = root.find("DOCUMENT").findall("STYLE")
+        st = next((s for s in styles if s.attrib.get("NAME") == "Default Paragraph Style"),
+                  None)
+        self.assertIsNotNone(st, "Default Paragraph Style not found in STYLE list")
         self.assertEqual(st.attrib.get("DefaultStyle"), "1")
 
 
@@ -453,6 +457,229 @@ class PublicSurfaceTests(unittest.TestCase):
             for f in dataclasses.fields(cls):
                 self.assertNotEqual(f.name, "raw_attrs",
                                      f"{cls.__name__} has raw_attrs field (D2 violation)")
+
+
+# ---------------------------------------------------------------------------
+# Task 6 — LLM-emission ergonomics (issue #5)
+# ---------------------------------------------------------------------------
+class AnchorErgonomicsTests(unittest.TestCase):
+    """Anchor named-args canonical form and legacy deprecation."""
+
+    def test_anchor_named_args_form(self):
+        """Anchor(h='center', v='bottom', margin_mm=20) resolves correctly."""
+        from sla_lib.builder.primitives import resolve_anchor
+        a = Anchor(h="center", v="bottom", margin_mm=20)
+        page_w, page_h = 200.0, 300.0
+        item_w, item_h = 100.0, 50.0
+        x, y = resolve_anchor(a, page_w, page_h, item_w, item_h)
+        # h=center → (200 - 100) / 2 = 50
+        self.assertAlmostEqual(x, (page_w - item_w) / 2, places=3)
+        # v=bottom, margin_mm=20 → y = 300 - 50 - mm_to_pt(20)
+        from sla_lib.builder.document import mm_to_pt
+        expected_y = page_h - item_h - mm_to_pt(20)
+        self.assertAlmostEqual(y, expected_y, places=3)
+
+    def test_anchor_named_args_top_left(self):
+        """Anchor(h='left', v='top', margin_mm=0) resolves to (0, 0)."""
+        from sla_lib.builder.primitives import resolve_anchor
+        a = Anchor(h="left", v="top")
+        x, y = resolve_anchor(a, 200.0, 300.0, 100.0, 50.0)
+        self.assertAlmostEqual(x, 0.0, places=3)
+        self.assertAlmostEqual(y, 0.0, places=3)
+
+    def test_anchor_named_args_right_edge(self):
+        """Anchor(h='right', v='center') resolves to right + vertical center."""
+        from sla_lib.builder.primitives import resolve_anchor
+        a = Anchor(h="right", v="center")
+        page_w, page_h = 200.0, 300.0
+        item_w, item_h = 60.0, 40.0
+        x, y = resolve_anchor(a, page_w, page_h, item_w, item_h)
+        self.assertAlmostEqual(x, page_w - item_w, places=3)  # right-flush, no margin
+        self.assertAlmostEqual(y, (page_h - item_h) / 2, places=3)
+
+    def test_anchor_invalid_h_raises(self):
+        """Anchor rejects unknown h= values."""
+        with self.assertRaises(ValueError):
+            Anchor(h="west", v="top")
+
+    def test_anchor_invalid_v_raises(self):
+        """Anchor rejects unknown v= values."""
+        with self.assertRaises(ValueError):
+            Anchor(h="center", v="middle")
+
+    def test_anchor_legacy_string_warns(self):
+        """Anchor.from_legacy('bottom-20') emits DeprecationWarning."""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            a = Anchor.from_legacy("bottom-20")
+            self.assertTrue(any(issubclass(x.category, DeprecationWarning) for x in w),
+                            "Expected DeprecationWarning from Anchor.from_legacy()")
+        self.assertIsInstance(a, Anchor)
+
+    def test_anchor_legacy_tuple_warns(self):
+        """Anchor.from_legacy(('center', 30)) emits DeprecationWarning."""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            a = Anchor.from_legacy(("center", 30))
+            self.assertTrue(any(issubclass(x.category, DeprecationWarning) for x in w),
+                            "Expected DeprecationWarning from Anchor.from_legacy() tuple")
+        self.assertIsInstance(a, Anchor)
+
+    def test_anchor_in_textframe_resolves(self):
+        """TextFrame(anchor=Anchor(h='center', v='top')) positions correctly."""
+        d = _make_simple_doc()
+        tf = TextFrame(w_mm=50, h_mm=20,
+                       anchor=Anchor(h="center", v="top"),
+                       anname="anchor_test")
+        d.pages[0].add(tf)
+        root = _build_to_tree(d)
+        # Should not raise and should produce a PAGEOBJECT.
+        pos = root.find("DOCUMENT").findall("PAGEOBJECT")
+        self.assertTrue(any(p.attrib.get("ANNAME") == "anchor_test" for p in pos))
+
+
+class RunLegacyDeprecationTests(unittest.TestCase):
+    """Run legacy tuple form emits DeprecationWarning."""
+
+    def test_run_legacy_tuple_warns_when_added_to_textframe(self):
+        """Tuple-form Run in TextFrame.runs emits DeprecationWarning on emit."""
+        import warnings
+        d = _make_simple_doc()
+        d.pages[0].add(TextFrame(
+            x_mm=10, y_mm=10, w_mm=20, h_mm=10,
+            runs=[("Hello", {"fcolor": "White"}, "para")],
+        ))
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            with ROOT.joinpath("tools/sla_lib/tests/dummy.sla").__class__("/dev/null").open("wb"):
+                pass
+            import tempfile
+            tmp = Path(tempfile.mktemp(suffix=".sla"))
+            d.save(tmp)
+            self.assertTrue(any(issubclass(x.category, DeprecationWarning) for x in w),
+                            "Expected DeprecationWarning for Run tuple form")
+
+
+class TextFrameMultiStyleChannelTests(unittest.TestCase):
+    """TextFrame multi-style-channel warning."""
+
+    def test_textframe_multi_style_channel_warns(self):
+        """Setting style= AND default_style_attrs= on same TextFrame emits UserWarning."""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            TextFrame(
+                x_mm=10, y_mm=10, w_mm=50, h_mm=20,
+                style="SomeStyle",
+                default_style_attrs={"FONT": "Gotham Narrow Book"},
+            )
+            user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+            self.assertTrue(len(user_warnings) > 0,
+                            "Expected UserWarning when style= and default_style_attrs= both set")
+
+    def test_textframe_style_alone_no_warning(self):
+        """Setting style= without default_style_attrs= emits no warning."""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            TextFrame(x_mm=10, y_mm=10, w_mm=50, h_mm=20, style="SomeStyle")
+            user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+            self.assertEqual(user_warnings, [], "No UserWarning expected when only style= is set")
+
+
+class ValidationErrorMessageTests(unittest.TestCase):
+    """Validation error messages name the offending attribute and closed set."""
+
+    def test_para_override_attrs_error_message_names_attr(self):
+        """Invalid paragraph_attrs key raises ValueError naming the key + set."""
+        with self.assertRaises(ValueError) as cm:
+            Run(text="x", paragraph_attrs={"UNKNOWN_KEY": "0"})
+        msg = str(cm.exception)
+        self.assertIn("UNKNOWN_KEY", msg,
+                      "Error message must name the offending attribute key")
+        # Should name the allowed keys or the closed set
+        self.assertIn("ALIGN", msg,
+                      "Error message must name at least one allowed key from the closed set")
+
+    def test_defaultstyle_attrs_error_message_names_attr(self):
+        """Invalid default_style_attrs key raises ValueError naming the key + set."""
+        with self.assertRaises(ValueError) as cm:
+            TextFrame(x_mm=0, y_mm=0, w_mm=10, h_mm=10,
+                      default_style_attrs={"BAD_KEY": "1"})
+        msg = str(cm.exception)
+        self.assertIn("BAD_KEY", msg,
+                      "Error message must name the offending attribute key")
+        self.assertIn("FONT", msg,
+                      "Error message must name at least one allowed key from DEFAULTSTYLE_OVERRIDE_ATTRS")
+
+    def test_trail_attrs_error_message_names_attr(self):
+        """Invalid trail_attrs key raises ValueError naming the key + set."""
+        with self.assertRaises(ValueError) as cm:
+            TextFrame(x_mm=0, y_mm=0, w_mm=10, h_mm=10,
+                      trail_attrs={"UNKNOWN_TRAIL_KEY": "0"})
+        msg = str(cm.exception)
+        self.assertIn("UNKNOWN_TRAIL_KEY", msg)
+        self.assertIn("ALIGN", msg)
+
+
+class AdditiveStylesTests(unittest.TestCase):
+    """Additive paragraph-style emission: palette_replaces_ci=False emits CI + custom."""
+
+    def test_custom_styles_additive_when_palette_replaces_ci_false(self):
+        """palette_replaces_ci=False: CI brand stack + custom styles both emitted."""
+        d = Document(title="t", template_id="x", palette_replaces_ci=False)
+        d.add_para_style(ParaStyle(name="MyCustomStyle", fontsize=14))
+        d.add_page(size="A6")
+        root = _build_to_tree(d)
+        style_names = {s.attrib.get("NAME", "") for s in root.find("DOCUMENT").findall("STYLE")}
+        # CI brand styles must appear
+        self.assertIn("ci/default", style_names,
+                      "CI style must appear when palette_replaces_ci=False")
+        # Custom template style must also appear
+        self.assertIn("MyCustomStyle", style_names,
+                      "Custom style must appear additively")
+
+    def test_custom_styles_only_when_palette_replaces_ci_true(self):
+        """palette_replaces_ci=True: only registered styles emitted, CI stack skipped."""
+        d = Document(title="t", template_id="x", palette_replaces_ci=True)
+        d.add_para_style(ParaStyle(name="TemplateOnly", fontsize=12))
+        d.add_page(size="A6")
+        root = _build_to_tree(d)
+        style_names = {s.attrib.get("NAME", "") for s in root.find("DOCUMENT").findall("STYLE")}
+        self.assertIn("TemplateOnly", style_names)
+        self.assertNotIn("ci/default", style_names,
+                         "CI style must NOT appear when palette_replaces_ci=True")
+
+    def test_vertical_text_align_canonical_form(self):
+        """TextFrame vertical_text_align= is the canonical form; emits ALIGN correctly."""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            d = _make_simple_doc()
+            d.pages[0].add(TextFrame(x_mm=10, y_mm=10, w_mm=30, h_mm=20,
+                                     vertical_text_align=2))
+            depr = [x for x in w if issubclass(x.category, DeprecationWarning)]
+            self.assertEqual(depr, [], "No DeprecationWarning for vertical_text_align=")
+        root = _build_to_tree(d)
+        po = root.find("DOCUMENT").find("PAGEOBJECT")
+        self.assertEqual(po.attrib["ALIGN"], "2")
+
+    def test_text_align_deprecated_alias_still_works(self):
+        """TextFrame text_align= still works but emits DeprecationWarning."""
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            d = _make_simple_doc()
+            d.pages[0].add(TextFrame(x_mm=10, y_mm=10, w_mm=30, h_mm=20,
+                                     text_align=1))
+            depr = [x for x in w if issubclass(x.category, DeprecationWarning)]
+            self.assertTrue(len(depr) > 0,
+                            "DeprecationWarning expected for text_align=")
+        root = _build_to_tree(d)
+        po = root.find("DOCUMENT").find("PAGEOBJECT")
+        self.assertEqual(po.attrib["ALIGN"], "1")
 
 
 if __name__ == "__main__":

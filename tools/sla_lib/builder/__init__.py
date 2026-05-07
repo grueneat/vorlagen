@@ -13,32 +13,39 @@ the format quirks documented in `.research/01-sla-format.md` and
 
 Public surface:
 
-    from sla_lib.builder import Document, Page, Color, Style
-    from sla_lib.builder import TextFrame, ImageFrame, Polygon, Line, Run
+    from sla_lib.builder import Document, Page, Color, Style, Brand
+    from sla_lib.builder import TextFrame, ImageFrame, Polygon, Run
     from sla_lib.builder import ParaStyle, CharStyle, DocumentLayer, SoftShadow
+    from sla_lib.builder import Anchor  # canonical: Anchor(h=, v=, margin_mm=)
 
 Usage:
-    doc = Document(title="Test", template_id="smoke")
+    doc = Document(brand=Brand.gruene_noe(), title="Test", template_id="smoke")
     page = doc.add_page(size="A6", orientation="portrait", bleed_mm=3)
     page.add(TextFrame(x_mm=20, y_mm=20, w_mm=60, h_mm=20, text="Hello"))
     doc.save("out.sla")
 
-New typed APIs introduced for the round-trip pipeline (issue #2):
+Deprecated but still available (emit DeprecationWarning on use):
 
+- ``Line`` — use ``Polygon(custom_path=..., line_color=..., fill='None')`` for
+  round-trip-stable lines. The SLA converter emits Polygon, not Line. Line is
+  kept for spec-input authoring only and will raise on ``to_pageobject()``.
+- ``Run`` tuple form ``(text, dict, sep)`` — use ``Run(text=..., fcolor=..., ...)``
+- ``Anchor`` string/tuple form ``"bottom-20"`` — use ``Anchor(v="bottom", margin_mm=20)``
+- ``TextFrame(text_align=...)`` — use ``TextFrame(vertical_text_align=...)``
+
+New typed APIs introduced in issue #2 and #5:
+
+- ``Brand`` — brand profile bundling palette, styles, layers, and Scribus defaults.
+  Pass to ``Document(brand=Brand.gruene_noe())`` to inject all CI brand state.
 - ``Run`` — typed per-run text formatting (font, fontsize, fcolor, fshade,
-  features, kern, char_style, separator, var=`pgno`); supersedes the old
-  ``(text, dict, sep)`` tuple form (still accepted for migration).
-- ``ParaStyle`` / ``CharStyle`` — per-document styles registered via
-  ``Document.add_para_style()`` / ``add_char_style()``; PARENT inheritance is
-  preserved by emitting only non-``None`` attributes.
-- ``DocumentLayer`` — per-document layer stack via ``Document(layers=[...])``;
-  overrides the CI brand layer stack.
-- ``SoftShadow`` — frame-level soft-shadow effect (``_Frame.soft_shadow=...``).
-- ``TextFrame.link_to`` — chain text frames via NEXTITEM/BACKITEM; the
-  emitter pre-allocates ItemIDs in chain order so links resolve correctly.
-- ``_Frame.custom_path`` / ``_Frame.fill_rule`` — emit FRTYPE=3 with arbitrary
-  path data (Scribus's path/copath verbatim).
-- ``_Frame.corner_radius_mm`` — rounded-corner rectangles (FRTYPE=2 / RADRECT).
+  features, kern, char_style, separator, var=`pgno`).
+- ``Anchor(h=, v=, margin_mm=)`` — canonical named-args anchor form.
+- ``ParaStyle`` / ``CharStyle`` — per-document styles; PARENT inheritance preserved.
+- ``DocumentLayer`` — per-document layer stack override.
+- ``SoftShadow`` — frame-level soft-shadow effect.
+- ``TextFrame.link_to`` — chain text frames via NEXTITEM/BACKITEM.
+- ``_Frame.custom_path`` / ``_Frame.fill_rule`` — FRTYPE=3 verbatim path data.
+- ``_Frame.corner_radius_mm`` — rounded rectangles (FRTYPE=2 / RADRECT).
 - ``Document.add_color`` — register document-local CMYK or RGB color.
 
 Note: soft-hyphen passthrough (``\\xad``) is supported as an escape hatch for

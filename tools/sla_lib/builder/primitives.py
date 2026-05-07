@@ -9,6 +9,7 @@ PTYPE values from `pageitem.h::ItemType`:
   2 = ImageFrame, 4 = TextFrame, 5 = Line, 6 = Polygon, 7 = PolyLine.
 """
 from __future__ import annotations
+import warnings
 from dataclasses import dataclass, field
 from typing import Mapping, Optional, Union
 
@@ -103,38 +104,162 @@ def _validate_defaultstyle_attrs(attrs: Optional[Mapping[str, str]]) -> None:
             f"allowed keys are {sorted(DEFAULTSTYLE_OVERRIDE_ATTRS)!r}"
         )
 
-# Anchor type: either a string name or (x, y) where each can be a number (mm)
-# or "left"|"right"|"center"|"top"|"bottom" or "bottom-N" / "right-N" (margin)
-Anchor = Union[str, tuple]
+# ---------------------------------------------------------------------------
+# Anchor — canonical named-args form + legacy string/tuple adapters
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Anchor:
+    """Canonical position anchor for frame placement.
+
+    Use the named-args form for new code:
+
+        Anchor(h="center", v="bottom", margin_mm=20)
+
+    Accepted values:
+      h: "left" | "center" | "right"  (horizontal)
+      v: "top"  | "center" | "bottom" (vertical)
+      margin_mm: float  (offset from the h/v edge, default 0)
+
+    Legacy forms still work (with a DeprecationWarning):
+      - string: ``"bottom-20"`` → ``Anchor.from_legacy("bottom-20")``
+      - tuple:  ``("center", 30)`` → ``Anchor.from_legacy(("center", 30))``
+
+    The legacy ``_LegacyAnchor`` union type alias is kept for internal
+    backward-compat in ``resolve_anchor()``.
+    """
+    h: str = "left"   # "left" | "center" | "right"
+    v: str = "top"    # "top"  | "center" | "bottom"
+    margin_mm: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.h not in ("left", "center", "right"):
+            raise ValueError(f"Anchor h= must be 'left', 'center', or 'right'; got {self.h!r}")
+        if self.v not in ("top", "center", "bottom"):
+            raise ValueError(f"Anchor v= must be 'top', 'center', or 'bottom'; got {self.v!r}")
+
+    @staticmethod
+    def from_legacy(spec: "Union[str, tuple]") -> "Anchor":
+        """Parse the legacy string/tuple anchor form and return an ``Anchor``.
+
+        Emits a DeprecationWarning.  Supported legacy forms:
+          - ``"bottom-20"`` → ``Anchor(v="bottom", margin_mm=20)``
+          - ``"center"``   → ``Anchor(h="center", v="center")``
+          - ``"top-left"`` → ``Anchor(h="left", v="top")``
+          - ``(h_spec, v_spec)`` tuple where each component is a string or mm float
+        """
+        warnings.warn(
+            f"Anchor legacy form {spec!r} is deprecated; use "
+            f"Anchor(h=..., v=..., margin_mm=...) instead.",
+            DeprecationWarning, stacklevel=2,
+        )
+        return _parse_legacy_anchor(spec)
 
 
-def resolve_anchor(anchor: Anchor, page_w_pt: float, page_h_pt: float,
+def _parse_legacy_anchor(spec: "Union[str, tuple]") -> Anchor:
+    """Internal parser for legacy anchor specs (no warning emitted here)."""
+    if isinstance(spec, str):
+        if spec == "center":
+            return Anchor(h="center", v="center")
+        parts = spec.split("-")
+        if len(parts) == 2:
+            first, second = parts
+            # Try to interpret as "v-h" (e.g. "top-left", "bottom-center")
+            v_map = {"top": "top", "bottom": "bottom", "center": "center"}
+            h_map = {"left": "left", "right": "right", "center": "center"}
+            if first in v_map and second in h_map:
+                return Anchor(h=h_map[second], v=v_map[first])
+            # "bottom-20" style: first=edge, second=mm margin
+            try:
+                margin = float(second)
+                if first in ("bottom", "top"):
+                    return Anchor(v=first, margin_mm=margin)
+                if first in ("left", "right"):
+                    return Anchor(h=first, margin_mm=margin)
+            except ValueError:
+                pass
+        raise ValueError(f"Unknown legacy anchor string: {spec!r}")
+    if isinstance(spec, tuple):
+        # (h_spec, v_spec) — both can be mm floats or alignment strings
+        if len(spec) != 2:
+            raise ValueError(f"Anchor tuple must be (h_spec, v_spec); got {spec!r}")
+        return _Anchor_from_tuple(spec)
+    raise ValueError(f"Unsupported anchor spec: {spec!r}")
+
+
+def _Anchor_from_tuple(spec: tuple) -> Anchor:
+    h_spec, v_spec = spec
+    h = "left"
+    v = "top"
+    margin_mm = 0.0
+    if isinstance(h_spec, str):
+        h_map = {"left": "left", "center": "center", "right": "right",
+                 "top": "center", "bottom": "center"}
+        if h_spec in h_map:
+            h = h_map[h_spec]
+        elif "-" in h_spec:
+            base, off = h_spec.split("-", 1)
+            h = base if base in ("left", "center", "right") else "left"
+            margin_mm = float(off)
+    elif isinstance(h_spec, (int, float)):
+        # Absolute mm position: encode as left with a margin
+        h = "left"
+        margin_mm = float(h_spec)
+    if isinstance(v_spec, str):
+        v_map = {"top": "top", "center": "center", "bottom": "bottom"}
+        if v_spec in v_map:
+            v = v_map[v_spec]
+        elif "-" in v_spec:
+            base, off = v_spec.split("-", 1)
+            v = base if base in ("top", "center", "bottom") else "top"
+    elif isinstance(v_spec, (int, float)):
+        v = "top"
+    return Anchor(h=h, v=v, margin_mm=margin_mm)
+
+
+# Legacy union type alias kept for backward compat in resolve_anchor signature.
+_LegacyAnchor = Union[str, tuple]
+
+
+def resolve_anchor(anchor: "Union[Anchor, str, tuple]",
+                   page_w_pt: float, page_h_pt: float,
                    item_w_pt: float, item_h_pt: float) -> tuple[float, float]:
     """Resolve an anchor spec to (local_x_pt, local_y_pt) on the page.
-    Anchor can be:
-      - "top-left" | "top-center" | "top-right"
-      - "center-left" | "center" | "center-right"
-      - "bottom-left" | "bottom-center" | "bottom-right"
-      - (x, y) where x,y are mm or strings like "center", "bottom-20"
+
+    Accepts:
+      - ``Anchor(h=, v=, margin_mm=)`` — canonical form
+      - Legacy string: ``"top-center"``, ``"bottom-20"`` — deprecated
+      - Legacy tuple: ``("center", 30)`` — deprecated
     """
-    if isinstance(anchor, str):
-        if anchor == "center":
-            return (page_w_pt - item_w_pt) / 2, (page_h_pt - item_h_pt) / 2
-        parts = anchor.split("-")
-        if len(parts) == 2:
-            v, h = parts
-            x = {"left": 0, "center": (page_w_pt - item_w_pt) / 2, "right": page_w_pt - item_w_pt}[h]
-            y = {"top": 0, "center": (page_h_pt - item_h_pt) / 2, "bottom": page_h_pt - item_h_pt}[v]
-            return x, y
-        raise ValueError(f"Unknown anchor: {anchor!r}")
-    # Tuple
-    x_spec, y_spec = anchor
-    x = _resolve_axis(x_spec, page_w_pt, item_w_pt, axis="x")
-    y = _resolve_axis(y_spec, page_h_pt, item_h_pt, axis="y")
+    # Normalise to canonical Anchor dataclass.
+    if isinstance(anchor, Anchor):
+        a = anchor
+    elif isinstance(anchor, (str, tuple)):
+        # No warning here — caller (blocks / template) may have emitted one already.
+        a = _parse_legacy_anchor(anchor)
+    else:
+        raise ValueError(f"Unsupported anchor type: {type(anchor)!r}")
+
+    # Resolve horizontal component.
+    if a.h == "center":
+        x = (page_w_pt - item_w_pt) / 2
+    elif a.h == "right":
+        x = page_w_pt - item_w_pt - mm_to_pt(a.margin_mm)
+    else:  # "left"
+        x = mm_to_pt(a.margin_mm)
+
+    # Resolve vertical component.
+    if a.v == "center":
+        y = (page_h_pt - item_h_pt) / 2
+    elif a.v == "bottom":
+        y = page_h_pt - item_h_pt - mm_to_pt(a.margin_mm)
+    else:  # "top"
+        y = mm_to_pt(a.margin_mm)
+
     return x, y
 
 
 def _resolve_axis(spec, page_size_pt: float, item_size_pt: float, axis: str) -> float:
+    """Legacy axis resolver — kept for backward compat with old tuple-form callers."""
     if isinstance(spec, (int, float)):
         return mm_to_pt(spec)
     if isinstance(spec, str):
@@ -255,11 +380,21 @@ def _apply_run_attrs(it: etree._Element, run: Run) -> None:
             it.set(attr, str(v))
 
 
-def _normalise_run(item) -> Run:
-    """Accept the legacy ``(text, dict, sep)`` tuple form too. Returns a Run."""
+def _normalise_run(item, *, _internal: bool = False) -> Run:
+    """Accept the legacy ``(text, dict, sep)`` tuple form too. Returns a Run.
+
+    Non-internal callers passing a tuple receive a ``DeprecationWarning``.
+    Pass ``_internal=True`` from blocks.py internals to suppress the warning.
+    """
     if isinstance(item, Run):
         return item
     if isinstance(item, tuple):
+        if not _internal:
+            warnings.warn(
+                "Run tuple form (text, dict, sep) is deprecated; "
+                "use Run(text=..., fcolor=..., separator=...) instead.",
+                DeprecationWarning, stacklevel=3,
+            )
         text = item[0]
         override = item[1] if len(item) > 1 else None
         sep = item[2] if len(item) > 2 else None
@@ -401,7 +536,11 @@ class TextFrame(_Frame):
     runs: Optional[list] = None  # list of Run, or legacy (text, dict, sep) tuples
     columns: int = 1
     col_gap_mm: float = 4
-    text_align: Optional[int] = None  # ALIGN attribute (vertical text align override)
+    # ALIGN attribute: vertical text alignment within the frame (0=top, 1=center, 2=bottom).
+    # ``vertical_text_align`` is the canonical name.  ``text_align`` is kept as a
+    # backward-compat alias — both map to the same PAGEOBJECT ALIGN attribute.
+    vertical_text_align: Optional[int] = None
+    text_align: Optional[int] = None  # deprecated alias for vertical_text_align
     default_linesp_mode: Optional[int] = None  # DefaultStyle LINESPMode attribute
     trail_style: Optional[str] = None  # PARENT on the closing <trail/> element
                                        # (style for the final unterminated paragraph)
@@ -430,6 +569,31 @@ class TextFrame(_Frame):
     def __post_init__(self) -> None:
         _validate_paragraph_attrs(self.trail_attrs)
         _validate_defaultstyle_attrs(self.default_style_attrs)
+        # Backward-compat alias: if caller used the deprecated text_align= kwarg,
+        # migrate the value to vertical_text_align and emit a warning.
+        if self.text_align is not None:
+            warnings.warn(
+                "TextFrame text_align= is deprecated; use vertical_text_align= instead.",
+                DeprecationWarning, stacklevel=2,
+            )
+            if self.vertical_text_align is None:
+                object.__setattr__(self, "vertical_text_align", self.text_align)
+        # Multi-style-channel warning: setting both style= (paragraph style name)
+        # and default_style_attrs= on the same frame is ambiguous — both target the
+        # <DefaultStyle> element. The style= kwarg sets PARENT; default_style_attrs=
+        # sets other attributes (FONT, FONTSIZE, FCOLOR, ALIGN, etc.). Using both is
+        # allowed but requires the caller to understand that default_style_attrs=
+        # takes effect AFTER PARENT is applied and may conflict with the named style.
+        if self.style and self.default_style_attrs:
+            warnings.warn(
+                "TextFrame: setting both style= and default_style_attrs= on the same "
+                "frame is ambiguous. style= sets the <DefaultStyle PARENT=...> and "
+                "default_style_attrs= sets additional attributes on the same element "
+                "(FONT, FONTSIZE, ALIGN, etc.). The default_style_attrs values apply "
+                "AFTER the parent style and may override it. Consider using only "
+                "style= for the named paragraph style.",
+                UserWarning, stacklevel=2,
+            )
 
     def link_to(self, other: "TextFrame") -> "TextFrame":
         """Chain self -> other. Returns ``other`` for fluent chains
@@ -481,8 +645,12 @@ class TextFrame(_Frame):
             attrs["PCOLOR"] = self.fill
         if self.line_color is not None:
             attrs["PCOLOR2"] = self.line_color
-        if self.text_align is not None:
-            attrs["ALIGN"] = str(self.text_align)
+        # vertical_text_align= is canonical; text_align= is the deprecated alias.
+        # Both were validated and merged in __post_init__ (text_align migrated to
+        # vertical_text_align).  Use vertical_text_align as the authoritative source.
+        _eff_valign = self.vertical_text_align
+        if _eff_valign is not None:
+            attrs["ALIGN"] = str(_eff_valign)
         if self.anname:
             attrs["ANNAME"] = self.anname
         po = etree.Element("PAGEOBJECT", attrib=attrs)
@@ -716,20 +884,40 @@ class Polygon(_Frame):
 
 
 # ---------------------------------------------------------------------------
-# Line
+# Line  (deprecated — kept for spec-input authoring only)
 # ---------------------------------------------------------------------------
 @dataclass
 class Line:
-    x1_mm: float
-    y1_mm: float
-    x2_mm: float
-    y2_mm: float
+    """A 2-point line primitive.
+
+    .. deprecated::
+        The SLA round-trip converter does NOT emit ``Line`` — it emits
+        ``Polygon(custom_path=..., line_color=..., fill='None')`` instead,
+        which is how Scribus represents lines internally (PTYPE=5 frames
+        behave as a rotated polygon with a tiny path). Use ``Polygon`` for
+        any programmatically authored line.
+
+        ``Line`` is retained here for spec-input authoring contexts where a
+        human-readable 2-point API is more expressive. Calling
+        ``to_pageobject()`` emits a ``DeprecationWarning``.
+    """
+    x1_mm: float = 0
+    y1_mm: float = 0
+    x2_mm: float = 50
+    y2_mm: float = 0
     color: str = "Black"
     width_pt: float = 1.0
     layer: int = 2
     anname: str = ""
 
     def to_pageobject(self, idgen, page) -> etree._Element:
+        warnings.warn(
+            "Line.to_pageobject() is deprecated. The SLA converter emits "
+            "Polygon(custom_path=..., line_color=..., fill='None') instead. "
+            "Use Polygon for round-trip-stable line output.",
+            DeprecationWarning, stacklevel=2,
+        )
+        import math
         x1, y1 = mm_to_pt(self.x1_mm), mm_to_pt(self.y1_mm)
         x2, y2 = mm_to_pt(self.x2_mm), mm_to_pt(self.y2_mm)
         # Scribus stores lines as a frame with origin at min(x,y); width = dx, height = 0
@@ -738,7 +926,6 @@ class Line:
         dx = x2 - x1
         dy = y2 - y1
         length = (dx * dx + dy * dy) ** 0.5
-        import math
         angle = math.degrees(math.atan2(dy, dx))
         attrs = {
             "XPOS": _fmt_num(x_origin), "YPOS": _fmt_num(y_origin),
@@ -746,7 +933,7 @@ class Line:
             "ItemID": str(idgen.next()),
             "PTYPE": "5",
             "WIDTH": _fmt_num(length), "HEIGHT": "1",
-            "FRTYPE": "3", "CLIPEDIT": "1" if self.clip_edit else "0",
+            "FRTYPE": "3", "CLIPEDIT": "0",  # Line has no clip-edit; fix AttributeError
             "PCOLOR": "None", "PCOLOR2": self.color,
             "PWIDTH": _fmt_num(self.width_pt),
             "PLINEART": "1", "LOCALSCX": "1", "LOCALSCY": "1",
