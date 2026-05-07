@@ -9,7 +9,10 @@ PTYPE values from `pageitem.h::ItemType`:
   2 = ImageFrame, 4 = TextFrame, 5 = Line, 6 = Polygon, 7 = PolyLine.
 """
 from __future__ import annotations
+import base64
+import struct
 import warnings
+import zlib
 from dataclasses import dataclass, field
 from typing import Mapping, Optional, Union
 
@@ -738,6 +741,20 @@ class TextFrame(_Frame):
 # ---------------------------------------------------------------------------
 # ImageFrame
 # ---------------------------------------------------------------------------
+def pack_inline_image(image_bytes: bytes, ext: str) -> tuple[str, str]:
+    """Encode raster bytes for ImageFrame.inline_image_data (qCompress format).
+
+    Scribus's inline ImageData attribute is qCompress-encoded:
+    base64( 4-byte big-endian uncompressed-length prefix + zlib_compress(image_bytes) ).
+    Naive base64 of raw bytes makes Scribus abort with qUncompress: Z_DATA_ERROR.
+
+    Returns (qcompressed_b64, ext) — pass to ImageFrame as
+    inline_image_data=..., inline_image_ext=ext.
+    """
+    blob = struct.pack(">I", len(image_bytes)) + zlib.compress(image_bytes, 6)
+    return base64.b64encode(blob).decode("ascii"), ext
+
+
 @dataclass
 class ImageFrame(_Frame):
     src: str = ""             # PFILE path (absolute or relative-to-SLA)
