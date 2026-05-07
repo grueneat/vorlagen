@@ -2,6 +2,7 @@
 id: '5'
 title: Review build.py + DSL before more templates
 status: done
+ship_state: pr_open
 priority: high
 labels:
 - dsl
