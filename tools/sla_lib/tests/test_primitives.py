@@ -1,8 +1,14 @@
+import sys
 import unittest
 import base64
 import struct
 import zlib
-from sla_lib.builder.primitives import pack_inline_image
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tools"))
+
+from sla_lib.builder.primitives import pack_inline_image  # noqa: E402
 
 class TestPackInlineImage(unittest.TestCase):
     def test_pack_inline_image_basic(self):
