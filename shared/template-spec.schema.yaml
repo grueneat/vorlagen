@@ -1,0 +1,312 @@
+# Template spec schema — JSON Schema (draft-2020-12) expressed in YAML.
+# This schema validates spec.yml files consumed by the spec→build.py converter
+# (converter implementation is deferred; this schema is the DSL-side contract).
+#
+# Validate a spec file:
+#   python -c "
+#     import yaml, jsonschema, pathlib
+#     schema = yaml.safe_load(pathlib.Path('shared/template-spec.schema.yaml').read_text())
+#     spec   = yaml.safe_load(pathlib.Path('templates/my-template/spec.yml').read_text())
+#     jsonschema.validate(spec, schema)
+#   "
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://gruene-noe.at/sla-lib/template-spec.schema.yaml"
+title: "Template Spec"
+description: >
+  Structured YAML description of a Scribus-layout template for the Grüne NÖ
+  design system.  An AI emitter reads this file and produces a valid build.py
+  using Brand, blocks, and DSL primitives.
+type: object
+additionalProperties: false
+
+required:
+  - template
+  - brand
+  - pages
+
+properties:
+
+  # ── template ────────────────────────────────────────────────────────────────
+  template:
+    type: object
+    description: "Identity and geometry of the template."
+    additionalProperties: false
+    required:
+      - id
+      - title
+      - size
+      - orientation
+    properties:
+      id:
+        type: string
+        description: "Machine-readable slug (e.g. 'postkarte-a6-kampagne')."
+        pattern: "^[a-z0-9][a-z0-9-]*$"
+      title:
+        type: string
+        description: "Human-readable title shown in gallery (e.g. 'Postkarte A6 Kampagne')."
+      size:
+        description: "Page size.  Either an ISO name or a custom width×height object."
+        oneOf:
+          - type: string
+            enum: [A0, A1, A2, A3, A4, A5, A6]
+          - type: object
+            additionalProperties: false
+            required: [width_mm, height_mm]
+            properties:
+              width_mm:
+                type: number
+                exclusiveMinimum: 0
+              height_mm:
+                type: number
+                exclusiveMinimum: 0
+      orientation:
+        type: string
+        enum: [portrait, landscape]
+      facing_pages:
+        type: boolean
+        default: false
+        description: "True for spreads (e.g. Zeitung).  Default false."
+      bleed_mm:
+        type: number
+        minimum: 0
+        default: 3
+        description: "Bleed margin in mm.  Default 3."
+
+  # ── brand ───────────────────────────────────────────────────────────────────
+  brand:
+    type: string
+    description: >
+      Brand profile name.  Today the only valid value is 'gruene-noe',
+      which maps to Brand.gruene_noe() in the DSL.
+    enum:
+      - gruene-noe
+
+  # ── styles ──────────────────────────────────────────────────────────────────
+  styles:
+    type: object
+    description: >
+      Template-specific paragraph style overrides.  Each key is a style name;
+      each value is a partial ParaStyle.  The 'parent' field references a CI
+      base style (e.g. 'ci/headline-ultra').  All other fields are overrides.
+    additionalProperties: false
+    patternProperties:
+      "^[A-Za-z0-9 _/-]+$":
+        $ref: "#/$defs/StyleOverride"
+
+  # ── pages ───────────────────────────────────────────────────────────────────
+  pages:
+    type: array
+    description: "Ordered list of pages in the document."
+    minItems: 1
+    items:
+      $ref: "#/$defs/PageSpec"
+
+  # ── layouts ─────────────────────────────────────────────────────────────────
+  layouts:
+    type: object
+    description: >
+      Named reusable page layouts.  Each page in 'pages' may reference a
+      layout by name.  Layouts specify default block positions; page-level
+      overrides take precedence.
+    additionalProperties: false
+    patternProperties:
+      "^[a-z][a-z0-9_-]*$":
+        $ref: "#/$defs/LayoutSpec"
+
+# ── shared definitions ────────────────────────────────────────────────────────
+$defs:
+
+  StyleOverride:
+    type: object
+    description: "Partial ParaStyle — only the keys that differ from the parent."
+    additionalProperties: false
+    properties:
+      parent:
+        type: string
+        description: >
+          CI style to inherit from.  Use 'ci/<name>' to reference brand CI
+          styles (e.g. 'ci/headline-ultra', 'ci/impressum').
+      fontsize:
+        type: number
+        exclusiveMinimum: 0
+      linesp:
+        type: number
+        exclusiveMinimum: 0
+      align:
+        type: integer
+        enum: [0, 1, 2, 3]
+        description: "0=left, 1=center, 2=right, 3=justify"
+      fcolor:
+        type: string
+        description: "Colour name registered in the document palette or symbolic 'brand.primary' etc."
+      language:
+        type: string
+        description: "ISO 639-1 language code (e.g. 'de', 'en')."
+
+  PageSpec:
+    type: object
+    description: "A single page in the document."
+    additionalProperties: false
+    properties:
+      layout:
+        type: string
+        description: "Name of a layout defined in 'layouts:', applied as defaults for this page."
+      master:
+        type: string
+        description: "Name of a master page to apply (must be added via doc.add_master())."
+      background:
+        description: "Background colour for the page (resolves to PageBackground block)."
+        oneOf:
+          - type: string
+            description: "Colour name or symbolic ref (e.g. 'Dunkelgrün', 'brand.primary')."
+          - type: "null"
+      headline:
+        $ref: "#/$defs/HeadlineSlot"
+      body:
+        $ref: "#/$defs/BodySlot"
+      impressum:
+        $ref: "#/$defs/ImpressumSlot"
+      contact:
+        $ref: "#/$defs/ContactSlot"
+      page_number:
+        description: >
+          Whether to emit a page-number frame on this page.  True/false or
+          a position override object.
+        oneOf:
+          - type: boolean
+          - $ref: "#/$defs/PositionSpec"
+
+  HeadlineSlot:
+    type: object
+    description: "Top-of-page headline block."
+    additionalProperties: false
+    properties:
+      style:
+        type: string
+        description: "Paragraph style name (CI or template-local) to apply to all runs."
+      pos:
+        $ref: "#/$defs/PositionSpec"
+      lines:
+        type: array
+        description: "Ordered text runs.  Each run may override colour."
+        items:
+          $ref: "#/$defs/RunSpec"
+
+  BodySlot:
+    type: object
+    description: "Multi-column body text block (maps to ColumnTextStory)."
+    additionalProperties: false
+    properties:
+      style:
+        type: string
+      pos:
+        $ref: "#/$defs/PositionSpec"
+      columns:
+        type: integer
+        minimum: 1
+        default: 1
+      text:
+        type: string
+        description: "Plain body text (no run-level markup; use runs[] for mixed formatting)."
+      runs:
+        type: array
+        items:
+          $ref: "#/$defs/RunSpec"
+
+  ImpressumSlot:
+    type: object
+    description: "Legal imprint text block (maps to Impressum block)."
+    additionalProperties: false
+    properties:
+      text:
+        type: string
+      pos:
+        $ref: "#/$defs/PositionSpec"
+
+  ContactSlot:
+    type: object
+    description: "Contact information block (maps to ContactBlock)."
+    additionalProperties: false
+    properties:
+      lines:
+        type: array
+        items:
+          type: string
+      pos:
+        $ref: "#/$defs/PositionSpec"
+
+  RunSpec:
+    type: object
+    description: "A single text run within a slot."
+    additionalProperties: false
+    required:
+      - text
+    properties:
+      text:
+        type: string
+      color:
+        type: string
+        description: "Colour override for this run (e.g. 'White', 'Gelb', 'brand.primary')."
+      fontsize:
+        type: number
+        exclusiveMinimum: 0
+      style:
+        type: string
+        description: "Paragraph style to apply at the end of this run (paragraph_style= in DSL)."
+      separator:
+        type: string
+        enum: [para, breakline, tab, breakcol, breakframe]
+        default: para
+
+  PositionSpec:
+    description: >
+      Frame position.  Either absolute mm coordinates or a named anchor.
+      Absolute coordinates take precedence over anchor if both are given.
+    oneOf:
+      - type: object
+        additionalProperties: false
+        required: [x_mm, y_mm]
+        properties:
+          x_mm:
+            type: number
+          y_mm:
+            type: number
+          w_mm:
+            type: number
+          h_mm:
+            type: number
+      - type: object
+        additionalProperties: false
+        required: [anchor]
+        properties:
+          anchor:
+            type: string
+            description: >
+              Symbolic anchor from the canonical set: 'top-left', 'top-center',
+              'top-right', 'center-left', 'center', 'center-right',
+              'bottom-left', 'bottom-center', 'bottom-right'.
+              Optional margin suffix: 'bottom-center-20' means 20 mm margin.
+            pattern: "^(top|center|bottom)-(left|center|right)(-[0-9]+)?$"
+
+  LayoutSpec:
+    type: object
+    description: "A reusable named page layout defining default block positions."
+    additionalProperties: false
+    properties:
+      page_background:
+        type: object
+        additionalProperties: false
+        properties:
+          color:
+            type: string
+      headline_pos:
+        $ref: "#/$defs/PositionSpec"
+      body_pos:
+        $ref: "#/$defs/PositionSpec"
+      impressum_pos:
+        $ref: "#/$defs/PositionSpec"
+      contact_pos:
+        $ref: "#/$defs/PositionSpec"
+      page_number_pos:
+        $ref: "#/$defs/PositionSpec"
