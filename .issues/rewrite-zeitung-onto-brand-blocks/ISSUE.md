@@ -1,7 +1,7 @@
 ---
 id: '8'
 title: Rewrite Zeitung A4 onto Brand + blocks
-status: open
+status: done
 priority: high
 labels:
 - dsl
