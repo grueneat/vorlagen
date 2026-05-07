@@ -188,6 +188,8 @@ class PageBackground:
     def for_page(cls, page_w_mm: float, page_h_mm: float,
                  color: str = Color.DUNKELGRUEN,
                  bleed_mm: float = 3.0,
+                 line_color: Optional[str] = None,
+                 line_width_pt: float = 0,
                  layer: int = 0) -> "PageBackground":
         """Factory that creates a correctly-sized PageBackground for a known page.
 
@@ -197,7 +199,9 @@ class PageBackground:
         """
         return _SizedPageBackground(
             page_w_mm=page_w_mm, page_h_mm=page_h_mm,
-            color=color, bleed_mm=bleed_mm, layer=layer,
+            color=color, bleed_mm=bleed_mm,
+            line_color=line_color, line_width_pt=line_width_pt,
+            layer=layer,
         )
 
 

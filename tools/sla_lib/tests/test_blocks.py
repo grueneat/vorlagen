@@ -185,6 +185,18 @@ class PageBackgroundTests(unittest.TestCase):
         self.assertGreater(len(xml), 100)
         self.assertIn("<SCRIBUSUTF8NEW", xml)
 
+    def test_page_background_for_page_forwards_line_args(self):
+        """for_page() forwards line_color and line_width_pt to the emitted Polygon."""
+        bg = PageBackground.for_page(105, 148, color='Dunkelgrün',
+                                     line_color='Black', line_width_pt=1)
+        polygons = list(bg.emit())
+        self.assertEqual(len(polygons), 1)
+        polygon = polygons[0]
+        self.assertEqual(polygon.line_color, 'Black',
+                         "line_color should propagate from for_page() to emitted Polygon")
+        self.assertEqual(polygon.line_width_pt, 1,
+                         "line_width_pt should propagate from for_page() to emitted Polygon")
+
 
 # ---------------------------------------------------------------------------
 # ContactBlock
