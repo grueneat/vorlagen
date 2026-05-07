@@ -1,4 +1,4 @@
-# Auto-generated from postkarte-vorlage-original.sla by tools/sla_to_dsl.py.
+# Auto-generated from template.sla by tools/sla_to_dsl.py.
 # Hand-edit thereafter; this file is the source of truth.
 
 import sys
@@ -8,11 +8,12 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 
 from sla_lib.builder import (  # noqa: E402
-    Document, TextFrame, ImageFrame, Polygon, Run,
-    DocumentLayer, ParaStyle, CharStyle, SoftShadow,
+    Brand, Document, DocumentLayer, TextFrame, ImageFrame, Polygon, Run,
+    ParaStyle, CharStyle, SoftShadow,
 )
 
 doc = Document(
+    brand=Brand.gruene_noe(),
     title='',
     template_id='postkarte-a6-kampagne',
     author='',
@@ -21,25 +22,17 @@ doc = Document(
     deffont='Gotham Narrow Black',
     defsize=12,
     first_page_num=1,
-    palette_replaces_ci=True,
     hcms=True,
     doc_page_width_pt=297.637795275591,
     doc_page_height_pt=419.527559055118,
-    extra_doc_attrs={'ALAYER': '0', 'AUTOCHECK': '0', 'AUTOL': '100', 'AUTOMATIC': '1', 'AUtoSaveInDocDir': '1', 'AutoSave': '1', 'AutoSaveCount': '1', 'AutoSaveDir': '', 'AutoSaveKeep': '0', 'AutoSaveTime': '600000', 'BASEGRID': '13', 'BASEO': '0', 'BRUSH': 'None', 'BRUSHSHADE': '100', 'BaseC': '#c0c0c0', 'CPICT': 'None', 'CSPICT': 'None', 'DCOL': '1', 'DGAP': '0', 'DIIm': '0', 'DISc': '1', 'DPIn': 'sRGB display profile (ICC v2.2)', 'DPIn2': 'sRGB display profile (ICC v2.2)', 'DPIn3': 'PSO Uncoated ISO12647 (ECI)', 'DPInCMYK': 'PSO Uncoated ISO12647 (ECI)', 'DPPr': 'PSO Uncoated ISO12647 (ECI)', 'DPSFo': '0', 'DPSo': '0', 'DPbla': '1', 'DPgam': '0', 'DPuse': '1', 'EmbeddedPath': '0', 'EndArrow': '0', 'FirstLineOffset': '1', 'GRAB': '4', 'GROUPC': '1', 'GUIDELOCK': '0', 'GapHorizontal': '0', 'GapVertical': '40', 'GridType': '0', 'GuideC': '#000080', 'GuideRad': '10', 'HalfRes': '1', 'LINESHADE': '100', 'MAJGRID': '100.001', 'MAJORC': '#00ff00', 'MARGC': '#0000ff', 'MINGRID': '20.001', 'MINORC': '#00ff00', 'PAGESIZE': 'A6', 'PASPECT': '1', 'PEN': 'Black', 'PENLINE': 'Green', 'PENSHADE': '100', 'PENTEXT': 'Black', 'PICTSCX': '1', 'PICTSCY': '1', 'PICTSHADE': '100', 'PICTSSHADE': '100', 'POLYC': '4', 'POLYCUR': '0', 'POLYF': '0.502', 'POLYIR': '0', 'POLYOCUR': '0', 'POLYR': '0', 'POLYS': '0', 'PRESET': '0', 'PSCALE': '1', 'RANDF': '0', 'SHOWBASE': '1', 'SHOWControl': '0', 'SHOWFRAME': '1', 'SHOWGRID': '1', 'SHOWGUIDES': '1', 'SHOWLAYERM': '0', 'SHOWLINK': '0', 'SHOWMARGIN': '1', 'SHOWPICT': '1', 'STIL': '1', 'STILLINE': '1', 'SUBJECT': '', 'ScratchBottom': '20.001', 'ScratchLeft': '100.001', 'ScratchRight': '100.001', 'ScratchTop': '20.001', 'SnapToElement': '0', 'SnapToGrid': '0', 'SnapToGuides': '0', 'StartArrow': '0', 'StrikeThruPos': '-1', 'StrikeThruWidth': '-1', 'StrokeText': 'Black', 'TabFill': '', 'TabWidth': '36', 'TextBackGround': 'None', 'TextBackGroundShade': '100', 'TextDistBottom': '0', 'TextDistLeft': '0', 'TextDistRight': '0', 'TextDistTop': '0', 'TextLineColor': 'None', 'TextLineShade': '100', 'TextPenShade': '100', 'TextStrokeShade': '100', 'UnderlinePos': '-1', 'UnderlineWidth': '-1', 'VHOCH': '33', 'VHOCHSC': '66', 'VKAPIT': '75', 'VTIEF': '33', 'VTIEFSC': '66', 'WIDTH': '1', 'WIDTHLINE': '5', 'arcStartAngle': '30', 'arcSweepAngle': '300', 'calligraphicPenAngle': '8', 'calligraphicPenFillColor': 'Black', 'calligraphicPenFillColorShade': '100', 'calligraphicPenLineColor': 'Black', 'calligraphicPenLineColorShade': '100', 'calligraphicPenLineWidth': '1', 'calligraphicPenStyle': '1', 'calligraphicPenWidth': '10', 'constrain': '15', 'currentProfile': 'PDF 1.4', 'dispX': '10.001', 'dispY': '10.001', 'renderStack': '2 0 4 1 3', 'rulerMode': '1', 'rulerXoffset': '0', 'rulerYoffset': '0', 'showcolborders': '1', 'showrulers': '1', 'spiralEndAngle': '1080', 'spiralFactor': '1.2', 'spiralStartAngle': '0'},
-    extra_pdf_attrs={'CMethod': '0', 'Clip': '0', 'Encrypt': '0', 'FontEmbedding': '0', 'ImageP': 'sRGB display profile (ICC v2.2)', 'ImagePr': '0', 'InfoString': '', 'Intent': '1', 'Intent2': '0', 'PageLayout': '0', 'PassOwner': '', 'PassUser': '', 'Permissions': '-4', 'PicRes': '300', 'PresentMode': '0', 'PrintP': 'PSO Uncoated ISO12647 (ECI)', 'RGBMode': '1', 'RecalcPic': '0', 'RotateDeg': '0', 'SolidP': 'sRGB display profile (ICC v2.2)', 'Thumbnails': '0', 'UseLayers': '0', 'UseLpi': '0', 'UseProfiles': '0', 'UseProfiles2': '0', 'UseSpotColors': '1', 'Version': '14', 'bleedMarks': '1', 'colorMarks': '0', 'cropMarks': '1', 'displayBookmarks': '0', 'displayFullscreen': '0', 'displayLayers': '0', 'displayThumbs': '0', 'doMultiFile': '0', 'docInfoMarks': '0', 'firstUse': '0', 'fitWindow': '0', 'hideMenuBar': '0', 'hideToolBar': '0', 'openAfterExport': '0', 'rangeSel': '0', 'rangeTxt': '', 'registrationMarks': '0', 'useDocBleeds': '1'},
-    layers=[
-        DocumentLayer(name='Hintergrund', visible=True, printable=True, editable=True, flow=True, transparent=1, blend=0, outline=False, layer_color='#000000'),
-    ],
+    extra_doc_attrs={'AUTOCHECK': '0', 'DPIn3': 'PSO Uncoated ISO12647 (ECI)', 'DPInCMYK': 'PSO Uncoated ISO12647 (ECI)', 'DPPr': 'PSO Uncoated ISO12647 (ECI)', 'GROUPC': '1', 'GapVertical': '40', 'GuideRad': '10', 'MAJGRID': '100.001', 'MINGRID': '20.001', 'PAGESIZE': 'A6', 'POLYF': '0.502', 'SHOWBASE': '1', 'SHOWGRID': '1', 'SHOWGUIDES': '1', 'SHOWMARGIN': '1', 'ScratchBottom': '20.001', 'ScratchLeft': '100.001', 'ScratchRight': '100.001', 'ScratchTop': '20.001', 'calligraphicPenAngle': '8', 'dispX': '10.001', 'dispY': '10.001', 'renderStack': '2 0 4 1 3'},
+    extra_pdf_attrs={'ImageP': 'sRGB display profile (ICC v2.2)', 'InfoString': '', 'PicRes': '300', 'PrintP': 'PSO Uncoated ISO12647 (ECI)', 'RGBMode': '1', 'RecalcPic': '0', 'SolidP': 'sRGB display profile (ICC v2.2)', 'UseProfiles2': '0', 'Version': '14', 'bleedMarks': '1', 'useDocBleeds': '1'},
+    layers=[DocumentLayer(name='Hintergrund', visible=True, printable=True, editable=True,
+                          flow=True, transparent=1, blend=0, outline=False,
+                          layer_color='#000000')],
 )
 
-doc.add_color('Black', cmyk=(0, 0, 0, 100))
-doc.add_color('Dunkelgrün', cmyk=(85, 35, 95, 10))
-doc.add_color('Gelb', cmyk=(0, 0, 100, 0))
 doc.add_color('Green', rgb=(153, 102, 51))
-doc.add_color('Hellgrün', cmyk=(69, 0, 100, 0))
-doc.add_color('Magenta', cmyk=(0, 100, 0, 0))
-doc.add_color('Registration', cmyk=(100, 100, 100, 100), register=True)
-doc.add_color('White', cmyk=(0, 0, 0, 0))
 
 doc.add_char_style(CharStyle(name='Default Character Style', font='Gotham Narrow Black', fcolor='Black', fontfeatures='', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
 doc.add_char_style(CharStyle(name='Default Character Style (2)', font='Gotham Narrow Book', fcolor='Black', fontfeatures='-clig', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0))
@@ -92,10 +85,6 @@ page0.add(Polygon(
     w_mm=111.00000000000014,
     h_mm=153.99999999999994,
     layer=0,
-    xpos_pt=91.497062992126,
-    ypos_pt=11.497062992126,
-    width_pt=314.645669291339,
-    height_pt=436.535433070866,
     clip_edit=True,
     fill='Dunkelgrün',
     line_color='Black',
@@ -108,10 +97,6 @@ page0.add(ImageFrame(
     w_mm=83.99999999999983,
     h_mm=126.99999999999999,
     layer=0,
-    xpos_pt=129.764779527559,
-    ypos_pt=49.764779527559,
-    width_pt=238.110236220472,
-    height_pt=360,
     image='',
     line_width_pt=3.83527559055118,
 ))
@@ -140,10 +125,6 @@ page0.add(TextFrame(
     w_mm=92.45469418960256,
     h_mm=47.07155963302771,
     layer=0,
-    xpos_pt=117.781748392689,
-    ypos_pt=149.284403669725,
-    width_pt=262.076298490212,
-    height_pt=133.431192660551,
     line_width_pt=1,
     default_linesp_mode=2,
     trail_style='Vollkorn Headline sehr wichtig',
@@ -163,10 +144,6 @@ page0.add(TextFrame(
     w_mm=69.90825688073397,
     h_mm=8.43205512232429,
     layer=0,
-    xpos_pt=149.737328830456,
-    ypos_pt=246.385321100917,
-    width_pt=198.165137614679,
-    height_pt=23.9018885357224,
     line_width_pt=1,
     trail_style='Unterüberschrift',
     col_gap_mm=0,
@@ -181,10 +158,6 @@ page0.add(Polygon(
     w_mm=20.539944662880583,
     h_mm=20.54,
     layer=0,
-    xpos_pt=307.203140318469,
-    ypos_pt=106.54037007874,
-    width_pt=58.2234651861182,
-    height_pt=58.2236220472441,
     rotation_deg=351,
     fill='Magenta',
     line_color='Magenta',
@@ -198,10 +171,6 @@ page0.add(TextFrame(
     w_mm=19.14330128647709,
     h_mm=11.538116151545923,
     layer=0,
-    xpos_pt=311.154144943236,
-    ypos_pt=118.832205204666,
-    width_pt=54.2644760876516,
-    height_pt=32.7064709807601,
     rotation_deg=351,
     line_width_pt=1.00000000000002,
     trail_style='Schrift rosa Kreis',
@@ -219,10 +188,6 @@ page1.add(Polygon(
     w_mm=111.00000000000014,
     h_mm=153.99999999999994,
     layer=0,
-    xpos_pt=91.4970629921262,
-    ypos_pt=471.024622047244,
-    width_pt=314.645669291339,
-    height_pt=436.535433070866,
     clip_edit=True,
     fill='Dunkelgrün',
     line_color='Black',
@@ -235,10 +200,6 @@ page1.add(TextFrame(
     w_mm=70.99999999999999,
     h_mm=113.48105395005106,
     layer=0,
-    xpos_pt=148.189976377953,
-    ypos_pt=515.378952755905,
-    width_pt=201.259842519685,
-    height_pt=321.678578126129,
     line_width_pt=1,
     trail_style='Fließtext',
     col_gap_mm=0,
@@ -263,10 +224,6 @@ page1.add(TextFrame(
     w_mm=38.49614678899099,
     h_mm=16.03229357798164,
     layer=0,
-    xpos_pt=123.146914892519,
-    ypos_pt=849.154778588456,
-    width_pt=109.122935779817,
-    height_pt=45.445871559633,
     line_width_pt=1,
     default_style_attrs={'ALIGN': '0', 'LINESP': '10'},
     trail_style='Kontaktmöglichkeiten',
@@ -286,10 +243,6 @@ page1.add(TextFrame(
     w_mm=41.944954128440244,
     h_mm=10.619582059123314,
     layer=0,
-    xpos_pt=274.789116727382,
-    ypos_pt=863.439182258181,
-    width_pt=118.899082568807,
-    height_pt=30.1027522935779,
     line_width_pt=1,
     trail_style='Impressum',
     col_gap_mm=0,
@@ -403,10 +356,6 @@ page1.add(TextFrame(
     w_mm=83.19082568807343,
     h_mm=4.427522935779805,
     layer=0,
-    xpos_pt=130.911640757062,
-    ypos_pt=808.908256880734,
-    width_pt=235.816513761468,
-    height_pt=12.5504587155963,
     line_width_pt=1,
     trail_style='Fließtext',
     col_gap_mm=0,
