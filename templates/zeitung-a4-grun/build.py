@@ -11,6 +11,7 @@ from sla_lib.builder import (  # noqa: E402
     Brand, Document, TextFrame, ImageFrame, Polygon, Run,
     ParaStyle, CharStyle, SoftShadow,
 )
+from sla_lib.builder.blocks import PageNumber  # noqa: E402
 
 doc = Document(
     brand=Brand.gruene_noe(),
@@ -443,7 +444,7 @@ page1.add(ImageFrame(
     image='',
 ))
 
-page1.add(TextFrame(
+page1.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.69722222116576,
     w_mm=12.775464220466706,
@@ -453,9 +454,6 @@ page1.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 _chain0_0 = TextFrame(
@@ -596,7 +594,7 @@ page2.add(TextFrame(
     ],
 ))
 
-page2.add(TextFrame(
+page2.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.10833333227686,
     w_mm=12.775464220466706,
@@ -606,9 +604,6 @@ page2.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page2.add(TextFrame(
@@ -688,7 +683,7 @@ page2.add(ImageFrame(
     line_width_pt=1,
 ))
 
-page3.add(TextFrame(
+page3.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.69722222116576,
     w_mm=12.775464220466706,
@@ -698,9 +693,6 @@ page3.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 _chain3_0 = TextFrame(
@@ -859,7 +851,7 @@ page3.add(TextFrame(
     ],
 ))
 
-page4.add(TextFrame(
+page4.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.1083333322769,
     w_mm=12.775464220466706,
@@ -869,9 +861,6 @@ page4.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page4.add(TextFrame(
@@ -961,7 +950,7 @@ page4.add(ImageFrame(
     line_width_pt=1,
 ))
 
-page5.add(TextFrame(
+page5.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211657,
     w_mm=12.775464220466706,
@@ -971,9 +960,6 @@ page5.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page5.add(TextFrame(
@@ -1233,7 +1219,7 @@ page6.add(TextFrame(
     ],
 ))
 
-page6.add(TextFrame(
+page6.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.1083333322768,
     w_mm=12.775464220466706,
@@ -1243,9 +1229,6 @@ page6.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page7.add(TextFrame(
@@ -1376,7 +1359,7 @@ page7.add(ImageFrame(
     line_width_pt=1,
 ))
 
-page7.add(TextFrame(
+page7.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211659,
     w_mm=12.775464220466706,
@@ -1386,9 +1369,6 @@ page7.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page8.add(TextFrame(
@@ -1510,7 +1490,7 @@ _chain8_2 = TextFrame(
 )
 page8.add(_chain8_2)
 
-page8.add(TextFrame(
+page8.add(PageNumber(
     x_mm=195.48295270104117,
     y_mm=285.10833333227697,
     w_mm=12.775464220466706,
@@ -1520,9 +1500,6 @@ page8.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page8.add(TextFrame(
@@ -1677,7 +1654,7 @@ page8.add(ImageFrame(
     local_scale=(0.0275551181102362, 0.0275551181102362),
 ))
 
-page9.add(TextFrame(
+page9.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211657,
     w_mm=12.775464220466706,
@@ -1687,9 +1664,6 @@ page9.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 _chain9_0 = TextFrame(
@@ -1967,7 +1941,7 @@ page11.add(ImageFrame(
     line_width_pt=1,
 ))
 
-page11.add(TextFrame(
+page11.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.69722222116604,
     w_mm=12.775464220466706,
@@ -1977,9 +1951,6 @@ page11.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 _chain11_0 = TextFrame(
@@ -2154,7 +2125,7 @@ page12.add(TextFrame(
     ],
 ))
 
-page12.add(TextFrame(
+page12.add(PageNumber(
     x_mm=195.48295270104086,
     y_mm=285.10833333227714,
     w_mm=12.775464220466706,
@@ -2164,9 +2135,7 @@ page12.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', var_attrs={'FCOLOR': 'White', 'FSHADE': '100'}, separator='para', paragraph_style='Seitenzahl'),
-    ],
+    var_attrs={'FCOLOR': 'White', 'FSHADE': '100'},
 ))
 
 page12.add(TextFrame(
@@ -2299,7 +2268,7 @@ page13.add(ImageFrame(
     local_offset_mm=(1.0939347604485252, -0.7605759429155533),
 ))
 
-page13.add(TextFrame(
+page13.add(PageNumber(
     x_mm=8.51073047881968,
     y_mm=283.6972222211657,
     w_mm=12.775464220466706,
@@ -2309,9 +2278,6 @@ page13.add(TextFrame(
     clip_edit=True,
     line_width_pt=1,
     col_gap_mm=3.207461712525627,
-    runs=[
-        Run(text='', has_itext=False, var='pgno', separator='para', paragraph_style='Seitenzahl'),
-    ],
 ))
 
 page13.add(TextFrame(
