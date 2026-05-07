@@ -463,8 +463,19 @@ class TextFrame(_Frame):
             "NEXTITEM": "-1", "BACKITEM": "-1",
             "ROT": _fmt_num(self.rotation_deg),
         }
-        _apply_shape_attrs(attrs, self, w_pt, h_pt,
-                            default_path=rect_path, default_frtype="0")
+        # When clip_edit=True with no explicit custom_path, TextFrame auto-generates
+        # the canonical rectangle clip path with FRTYPE=3.  This is the standard
+        # Scribus representation for clipped text frames (corpus: 79 of 86 zeitung
+        # CLIPEDIT=1 frames are PTYPE=4 FRTYPE=3 with a verbatim rect path).
+        # Callers no longer need custom_path= for this common case.
+        # Note: Polygon frames with clip_edit=True use FRTYPE=0 (their default)
+        # and are NOT affected by this TextFrame-specific auto-generation.
+        if self.clip_edit and self.custom_path is None and self.corner_radius_mm == 0:
+            _apply_shape_attrs(attrs, self, w_pt, h_pt,
+                                default_path=rect_path, default_frtype="3")
+        else:
+            _apply_shape_attrs(attrs, self, w_pt, h_pt,
+                                default_path=rect_path, default_frtype="0")
         _apply_soft_shadow(attrs, self.soft_shadow)
         if self.fill is not None:
             attrs["PCOLOR"] = self.fill

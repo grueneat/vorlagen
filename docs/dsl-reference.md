@@ -8,6 +8,7 @@ not supported.
 
 | Symbol | Purpose |
 |---|---|
+| `Brand` | Brand profile — bundles palette, styles, layers, and Scribus doc/PDF defaults. Pass to `Document(brand=...)`. |
 | `Document` | The root document object. Build pages, then call `save()`. |
 | `Page` | Returned by `Document.add_page()` / `add_master()`. Add primitives via `page.add(...)`. |
 | `DocumentLayer` | Per-document layer override (replaces the CI 4-layer brand stack). |
@@ -29,10 +30,33 @@ All frames inherit `_Frame` and accept:
 - `x_mm`, `y_mm`, `w_mm`, `h_mm` — geometry (mm)
 - `anchor` — alternative to xy: `"top-center"`, `"bottom-20"`, `("center", 30)`, etc.
 - `rotation_deg`, `layer`, `anname`
+- `clip_edit` — mark the frame as having a custom clip region (CLIPEDIT=1)
 - `custom_path` — emit FRTYPE=3 with verbatim path data
 - `corner_radius_mm` — emit FRTYPE=2 with RADRECT (rounded rectangles)
 - `soft_shadow` — frame-level shadow effect
 - `fill_rule` — for FRTYPE=3 paths (0=nonzero, 1=evenodd)
+
+### Clip-rect auto-generation (`TextFrame`)
+
+When `TextFrame(clip_edit=True)` is used **without** an explicit `custom_path=`
+and without a `corner_radius_mm`, the DSL automatically emits FRTYPE=3 with a
+canonical axis-aligned rectangle path matching the frame dimensions. This is
+the correct Scribus encoding for text frames that have `CLIPEDIT=1` but no
+special clip shape.
+
+```python
+# DSL auto-emits FRTYPE=3 + rect path — no custom_path= needed:
+TextFrame(x_mm=10, y_mm=10, w_mm=80, h_mm=40, clip_edit=True)
+
+# Explicit custom_path= overrides the auto-generated rect path:
+TextFrame(x_mm=10, y_mm=10, w_mm=80, h_mm=40, clip_edit=True,
+          custom_path="M0 0 C40 0 80 20 80 40 L0 40 Z")
+```
+
+The converter (`tools/sla_to_dsl.py`) detects CLIPEDIT=1 + FRTYPE=3 frames
+whose stored path is already a rectangle and **omits** `custom_path=` from the
+emitted build.py — the DSL regenerates the path automatically. Only non-rect
+bezier paths and non-rectangular polygons are emitted verbatim.
 
 ## `Run` — per-run text formatting
 
@@ -69,28 +93,65 @@ Avoid soft hyphens for routine line-break control — let the hyphenation
 engine do its job. The Plakat A1 reproduction uses 7 occurrences total
 across 3 long words; the Zeitung uses 0.
 
-## Document-level overrides
+## Brand — single source of truth for all CI documents
+
+`Brand.gruene_noe()` loads the Grüne NÖ identity from `shared/ci.yml` +
+`shared/ci-defaults.yml` and bundles:
+
+- **Palette** — 7 CI colors (Black, White, Registration, Dunkelgrün, Hellgrün, Gelb, Magenta)
+- **Paragraph styles** — `ci/default`, `ci/headline-ultra`, `ci/headline-vollkorn-italic`, `ci/body-12`, `ci/body-11`, `ci/impressum`, `ci/stoerer`, `ci/cta`
+- **Layer stack** — Hintergrund, Text, Hilfslinien, Bilder (4 layers)
+- **113 `extra_doc_attrs`** — locale defaults, ICC profile names, Scribus runtime state
+- **34 `extra_pdf_attrs`** — PDF export profile (ICC intents, spot colour, compression)
+
+Pass it to `Document(brand=...)` and the brand injects everything automatically.
+Templates declare only their *additions* via `doc.add_color(...)` and
+`doc.add_para_style(...)`. Per-template `extra_doc_attrs=` / `extra_pdf_attrs=`
+override brand defaults (template values win).
 
 ```python
 doc = Document(
+    brand=Brand.gruene_noe(),        # injects palette, styles, layers, 113+34 attrs
     title="Postkarte",
     template_id="postkarte-a6-kampagne",
     facing_pages=False,
     column_gap_default_pt=11,
     deffont="Gotham Narrow Book",
     defsize=12,
-    palette_replaces_ci=True,        # only emit registered colors
-    layers=[DocumentLayer(name="Hintergrund")],
-    extra_doc_attrs={                # converter pass-through
-        "ALAYER": "0", "AUTOL": "100", "BaseC": "#c0c0c0", ...
+    hcms=True,
+    extra_doc_attrs={                # only the ~23 keys that differ per template
+        "PEN": "Dunkelgrün", ...
+    },
+    extra_pdf_attrs={                # only the ~11 keys that differ per template
+        "UseSpotColors": "1", ...
     },
 )
-doc.add_color("Green", rgb=(153, 102, 51))
+# Template-specific additions (brand CI colors are already registered):
+doc.add_color("HellgrünTransparent", rgb=(178, 212, 113))
 doc.add_para_style(ParaStyle(name="Headline sehr wichtig",
     font="Gotham Narrow Ultra", fontsize=27, fcolor="White",
     align=1, linesp=23, language="de"))
 doc.add_char_style(CharStyle(name="Default Character Style",
     font="Gotham Narrow Black", fontsize=12, is_default=True))
+```
+
+## Document-level overrides (without Brand)
+
+When `brand=` is not supplied, the full set of doc/PDF attrs must be listed
+explicitly. This mode exists for one-off scripts and the test suite.
+
+```python
+doc = Document(
+    title="Standalone",
+    template_id="standalone-test",
+    facing_pages=False,
+    palette_replaces_ci=True,        # only emit registered colors
+    layers=[DocumentLayer(name="Hintergrund")],
+    extra_doc_attrs={                # all 113 keys must be listed
+        "ALAYER": "0", "AUTOL": "100", "BaseC": "#c0c0c0", ...
+    },
+)
+doc.add_color("Green", rgb=(153, 102, 51))
 ```
 
 ## Linked text-frame chains

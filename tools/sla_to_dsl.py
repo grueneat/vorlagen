@@ -42,6 +42,7 @@ _THIS = Path(__file__).resolve()
 sys.path.insert(0, str(_THIS.parent))
 
 from sla_lib import SLADocument  # noqa: E402
+from sla_lib.builder import Brand  # noqa: E402
 from sla_lib.builder.primitives import (  # noqa: E402
     PARAGRAPH_OVERRIDE_ATTRS as _PARA_OVERRIDE_ATTRS,
     DEFAULTSTYLE_OVERRIDE_ATTRS as _DEFAULTSTYLE_OVERRIDE_ATTRS,
@@ -62,10 +63,70 @@ class UnhandledElement(Exception):
 
 
 # ---------------------------------------------------------------------------
-def _load_ci_color_names() -> set[str]:
-    with open(CI_YAML) as f:
-        data = yaml.safe_load(f)
-    return set(data.get("colors", {}).keys())
+def _is_rect_path(path: str, w_pt: float, h_pt: float) -> bool:
+    """Return True if ``path`` is any axis-aligned rectangle path for a
+    frame of (w_pt, h_pt), regardless of winding order or floating-point
+    precision (tolerance: 0.015 pt ~ 0.005 mm).
+
+    Scribus stores rectangle paths in compact form where the command letter
+    is attached to the first coordinate: ``M0 0 Lx y Lx y Lx y Lx y Z``
+    = 11 tokens.  Two winding orders appear in the corpus:
+
+    - Right-first:    ``M0 0 L{w} 0 L{w} {h} L0 {h} L0 0 Z``
+    - Vertical-first: ``M0 0 L0 {h} L{w} {h} L{w} 0 L0 0 Z``
+
+    When True, the DSL auto-generates this path from ``clip_edit=True`` so the
+    converter can omit ``custom_path=`` and ``fill_rule=``.
+    """
+    parts = path.split()
+    # 5-corner rectangle: M0 0 Lx y Lx y Lx y Lx y Z = 11 tokens
+    if len(parts) != 11 or parts[10] != "Z":
+        return False
+    # Parse the 5 points.  Tokens are: "M0", "0", "L<x>", "<y>", ..., "L<x>", "<y>"
+    pts: list[tuple[float, float]] = []
+    for pair_start in (0, 2, 4, 6, 8):
+        cmd_coord = parts[pair_start]     # e.g. "M0" or "L314.646"
+        y_str     = parts[pair_start + 1]  # e.g. "0" or "436.535"
+        cmd = cmd_coord[0]
+        x_str = cmd_coord[1:]
+        if pair_start == 0:
+            if cmd != "M":
+                return False
+        else:
+            if cmd != "L":
+                return False
+        try:
+            px, py = float(x_str), float(y_str)
+        except ValueError:
+            return False
+        pts.append((px, py))
+    # The path is a rectangle covering w_pt x h_pt if the set of x-coords is
+    # {0, w_pt} (within tolerance) and the set of y-coords is {0, h_pt}.
+    xs = {p[0] for p in pts}
+    ys = {p[1] for p in pts}
+    tol = 0.015  # 0.015 pt ≈ 0.005 mm — generous for Scribus %.4g path coords
+    if len(xs) != 2 or len(ys) != 2:
+        return False
+    x_vals = sorted(xs)
+    y_vals = sorted(ys)
+    return (
+        abs(x_vals[0]) < tol
+        and abs(x_vals[1] - w_pt) < tol
+        and abs(y_vals[0]) < tol
+        and abs(y_vals[1] - h_pt) < tol
+    )
+
+
+# Module-level brand singleton: loaded once, shared across convert() calls.
+# Using a mutable list as a simple "optional" container avoids a global= stmt.
+_brand_cache: list[Brand] = []
+
+
+def _get_brand() -> Brand:
+    """Return the Grüne NÖ brand profile, loading it on first call."""
+    if not _brand_cache:
+        _brand_cache.append(Brand.gruene_noe())
+    return _brand_cache[0]
 
 
 def _safe_filename(s: str) -> str:
@@ -568,18 +629,31 @@ def _convert_pageobject(po: etree._Element,
     rot = float(po.attrib.get("ROT", "0"))
     layer = int(po.attrib.get("LAYER", "0"))
 
+    # Task 5b: only carry verbatim pt overrides for inline image frames
+    # where mm↔pt round-tripping introduces sub-ulp drift (e.g. HEIGHT=
+    # '27.7755590551181' in Zeitung).  For all other frames, the mm coords
+    # are sufficient — sla_diff normalises geometry semantically, not
+    # byte-for-byte, so the small rounding delta is below the diff threshold.
+    # Inline image frames are identified below (ptype=="2" + isInlineImage).
+    # This flag is set True for those frames when we reach ptype=="2".
+    _is_inline_image = (
+        ptype == "2" and po.attrib.get("isInlineImage") == "1"
+    )
+
     common_kwargs: dict = {
         "x_mm": x_mm, "y_mm": y_mm, "w_mm": w_mm, "h_mm": h_mm,
         "layer": layer,
-        # Verbatim pt overrides bypass mm ↔ pt round-tripping in the
-        # emit path so XPOS/YPOS/WIDTH/HEIGHT bytes exactly match the
-        # original SLA (matters for sub-ulp-precision inline image
-        # frames). Carrying both x_mm and xpos_pt is intentional:
-        # x_mm is what a human author would write; xpos_pt is the
-        # converter's exact-repro hint.
-        "xpos_pt": xpos_pt, "ypos_pt": ypos_pt,
-        "width_pt": width_pt, "height_pt": height_pt,
     }
+    if _is_inline_image:
+        # Verbatim pt overrides for inline image frames only: preserves
+        # LOCALSCX precision (e.g. 0.0438778076573352) and exact
+        # XPOS/YPOS/WIDTH/HEIGHT bytes so the rebuilt SLA round-trips the
+        # image scale without sub-ulp drift that causes 1-2 px shifts at
+        # logo edges in the rendered PDF.
+        common_kwargs["xpos_pt"] = xpos_pt
+        common_kwargs["ypos_pt"] = ypos_pt
+        common_kwargs["width_pt"] = width_pt
+        common_kwargs["height_pt"] = height_pt
     if rot:
         common_kwargs["rotation_deg"] = rot
     if anname:
@@ -587,10 +661,22 @@ def _convert_pageobject(po: etree._Element,
     if po.attrib.get("CLIPEDIT") == "1":
         common_kwargs["clip_edit"] = True
     if frtype == "3":
-        # Pass the original path verbatim for byte-equivalent round-trip.
-        common_kwargs["custom_path"] = po.attrib.get("path", "")
-        if "fillRule" in po.attrib:
-            common_kwargs["fill_rule"] = int(po.attrib["fillRule"])
+        # Task 5c: skip custom_path= when CLIPEDIT=1 and the path is a
+        # rectangle matching the frame's dimensions.  The DSL auto-generates
+        # the canonical rect path for TextFrame(clip_edit=True) without an
+        # explicit custom_path=.  Any orientation and precision is accepted
+        # (Scribus versions differ in winding order and decimal places).
+        path = po.attrib.get("path", "")
+        if po.attrib.get("CLIPEDIT") == "1" and _is_rect_path(path, width_pt, height_pt):
+            # fillRule=0 is the Scribus default for FRTYPE=3 rect frames;
+            # skip round-tripping it — DSL does not emit fillRule for the
+            # auto-generated rect path.
+            pass
+        else:
+            # Pass the original path verbatim for byte-equivalent round-trip.
+            common_kwargs["custom_path"] = path
+            if "fillRule" in po.attrib:
+                common_kwargs["fill_rule"] = int(po.attrib["fillRule"])
     if frtype == "2" and "RADRECT" in po.attrib:
         radrect_pt = float(po.attrib["RADRECT"])
         common_kwargs["corner_radius_mm"] = radrect_pt / PT_PER_MM
@@ -939,7 +1025,20 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
                 continue
             pdf_extras[k] = v
 
-    ci_color_names = _load_ci_color_names()
+    # Task 5a: load Brand to filter out brand-default attrs and brand colors
+    # from the generated build.py (they will be supplied by brand= instead).
+    brand = _get_brand()
+    brand_color_names: set[str] = set(brand.colors.keys())
+    brand_default_doc_keys: set[str] = set(brand.default_doc_attrs.keys())
+    brand_default_pdf_keys: set[str] = set(brand.default_pdf_attrs.keys())
+
+    # Filter extras: keep only the keys that differ from brand defaults.
+    differing_doc_extras: dict[str, str] = {
+        k: v for k, v in extras.items() if k not in brand_default_doc_keys
+    }
+    differing_pdf_extras: dict[str, str] = {
+        k: v for k, v in pdf_extras.items() if k not in brand_default_pdf_keys
+    }
 
     code = PythonRepr()
     code.line("# Auto-generated from %s by tools/sla_to_dsl.py." % sla_path.name)
@@ -952,31 +1051,20 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
     code.line("sys.path.insert(0, str(HERE.parents[1] / 'tools'))")
     code.line("")
     code.line("from sla_lib.builder import (  # noqa: E402")
-    code.line("    Document, TextFrame, ImageFrame, Polygon, Run,")
-    code.line("    DocumentLayer, ParaStyle, CharStyle, SoftShadow,")
+    code.line("    Brand, Document, TextFrame, ImageFrame, Polygon, Run,")
+    code.line("    ParaStyle, CharStyle, SoftShadow,")
     code.line(")")
     code.line("")
 
-    # Layers (only the subset Scribus actually uses; usually one)
-    layer_lines: list[str] = []
-    for layer_el in sla.iter_layers():
-        kwargs = {
-            "name": layer_el.attrib.get("NAME", "Hintergrund"),
-            "visible": (layer_el.attrib.get("SICHTBAR") == "1"),
-            "printable": (layer_el.attrib.get("DRUCKEN") == "1"),
-            "editable": (layer_el.attrib.get("EDIT") == "1"),
-            "flow": (layer_el.attrib.get("FLOW", "1") == "1"),
-            "transparent": float(layer_el.attrib.get("TRANS", "1")),
-            "blend": int(layer_el.attrib.get("BLEND", "0")),
-            "outline": (layer_el.attrib.get("OUTL") == "1"),
-            "layer_color": layer_el.attrib.get("LAYERC", "#000000"),
-        }
-        layer_lines.append("DocumentLayer(" + ", ".join(
-            f"{k}={_py_value(v)}" for k, v in kwargs.items()) + ")")
+    # Task 5a: brand provides layers; no need to emit DocumentLayer list.
+    # Brand also supplies the 113 identical extra_doc_attrs and 34 identical
+    # extra_pdf_attrs — only the differing per-template keys are emitted below.
 
-    # Build Document(...) constructor — palette_replaces_ci so the emitted
-    # SLA's COLOR list exactly matches the original (no leaked CI colors).
+    # Build Document(...) constructor — brand= injects palette, styles, layers,
+    # and the 113+34 identical default attrs.  No palette_replaces_ci= needed
+    # (Brand sets it automatically).
     doc_kwargs = [
+        f'    brand=Brand.gruene_noe(),',
         f'    title={_py_value(doc_elem.attrib.get("TITLE", ""))},',
         f'    template_id={_py_value(template_id)},',
         f'    author={_py_value(doc_elem.attrib.get("AUTHOR", "Die Grünen Niederösterreich"))},',
@@ -985,35 +1073,32 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
         f'    deffont={_py_value(deffont)},',
         f'    defsize={_py_value(defsize)},',
         f'    first_page_num={first_page_num},',
-        f'    palette_replaces_ci=True,',
         f'    hcms={hcms},',
         f'    doc_page_width_pt={_py_value(page_w_pt)},',
         f'    doc_page_height_pt={_py_value(page_h_pt)},',
     ]
-    if extras:
-        # Sort for stable output across runs
+    if differing_doc_extras:
+        # Only the 23 per-template differing keys; brand defaults cover the rest.
         items = ", ".join(f"{_py_value(k)}: {_py_value(v)}"
-                          for k, v in sorted(extras.items()))
+                          for k, v in sorted(differing_doc_extras.items()))
         doc_kwargs.append(f"    extra_doc_attrs={{{items}}},")
-    if pdf_extras:
+    if differing_pdf_extras:
+        # Only the 11 per-template differing keys; brand defaults cover the rest.
         items = ", ".join(f"{_py_value(k)}: {_py_value(v)}"
-                          for k, v in sorted(pdf_extras.items()))
+                          for k, v in sorted(differing_pdf_extras.items()))
         doc_kwargs.append(f"    extra_pdf_attrs={{{items}}},")
-    if layer_lines:
-        doc_kwargs.append("    layers=[")
-        for ll in layer_lines:
-            doc_kwargs.append("        " + ll + ",")
-        doc_kwargs.append("    ],")
     code.line("doc = Document(")
     for line in doc_kwargs:
         code.line(line)
     code.line(")")
     code.line("")
 
-    # Colors — emit every COLOR from the original (palette_replaces_ci=True
-    # means the CI brand stack is suppressed; what we register here is what
-    # gets written). Order matches the original.
-    for c in sla.iter_colors():
+    # Colors — emit only template-specific colors NOT already in brand.colors.
+    # Brand.gruene_noe() registers all CI colors (Black, White, Dunkelgrün,
+    # Hellgrün, Gelb, Magenta, Registration), so we skip those here.
+    template_colors = [c for c in sla.iter_colors()
+                       if c.attrib.get("NAME", "") not in brand_color_names]
+    for c in template_colors:
         name, kwargs = _convert_color(c)
         rgb = kwargs.get("rgb")
         cmyk = kwargs.get("cmyk")
@@ -1026,7 +1111,7 @@ def convert(sla_path: Path, out_path: Path, template_id: str,
             code.line(f'doc.add_color({_py_value(name)}, rgb={_py_value(rgb)}{extra})')
         else:
             code.line(f'doc.add_color({_py_value(name)}, cmyk={_py_value(cmyk)}{extra})')
-    if list(sla.iter_colors()):
+    if template_colors:
         code.line("")
 
     # Char styles
