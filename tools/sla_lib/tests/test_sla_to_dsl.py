@@ -206,6 +206,49 @@ class ZeitungRoundTrip(unittest.TestCase):
                          msg=f"chain issues: {[i.short() for i in chain_issues]}")
 
 
+class ZeitungConverterFreshRun(unittest.TestCase):
+    """Run the converter from scratch in a tempdir against the Zeitung
+    original and verify the diff stays clean. Mirror of
+    PostkarteConverterFreshRun adapted for Zeitung's 14-page facing-pages
+    layout, linked-story chains, and 'Ebene 1' legacy layer."""
+
+    ORIGINAL = ROOT / "gruene-zeitung-vorlage-original.sla"
+
+    def test_fresh_convert_is_clean(self):
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "sla_to_dsl", str(ROOT / "tools" / "sla_to_dsl.py"))
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            mod.convert(self.ORIGINAL, tmp / "build.py",
+                         "zeitung-a4-grun", tmp / "assets")
+            sla = _run_build(tmp / "build.py")
+            report = _diff_clean(self.ORIGINAL, sla)
+            self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
+                             msg=f"critical issues: "
+                                 f"{[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_CRITICAL]}")
+            _BRAND_COLOR_NAMES = (
+                "Black", "White", "Registration",
+                "Dunkelgrün", "Hellgrün", "Gelb", "Magenta",
+            )
+            _LEGACY_LAYER_NAMES = ("Ebene 1",)
+            non_brand_warnings = [
+                i for i in report.issues
+                if i.severity == sla_diff.SEVERITY_WARNING
+                and not (
+                    i.code in ("extra-style", "extra-layer")
+                    or (i.code == "extra-color" and i.right in _BRAND_COLOR_NAMES)
+                    or (i.code == "missing-layer" and i.left in _LEGACY_LAYER_NAMES)
+                )
+            ]
+            self.assertEqual(non_brand_warnings, [],
+                             msg=f"unexpected warning issues: "
+                                 f"{[i.short() for i in non_brand_warnings]}")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 class StoryTextRoundTripTests(unittest.TestCase):
     """Direct tests on the converter's StoryText walker (_build_runs).
 
