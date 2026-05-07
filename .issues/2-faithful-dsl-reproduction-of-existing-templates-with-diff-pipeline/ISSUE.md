@@ -2,6 +2,7 @@
 id: '2'
 title: Faithful DSL reproduction of existing templates with diff pipeline
 status: done
+ship_state: merged
 priority: high
 labels:
 - dsl

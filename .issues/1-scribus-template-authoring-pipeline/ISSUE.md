@@ -2,6 +2,7 @@
 id: '1'
 title: Scribus template authoring pipeline
 status: done
+ship_state: merged
 priority: high
 labels:
 - foundation
