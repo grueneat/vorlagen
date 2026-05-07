@@ -1,7 +1,7 @@
 ---
 id: '5'
 title: Review build.py + DSL before more templates
-status: open
+status: done
 priority: high
 labels:
 - dsl
