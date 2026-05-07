@@ -11,6 +11,7 @@ from sla_lib.builder import (  # noqa: E402
     Brand, Document, DocumentLayer, TextFrame, ImageFrame, Polygon, Run,
     ParaStyle, CharStyle, SoftShadow,
 )
+from sla_lib.builder.blocks import PageBackground  # noqa: E402
 
 doc = Document(
     brand=Brand.gruene_noe(),
@@ -79,17 +80,8 @@ page1 = doc.add_page(
     height_pt=419.527559055118,
 )
 
-page0.add(Polygon(
-    x_mm=-2.9999999999999942,
-    y_mm=-2.9999999999999942,
-    w_mm=111.00000000000014,
-    h_mm=153.99999999999994,
-    layer=0,
-    clip_edit=True,
-    fill='Dunkelgrün',
-    line_color='Black',
-    line_width_pt=1,
-))
+page0.add(PageBackground.for_page(105, 148, color='Dunkelgrün',
+                                   line_color='Black', line_width_pt=1))
 
 page0.add(ImageFrame(
     x_mm=10.499999999999977,
@@ -182,17 +174,8 @@ page0.add(TextFrame(
     ],
 ))
 
-page1.add(Polygon(
-    x_mm=-2.999999999999924,
-    y_mm=-2.9999999999999996,
-    w_mm=111.00000000000014,
-    h_mm=153.99999999999994,
-    layer=0,
-    clip_edit=True,
-    fill='Dunkelgrün',
-    line_color='Black',
-    line_width_pt=1,
-))
+page1.add(PageBackground.for_page(105, 148, color='Dunkelgrün',
+                                   line_color='Black', line_width_pt=1))
 
 page1.add(TextFrame(
     x_mm=17.00000000000008,
