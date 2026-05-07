@@ -9,6 +9,9 @@ labels:
 - migration
 depends_on:
 - 5
+source: github
+source_id: 12
+source_url: https://github.com/GrueneAT/vorlagen/issues/12
 ---
 
 ## Goal
