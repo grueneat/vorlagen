@@ -2,7 +2,7 @@
 id: '6'
 title: Rewrite Postkarte A6 onto Brand + blocks
 status: done
-ship_state: pr_open
+ship_state: merged
 priority: high
 labels:
 - dsl
