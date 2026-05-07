@@ -572,7 +572,10 @@ class QuoteSidebar:
 
 def _build_legacy_module():
     """Build the legacy blocks module lazily at first access."""
-    mod = _types.ModuleType("sla_lib.builder.blocks.legacy")
+    import sys as _sys
+    name = "sla_lib.builder.blocks.legacy"
+    mod = _types.ModuleType(name)
+    _sys.modules[name] = mod
     exec(compile(_legacy_src, "<legacy-blocks>", "exec"), mod.__dict__)
     return mod
 
