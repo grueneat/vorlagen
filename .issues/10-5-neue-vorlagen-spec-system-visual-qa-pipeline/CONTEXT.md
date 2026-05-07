@@ -3,6 +3,14 @@
 Captured 2026-05-07. Locked decisions are binding for research, plan, and execute phases.
 Discretion items can be explored by research; deferred items are out of scope.
 
+> **POST-RESEARCH REVISIONS:** D1 and D4 below were partially revised by research findings (see `RESEARCH.md` § "Corrections to CONTEXT.md"). Specifically:
+> - **D1**: Pivoted from EPS→PDF→inline to **using the existing `/root/workspace/Wahlkreuz.png`** directly. No Ghostscript step.
+> - **D4**: Layer + spot-color APIs already exist (`DocumentLayer`, `Document.add_color(spot=True)`). New blocks just **use** them; spot colors stay **document-local**, not in `shared/ci.yml`.
+> - **D7**: Use ImageMagick `montage` (already in repo), not Pillow.
+> - **New**: D11 (Codex demo-image generation) and D12 (Wahlkreuz background-color rule) added below.
+>
+> Read `RESEARCH.md` for the authoritative current state. The original D1/D4/D7 text is left in place as a record of pre-research thinking.
+
 ## Decisions (locked — research/planner must follow)
 
 ### D1. EPS-Embedding-Strategie: EPS → PDF → inline `ImageFrame`
@@ -244,6 +252,49 @@ deterministisch ist.
   Resultat (Round-Trip-Diff bleibt sauber)
 - CI-Lauf braucht kein Ghostscript-Setup wenn PDF schon vorhanden
 - Konvertierungs-Skript dokumentiert wie's gemacht wird, Reproduzierbar
+
+---
+
+### D11. Codex DALL·E Demo-Image Generation (one-shot, per-template)
+
+**Entscheidung:** Templates mit Bild-Slots bekommen **per-template Demo-Bilder** durch
+einmalige Codex-DALL·E-Generierung während dieser Issue-Implementierung. Bilder werden
+unter `templates/<slug>/samples/<image>.jpg` committed. Ein Manifest
+`templates/<slug>/samples/manifest.yml` dokumentiert Prompts.
+
+- **Template-spezifisch, hart verknüpft** — keine globalen Bilder, kein Cross-Reuse.
+- **One-shot, nicht zur Build-Zeit** — Generierung passiert während dieser Issue,
+  Bilder werden committed, Build/CI ruft Codex nie auf.
+- **Templates referenzieren die Demo-Bilder NICHT als Pflicht-Slots** — Slots bleiben
+  `optional` in `meta.yml`. Eine separate `<slug>-preview.sla` (im Gallery-Build erzeugt)
+  injiziert die Demo-Bilder nur für die PNG-Preview.
+- **Authoring-Helper** `tools/codex_image_gen.py` (~80 LoC): liest manifest, ruft
+  `codex` mit Bild-Generation-Prompt + Output-Pfad, schreibt JPG.
+- **Begründung:** Galerie-Previews sehen mit echten Bildern professionell aus
+  ohne Endnutzer:innen-Footgun (kein Datei-Reference auf nicht-vorhandene Bilder
+  in der Vorlage).
+
+### D12. Wahlkreuz auf farbigem Hintergrund — verbindliche Spec-Regel
+
+**Entscheidung:** Jedes Template, das den Wahlkreuz nutzt, **muss** ihn auf
+farbigem Brand-Hintergrund platzieren — `Dunkelgrün`, `Hellgrün`, oder `Magenta`.
+**Nie auf Weiß. Nie auf Gelb.**
+
+**Begründung:**
+- Das vorliegende Wahlkreuz-Asset (PNG, RGBA, 1200×1299) zeigt ein gelbes Kreuz
+  in einem **weißen** Kreis. Auf weißem Hintergrund verschwindet der weiße Kreis,
+  und nur das gelbe Kreuz bleibt sichtbar — der Symbolcharakter (geschützter
+  Wahlakt im Kreis) geht verloren.
+- Auf gelbem Hintergrund verschwindet das gelbe Kreuz.
+- Daher: Spec-Constraint, plus visueller Background-Fill-Default im
+  `WahlkreuzSymbol`-Block (default `Dunkelgrün`), plus Visual-QA-Gate-3-Check
+  „Wahlkreuz on white-or-yellow = blocking finding".
+
+**Implementierungs-Konsequenz:**
+- `WahlkreuzSymbol(background_color="Dunkelgrün", background_padding_mm=4.0, ...)`
+  zeichnet zuerst ein farbiges Polygon, dann das `ImageFrame` darüber.
+- Spec-Template hat eine Sektion „Wahlkreuz background-color contract".
+- `tools/visual_review.py` Prompt referenziert die Regel beim Namen.
 
 ---
 
