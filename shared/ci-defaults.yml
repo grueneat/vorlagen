@@ -1,0 +1,169 @@
+# Brand-level Scribus document defaults — single source of truth for the
+# 113 identical extra_doc_attrs keys and 34 identical extra_pdf_attrs keys
+# that are shared verbatim across all three existing templates (Plakat A1,
+# Postkarte A6, Zeitung A4).
+#
+# These values are injected by Brand.gruene_noe() into Document(brand=...)
+# so every build.py no longer needs to carry a 7KB one-line dict literal.
+# Templates may still override individual keys via extra_doc_attrs= /
+# extra_pdf_attrs= on the Document constructor — the per-template value wins.
+#
+# Keys that differ between templates (23 doc-attrs, 11 pdf-attrs) are NOT
+# listed here; they remain as per-template extra_*_attrs overrides.
+# Differing doc-attrs: AUTOCHECK, DPIn3, DPInCMYK, DPPr, GROUPC, GapVertical,
+#   GuideRad, MAJGRID, MINGRID, PAGESIZE, POLYF, SHOWBASE, SHOWGRID,
+#   SHOWGUIDES, SHOWMARGIN, ScratchBottom, ScratchLeft, ScratchRight,
+#   ScratchTop, calligraphicPenAngle, dispX, dispY, renderStack.
+# Differing pdf-attrs: ImageP, InfoString, PicRes, PrintP, RGBMode, RecalcPic,
+#   SolidP, UseProfiles2, Version, bleedMarks, useDocBleeds.
+
+default_doc_attrs:
+  ALAYER: '0'
+  AUTOL: '100'
+  AUTOMATIC: '1'
+  AUtoSaveInDocDir: '1'
+  AutoSave: '1'
+  AutoSaveCount: '1'
+  AutoSaveDir: ''
+  AutoSaveKeep: '0'
+  AutoSaveTime: '600000'
+  BASEGRID: '13'
+  BASEO: '0'
+  BRUSH: None
+  BRUSHSHADE: '100'
+  BaseC: '#c0c0c0'
+  CPICT: None
+  CSPICT: None
+  DCOL: '1'
+  DGAP: '0'
+  DIIm: '0'
+  DISc: '1'
+  DPIn: sRGB display profile (ICC v2.2)
+  DPIn2: sRGB display profile (ICC v2.2)
+  DPSFo: '0'
+  DPSo: '0'
+  DPbla: '1'
+  DPgam: '0'
+  DPuse: '1'
+  EmbeddedPath: '0'
+  EndArrow: '0'
+  FirstLineOffset: '1'
+  GRAB: '4'
+  GUIDELOCK: '0'
+  GapHorizontal: '0'
+  GridType: '0'
+  GuideC: '#000080'
+  HalfRes: '1'
+  LINESHADE: '100'
+  MAJORC: '#00ff00'
+  MARGC: '#0000ff'
+  MINORC: '#00ff00'
+  PASPECT: '1'
+  PEN: Black
+  PENLINE: Green
+  PENSHADE: '100'
+  PENTEXT: Black
+  PICTSCX: '1'
+  PICTSCY: '1'
+  PICTSHADE: '100'
+  PICTSSHADE: '100'
+  POLYC: '4'
+  POLYCUR: '0'
+  POLYIR: '0'
+  POLYOCUR: '0'
+  POLYR: '0'
+  POLYS: '0'
+  PRESET: '0'
+  PSCALE: '1'
+  RANDF: '0'
+  SHOWControl: '0'
+  SHOWFRAME: '1'
+  SHOWLAYERM: '0'
+  SHOWLINK: '0'
+  SHOWPICT: '1'
+  STIL: '1'
+  STILLINE: '1'
+  SUBJECT: ''
+  SnapToElement: '0'
+  SnapToGrid: '0'
+  SnapToGuides: '0'
+  StartArrow: '0'
+  StrikeThruPos: '-1'
+  StrikeThruWidth: '-1'
+  StrokeText: Black
+  TabFill: ''
+  TabWidth: '36'
+  TextBackGround: None
+  TextBackGroundShade: '100'
+  TextDistBottom: '0'
+  TextDistLeft: '0'
+  TextDistRight: '0'
+  TextDistTop: '0'
+  TextLineColor: None
+  TextLineShade: '100'
+  TextPenShade: '100'
+  TextStrokeShade: '100'
+  UnderlinePos: '-1'
+  UnderlineWidth: '-1'
+  VHOCH: '33'
+  VHOCHSC: '66'
+  VKAPIT: '75'
+  VTIEF: '33'
+  VTIEFSC: '66'
+  WIDTH: '1'
+  WIDTHLINE: '5'
+  arcStartAngle: '30'
+  arcSweepAngle: '300'
+  calligraphicPenFillColor: Black
+  calligraphicPenFillColorShade: '100'
+  calligraphicPenLineColor: Black
+  calligraphicPenLineColorShade: '100'
+  calligraphicPenLineWidth: '1'
+  calligraphicPenStyle: '1'
+  calligraphicPenWidth: '10'
+  constrain: '15'
+  currentProfile: PDF 1.4
+  rulerMode: '1'
+  rulerXoffset: '0'
+  rulerYoffset: '0'
+  showcolborders: '1'
+  showrulers: '1'
+  spiralEndAngle: '1080'
+  spiralFactor: '1.2'
+  spiralStartAngle: '0'
+
+default_pdf_attrs:
+  CMethod: '0'
+  Clip: '0'
+  Encrypt: '0'
+  FontEmbedding: '0'
+  ImagePr: '0'
+  Intent: '1'
+  Intent2: '0'
+  PageLayout: '0'
+  PassOwner: ''
+  PassUser: ''
+  Permissions: '-4'
+  PresentMode: '0'
+  RotateDeg: '0'
+  Thumbnails: '0'
+  UseLayers: '0'
+  UseLpi: '0'
+  UseProfiles: '0'
+  UseSpotColors: '1'
+  colorMarks: '0'
+  cropMarks: '1'
+  displayBookmarks: '0'
+  displayFullscreen: '0'
+  displayLayers: '0'
+  displayThumbs: '0'
+  doMultiFile: '0'
+  docInfoMarks: '0'
+  firstUse: '0'
+  fitWindow: '0'
+  hideMenuBar: '0'
+  hideToolBar: '0'
+  openAfterExport: '0'
+  rangeSel: '0'
+  rangeTxt: ''
+  registrationMarks: '0'

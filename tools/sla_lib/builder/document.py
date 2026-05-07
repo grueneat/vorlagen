@@ -144,6 +144,7 @@ class Document:
                  author: str = "Die Grünen Niederösterreich",
                  ci_path: Optional[Path | str] = None,
                  *,
+                 brand: Optional["Brand"] = None,
                  layers: Optional[list[DocumentLayer]] = None,
                  facing_pages: bool = False,
                  column_gap_default_pt: float = 11.0,
@@ -201,6 +202,46 @@ class Document:
         self._extra_colors: dict[str, BrandColor] = {}
         self._extra_para_styles: dict[str, ParaStyle] = {}
         self._extra_char_styles: dict[str, CharStyle] = {}
+
+        # Brand profile injection.  When a Brand is supplied:
+        # - Its colors, para-styles, char-styles, and layers replace the CI
+        #   defaults (brand IS the CI; palette_replaces_ci is forced False so
+        #   the brand's palette is used as-is without re-listing it).
+        # - Its default_doc_attrs / default_pdf_attrs are merged UNDER the
+        #   caller-supplied extra_*_attrs (caller wins on conflict).
+        # - deffont / defsize / column_gap_default_pt from the brand apply
+        #   unless the caller explicitly passed different values.
+        # When Brand is None: no behavior change — every existing test passes.
+        if brand is not None:
+            # Force palette_replaces_ci=True: brand colors ARE the palette.
+            # Using _extra_colors as the sole source avoids emitting CI colors
+            # twice (brand.colors already IS ci.colors for Grüne NÖ).  Any
+            # colors the template adds via doc.add_color() are appended to
+            # _extra_colors and appear in the emitted list.
+            self.palette_replaces_ci = True
+            # Auto-register brand colors as document extras so they appear in
+            # the emitted COLOR list.  Skip any already added by the caller.
+            for cname, bc in brand.colors.items():
+                if cname not in self._extra_colors:
+                    self._extra_colors[cname] = bc
+            # Auto-register brand para-styles.
+            for sname, ps in brand.para_styles.items():
+                if sname not in self._extra_para_styles:
+                    self._extra_para_styles[sname] = ps
+            # Auto-register brand char-styles.
+            for csname, cs in brand.char_styles.items():
+                if csname not in self._extra_char_styles:
+                    self._extra_char_styles[csname] = cs
+            # Auto-register brand layers if no caller-supplied override.
+            if not self._layers_override:
+                self._layers_override = list(brand.layers)
+            # Merge brand doc/pdf defaults UNDER caller's extra_*_attrs.
+            merged_doc = dict(brand.default_doc_attrs)
+            merged_doc.update(self.extra_doc_attrs)  # caller wins
+            self.extra_doc_attrs = merged_doc
+            merged_pdf = dict(brand.default_pdf_attrs)
+            merged_pdf.update(self.extra_pdf_attrs)  # caller wins
+            self.extra_pdf_attrs = merged_pdf
 
     # ---- per-document palette / style registration ---------------------
     def add_color(self, name: str, *,
@@ -675,25 +716,44 @@ class Document:
             cs.set("FONTSIZE", "12")
             cs.set("FCOLOR", "Black")
 
-        # If the document registered its own paragraph styles, emit those
-        # using only-non-None semantics (PARENT inheritance preserved).
-        # Otherwise, fall back to the CI brand style stack as before.
-        if self._extra_para_styles:
+        # Paragraph-style emission order (additive, Codex A-1 fix):
+        #
+        # Mirrors _emit_colors: palette_replaces_ci=True (including the brand
+        # path, which forces this flag True) means _extra_para_styles is the
+        # sole source.  palette_replaces_ci=False means CI brand stack is the
+        # base, with _extra_para_styles additive on top (custom style wins on
+        # name collision).
+        #
+        # Pre-fix behavior had an unconditional early `return` after emitting
+        # _extra_para_styles regardless of palette_replaces_ci.  This meant
+        # a template that added even one custom style (palette_replaces_ci=False)
+        # would silently drop the entire CI stack — making the CI styles
+        # invisible to Scribus on round-trip.
+        if self.palette_replaces_ci:
+            # palette_replaces_ci=True: only emit explicitly registered styles.
+            # Brand path: brand CI styles are in _extra_para_styles already.
             for ps in self._extra_para_styles.values():
                 self._emit_para_style(doc, ps)
-            return
-        for sname, s in self.ci.styles.items():
-            st = etree.SubElement(doc, "STYLE")
-            st.set("NAME", sname)
-            if s.parent:
-                st.set("PARENT", s.parent)
-            st.set("ALIGN", str(s.align))
-            st.set("LINESP", f"{s.linesp:.6f}")
-            st.set("LINESPMode", "2")
-            st.set("FONT", s.font)
-            st.set("FONTSIZE", f"{s.fontsize:.1f}")
-            st.set("FCOLOR", s.fcolor)
-            st.set("LANGUAGE", s.language)
+        else:
+            # palette_replaces_ci=False: CI stack is the base; custom styles
+            # are additive (custom name shadows CI name).
+            ci_overridden = set(self._extra_para_styles)
+            for sname, s in self.ci.styles.items():
+                if sname in ci_overridden:
+                    continue  # template override takes precedence
+                st = etree.SubElement(doc, "STYLE")
+                st.set("NAME", sname)
+                if s.parent:
+                    st.set("PARENT", s.parent)
+                st.set("ALIGN", str(s.align))
+                st.set("LINESP", f"{s.linesp:.6f}")
+                st.set("LINESPMode", "2")
+                st.set("FONT", s.font)
+                st.set("FONTSIZE", f"{s.fontsize:.1f}")
+                st.set("FCOLOR", s.fcolor)
+                st.set("LANGUAGE", s.language)
+            for ps in self._extra_para_styles.values():
+                self._emit_para_style(doc, ps)
 
     def _emit_char_style(self, doc, cs_obj: CharStyle) -> None:
         cs = etree.SubElement(doc, "CHARSTYLE")

@@ -88,8 +88,22 @@ class PostkarteConverterFreshRun(unittest.TestCase):
                          "postkarte-a6-kampagne", tmp / "assets")
             sla = _run_build(tmp / "build.py")
             report = _diff_clean(self.ORIGINAL, sla)
-            self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0)
-            self.assertEqual(report.summary[sla_diff.SEVERITY_WARNING], 0)
+            self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
+                             msg=f"critical issues: "
+                                 f"{[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_CRITICAL]}")
+            # The converter now emits brand=Brand.gruene_noe() which injects:
+            # - CI paragraph styles (ci/default, ci/headline-ultra, ...) not in originals
+            # - All 4 brand layers (originals may only have Hintergrund)
+            # These are additive-only (do not change rendering) and expected.
+            # Filter them out and assert no OTHER warnings exist.
+            non_brand_warnings = [
+                i for i in report.issues
+                if i.severity == sla_diff.SEVERITY_WARNING
+                and not (i.code in ("extra-style", "extra-layer"))
+            ]
+            self.assertEqual(non_brand_warnings, [],
+                             msg=f"unexpected warning issues: "
+                                 f"{[i.short() for i in non_brand_warnings]}")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
@@ -455,6 +469,183 @@ class ParagraphAttributeRoundTripTests(unittest.TestCase):
             self.fail("could not find the synthetic frame in the rebuilt SLA")
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class ConverterTask5BehaviorsTests(unittest.TestCase):
+    """Unit tests for Task 5 converter changes:
+    5a – emit brand=Brand.gruene_noe() and filter brand-default attrs,
+    5b – omit xpos_pt/ypos_pt/width_pt/height_pt for non-inline frames,
+    5c – omit custom_path= for CLIPEDIT=1 FRTYPE=3 rect frames.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "sla_to_dsl_t5", str(ROOT / "tools" / "sla_to_dsl.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        cls.sla_to_dsl = mod
+
+    def _fresh_convert(self, sla_path: Path) -> str:
+        """Run the converter on sla_path in a tmpdir and return the build.py text."""
+        import shutil
+        import tempfile
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            self.sla_to_dsl.convert(sla_path, tmp / "build.py",
+                                    "test-id", tmp / "assets")
+            return (tmp / "build.py").read_text(encoding="utf-8")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    # ---- 5a: Brand emission -------------------------------------------------
+
+    def test_5a_brand_emitted_in_postkarte(self):
+        """Converter emits brand=Brand.gruene_noe() in the Document() call."""
+        code = self._fresh_convert(ROOT / "postkarte-vorlage-original.sla")
+        self.assertIn("brand=Brand.gruene_noe()", code,
+                      "Converter must emit brand=Brand.gruene_noe() in Document()")
+
+    def test_5a_brand_emitted_in_plakat(self):
+        """brand=Brand.gruene_noe() appears in Plakat conversion output."""
+        code = self._fresh_convert(ROOT / "plakat-a1-hochformat-original.sla")
+        self.assertIn("brand=Brand.gruene_noe()", code)
+
+    def test_5a_brand_emitted_in_zeitung(self):
+        """brand=Brand.gruene_noe() appears in Zeitung conversion output."""
+        code = self._fresh_convert(ROOT / "gruene-zeitung-vorlage-original.sla")
+        self.assertIn("brand=Brand.gruene_noe()", code)
+
+    def test_5a_brand_colors_not_re_emitted(self):
+        """add_color() calls for CI brand colors (Dunkelgrün, Gelb …) are absent."""
+        code = self._fresh_convert(ROOT / "postkarte-vorlage-original.sla")
+        for ci_color in ("Dunkelgrün", "Hellgrün", "Gelb", "Magenta",
+                         "Dunkelgr", "Hellgr"):  # match partial to catch encoding variants
+            # CI colors should NOT appear as add_color arguments
+            self.assertNotIn(f'add_color("{ci_color}', code,
+                             f"CI brand color {ci_color!r} must not be re-emitted via add_color()")
+
+    def test_5a_palette_replaces_ci_not_emitted(self):
+        """palette_replaces_ci= is NOT emitted — brand= handles it automatically."""
+        code = self._fresh_convert(ROOT / "postkarte-vorlage-original.sla")
+        self.assertNotIn("palette_replaces_ci", code,
+                         "palette_replaces_ci must not appear; Brand sets it automatically")
+
+    def test_5a_document_layer_not_emitted(self):
+        """DocumentLayer list is NOT emitted — brand= supplies layers."""
+        code = self._fresh_convert(ROOT / "postkarte-vorlage-original.sla")
+        self.assertNotIn("DocumentLayer", code,
+                         "DocumentLayer must not appear; Brand supplies the layer stack")
+
+    # ---- 5b: Drop redundant pt kwargs for non-inline frames ----------------
+
+    def test_5b_non_inline_frames_have_no_xpos_pt(self):
+        """All occurrences of xpos_pt= in Postkarte belong to inline image frames."""
+        code = self._fresh_convert(ROOT / "postkarte-vorlage-original.sla")
+        # page_xpos_pt= is on add_page/add_master calls (page geometry), not frames.
+        # Frame-level xpos_pt= must appear exactly as many times as inline_image_data=.
+        xpos_count = code.count("xpos_pt=") - code.count("page_xpos_pt=")
+        inline_count = code.count("inline_image_data=")
+        self.assertEqual(xpos_count, inline_count,
+                         f"xpos_pt= count ({xpos_count}) must equal "
+                         f"inline_image_data= count ({inline_count}); "
+                         f"non-inline frames must not carry xpos_pt=")
+
+    def test_5b_plakat_inline_image_keeps_xpos_pt(self):
+        """Inline image frames in Plakat DO carry xpos_pt= for precision."""
+        code = self._fresh_convert(ROOT / "plakat-a1-hochformat-original.sla")
+        # Plakat has 1 inline image frame; it must keep xpos_pt.
+        # page_xpos_pt= on add_page calls is distinct; subtract those.
+        xpos_count = code.count("xpos_pt=") - code.count("page_xpos_pt=")
+        inline_count = code.count("inline_image_data=")
+        self.assertGreater(inline_count, 0,
+                           "Plakat must have inline_image_data= for its logo")
+        self.assertEqual(xpos_count, inline_count,
+                         f"Plakat: frame xpos_pt= ({xpos_count}) must match "
+                         f"inline image count ({inline_count})")
+
+    def test_5b_zeitung_inline_images_keep_xpos_pt(self):
+        """Zeitung has 6 inline images; xpos_pt= count matches inline image count."""
+        code = self._fresh_convert(ROOT / "gruene-zeitung-vorlage-original.sla")
+        # page_xpos_pt= on add_page/add_master calls must not be counted.
+        xpos_count = code.count("xpos_pt=") - code.count("page_xpos_pt=")
+        inline_count = code.count("inline_image_data=")
+        self.assertEqual(xpos_count, inline_count,
+                         f"xpos_pt= count ({xpos_count}) must equal "
+                         f"inline_image_data= count ({inline_count})")
+
+    # ---- 5c: Clip-rect auto-generation (converter side) --------------------
+
+    def test_5c_zeitung_clip_rect_frames_omit_custom_path(self):
+        """Zeitung's 86 CLIPEDIT=1 FRTYPE=3 rect frames produce no custom_path=."""
+        code = self._fresh_convert(ROOT / "gruene-zeitung-vorlage-original.sla")
+        # The Zeitung has 86 FRTYPE=3 frames whose path is a rectangle.
+        # After Task 5c the converter must omit custom_path= for all of them.
+        # We count custom_path= occurrences: only non-rect bezier curves should remain.
+        custom_path_count = code.count("custom_path=")
+        # Zeitung has 0 non-rect custom paths (all 86 FRTYPE=3 are rect)
+        self.assertEqual(custom_path_count, 0,
+                         f"Zeitung should have 0 custom_path= after Task 5c, "
+                         f"got {custom_path_count}")
+
+    def test_5c_postkarte_non_rect_bezier_keeps_custom_path(self):
+        """Postkarte's non-rectangular bezier paths are preserved in custom_path=."""
+        code = self._fresh_convert(ROOT / "postkarte-vorlage-original.sla")
+        # Postkarte has non-rect custom paths (leaf/badge bezier curves)
+        custom_path_count = code.count("custom_path=")
+        self.assertGreater(custom_path_count, 0,
+                           "Postkarte has non-rect bezier paths; custom_path= must be emitted")
+
+    # ---- 5c: _is_rect_path unit tests --------------------------------------
+
+    def test_5c_is_rect_path_right_first_winding(self):
+        """_is_rect_path accepts right-first winding (M0 0 Lw 0 Lw h L0 h L0 0 Z)."""
+        fn = self.sla_to_dsl._is_rect_path
+        w, h = 100.0, 50.0
+        path = f"M0 0 L{w} 0 L{w} {h} L0 {h} L0 0 Z"
+        self.assertTrue(fn(path, w, h))
+
+    def test_5c_is_rect_path_vertical_first_winding(self):
+        """_is_rect_path accepts vertical-first winding (M0 0 L0 h Lw h Lw 0 L0 0 Z)."""
+        fn = self.sla_to_dsl._is_rect_path
+        w, h = 314.646, 436.535
+        path = f"M0 0 L0 {h} L{w} {h} L{w} 0 L0 0 Z"
+        self.assertTrue(fn(path, w, h))
+
+    def test_5c_is_rect_path_with_float_precision(self):
+        """_is_rect_path accepts Scribus-style truncated floats (%.4g precision)."""
+        fn = self.sla_to_dsl._is_rect_path
+        # Scribus stores coords with ~4 significant figures; 199.843 vs 199.8425…
+        path = "M0 0 L199.843 0 L199.843 283.465 L0 283.465 L0 0 Z"
+        self.assertTrue(fn(path, 199.8425196850394, 283.46456692913383))
+
+    def test_5c_is_rect_path_non_rect_path_rejected(self):
+        """_is_rect_path returns False for a non-rectangular bezier path."""
+        fn = self.sla_to_dsl._is_rect_path
+        bezier = "M0 0 C50 0 100 50 100 100 C100 150 50 200 0 200 Z"
+        self.assertFalse(fn(bezier, 100.0, 200.0))
+
+    def test_5c_is_rect_path_wrong_dimensions_rejected(self):
+        """_is_rect_path returns False when path dimensions don't match frame."""
+        fn = self.sla_to_dsl._is_rect_path
+        w, h = 100.0, 50.0
+        # Path for 200x100 frame, not 100x50
+        path = f"M0 0 L200 0 L200 100 L0 100 L0 0 Z"
+        self.assertFalse(fn(path, w, h))
+
+    def test_5c_is_rect_path_non_origin_rect_rejected(self):
+        """_is_rect_path returns False when rect doesn't start at origin."""
+        fn = self.sla_to_dsl._is_rect_path
+        # Rect offset from (0,0) — not a valid frame path
+        path = "M10 10 L110 10 L110 60 L10 60 L10 10 Z"
+        self.assertFalse(fn(path, 100.0, 50.0))
+
+    def test_5c_is_rect_path_empty_string_rejected(self):
+        """_is_rect_path returns False for empty or malformed strings."""
+        fn = self.sla_to_dsl._is_rect_path
+        self.assertFalse(fn("", 100.0, 50.0))
+        self.assertFalse(fn("M0 0 Z", 100.0, 50.0))
 
 
 if __name__ == "__main__":
