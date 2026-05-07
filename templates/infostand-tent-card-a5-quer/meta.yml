@@ -1,0 +1,63 @@
+id: infostand-tent-card-a5-quer
+version: 0.1.0
+title: Infostand-Tent-Card A5 quer
+format: A4
+orientation: landscape
+pages: 1
+preview_dpi: 100
+audience: [bezirksgruppe, ortsgruppe, infostand-helfer]
+description: >
+  A4 quer (297×210 mm) gefalzt zu A5-Tent. Steht selbsttragend auf Tisch am
+  Infostand, im Pfarrkaffee oder bei Veranstaltungen. Zwei Panele
+  (DE oben, EN unten) lesen je nach Tisch-Seite.
+
+build:
+  script: build.py
+  output: template.sla
+
+previews_for_sla: 45f2abcd2524e141734d98cfbc5e4306c861e3705d5794cc579ae896d97f7878
+
+ci_overrides:
+  non_ci_styles:
+    - "tent/headline"
+    - "tent/body"
+    - "tent/impressum"
+  non_ci_colors:
+    - "Falz"             # document-local spot color
+  non_ci_layers:
+    - "Falz"
+
+slots:
+  headline_panel_a:
+    type: text
+    description: Headline Panel A (DE) — 36pt Vollkorn Italic Dunkelgrün
+    anname: "Headline Panel A"
+  body_panel_a:
+    type: text
+    description: 3-Bullet Body Panel A — 14pt Gotham Book
+    anname: "Body Panel A"
+  falzlinie:
+    type: shape
+    description: Mittelfalz horizontal y=105 (Falz-Layer Spot-Color)
+    anname: "Mittelfalz (horizontal)"
+  headline_panel_b:
+    type: text
+    description: Headline Panel B (EN) — 36pt Vollkorn Italic Dunkelgrün, rotated 180°
+    anname: "Headline Panel B"
+  body_panel_b:
+    type: text
+    description: 3-Bullet Body Panel B — 14pt, rotated 180°
+    anname: "Body Panel B"
+  impressum:
+    type: text
+    description: Mediengesetz §24 Impressum (auf Panel A, knapp über Falz)
+    anname: "Impressum (Tent)"
+
+example_pages:
+  - { num: 1, label: "Flach (vor dem Falzen) — Panel A oben, Panel B unten 180°" }
+
+preflight:
+  bleed_mm: 3
+  fold_mm: [105]
+  cmyk_only: true
+  min_image_dpi: 300
