@@ -2,7 +2,7 @@
 id: '7'
 title: Rewrite Plakat A1 onto Brand + blocks
 status: done
-ship_state: pr_open
+ship_state: merged
 priority: high
 labels:
 - dsl
