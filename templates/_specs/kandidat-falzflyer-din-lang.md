@@ -252,6 +252,15 @@ slots:
     fcolor: "Black"
     style_ref: "falzflyer/teaser-body"
     example: "Mödling hat einen Klimaplan — er muss umgesetzt werden."
+  - anname: "P2 Logo (klein)"
+    type: ImageFrame
+    x_mm: 105
+    y_mm: 188
+    w_mm: 25
+    h_mm: 8
+    fcolor: ""
+    style_ref: "shared/logos/gruene-cmyk.png"
+    example: ""
   # Front Panel 3 — Closer
   - anname: "P3 Hintergrund"
     type: Polygon
@@ -298,6 +307,24 @@ slots:
     fcolor: "White"
     style_ref: "falzflyer/closer-url"
     example: "gruene-moedling.at"
+  - anname: "Falz x=99 (Front)"
+    type: "Block:FoldLine"
+    x_mm: 99
+    y_mm: 0
+    w_mm: 0
+    h_mm: 210
+    fcolor: "Falz"
+    style_ref: ""
+    example: "FoldLine vertikal y=0..210, x=99"
+  - anname: "Falz x=198 (Front)"
+    type: "Block:FoldLine"
+    x_mm: 198
+    y_mm: 0
+    w_mm: 0
+    h_mm: 210
+    fcolor: "Falz"
+    style_ref: ""
+    example: "FoldLine vertikal y=0..210, x=198"
   # Back Panel 4 — Themen 1+2
   - anname: "P4 Thema 1 — Headline"
     type: TextFrame
@@ -391,6 +418,33 @@ slots:
     fcolor: "Black"
     style_ref: "falzflyer/contact-body"
     example: "Hauptstraße 12\n2340 Mödling"
+  - anname: "P6 Kontakt-Email-Tel"
+    type: TextFrame
+    x_mm: 204
+    y_mm: 56
+    w_mm: 87
+    h_mm: 20
+    fcolor: "Black"
+    style_ref: "falzflyer/contact-body"
+    example: "maria.beispiel@gruene-moedling.at\n+43 660 1234567"
+  - anname: "P6 QR-Code"
+    type: ImageFrame
+    x_mm: 232
+    y_mm: 85
+    w_mm: 35
+    h_mm: 35
+    fcolor: ""
+    style_ref: "optional / generated"
+    example: "QR zur Kandidaten-Webseite"
+  - anname: "P6 Logo Grüne"
+    type: ImageFrame
+    x_mm: 204
+    y_mm: 130
+    w_mm: 35
+    h_mm: 10
+    fcolor: ""
+    style_ref: "shared/logos/gruene-cmyk.png"
+    example: ""
   - anname: "P6 Impressum"
     type: TextFrame
     x_mm: 204
@@ -400,6 +454,24 @@ slots:
     fcolor: "Black"
     style_ref: "Impressum"
     example: "Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten."
+  - anname: "Falz x=99 (Back)"
+    type: "Block:FoldLine"
+    x_mm: 99
+    y_mm: 0
+    w_mm: 0
+    h_mm: 210
+    fcolor: "Falz"
+    style_ref: ""
+    example: "FoldLine vertikal y=0..210, x=99"
+  - anname: "Falz x=198 (Back)"
+    type: "Block:FoldLine"
+    x_mm: 198
+    y_mm: 0
+    w_mm: 0
+    h_mm: 210
+    fcolor: "Falz"
+    style_ref: ""
+    example: "FoldLine vertikal y=0..210, x=198"
 ```
 
 ## EPS / Image-Embedding-Strategie

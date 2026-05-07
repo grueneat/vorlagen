@@ -123,12 +123,13 @@ für maximalen Reach.
 | Body Panel B                 | TextFrame |  12  | 113  | 223  |  56  | Black     | tent/body                       | • Renewables: scale up\n• Public transport: double\n• Heat pump, not gas |
 | QR-Code (optional)           | ImageFrame|  12  | 196  |  14  |  14  | —         | optional                        | (Event-Anmeldung)                                 |
 
-> **Hinweis zur Panel-B-Rotation:** Die x/y-Koordinaten oben beschreiben die *flache*
-> Panel-B-Geometrie ohne Rotation. Beim Bauen rotiert `build.py` die Panel-B-Frames um
-> 180° (Pivot-Punkt = Mitte des Panel B = (148.5, 157.5) mm). Nach Rotation lesen die
-> Frames für eine Person, die das gefalzte Tent von der Rückseite betrachtet, korrekt.
-> Die Slot-Koordinaten in der YAML entsprechen den **rotierten** Frame-Koordinaten —
-> identisch zu dem, was `tools/spec_check.py` im SLA findet.
+> **Hinweis zur Panel-B-Rotation:** Sowohl die Markdown-Tabelle als auch der eingebettete
+> YAML-Block enthalten die **finalen Frame-Koordinaten** wie sie im SLA stehen werden —
+> nach Anwendung der 180°-Rotation, die `TableTentFold`/`build.py` für Panel B emittiert.
+> Pivot der Rotation ist die Mitte von Panel B = (148.5, 157.5) mm im flachen A4-quer-Layout.
+> Bei einer Person, die das gefalzte Tent von der Rückseite betrachtet, lesen die Frames
+> dann korrekt aufrecht. Tabelle + YAML entsprechen 1:1 dem, was `tools/spec_check.py`
+> im SLA als Frame-Position findet.
 
 ```yaml
 slots:
@@ -198,7 +199,7 @@ slots:
   - anname: "Impressum (Tent)"
     type: TextFrame
     x_mm: 12
-    y_mm: 100
+    y_mm: 96
     w_mm: 280
     h_mm: 4
     fcolor: "Black"

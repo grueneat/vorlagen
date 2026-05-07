@@ -1,110 +1,104 @@
-# Gate 1 Spec Review — Multi-Model Consensus Report
+# Gate 1 — Spec Review (Iteration 1)
 
-Date: 2026-05-07
-Models: Claude, Codex, Gemini (Synthesized)
+**Date:** 2026-05-07
+**Reviewers:** Claude (this session) + Codex (`codex exec --skip-git-repo-check`) + Gemini
+(`gemini -p` headless).
 
-### SCHEMA.md
+## Reviewer Status
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Clear and mandatory structure for technical specifications.
-    - Explicitly addresses visual quality as the primary goal.
-    - Defines the "Brand-Hierarchy Contract" with minimum font sizes per format.
-    - Incorporates technical constraints like D12 (Wahlkreuz background) and coordinate origin (Trim-Top-Left).
-- **blocking_findings:** none
-- **nice_to_have:** 
-    - Explicitly mention multi-master template requirements (as identified in the Zeitung retro-spec).
-    - Clarify the expectation for YAML slot coverage (subset vs. 100% of the table).
-- **comparison_to_existing:** N/A (Meta-spec)
+- **Claude:** read all 9 spec files in this session and produced findings below.
+- **Codex:** completed full review with line-cited blocking findings, raw output saved
+  at `reviews/spec-review-codex-iter1-raw.txt`.
+- **Gemini:** completed review, returned ALL_MERGE_READY with 0 blocking findings, raw
+  output saved at `reviews/spec-review-gemini-iter1-raw.txt`. Disagrees with Codex on
+  rigor of YAML coverage; per P-VISION-4, when one model says blocking and another says
+  pass, the question is whether the finding is concrete and actionable. Codex's findings
+  are concrete and cite line numbers.
 
-### _existing-postkarte-a6-kampagne.md
+## Synthesized Findings
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Provides a solid baseline for A6 formats (27pt headline, 12pt body).
-    - Correctly identifies that not all frames need an `anname` in YAML.
-- **blocking_findings:** none
-- **nice_to_have:** none
-- **comparison_to_existing:** Baseline.
+The dominant pattern across reviewers is **slot-table ↔ YAML coverage drift**: the
+human-readable Markdown tables list slots that the embedded YAML block does not contain.
+Codex flags this on every spec; Claude agrees that for the **5 new specs** this is a
+legitimate machine-truth concern (`tools/spec_check.py` parses YAML, not the table).
 
-### _existing-plakat-a1-hochformat.md
+Claude's overlay assessment per spec:
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Establishes the importance of distance-readability (150pt headline).
-    - Clear "drittel-layout" logic.
-- **blocking_findings:** none
-- **nice_to_have:** none
-- **comparison_to_existing:** Baseline.
+### SCHEMA.md — accept
 
-### _existing-zeitung-a4-grun.md
+Codex's BLK-1 (Brand-Hierarchy not mandatory) and BLK-2 (no run-level color in YAML)
+are valid concerns but are best handled by **convention** rather than schema-bloat. The
+new specs DO have brand-hierarchy sections; the schema's §8 says they SHOULD; we'll
+upgrade §8 to MUST in iter-2.
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Demonstrates master-page and linked-text-frame architecture.
-    - Good inventory of "slot classes" instead of instances for complex documents.
-- **blocking_findings:** none
-- **nice_to_have:** none
-- **comparison_to_existing:** Baseline.
+### Retro-specs (3 files) — merge_ready=yes (downgraded findings to non-blocking)
 
-### themen-plakat-a3-quer.md
+The retros document existing reality. Codex's blocking findings here (postkarte: YAML
+omits CTA/logo; plakat: green-strip contradiction; zeitung: slot-classes vs concrete
+slots) are correct **as observations** but reflect the *existing* template's actual
+state — fixing the spec without rebuilding the existing template would create new
+drift. Per D9 (retro-specs validate the schema, not the build), these are **schema
+stress findings**, not blockers. We document them in each retro and proceed.
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Excellent hierarchy with the 60pt thesis as a visual anchor.
-    - Clear 3-column argumentation structure (These -> Beleg -> Quelle).
-    - Perfect match between Slot-Table and YAML (100% coverage).
-- **blocking_findings:** none
-- **nice_to_have:** none
-- **comparison_to_existing:** Superior to the A1 plakat for information-heavy content; maintains high visual standards through consistent use of Vollkorn and generous whitespace.
+The plakat green-strip contradiction is a real prose bug — fix it.
 
-### wahlaufruf-postkarte-a6-quer.md
+### themen-plakat-a3-quer.md — fix (BLK-1) + reject (BLK-2)
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Clean symbol-front / info-back split.
-    - Correct citation of D12 contract and NRWO §53 legality.
-- **blocking_findings:** none
-- **nice_to_have:** 
-    - The `Headline-Wahlaufruf` ends at y=98mm, which is exactly on the bottom margin (105mm - 6mm = 99mm). Consider adding 1-2mm safety if real-world text runs long.
-- **comparison_to_existing:** Equivalent in quality and precision to the kampagne-postkarte baseline.
+- BLK-1 (Sub-Headline / Quelle naming inconsistency table↔YAML): **fix** in iter-2.
+- BLK-2 (no defined accent): **reject** — the spec deliberately omits a Magenta
+  Stoerer for thematic plakat (argument-mode, not Stoerer-mode); this is a brand
+  decision, not a deficiency. Document the rejection in the spec.
 
-### wahltag-tueranhaenger.md
+### wahlaufruf-postkarte-a6-quer.md — fix (BLK-1)
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Very precise die-cut and safety zone specifications (2mm).
-    - Clear zone-based layout (Brand-Bar, Hole, Hero, CTA).
-- **blocking_findings:** none
-- **nice_to_have:** 
-    - YAML subset is missing several slots described in the table (Logo back, Position, URL). While consistent with retro-spec subsetting, full YAML coverage would improve automated validation.
-- **comparison_to_existing:** New layout category; maintains the high precision required for physical production (stanzkontur).
+- BLK-1 (logos + background dropped from YAML): **fix** by adding all table slots to
+  YAML.
 
-### infostand-tent-card-a5-quer.md
+### wahltag-tueranhaenger.md — fix both BLKs
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Addresses the technical complexity of Panel B rotation (180°).
-    - Correctly specifies the "Tisch-Kontaktzone" (bottom 3mm) to prevent text at the edge.
-- **blocking_findings:** none
-- **nice_to_have:** 
-    - The 110 characters per line in the body text is high; the spec's recommendation to use bullets is a critical visual-quality safeguard.
-- **comparison_to_existing:** Specialized format with no direct retro-spec equivalent, but follows the established brand language perfectly.
+- BLK-1 (Brand-Bar slot missing on white front): **fix** — add a Brand-Bar slot
+  documenting the dark patch behind the white logo.
+- BLK-2 (back-side YAML omits slots, Wahlkreuz/Stanzkontur renamed): **fix** YAML.
 
-### kandidat-falzflyer-din-lang.md
+### infostand-tent-card-a5-quer.md — fix both BLKs (high priority)
 
-- **merge_ready:** yes
-- **strengths:** 
-    - Sophisticated multi-panel narrative flow (Cover -> Teaser -> Themes -> Closer).
-    - Clear hierarchy across multiple stages of unfolding.
-- **blocking_findings:** none
-- **nice_to_have:** 
-    - High divergence between Table and YAML (only 22 of ~30 slots are in YAML).
-- **comparison_to_existing:** The most complex of the new specs; exceeds the baseline in terms of narrative depth while staying within brand constraints.
+- BLK-1 (Panel B coordinate contradiction): **fix** — the spec's note that "YAML
+  corresponds to rotated coordinates" is itself confusing. Simplify: the YAML
+  coordinates are the **flat A4 bbox** the build.py creates, then `build.py` rotates
+  the Panel B frame group 180° at emit time. Document this clearly. Also add explicit
+  Panel B BBox notes.
+- BLK-2 (Impressum on table-contact zone): **fix** — move Impressum to y=99–103 (in
+  Panel A, just above the fold), removing the contact-zone violation.
 
-## Consensus
+### kandidat-falzflyer-din-lang.md — fix (BLK-1)
 
-- **Total blocking findings:** 0
-- **Specs not merge_ready:** []
-- **Recommendation:** ALL_MERGE_READY
-- **Summary verdict:** The 9 spec documents provide a comprehensive and technically sound foundation for template implementation. They rigorously adhere to brand guidelines (typography, color, hierarchy) and legal requirements. The transition from retro-specs to new specs shows a clear evolution in precision, particularly in technical areas like falz/stanze and complex reading orders.
+- BLK-1 (8 slots in tables, missing from YAML — P2 logo, both fold lines, P6 email/tel,
+  P6 QR, P6 logo): **fix** by adding to YAML.
+
+## Process Note
+
+The "merge_ready=no on every file" Codex output is correct on each individual concern,
+but treating each as equal-weight blocker is over-strict. The valid pattern: **fix the
+slot-table↔YAML drift on the 5 new specs and the plakat-retro contradiction, accept
+the schema-stress findings on the other 2 retros, push forward.**
+
+We do NOT iterate on every retro fix because:
+1. Retro-specs document existing templates we cannot freely re-shape.
+2. The schema-stress findings (Codex's framing) are valid SCHEMA observations — we
+   document them and link to a future-work note rather than rebuilding three working
+   templates' specs.
+
+## Final Decision
+
+**Iterate once (iter-2)** to:
+1. Fix slot-table↔YAML alignment on the 5 NEW specs.
+2. Fix plakat-retro green-strip prose contradiction.
+3. Fix themen-plakat sub/quelle naming.
+4. Fix tent-card Panel B coordinate doc + Impressum position.
+5. Fix Türanhänger Brand-Bar slot.
+
+Then mark Gate 1 closed. Do not loop further on retro-spec contract findings.
+
+## Iteration 2 — Fixes Applied (after addressing the above)
+
+See `reviews/spec-review-2.md` for the second-pass review after fixes.

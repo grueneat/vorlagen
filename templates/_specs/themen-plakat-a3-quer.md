@@ -77,14 +77,14 @@ Legende:
 |-------------------------------|-----------|------|------|------|------|-----------|------------------------------------|---------------------------------------------------------|
 | Logo Grüne (top-left)         | ImageFrame|  15  |  10  |  60  |  18  | —         | shared/logos/gruene-cmyk.png       | (verwende shared/logos/gruene-cmyk.png)                 |
 | Headline These                | TextFrame |  15  |  40  | 390  |  50  | Dunkelgrün| themen-plakat/headline             | Klimaschutz ist Wirtschaftspolitik.                     |
-| Sub-Headline (optional)       | TextFrame |  15  |  92  | 390  |  16  | Dunkelgrün| themen-plakat/sub                  | Drei Belege aus Niederösterreich, Mai 2026.             |
+| Sub-Headline                  | TextFrame |  15  |  92  | 390  |  16  | Dunkelgrün| themen-plakat/sub                  | Drei Belege aus Niederösterreich, Mai 2026.             |
 | Beleg 1 — Headline            | TextFrame |  15  | 130  | 124  |  20  | Dunkelgrün| themen-plakat/beleg-headline       | 12 700 grüne Jobs                                       |
 | Beleg 1 — Body                | TextFrame |  15  | 152  | 124  |  90  | Black     | themen-plakat/beleg-body           | In Niederösterreich arbeiten 12 700 Menschen direkt in der Erneuerbaren-Energie-Branche — mehr als in der konventionellen Energiewirtschaft. |
 | Beleg 2 — Headline            | TextFrame | 147  | 130  | 124  |  20  | Dunkelgrün| themen-plakat/beleg-headline       | 1.2 Mrd. € Umsatz                                       |
 | Beleg 2 — Body                | TextFrame | 147  | 152  | 124  |  90  | Black     | themen-plakat/beleg-body           | Die Solar- und Wind-Branche macht in NÖ 1.2 Mrd. € Jahresumsatz aus — Tendenz steigend. Jeder Euro fließt in die regionale Wertschöpfung zurück. |
 | Beleg 3 — Headline            | TextFrame | 281  | 130  | 124  |  20  | Dunkelgrün| themen-plakat/beleg-headline       | 36 % weniger CO₂                                        |
 | Beleg 3 — Body                | TextFrame | 281  | 152  | 124  |  90  | Black     | themen-plakat/beleg-body           | Seit 2010 hat NÖ den industriellen CO₂-Ausstoß um 36 % reduziert — bei gleichzeitig wachsender Industrie-Produktion. |
-| Quelle/Source                 | TextFrame |  15  | 270  | 280  |  10  | Dunkelgrün| themen-plakat/source               | Quelle: Statistik Austria, AEA-Energiebilanz NÖ 2024.   |
+| Quelle                        | TextFrame |  15  | 270  | 280  |  10  | Dunkelgrün| themen-plakat/source               | Quelle: Statistik Austria, AEA-Energiebilanz NÖ 2024.   |
 | Impressum                     | TextFrame | 305  | 270  | 100  |  10  | Black     | Impressum                          | Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten. |
 
 ```yaml
@@ -253,6 +253,17 @@ print_hints:
 Impressum-Slot vorhanden, Default-Text aus
 `tools/sla_lib/builder/blocks.py::DEFAULT_IMPRESSUM`. Endnutzer:innen passen Druckerei
 und Auflage an.
+
+## Brand-Accent — bewusste Auslassung
+
+Diese Spec verzichtet bewusst auf einen Magenta-Stoerer / -Akzent. Themen-Plakate stehen
+im argumentativen Modus (These → Belege → Quelle); ein Stoerer würde die ruhige
+Argumentation zerschneiden. Gate-1-Reviewer haben das angemerkt: das Plakat hat keinen
+„Brand-Energie-Anker" wie die Postkarte (Magenta-Kreis) oder das Plakat-A1
+(Headline-Wechselfarbe). Die Spec antwortet bewusst: **Brand-Energie kommt hier aus der
+Vollkorn-Black-Italic-These auf Dunkelgrün, nicht aus einer Stoerer-Farbe.** Wenn eine
+Bezirksgruppe einen visuellen Magenta-Akzent will, ist das eine Spec-Variante (D3),
+nicht der Default.
 
 ## Style-Hygiene
 

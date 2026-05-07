@@ -19,52 +19,52 @@ audience: [bezirksgruppe, landesgruppe, ortsgruppe]
 ## Audience und Layout-Philosophie
 
 Veranstaltungs-Plakat A1 für Events, Mahnwachen, Stammtische, Kundgebungen. Nutzungsfall:
-Schaufenster, Plakatwand, Kundgebungs-Backdrop. Lese-Distanz **2–6 m**. Layout drittelt
-sich vertikal: oben Headline (4-zeilig, alternierende Brand-Farben über zwei Drittel der
-Höhe), unten Veranstaltungs-Daten (Datum, Ort, URL) auf Dunkelgrün-Streifen mit dem
-Logo rechts oben. Impressum vertikal am rechten Rand (gedreht 270°).
+Schaufenster, Plakatwand, Kundgebungs-Backdrop. Lese-Distanz **2–6 m**. Layout teilt
+sich vertikal in zwei Hälften: **oben weiß** mit dem Logo (rechts oben) und Veranstaltungs-
+Daten (Datum, Ort, URL); **unten Dunkelgrün-Vollbild** mit der 4-zeiligen Headline in
+alternierenden Brand-Farben (Weiß/Gelb). Impressum vertikal am rechten Rand (gedreht 270°).
+Die Headline trägt die Hauptbotschaft, die Veranstaltungs-Daten oben sind sekundär.
 
 ## Layout — Vorderseite (Page 1, einzige Seite)
 
 ```text
    <-----594mm----->
   +-----------------+   ↑
-  |    L            |   |
-  |    L            |   |
-  |    L            |   |
-  |  H1             |   |
-  |   H1            |   |
-  |    H1           |   |
-  |     H1          |   |
-  |     (4-zeilig,  | 841
-  |      Wechsel-   |  mm
-  |      W/Y/W/Y)   |   |
+  |          L      |   |  Obere Hälfte:
+  |                 |   |  Weißer Hintergrund
+  |   DATUM         |   |  L  = Logo Grüne (rechts oben)
+  |   ORT           |   |  Veranstaltungs-Daten links
+  |   URL           |   |
   |                 |   |
-  |  +-----------+  |   |
-  |  | DATUM     |  |   |
-  |  | ORT       |  |   |
-  |  | URL       |  |   |
-  |  +-----------+ I|   |
+  +=================+   |  ← Trennlinie ~y=414 mm
+  |  H1             |   |
+  |   H1 H1         |   |  Untere Hälfte:
+  |    H1 H1 H1     | 841  Dunkelgrün-Vollbild
+  |     H1 H1       |  mm  Headline 4-zeilig
+  |      H1 H1 H1   |   |  Wechselfarbe (W/Y/W/Y)
+  |       H1        |   |
+  |                 |   |
+  |                I|   |
   +-----------------+   ↓
                      ↑
                      Impressum (vertikal, rotiert 270°)
 
 Legende:
-  H1 = Headline 4-zeilig (Wechselfarbe Weiss/Gelb)
-  L  = Logo Grüne (weiss, oben rechts)
+  H1 = Headline 4-zeilig (Wechselfarbe Weiss/Gelb auf Dunkelgrün)
+  L  = Logo Grüne (weiss-cmyk, rechts oben auf Weiß)
   DATUM = Veranstaltung — Datum/Zeit
   ORT   = Veranstaltung — Ort/Adresse
   URL   = Anmelde-URL
-  I     = Impressum vertikal
+  I     = Impressum vertikal am rechten Rand
 ```
 
 ## Slot-Tabelle (Auszug aus build.py + meta.yml)
 
 | anname                                | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref           | example                                            |
 |---------------------------------------|-----------|------|------|------|------|-----------|---------------------|----------------------------------------------------|
-| Hintergrund-Streifen unten            | TextFrame |   0  | 414  | 594  | 427  | Dunkelgrün| —                   | (Vollbild-Streifen unten, 50% Höhe)                |
+| Hintergrund-Streifen unten            | Polygon   |   0  | 414  | 594  | 427  | Dunkelgrün| —                   | (Dunkelgrün-Vollbild-Streifen untere Hälfte)       |
 | Headline 4-zeilig (Brand-Wechselfarbe)| TextFrame |  33  | 443  | 491  | 244  | White     | Headlineweiß        | Hier steht / eine große / vierzeilige / Überschrift|
-| Logo (top-right, weiss)               | ImageFrame|  20  |  20  | 200  |  60  | —         | shared/logos/...    | shared/logos/gruene-weiss.png                      |
+| Logo (top-right, cmyk)                | ImageFrame| 374  |  20  | 200  |  60  | —         | shared/logos/gruene-cmyk.png| shared/logos/gruene-cmyk.png (rechtsbündig: 594 − 20 − 200 = 374) |
 | Veranstaltung — Datum/Zeit            | TextFrame | 100  | 700  | 200  |  40  | White     | Fließtext           | Samstag, 15. Mai · 14:00                           |
 | Veranstaltung — Ort/Adresse           | TextFrame | 100  | 745  | 200  |  40  | White     | Fließtext           | Hauptplatz Baden                                   |
 | Anmelde-URL                           | TextFrame | 100  | 790  | 200  |  20  | White     | Fließtext           | gruene.at/anmelde                                  |
@@ -113,14 +113,14 @@ slots:
     fcolor: "White"
     style_ref: "Fließtext"
     example: "gruene.at/anmelde"
-  - anname: "Logo (top-right, weiss)"
+  - anname: "Logo (top-right, cmyk)"
     type: ImageFrame
-    x_mm: 20
+    x_mm: 374
     y_mm: 20
     w_mm: 200
     h_mm: 60
     fcolor: ""
-    style_ref: "shared/logos/gruene-weiss.png"
+    style_ref: "shared/logos/gruene-cmyk.png"
     example: ""
   - anname: "Impressum (vertikal)"
     type: TextFrame
@@ -140,9 +140,11 @@ slots:
    ist hart am Maximum**, jede kleinere Headline scheitert.
 2. **Color-Wechsel:** identisches Pattern wie Postkarte (Run-Wechsel `Headlineweiß`/
    `Überschrift gelb` para-für-para). Konsistenz mit Postkarte ist Brand-Signal.
-3. **Layout-Drittel:** obere ~50% reine Headline auf Dunkelgrün-Streifen, untere ~50%
-   weißer Hintergrund mit Veranstaltungs-Daten + Logo rechts oben. Klarer Gestalt-Bruch
-   in der Mitte.
+3. **Layout-Halbierung:** **obere ~50% weißer Hintergrund** mit Veranstaltungs-Daten +
+   Logo rechts oben. **Untere ~50% Dunkelgrün-Vollbild** mit Headline 4-zeilig
+   (Wechselfarbe Weiß/Gelb). Klarer Gestalt-Bruch in der Mitte (Trennlinie ~y=414 mm).
+   Der Dunkelgrün-Streifen unten ist visuell schwerer als die helle Daten-Zone oben —
+   bewusste „Headline-Anker"-Wahl auf der unteren Hälfte (Augen-Lese-Höhe).
 4. **Body-Schriftgröße:** 50 pt für Datum/Ort/URL (`Fließtext` Gotham Narrow Book) — bei
    A1-Distanz die Mindest-Lesbarkeit für Sekundär-Inhalt.
 5. **Impressum:** 20 pt (groß für A1-Distanz, aber **vertikal um 270° gedreht**) am

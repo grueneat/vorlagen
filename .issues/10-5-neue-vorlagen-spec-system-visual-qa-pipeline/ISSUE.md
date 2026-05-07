@@ -1,7 +1,7 @@
 ---
 id: '10'
 title: 5 neue Vorlagen + Spec-System + Visual-QA-Pipeline
-status: open
+status: in_progress
 priority: high
 labels:
 - templates

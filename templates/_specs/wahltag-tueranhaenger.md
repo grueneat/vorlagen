@@ -146,6 +146,7 @@ fordert. Wir liefern „Stanzkontur" als Default (Österreichischer Druckerei-St
 
 | anname                       | type             | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                          | example                                   |
 |------------------------------|------------------|------|------|------|------|-----------|------------------------------------|-------------------------------------------|
+| Brand-Bar (Vorderseite)      | Polygon          |   0  |   0  | 105  |  20  | Dunkelgrün| —                                  | (Hintergrund-Patch hinter Logo, damit weißes Logo sichtbar) |
 | Logo Grüne (weiss, top)      | ImageFrame       |  10  |   8  |  35  |  10  | —         | shared/logos/gruene-weiss.png      | (verwende shared/logos/gruene-weiss.png)  |
 | Wahlkreuz (Hero)             | Block:WahlkreuzSymbol| 27.5| 70 |  50  |  50  | —         | —                                  | (Wahlkreuz auf Hellgrün-Polygon)          |
 | Headline-Wahltag             | TextFrame        |  10  | 130  |  85  |  20  | Dunkelgrün| tueranhaenger/headline             | Heute ist Wahltag.                        |
@@ -168,6 +169,15 @@ fordert. Wir liefern „Stanzkontur" als Default (Österreichischer Druckerei-St
 
 ```yaml
 slots:
+  - anname: "Brand-Bar (Vorderseite)"
+    type: Polygon
+    x_mm: 0
+    y_mm: 0
+    w_mm: 105
+    h_mm: 20
+    fcolor: "Dunkelgrün"
+    style_ref: ""
+    example: "Hintergrund-Patch hinter Logo (weißes Logo auf Dunkelgrün)"
   - anname: "Logo Grüne (weiss, top)"
     type: ImageFrame
     x_mm: 10
@@ -177,7 +187,7 @@ slots:
     fcolor: ""
     style_ref: "shared/logos/gruene-weiss.png"
     example: ""
-  - anname: "Wahlkreuz"
+  - anname: "Wahlkreuz (Hero)"
     type: "Block:WahlkreuzSymbol"
     x_mm: 27.5
     y_mm: 70
@@ -222,7 +232,7 @@ slots:
     fcolor: "Black"
     style_ref: "Impressum"
     example: "Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten."
-  - anname: "Stanzkontur"
+  - anname: "Stanzkontur (Außen + Loch)"
     type: "Block:DoorHangerCutout"
     x_mm: 0
     y_mm: 0
@@ -231,6 +241,15 @@ slots:
     fcolor: "Stanzkontur"
     style_ref: ""
     example: "Außen-Rechteck + 35 mm Loch zentriert horizontal, 25 mm vom Top"
+  - anname: "Logo Grüne (cmyk, back)"
+    type: ImageFrame
+    x_mm: 10
+    y_mm: 8
+    w_mm: 35
+    h_mm: 10
+    fcolor: ""
+    style_ref: "shared/logos/gruene-cmyk.png"
+    example: ""
   - anname: "Kandidat-Portrait"
     type: ImageFrame
     x_mm: 20
@@ -249,6 +268,24 @@ slots:
     fcolor: "Dunkelgrün"
     style_ref: "tueranhaenger/cand-name"
     example: "Maria Beispiel"
+  - anname: "Kandidat-Position"
+    type: TextFrame
+    x_mm: 10
+    y_mm: 178
+    w_mm: 85
+    h_mm: 8
+    fcolor: "Black"
+    style_ref: "tueranhaenger/cand-pos"
+    example: "Bürgermeisterkandidatin Mödling"
+  - anname: "Kontakt-URL"
+    type: TextFrame
+    x_mm: 10
+    y_mm: 200
+    w_mm: 85
+    h_mm: 8
+    fcolor: "Dunkelgrün"
+    style_ref: "tueranhaenger/url"
+    example: "gruene-moedling.at"
   - anname: "Kontakt-Info"
     type: TextFrame
     x_mm: 10
@@ -258,6 +295,15 @@ slots:
     fcolor: "Black"
     style_ref: "tueranhaenger/body"
     example: "maria.beispiel@gruene-moedling.at\n+43 660 1234567"
+  - anname: "Impressum (back)"
+    type: TextFrame
+    x_mm: 10
+    y_mm: 240
+    w_mm: 85
+    h_mm: 6
+    fcolor: "Black"
+    style_ref: "Impressum"
+    example: "Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten."
 ```
 
 ## EPS / Image-Embedding-Strategie

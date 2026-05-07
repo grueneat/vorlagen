@@ -100,7 +100,7 @@ Legende:
 
 | anname                       | type             | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                          | example                                    |
 |------------------------------|------------------|------|------|------|------|-----------|------------------------------------|--------------------------------------------|
-| Seitenhintergrund (front)    | Polygon          |  -3  |  -3  | 154  | 111  | Dunkelgrün| —                                  | (Vollbild)                                 |
+| Seitenhintergrund (front)    | Polygon          |  -3  |  -3  | 154  | 111  | Dunkelgrün| —                                  | Vollbild Vorderseite                       |
 | Logo Grüne (weiss)           | ImageFrame       |   6  |   6  |  35  |  10  | —         | shared/logos/gruene-weiss.png      | (verwende shared/logos/gruene-weiss.png)   |
 | Wahlkreuz                    | Block:WahlkreuzSymbol| 47 | 16  |  55  |  55  | —         | —                                  | (Wahlkreuz auf Dunkelgrün-Polygon)         |
 | Headline-Wahlaufruf          | TextFrame        |  10  |  78  | 128  |  20  | White     | wahlaufruf/headline                | Wähle Grün am 23. Mai                      |
@@ -122,7 +122,7 @@ Legende:
 
 ```yaml
 slots:
-  - anname: "Seitenhintergrund"
+  - anname: "Seitenhintergrund (front)"
     type: Polygon
     x_mm: -3
     y_mm: -3
@@ -131,6 +131,15 @@ slots:
     fcolor: "Dunkelgrün"
     style_ref: ""
     example: "Vollbild Vorderseite"
+  - anname: "Logo Grüne (weiss)"
+    type: ImageFrame
+    x_mm: 6
+    y_mm: 6
+    w_mm: 35
+    h_mm: 10
+    fcolor: ""
+    style_ref: "shared/logos/gruene-weiss.png"
+    example: ""
   - anname: "Wahlkreuz"
     type: "Block:WahlkreuzSymbol"
     x_mm: 47
@@ -140,6 +149,15 @@ slots:
     fcolor: ""
     style_ref: ""
     example: "Wahlkreuz auf Dunkelgrün-Polygon, padding 4mm"
+  - anname: "Logo Grüne (cmyk)"
+    type: ImageFrame
+    x_mm: 6
+    y_mm: 6
+    w_mm: 30
+    h_mm: 9
+    fcolor: ""
+    style_ref: "shared/logos/gruene-cmyk.png"
+    example: ""
   - anname: "Headline-Wahlaufruf"
     type: TextFrame
     x_mm: 10
