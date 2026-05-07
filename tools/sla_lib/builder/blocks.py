@@ -20,11 +20,34 @@ next major DSL revision.
 """
 from __future__ import annotations
 
+import math
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Mapping, Optional, Sequence, Iterable
 
 from .ci import Color, Style
-from .primitives import TextFrame, ImageFrame, Polygon, Anchor, Run
+from .primitives import (
+    TextFrame, ImageFrame, Polygon, Anchor, Run, pack_inline_image,
+    _format_path_coord,
+)
+from .document import mm_to_pt
+
+
+def _path_from_points_mm(points_mm: list[tuple[float, float]]) -> str:
+    """Build a Scribus path string from a list of (x, y) mm points.
+
+    Scribus stores SVG-like path strings: ``M{x0} {y0} L{x1} {y1} ... Z``.
+    All coordinates emitted in PT (the unit of ``custom_path``), formatted
+    with %.6g for stability.
+    """
+    if not points_mm:
+        return ""
+    pts_pt = [(mm_to_pt(x), mm_to_pt(y)) for x, y in points_mm]
+    parts = [f"M{_format_path_coord(pts_pt[0][0])} {_format_path_coord(pts_pt[0][1])}"]
+    for x_pt, y_pt in pts_pt[1:]:
+        parts.append(f"L{_format_path_coord(x_pt)} {_format_path_coord(y_pt)}")
+    parts.append("Z")
+    return " ".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -359,6 +382,272 @@ class ColumnTextStory:
         for i in range(len(frames) - 1):
             frames[i].link_to(frames[i + 1])
         yield from frames
+
+
+# ---------------------------------------------------------------------------
+# Block 6: WahlkreuzSymbol
+# Spec: templates/_specs/SCHEMA.md §6 (D12 background-color contract)
+# ---------------------------------------------------------------------------
+@dataclass
+class WahlkreuzSymbol:
+    """Wahlkreuz im Kreis (yellow cross + white circle).
+
+    The PNG asset has a white outer circle. On a white background the circle
+    disappears — only the yellow cross stays visible. Per D12, this block draws
+    a colored background polygon BEFORE placing the ImageFrame, so the white
+    ring stays visible. Default background: Dunkelgruen.
+
+    Source asset: shared/assets/wahlkreuz.png (RGBA 1200x1299).
+    """
+
+    pos: Anchor
+    size: tuple[float, float] = (55, 55)     # (w_mm, h_mm)
+    background_color: str = "Dunkelgrün"    # D12: never White, never Gelb
+    background_padding_mm: float = 4.0
+    anname: str = "Wahlkreuz"
+
+    def emit(self, page=None) -> Iterable:
+        # D12 Enforcement
+        if self.background_color in ("White", "Gelb"):
+            raise ValueError(
+                f"D12 violation: Wahlkreuz background_color cannot be '{self.background_color}'. "
+                "Must be a colored brand color (Dunkelgrün, Hellgrün, or Magenta) so the "
+                "white circle remains visible."
+            )
+
+        w, h = self.size
+        p = self.background_padding_mm
+
+        # Background fill
+        yield Polygon(
+            anchor=self.pos,
+            w_mm=w + 2 * p,
+            h_mm=h + 2 * p,
+            fill=self.background_color,
+            x_mm=-p,
+            y_mm=-p,  # Offset relative to anchor
+            anname=f"{self.anname} (Hintergrund)",
+        )
+
+        # Wahlkreuz Image
+        asset_path = Path("shared/assets/wahlkreuz.png")
+        if not asset_path.exists():
+            # Fallback for testing/CI if file missing in unexpected CWD
+            asset_path = (
+                Path(__file__).resolve().parents[3]
+                / "shared"
+                / "assets"
+                / "wahlkreuz.png"
+            )
+
+        with open(asset_path, "rb") as f:
+            img_bytes = f.read()
+
+        data, ext = pack_inline_image(img_bytes, "png")
+        yield ImageFrame(
+            anchor=self.pos,
+            w_mm=w,
+            h_mm=h,
+            inline_image_data=data,
+            inline_image_ext=ext,
+            scale_type=0,  # free / aspect-locked
+            anname=self.anname,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Block 7: FoldLine
+# Spec: templates/_specs/SCHEMA.md §7
+# ---------------------------------------------------------------------------
+@dataclass
+class FoldLine:
+    """Strichlierte Falz-Linie auf 'Falz'-Layer mit Spot-Color-Stroke.
+
+    ``layer_idx`` is the Scribus LAYER integer index (matches the position of the
+    Falz layer in ``Document(layers=[...])``). Pass an integer; ``layer_name`` is
+    a documentation hint for the SCRIBUS layer name and not emitted as LAYER.
+    """
+
+    start_mm: tuple[float, float]
+    end_mm: tuple[float, float]
+    layer_idx: int = 3                  # default 4th layer (Hintergrund/Bilder/Text/Falz)
+    layer_name: str = "Falz"            # documentation hint
+    spot_color: str = "Falz"
+    line_width_pt: float = 0.5
+    dash_pattern: tuple[float, float] = (3.0, 1.5)
+    anname: str = "Falzlinie"
+
+    def emit(self, page=None) -> Iterable:
+        # Bbox covers both endpoints (relative to page top-left); custom_path
+        # is local to the bbox top-left (subtract origin).
+        x0, y0 = self.start_mm
+        x1, y1 = self.end_mm
+        ox = min(x0, x1)
+        oy = min(y0, y1)
+        # Width/height >= small minimum so Scribus accepts the frame
+        w_mm = max(abs(x1 - x0), 0.1)
+        h_mm = max(abs(y1 - y0), 0.1)
+        local_pts = [(x0 - ox, y0 - oy), (x1 - ox, y1 - oy)]
+        path = _path_from_points_mm(local_pts)
+        yield Polygon(
+            x_mm=ox, y_mm=oy, w_mm=w_mm, h_mm=h_mm,
+            custom_path=path,
+            layer=self.layer_idx,
+            line_color=self.spot_color,
+            line_width_pt=self.line_width_pt,
+            dash_pattern=self.dash_pattern,
+            fill="None",
+            anname=self.anname,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Block 8: DieCut
+# Spec: templates/_specs/SCHEMA.md §7
+# ---------------------------------------------------------------------------
+@dataclass
+class DieCut:
+    """Geschlossener Stanzpfad auf 'Stanzkontur'-Layer.
+
+    ``layer_idx`` is the Scribus LAYER integer index. Pass it explicitly when
+    the document has a custom layer stack (e.g. ``Stanzkontur`` at index 3).
+    """
+
+    path_mm: list[tuple[float, float]]
+    layer_idx: int = 3                  # default 4th layer
+    layer_name: str = "Stanzkontur"     # documentation hint
+    spot_color: str = "Stanzkontur"
+    line_width_pt: float = 0.25
+    anname: str = "Stanzkontur"
+
+    def emit(self, page=None) -> Iterable:
+        pts = list(self.path_mm)
+        if pts and pts[0] != pts[-1]:
+            pts.append(pts[0])  # Close the loop
+        # Bbox covers all points
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        ox = min(xs)
+        oy = min(ys)
+        w_mm = max(max(xs) - ox, 0.1)
+        h_mm = max(max(ys) - oy, 0.1)
+        local_pts = [(p[0] - ox, p[1] - oy) for p in pts]
+        path = _path_from_points_mm(local_pts)
+        yield Polygon(
+            x_mm=ox, y_mm=oy, w_mm=w_mm, h_mm=h_mm,
+            custom_path=path,
+            layer=self.layer_idx,
+            line_color=self.spot_color,
+            line_width_pt=self.line_width_pt,
+            fill="None",
+            anname=self.anname,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Block 9: FoldedPanel
+# ---------------------------------------------------------------------------
+@dataclass
+class FoldedPanel:
+    """Wrapper for a single panel of a folded flyer.
+
+    ``fold_layer_idx`` is the Scribus LAYER integer index for the right-edge
+    FoldLine (Falz spot color) — pass it explicitly when the document has a
+    custom layer stack (e.g. Falz at index 3).
+    """
+
+    panel_index: int  # 0-based
+    panel_count: int  # 3 for DIN-lang
+    panel_size_mm: tuple[float, float]  # (99, 210) for DIN-lang vertical
+    has_fold_right: bool = True
+    fold_layer_idx: int = 3
+    children: list = field(default_factory=list)
+
+    def emit(self, page=None) -> Iterable:
+        for child in self.children:
+            if hasattr(child, "emit"):
+                yield from child.emit(page)
+            else:
+                yield child
+
+        if self.has_fold_right:
+            w, h = self.panel_size_mm
+            x = (self.panel_index + 1) * w
+            yield from FoldLine(
+                start_mm=(x, 0),
+                end_mm=(x, h),
+                layer_idx=self.fold_layer_idx,
+                anname=f"Falz Panel {self.panel_index}",
+            ).emit(page)
+
+
+# ---------------------------------------------------------------------------
+# Block 10: DoorHangerCutout
+# Spec: templates/_specs/wahltag-tueranhaenger.md
+# ---------------------------------------------------------------------------
+@dataclass
+class DoorHangerCutout:
+    """Standard door-hanger outer + handle-hole stanzpfad.
+
+    ``layer_idx`` is the Scribus LAYER integer index for both DieCuts
+    (outer + hole). Pass it explicitly when the document has a custom layer
+    stack (e.g. Stanzkontur at index 3).
+    """
+
+    page_size_mm: tuple[float, float] = (105, 250)
+    hole_diameter_mm: float = 35
+    hole_top_offset_mm: float = 25
+    layer_idx: int = 3
+
+    def emit(self, page=None) -> Iterable:
+        w, h = self.page_size_mm
+        # Outer rectangle
+        path = [(0, 0), (w, 0), (w, h), (0, h), (0, 0)]
+
+        # Hole (circular, approximated)
+        d = self.hole_diameter_mm
+        r = d / 2
+        cx = w / 2
+        cy = self.hole_top_offset_mm + r
+
+        segments = 36
+        hole_path = []
+        for i in range(segments + 1):
+            angle = 2 * math.pi * i / segments
+            hx = cx + r * math.cos(angle)
+            hy = cy + r * math.sin(angle)
+            hole_path.append((hx, hy))
+
+        yield from DieCut(path_mm=path, layer_idx=self.layer_idx,
+                          anname="Stanzkontur Außen").emit(page)
+        yield from DieCut(path_mm=hole_path, layer_idx=self.layer_idx,
+                          anname="Stanzkontur Loch").emit(page)
+
+
+# ---------------------------------------------------------------------------
+# Block 11: TableTentFold
+# Spec: templates/_specs/infostand-tent-card-a5-quer.md
+# ---------------------------------------------------------------------------
+@dataclass
+class TableTentFold:
+    """A4 quer folded into A5 tent: emits horizontal Falz-line at center.
+
+    ``layer_idx`` is the Scribus LAYER integer index for the FoldLine
+    (Falz spot color). Default 3 assumes the document declares 4 layers
+    [Hintergrund, Bilder, Text, Falz].
+    """
+
+    page_size_mm: tuple[float, float] = (297, 210)
+    layer_idx: int = 3
+
+    def emit(self, page=None) -> Iterable:
+        w, h = self.page_size_mm
+        yield from FoldLine(
+            start_mm=(0, h / 2),
+            end_mm=(w, h / 2),
+            layer_idx=self.layer_idx,
+            anname="Mittelfalz (horizontal)",
+        ).emit(page)
 
 
 # ---------------------------------------------------------------------------

@@ -19,7 +19,8 @@ from sla_lib.builder.blocks import (  # noqa: E402
     PageNumber, Impressum, PageBackground, ContactBlock, ColumnTextStory,
     DEFAULT_IMPRESSUM,
 )
-from sla_lib.builder.primitives import Run, TextFrame  # noqa: E402
+from sla_lib.builder.primitives import Run, TextFrame, Polygon, ImageFrame, Anchor
+  # noqa: E402
 
 
 def _save(doc: Document) -> SLADocument:
@@ -390,3 +391,131 @@ class LegacyBlocksTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+# ---------------------------------------------------------------------------
+# WahlkreuzSymbol
+# ---------------------------------------------------------------------------
+class WahlkreuzSymbolTests(unittest.TestCase):
+    def test_wahlkreuz_emits_polygon_and_image(self):
+        from sla_lib.builder.blocks import WahlkreuzSymbol
+        from sla_lib.builder.primitives import Anchor
+        wk = WahlkreuzSymbol(pos=Anchor.from_page("top-left", 10, 10), 
+                            size=(50, 50),
+                            background_color="Dunkelgrün",
+                            background_padding_mm=4.0)
+        items = list(wk.emit(None))
+        self.assertEqual(len(items), 2)
+        self.assertIsInstance(items[0], Polygon)
+        self.assertIsInstance(items[1], ImageFrame)
+        
+        poly = items[0]
+        self.assertEqual(poly.fill, "Dunkelgrün")
+        # 50x50 + 4mm padding each side = 58x58
+        self.assertAlmostEqual(poly.w_mm, 58.0)
+        self.assertAlmostEqual(poly.h_mm, 58.0)
+        
+        img = items[1]
+        self.assertEqual(img.w_mm, 50.0)
+        self.assertEqual(img.h_mm, 50.0)
+        self.assertIsNotNone(img.inline_image_data)
+        self.assertEqual(img.inline_image_ext, "png")
+
+    def test_wahlkreuz_invalid_color_raises(self):
+        from sla_lib.builder.blocks import WahlkreuzSymbol
+        from sla_lib.builder.primitives import Anchor
+        wk = WahlkreuzSymbol(pos=Anchor.from_page("top-left", 10, 10), 
+                            size=(50, 50),
+                            background_color="White")
+        with self.assertRaisesRegex(ValueError, "D12"):
+            list(wk.emit(None))
+
+# ---------------------------------------------------------------------------
+# FoldLine
+# ---------------------------------------------------------------------------
+class FoldLineTests(unittest.TestCase):
+    def test_foldline_emits_polygon_on_layer(self):
+        from sla_lib.builder.blocks import FoldLine
+        fl = FoldLine(start_mm=(10, 10), end_mm=(10, 100), layer_idx=3,
+                      layer_name="Falz", spot_color="Falz")
+        items = list(fl.emit(None))
+        self.assertEqual(len(items), 1)
+        poly = items[0]
+        self.assertEqual(poly.layer, 3)  # int index, matches LAYER attribute
+        self.assertEqual(poly.line_color, "Falz")
+        self.assertEqual(poly.dash_pattern, (3.0, 1.5))
+
+# ---------------------------------------------------------------------------
+# DieCut
+# ---------------------------------------------------------------------------
+class DieCutTests(unittest.TestCase):
+    def test_diecut_emits_closed_polygon(self):
+        from sla_lib.builder.blocks import DieCut
+        path = [(10, 10), (20, 10), (20, 20), (10, 20)]
+        dc = DieCut(path_mm=path, layer_idx=3, layer_name="Stanzkontur",
+                    spot_color="Stanzkontur")
+        items = list(dc.emit(None))
+        self.assertEqual(len(items), 1)
+        poly = items[0]
+        self.assertEqual(poly.layer, 3)  # int index
+        self.assertEqual(poly.line_color, "Stanzkontur")
+        # custom_path is now a Scribus path string. Verify it's closed (ends with Z)
+        self.assertTrue(poly.custom_path.endswith("Z"),
+                        f"path doesn't end with Z: {poly.custom_path}")
+        # bbox calc: 10..20 mm = 10x10 mm = 28.34 x 28.34 pt
+        self.assertAlmostEqual(poly.w_mm, 10.0, places=2)
+        self.assertAlmostEqual(poly.h_mm, 10.0, places=2)
+        self.assertAlmostEqual(poly.x_mm, 10.0, places=2)
+        self.assertAlmostEqual(poly.y_mm, 10.0, places=2)
+
+# ---------------------------------------------------------------------------
+# FoldedPanel
+# ---------------------------------------------------------------------------
+class FoldedPanelTests(unittest.TestCase):
+    def test_foldedpanel_emits_foldline_at_right(self):
+        from sla_lib.builder.blocks import FoldedPanel
+        fp = FoldedPanel(panel_index=0, panel_count=3, panel_size_mm=(99, 210), has_fold_right=True)
+        items = list(fp.emit(None))
+        # No children, just the fold line
+        self.assertEqual(len(items), 1)
+        # Should be a Polygon (from FoldLine.emit) — vertical line at x=99
+        poly = items[0]
+        self.assertIsInstance(poly, Polygon)
+        self.assertAlmostEqual(poly.x_mm, 99.0, places=2)
+        self.assertAlmostEqual(poly.y_mm, 0.0, places=2)
+        self.assertAlmostEqual(poly.h_mm, 210.0, places=2)
+
+# ---------------------------------------------------------------------------
+# DoorHangerCutout
+# ---------------------------------------------------------------------------
+class DoorHangerCutoutTests(unittest.TestCase):
+    def test_doorhanger_emits_diecut_with_hole(self):
+        from sla_lib.builder.blocks import DoorHangerCutout
+        dhc = DoorHangerCutout(page_size_mm=(105, 250))
+        items = list(dhc.emit(None))
+        self.assertEqual(len(items), 2)  # Outer + Hole
+        poly_outer = items[0]
+        poly_hole = items[1]
+        # Outer is a 5-point closed rect → at least M + 4 L + Z = 5 path commands
+        self.assertTrue(poly_outer.custom_path.endswith("Z"))
+        outer_segments = poly_outer.custom_path.count("L") + poly_outer.custom_path.count("M")
+        self.assertGreaterEqual(outer_segments, 5)
+        # Hole is a 36-segment circle → at least 36+ L commands
+        hole_segments = poly_hole.custom_path.count("L") + poly_hole.custom_path.count("M")
+        self.assertGreaterEqual(hole_segments, 36)
+
+# ---------------------------------------------------------------------------
+# TableTentFold
+# ---------------------------------------------------------------------------
+class TableTentFoldTests(unittest.TestCase):
+    def test_tabletentfold_emits_horizontal_foldline(self):
+        from sla_lib.builder.blocks import TableTentFold
+        ttf = TableTentFold(page_size_mm=(297, 210))
+        items = list(ttf.emit(None))
+        self.assertEqual(len(items), 1)
+        poly = items[0]
+        # FoldLine bbox at y=105, full width 297 mm horizontal
+        self.assertAlmostEqual(poly.x_mm, 0.0, places=2)
+        self.assertAlmostEqual(poly.y_mm, 105.0, places=2)
+        self.assertAlmostEqual(poly.w_mm, 297.0, places=2)
+        self.assertEqual(poly.layer, 3)
+

@@ -56,7 +56,7 @@ from __future__ import annotations
 
 from .ci import Color, Style, load_ci
 from .document import Document, Page
-from .primitives import TextFrame, ImageFrame, Polygon, Line, Anchor, Run
+from .primitives import TextFrame, ImageFrame, Polygon, Line, Anchor, Run, pack_inline_image
 from .styles import DocumentLayer, ParaStyle, CharStyle, SoftShadow
 from .brand import Brand
 from . import blocks
@@ -72,6 +72,7 @@ __all__ = [
     "Line",
     "Anchor",
     "Run",
+    "pack_inline_image",
     "ParaStyle",
     "CharStyle",
     "DocumentLayer",

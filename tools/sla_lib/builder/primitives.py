@@ -9,7 +9,10 @@ PTYPE values from `pageitem.h::ItemType`:
   2 = ImageFrame, 4 = TextFrame, 5 = Line, 6 = Polygon, 7 = PolyLine.
 """
 from __future__ import annotations
+import base64
+import struct
 import warnings
+import zlib
 from dataclasses import dataclass, field
 from typing import Mapping, Optional, Union
 
@@ -153,6 +156,12 @@ class Anchor:
             DeprecationWarning, stacklevel=2,
         )
         return _parse_legacy_anchor(spec)
+
+    @classmethod
+    def from_page(cls, where: str, x_offset_mm: float = 0, y_offset_mm: float = 0) -> "Anchor":
+        """DEPRECATED: Create anchor from page corner with optional offsets."""
+        # For simplicity, we just use the (x, y) tuple legacy form
+        return cls.from_legacy((x_offset_mm, y_offset_mm))
 
 
 def _parse_legacy_anchor(spec: "Union[str, tuple]") -> Anchor:
@@ -738,6 +747,20 @@ class TextFrame(_Frame):
 # ---------------------------------------------------------------------------
 # ImageFrame
 # ---------------------------------------------------------------------------
+def pack_inline_image(image_bytes: bytes, ext: str) -> tuple[str, str]:
+    """Encode raster bytes for ImageFrame.inline_image_data (qCompress format).
+
+    Scribus's inline ImageData attribute is qCompress-encoded:
+    base64( 4-byte big-endian uncompressed-length prefix + zlib_compress(image_bytes) ).
+    Naive base64 of raw bytes makes Scribus abort with qUncompress: Z_DATA_ERROR.
+
+    Returns (qcompressed_b64, ext) — pass to ImageFrame as
+    inline_image_data=..., inline_image_ext=ext.
+    """
+    blob = struct.pack(">I", len(image_bytes)) + zlib.compress(image_bytes, 6)
+    return base64.b64encode(blob).decode("ascii"), ext
+
+
 @dataclass
 class ImageFrame(_Frame):
     src: str = ""             # PFILE path (absolute or relative-to-SLA)
@@ -829,6 +852,7 @@ class Polygon(_Frame):
     layer: int = 0                    # default Hintergrund
     shape: str = "rectangle"          # 'rectangle' | 'ellipse'
     fill_shade: int = 100             # SHADE — emitted when != 100
+    dash_pattern: Optional[tuple[float, ...]] = None  # (dash, gap, ...) in pt
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
@@ -864,6 +888,10 @@ class Polygon(_Frame):
             attrs["PCOLOR2"] = self.line_color
         if self.fill_shade != 100:
             attrs["SHADE"] = str(self.fill_shade)
+        if self.dash_pattern:
+            attrs["DASHS"] = " ".join(_fmt_num(v) for v in self.dash_pattern)
+            attrs["NUMDASH"] = str(len(self.dash_pattern))
+            attrs["DASHOFF"] = "0"
         if self.anname:
             attrs["ANNAME"] = self.anname
         return etree.Element("PAGEOBJECT", attrib=attrs)

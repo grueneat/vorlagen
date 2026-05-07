@@ -17,7 +17,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 23ea1bed2afd5b4beb05ca33aefa020fba33f735dd5f95d819eac4dae4ef646d
+previews_for_sla: f8d1744d980925e9034469d59ec4e9f1a7ed4c5e788d451e071356f9f364e8a4
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style
