@@ -62,9 +62,9 @@ class TestBrandGrueneNoe(unittest.TestCase):
                          f"Expected 113 keys, got {len(self.brand.default_doc_attrs)}")
 
     def test_brand_default_pdf_attrs_count(self):
-        """Brand.default_pdf_attrs contains exactly 34 keys."""
-        self.assertEqual(len(self.brand.default_pdf_attrs), 34,
-                         f"Expected 34 keys, got {len(self.brand.default_pdf_attrs)}")
+        """Brand.default_pdf_attrs contains exactly 35 keys (34 original + CompressMethod hoisted in issue #6)."""
+        self.assertEqual(len(self.brand.default_pdf_attrs), 35,
+                         f"Expected 35 keys, got {len(self.brand.default_pdf_attrs)}")
 
     def test_brand_para_styles_present(self):
         """Brand.para_styles contains all CI brand styles."""

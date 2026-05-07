@@ -16,6 +16,9 @@
 #   ScratchTop, calligraphicPenAngle, dispX, dispY, renderStack.
 # Differing pdf-attrs: ImageP, InfoString, PicRes, PrintP, RGBMode, RecalcPic,
 #   SolidP, UseProfiles2, Version, bleedMarks, useDocBleeds.
+# Note: CompressMethod was hoisted to default_pdf_attrs (issue #6) — the DSL
+#   builder always emits CompressMethod='0' and the converter was capturing it
+#   as a per-template residual, inflating extra_pdf_attrs to 12 keys.
 
 default_doc_attrs:
   ALAYER: '0'
@@ -135,6 +138,7 @@ default_doc_attrs:
 default_pdf_attrs:
   CMethod: '0'
   Clip: '0'
+  CompressMethod: '0'
   Encrypt: '0'
   FontEmbedding: '0'
   ImagePr: '0'
