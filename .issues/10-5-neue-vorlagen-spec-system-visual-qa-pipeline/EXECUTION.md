@@ -13,17 +13,17 @@
 - [x] Task 5: Spec wahltag-tueranhaenger — commit 17e0fe1
 - [x] Task 6: Spec infostand-tent-card-a5-quer — commit 1c6d91a
 - [x] Task 7: Spec kandidat-falzflyer-din-lang — commit a38c875
-- [x] Task 8: Gate 1 — spec review (iter-1 + iter-2 fixes; pending commit)
-- [ ] Task 9: Wahlkreuz assets + pack_inline_image
-- [ ] Task 10: Six new blocks
-- [ ] Task 11: codex_image_gen.py
-- [ ] Task 12: Template themen-plakat-a3-quer
-- [ ] Task 13: Template wahlaufruf-postkarte-a6-quer
-- [ ] Task 14: Template wahltag-tueranhaenger
-- [ ] Task 15: Template infostand-tent-card-a5-quer
-- [ ] Task 16: Template kandidat-falzflyer-din-lang
-- [ ] Task 17: Gallery build pre-flight
-- [ ] Task 18: Gate 2 — code review
+- [x] Task 8: Gate 1 — spec review — commit 167559e
+- [x] Task 9: Wahlkreuz assets + pack_inline_image — commits 0f47e1c, f1be7a7
+- [x] Task 10: Six new blocks — commit cfa0d1f
+- [x] Task 11: codex_image_gen.py — commit 266b10e
+- [x] Task 12: Template themen-plakat-a3-quer — commit 133cca6
+- [x] Task 13: Template wahlaufruf-postkarte-a6-quer — commit 24e4694
+- [x] Task 14: Template wahltag-tueranhaenger — commit 886a3d4
+- [x] Task 15: Template infostand-tent-card-a5-quer — commit 82e814a
+- [x] Task 16: Template kandidat-falzflyer-din-lang — commit 466443a
+- [x] Task 17: Gallery build pre-flight — commit 2286f4d
+- [x] Task 18: Gate 2 — code review (iter-1 + fixes) — commits in 41dfcb5
 - [ ] Task 19: spec_check.py
 - [ ] Task 20: visual_review.py
 - [ ] Task 21: Gate 3 — themen-plakat
