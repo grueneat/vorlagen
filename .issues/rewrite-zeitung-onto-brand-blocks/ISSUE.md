@@ -2,6 +2,7 @@
 id: '8'
 title: Rewrite Zeitung A4 onto Brand + blocks
 status: done
+ship_state: pr_open
 priority: high
 labels:
 - dsl
