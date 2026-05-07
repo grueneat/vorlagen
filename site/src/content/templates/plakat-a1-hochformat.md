@@ -16,7 +16,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../plakat-a1-hochformat-original.sla
-previews_for_sla: cff461714e044eb343b7593bf7b0de2d40a5bb38a458d62db80359748902a3b4
+previews_for_sla: 5c9a04ed876a8bdfad9ed7bb1851fbe4e39fd6119db1469f18b06f1c07bad48c
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style

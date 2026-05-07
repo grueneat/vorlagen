@@ -19,7 +19,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../postkarte-vorlage-original.sla
-previews_for_sla: f8bcd668ecfec76a285243145d2ce91e2c67be8c3a51906b998ba38300a94d00
+previews_for_sla: 68189afb1ef38c2f55175617755574feee95f8ad90f4489779425ae9ea89fd67
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style
