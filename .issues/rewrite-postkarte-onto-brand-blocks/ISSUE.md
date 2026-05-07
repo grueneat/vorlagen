@@ -1,7 +1,7 @@
 ---
 id: '6'
 title: Rewrite Postkarte A6 onto Brand + blocks
-status: open
+status: done
 priority: high
 labels:
 - dsl
