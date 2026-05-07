@@ -1,8 +1,10 @@
 # Execution: 5 neue Vorlagen + Spec-System + Visual-QA-Pipeline
 
 **Started:** 2026-05-07
-**Status:** in_progress
+**Completed:** 2026-05-07
+**Status:** complete
 **Branch:** issue/10-5-neue-vorlagen-spec-system-visual-qa-pipeline
+**PR:** https://github.com/GrueneAT/vorlagen/pull/20
 
 ## Execution Log
 
@@ -33,7 +35,7 @@
 - [x] Task 25: Gate 3 — kandidat-falzflyer — commit 8e82cc8
 - [x] Task 26: Gate 3 — summary report — commit 8e82cc8
 - [x] Task 27: Pre-merge sweep — verified locally (266 DSL + 47 smoke + 3 round-trip + bin/validate + gallery 8 = green)
-- [ ] Task 28: Open PR
+- [x] Task 28: Open PR — https://github.com/GrueneAT/vorlagen/pull/20
 
 ## Verification Results
 
