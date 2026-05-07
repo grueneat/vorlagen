@@ -18,7 +18,7 @@ description: 'A4 quer (297×210 mm) gefalzt zu A5-Tent. Steht selbsttragend auf 
 build:
   script: build.py
   output: template.sla
-previews_for_sla: 45f2abcd2524e141734d98cfbc5e4306c861e3705d5794cc579ae896d97f7878
+previews_for_sla: f539a176231a8524cb4dc33a2fbe9ea25a43acc62b367b1b446b462771c6cd79
 ci_overrides:
   non_ci_styles:
   - tent/headline

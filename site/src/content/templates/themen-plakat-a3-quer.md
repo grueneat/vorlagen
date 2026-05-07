@@ -18,7 +18,7 @@ description: 'Argumentations-Plakat A3 quer (420×297 mm) für sachthemen-orient
 build:
   script: build.py
   output: template.sla
-previews_for_sla: a3a080f681adfa006234687d1af2374b6a63764b6a862cd54645a4cd38abc9e2
+previews_for_sla: cf1eeefd7dbf7b2dacfbd85720f3c02f90fa11daf696c9ba4627258a7a9ddeba
 ci_overrides:
   non_ci_styles:
   - themen-plakat/headline

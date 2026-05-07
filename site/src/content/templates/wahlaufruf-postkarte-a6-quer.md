@@ -18,7 +18,7 @@ description: 'Zweiseitige Wahlaufruf-Postkarte A6 quer (148×105 mm). Vorderseit
 build:
   script: build.py
   output: template.sla
-previews_for_sla: acbd35b972f888e999e9279fcf0f14b0f1a51671775a353a46320b4491d6b503
+previews_for_sla: a3d0915e4385dad97cad72f92c7ee6d3d6ee913d81c7556d2f26d6e937dc116b
 ci_overrides:
   non_ci_styles:
   - wahlaufruf/headline

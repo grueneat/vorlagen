@@ -18,7 +18,7 @@ description: '3-fach gefalzter A4-quer-Kandidaten-Flyer (Zickzackfalz, 6 Panele 
 build:
   script: build.py
   output: template.sla
-previews_for_sla: f136d8d5011347a8e4e8e33096a35bce6b66d4b634173aec7657bb815f669321
+previews_for_sla: 2f2c43df40e378b376c449442e614bf0e97d64210047c1327afc0be628ffa493
 ci_overrides:
   non_ci_styles:
   - falzflyer/cand-name

@@ -157,6 +157,19 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Brand-Bar (Vorderseite)",
     ))
 
+    # Logo (white) on Brand-Bar — 35x10mm at 413x118px source → scale 0.24
+    logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
+    if logo_weiss.exists():
+        lw_data, lw_ext = pack_inline_image(logo_weiss.read_bytes(), "png")
+        page0.add(ImageFrame(
+            x_mm=10, y_mm=8, w_mm=35, h_mm=10,
+            inline_image_data=lw_data, inline_image_ext=lw_ext,
+            scale_type=0, ratio=1,
+            local_scale=(0.240, 0.240),
+            layer=LAYER_BILDER,
+            anname="Logo Grüne (weiss, top)",
+        ))
+
     # Wahlkreuz hero on Hellgrün band (D12: not white, not yellow)
     wahlkreuz_path = HERE.parents[1] / "shared" / "assets" / "wahlkreuz.png"
     if not wahlkreuz_path.exists():
@@ -258,6 +271,18 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         layer=LAYER_HINTERGRUND,
         anname="Brand-Bar (Rückseite)",
     ))
+
+    # Logo (white on Dunkelgrün, back)
+    if logo_weiss.exists():
+        lw_data2, lw_ext2 = pack_inline_image(logo_weiss.read_bytes(), "png")
+        page1.add(ImageFrame(
+            x_mm=10, y_mm=8, w_mm=35, h_mm=10,
+            inline_image_data=lw_data2, inline_image_ext=lw_ext2,
+            scale_type=0, ratio=1,
+            local_scale=(0.240, 0.240),
+            layer=LAYER_BILDER,
+            anname="Logo Grüne (cmyk, back)",
+        ))
 
     # Kandidat-Portrait placeholder (optional — slot stays present, image
     # injected by Codex demo or end user)

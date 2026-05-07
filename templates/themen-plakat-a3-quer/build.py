@@ -139,18 +139,26 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
 
     # Logo (top-left) — embedded inline so the SLA stays self-contained
     logo_path = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
-    if logo_path.exists():
-        logo_bytes = logo_path.read_bytes()
-        data, ext = pack_inline_image(logo_bytes, "png")
-        page.add(ImageFrame(
-            x_mm=15, y_mm=10, w_mm=60, h_mm=18,
-            inline_image_data=data,
-            inline_image_ext=ext,
-            scale_type=1,  # fit to frame
-            ratio=1,
-            layer=1,
-            anname="Logo Grüne (top-left)",
-        ))
+    if not logo_path.exists():
+        raise FileNotFoundError(
+            f"Logo asset missing at {logo_path} — run "
+            f"`bin/refresh-placeholder-logos` or drop the brand logos there."
+        )
+    logo_bytes = logo_path.read_bytes()
+    data, ext = pack_inline_image(logo_bytes, "png")
+    # Use scale_type=0 (free) + explicit LOCALSCX/Y so Scribus renders the
+    # PNG inside the frame (scale_type=1+ratio=1 was rendering blank).
+    # 413x118 px source, 60x18 mm frame ≈ 170.1x51 pt → scale = 51/118 ≈ 0.432
+    page.add(ImageFrame(
+        x_mm=15, y_mm=10, w_mm=60, h_mm=18,
+        inline_image_data=data,
+        inline_image_ext=ext,
+        scale_type=0,
+        ratio=1,
+        local_scale=(0.412, 0.432),
+        layer=1,
+        anname="Logo Grüne (top-left)",
+    ))
 
     # Headline — These (60 pt Vollkorn Black Italic Dunkelgrün)
     page.add(TextFrame(

@@ -183,7 +183,20 @@ def _add_front(doc, page0):
     ))
 
     # ---- Panel 1 (Cover) — x=0..99 -----
-    # Logo placeholder (would be top-left, optional file)
+    # Logo (cmyk) top-left corner
+    logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
+    logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
+    if logo_cmyk.exists():
+        lc_data, lc_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+        page0.add(ImageFrame(
+            x_mm=6, y_mm=10, w_mm=35, h_mm=10,
+            inline_image_data=lc_data, inline_image_ext=lc_ext,
+            scale_type=0, ratio=1,
+            local_scale=(0.240, 0.240),
+            layer=LAYER_BILDER,
+            anname="P1 Logo Grüne",
+        ))
+
     # Kandidat-Portrait placeholder (image frame, optional Codex demo)
     page0.add(ImageFrame(
         x_mm=6, y_mm=28, w_mm=87, h_mm=105,
@@ -236,6 +249,18 @@ def _add_front(doc, page0):
         )],
         anname="P2 Teaser-Body",
     ))
+
+    # P2 small logo at bottom of panel — 25x8mm → scale ≈ 0.172
+    if logo_cmyk.exists():
+        lc2_data, lc2_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+        page0.add(ImageFrame(
+            x_mm=105, y_mm=188, w_mm=25, h_mm=8,
+            inline_image_data=lc2_data, inline_image_ext=lc2_ext,
+            scale_type=0, ratio=1,
+            local_scale=(0.172, 0.192),
+            layer=LAYER_BILDER,
+            anname="P2 Logo (klein)",
+        ))
 
     # ---- Panel 3 (Closer) — x=198..297, on Dunkelgrün --------
     # Wahlkreuz hero (Dunkelgrün bg already provides D12 contract)
@@ -411,6 +436,18 @@ def _add_back(doc, page1):
         layer=LAYER_BILDER,
         anname="P6 QR-Code",
     ))
+    # P6 Logo Grüne — 35x10mm → scale 0.240
+    logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
+    if logo_cmyk.exists():
+        lc6_data, lc6_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+        page1.add(ImageFrame(
+            x_mm=204, y_mm=130, w_mm=35, h_mm=10,
+            inline_image_data=lc6_data, inline_image_ext=lc6_ext,
+            scale_type=0, ratio=1,
+            local_scale=(0.240, 0.240),
+            layer=LAYER_BILDER,
+            anname="P6 Logo Grüne",
+        ))
     # Impressum
     page1.add(TextFrame(
         x_mm=204, y_mm=145, w_mm=87, h_mm=60,

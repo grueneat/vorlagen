@@ -22,7 +22,7 @@ description: 'Vertikaler Türanhänger 105×250 mm mit 35-mm-Loch-Stanzform für
 build:
   script: build.py
   output: template.sla
-previews_for_sla: cef90a857ff98febde6eb8769248e63950a2017adbb3f5e0b8263a3aaf89967e
+previews_for_sla: 5fcc602e0d1f85f74307c1dd2deeac764600d13cb1ebf77212b16c8b94365c48
 ci_overrides:
   non_ci_styles:
   - tueranhaenger/headline

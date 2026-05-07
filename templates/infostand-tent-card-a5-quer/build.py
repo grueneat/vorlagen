@@ -27,9 +27,11 @@ from sla_lib.builder import (  # noqa: E402
     Document,
     DocumentLayer,
     TextFrame,
+    ImageFrame,
     Polygon,
     Run,
     ParaStyle,
+    pack_inline_image,
 )
 from sla_lib.builder.blocks import TableTentFold  # noqa: E402
 
@@ -114,9 +116,22 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
     )
 
     # ---- PANEL A (y=0..105) — normal orientation ---------------------------
-    # Headline Panel A
+    # Logo (cmyk) top-left of Panel A — 45x14mm = 127.6x39.7pt → scale ≈ 0.309
+    logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
+    if logo_cmyk.exists():
+        lc_data, lc_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+        page.add(ImageFrame(
+            x_mm=12, y_mm=10, w_mm=45, h_mm=14,
+            inline_image_data=lc_data, inline_image_ext=lc_ext,
+            scale_type=0, ratio=1,
+            local_scale=(0.309, 0.336),
+            layer=LAYER_BILDER,
+            anname="Logo Grüne (cmyk, panel A)",
+        ))
+
+    # Headline Panel A — placed to the right of the logo
     page.add(TextFrame(
-        x_mm=12, y_mm=12, w_mm=273, h_mm=24,
+        x_mm=62, y_mm=12, w_mm=223, h_mm=24,
         layer=LAYER_TEXT,
         style="tent/headline",
         runs=[Run(text="Klimaschutz konkret.",
@@ -124,9 +139,9 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Headline Panel A",
     ))
 
-    # Body Panel A
+    # Body Panel A — aligned with headline (under it, slightly indented)
     page.add(TextFrame(
-        x_mm=12, y_mm=44, w_mm=273, h_mm=56,
+        x_mm=62, y_mm=44, w_mm=223, h_mm=56,
         layer=LAYER_TEXT,
         style="tent/body",
         runs=[Run(
@@ -171,9 +186,14 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
     # to flip the frames into the correct visual orientation when the sheet
     # is folded.
 
-    # Headline Panel B
+    # Headline Panel B — rotated 180°, positioned with bbox math:
+    # original (12, 174, 223, 24) → rotated 180 around bbox center makes
+    # the rendered headline read upright when sheet is folded.
+    # Frame XPOS/YPOS in Scribus track the rotated bbox top-left (which
+    # for ROT=180 lands at original bottom-right): so x = 12+223 = 235,
+    # y = 174+24 = 198.
     page.add(TextFrame(
-        x_mm=285, y_mm=200, w_mm=273, h_mm=24,
+        x_mm=235, y_mm=198, w_mm=223, h_mm=24,
         layer=LAYER_TEXT,
         style="tent/headline",
         runs=[Run(text="Climate. Concrete.",
@@ -182,9 +202,9 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         rotation_deg=180,
     ))
 
-    # Body Panel B
+    # Body Panel B — original (12, 113, 223, 56) → rotated bbox: x=235, y=169
     page.add(TextFrame(
-        x_mm=285, y_mm=169, w_mm=273, h_mm=56,
+        x_mm=235, y_mm=169, w_mm=223, h_mm=56,
         layer=LAYER_TEXT,
         style="tent/body",
         runs=[Run(
@@ -196,6 +216,19 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Body Panel B",
         rotation_deg=180,
     ))
+
+    # Logo Panel B (rotated 180°)
+    if logo_cmyk.exists():
+        lc2_data, lc2_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+        page.add(ImageFrame(
+            x_mm=57, y_mm=210, w_mm=45, h_mm=14,
+            inline_image_data=lc2_data, inline_image_ext=lc2_ext,
+            scale_type=0, ratio=1,
+            local_scale=(0.309, 0.336),
+            layer=LAYER_BILDER,
+            anname="Logo Grüne (cmyk, panel B)",
+            rotation_deg=180,
+        ))
 
     out_path = Path(out_path)
     doc.save(out_path)
