@@ -435,11 +435,12 @@ class WahlkreuzSymbolTests(unittest.TestCase):
 class FoldLineTests(unittest.TestCase):
     def test_foldline_emits_polygon_on_layer(self):
         from sla_lib.builder.blocks import FoldLine
-        fl = FoldLine(start_mm=(10, 10), end_mm=(10, 100), layer_name="Falz", spot_color="Falz")
+        fl = FoldLine(start_mm=(10, 10), end_mm=(10, 100), layer_idx=3,
+                      layer_name="Falz", spot_color="Falz")
         items = list(fl.emit(None))
         self.assertEqual(len(items), 1)
         poly = items[0]
-        self.assertEqual(poly.layer, "Falz")
+        self.assertEqual(poly.layer, 3)  # int index, matches LAYER attribute
         self.assertEqual(poly.line_color, "Falz")
         self.assertEqual(poly.dash_pattern, (3.0, 1.5))
 
@@ -450,15 +451,21 @@ class DieCutTests(unittest.TestCase):
     def test_diecut_emits_closed_polygon(self):
         from sla_lib.builder.blocks import DieCut
         path = [(10, 10), (20, 10), (20, 20), (10, 20)]
-        dc = DieCut(path_mm=path, layer_name="Stanzkontur", spot_color="Stanzkontur")
+        dc = DieCut(path_mm=path, layer_idx=3, layer_name="Stanzkontur",
+                    spot_color="Stanzkontur")
         items = list(dc.emit(None))
         self.assertEqual(len(items), 1)
         poly = items[0]
-        self.assertEqual(poly.layer, "Stanzkontur")
+        self.assertEqual(poly.layer, 3)  # int index
         self.assertEqual(poly.line_color, "Stanzkontur")
-        # Check path is closed (5 points)
-        self.assertEqual(len(poly.custom_path), 5)
-        self.assertEqual(poly.custom_path[0], poly.custom_path[-1])
+        # custom_path is now a Scribus path string. Verify it's closed (ends with Z)
+        self.assertTrue(poly.custom_path.endswith("Z"),
+                        f"path doesn't end with Z: {poly.custom_path}")
+        # bbox calc: 10..20 mm = 10x10 mm = 28.34 x 28.34 pt
+        self.assertAlmostEqual(poly.w_mm, 10.0, places=2)
+        self.assertAlmostEqual(poly.h_mm, 10.0, places=2)
+        self.assertAlmostEqual(poly.x_mm, 10.0, places=2)
+        self.assertAlmostEqual(poly.y_mm, 10.0, places=2)
 
 # ---------------------------------------------------------------------------
 # FoldedPanel
@@ -470,8 +477,12 @@ class FoldedPanelTests(unittest.TestCase):
         items = list(fp.emit(None))
         # No children, just the fold line
         self.assertEqual(len(items), 1)
-        # Should be a Polygon (from FoldLine.emit)
-        self.assertIsInstance(items[0], Polygon) 
+        # Should be a Polygon (from FoldLine.emit) — vertical line at x=99
+        poly = items[0]
+        self.assertIsInstance(poly, Polygon)
+        self.assertAlmostEqual(poly.x_mm, 99.0, places=2)
+        self.assertAlmostEqual(poly.y_mm, 0.0, places=2)
+        self.assertAlmostEqual(poly.h_mm, 210.0, places=2)
 
 # ---------------------------------------------------------------------------
 # DoorHangerCutout
@@ -481,11 +492,16 @@ class DoorHangerCutoutTests(unittest.TestCase):
         from sla_lib.builder.blocks import DoorHangerCutout
         dhc = DoorHangerCutout(page_size_mm=(105, 250))
         items = list(dhc.emit(None))
-        self.assertEqual(len(items), 2) # Outer + Hole
+        self.assertEqual(len(items), 2)  # Outer + Hole
         poly_outer = items[0]
         poly_hole = items[1]
-        self.assertEqual(len(poly_outer.custom_path), 5)
-        self.assertGreaterEqual(len(poly_hole.custom_path), 36)
+        # Outer is a 5-point closed rect → at least M + 4 L + Z = 5 path commands
+        self.assertTrue(poly_outer.custom_path.endswith("Z"))
+        outer_segments = poly_outer.custom_path.count("L") + poly_outer.custom_path.count("M")
+        self.assertGreaterEqual(outer_segments, 5)
+        # Hole is a 36-segment circle → at least 36+ L commands
+        hole_segments = poly_hole.custom_path.count("L") + poly_hole.custom_path.count("M")
+        self.assertGreaterEqual(hole_segments, 36)
 
 # ---------------------------------------------------------------------------
 # TableTentFold
@@ -497,6 +513,9 @@ class TableTentFoldTests(unittest.TestCase):
         items = list(ttf.emit(None))
         self.assertEqual(len(items), 1)
         poly = items[0]
-        # Check coordinates of the fold line (horizontal at y=105)
-        self.assertEqual(poly.custom_path, [(0, 105.0), (297.0, 105.0)])
+        # FoldLine bbox at y=105, full width 297 mm horizontal
+        self.assertAlmostEqual(poly.x_mm, 0.0, places=2)
+        self.assertAlmostEqual(poly.y_mm, 105.0, places=2)
+        self.assertAlmostEqual(poly.w_mm, 297.0, places=2)
+        self.assertEqual(poly.layer, 3)
 
