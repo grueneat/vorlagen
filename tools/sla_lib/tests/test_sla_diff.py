@@ -784,6 +784,66 @@ class AllowBrandExtrasTests(unittest.TestCase):
         _et.ElementTree(root).write(str(target), encoding="UTF-8", xml_declaration=True)
         return target
 
+    def _write_sla_with_extra_color(self, name: str, extra_color_name: str) -> Path:
+        """Write a synthetic SLA that has an extra COLOR element on the right."""
+        from lxml import etree as _et
+        target = self.tmp / name
+        root = _et.Element("SCRIBUSUTF8NEW", attrib={"Version": "1.6.5"})
+        doc = _et.SubElement(root, "DOCUMENT")
+        doc.set("ANZPAGES", "1")
+        doc.set("PAGEWIDTH", "297.638")
+        doc.set("PAGEHEIGHT", "419.528")
+        for k in ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight"):
+            doc.set(k, "8.504")
+        page = _et.SubElement(doc, "PAGE")
+        page.set("NUM", "0"); page.set("PAGEXPOS", "100"); page.set("PAGEYPOS", "20")
+        page.set("MNAM", "Normal")
+        m = _et.SubElement(doc, "MASTERPAGE")
+        m.set("NAM", "Normal"); m.set("PAGEXPOS", "500"); m.set("PAGEYPOS", "20")
+        if extra_color_name:
+            color = _et.SubElement(doc, "COLOR")
+            color.set("NAME", extra_color_name)
+            color.set("CMYK", "#00000000")
+        _et.ElementTree(root).write(str(target), encoding="UTF-8", xml_declaration=True)
+        return target
+
+    def test_allow_brand_extras_filters_extra_color_warning_for_brand_color(self):
+        """--allow-brand-extras: extra-color warning for a brand color is filtered out.
+
+        Without the flag: --strict exit 1 on extra-color warnings.
+        With the flag:    --strict exit 0 because brand-color extra-color warnings are removed.
+        """
+        left = self._write_sla_with_extra_color("left_no_color.sla", extra_color_name="")
+        right = self._write_sla_with_extra_color("right_extra_brand_color.sla",
+                                                  extra_color_name="Hellgrün")
+        # Without flag: --strict exits 1 because extra-color warning is present
+        rc_strict = sd.main(["--left", str(left), "--right", str(right), "--strict"])
+        self.assertEqual(rc_strict, 1, "Expected exit 1 from --strict with extra-color warning")
+        # With flag: --strict exits 0 because 'Hellgrün' is in _BRAND_COLOR_NAMES
+        rc_allowed = sd.main(["--left", str(left), "--right", str(right),
+                               "--strict", "--allow-brand-extras"])
+        self.assertEqual(rc_allowed, 0,
+                         "Expected exit 0 from --strict --allow-brand-extras with brand extra-color warning")
+
+    def test_allow_brand_extras_does_not_filter_non_brand_color(self):
+        """--allow-brand-extras must NOT filter extra-color for non-brand color names.
+
+        Only brand palette colors (Black, White, Registration, Dunkelgrün,
+        Hellgrün, Gelb, Magenta) are filtered. An arbitrary color name that is
+        NOT in the 7-tuple must still cause exit 1 under --strict --allow-brand-extras.
+        """
+        left = self._write_sla_with_extra_color("left_no_color2.sla", extra_color_name="")
+        right = self._write_sla_with_extra_color("right_extra_nonbrand_color.sla",
+                                                  extra_color_name="SomeRandomBrandX")
+        # Without flag: --strict exits 1
+        rc_strict = sd.main(["--left", str(left), "--right", str(right), "--strict"])
+        self.assertEqual(rc_strict, 1, "Expected exit 1 from --strict with non-brand extra-color warning")
+        # With flag: --strict STILL exits 1 because 'SomeRandomBrandX' is not a brand color
+        rc_allowed = sd.main(["--left", str(left), "--right", str(right),
+                               "--strict", "--allow-brand-extras"])
+        self.assertEqual(rc_allowed, 1,
+                         "Expected exit 1 from --strict --allow-brand-extras with non-brand extra-color warning")
+
     def test_allow_brand_extras_filters_extra_style_warning(self):
         """--allow-brand-extras: extra-style warning is filtered out.
 

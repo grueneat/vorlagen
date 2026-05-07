@@ -1,4 +1,4 @@
-# Auto-generated from plakat-a1-hochformat-original.sla by tools/sla_to_dsl.py.
+# Auto-generated from template.sla by tools/sla_to_dsl.py.
 # Hand-edit thereafter; this file is the source of truth.
 
 import sys
@@ -8,11 +8,12 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 
 from sla_lib.builder import (  # noqa: E402
-    Document, TextFrame, ImageFrame, Polygon, Run,
-    DocumentLayer, ParaStyle, CharStyle, SoftShadow,
+    Brand, Document, TextFrame, ImageFrame, Polygon, Run,
+    ParaStyle, CharStyle, SoftShadow,
 )
 
 doc = Document(
+    brand=Brand.gruene_noe(),
     title='',
     template_id='plakat-a1-hochformat',
     author='',
@@ -21,22 +22,12 @@ doc = Document(
     deffont='Gotham Narrow Black',
     defsize=12,
     first_page_num=1,
-    palette_replaces_ci=True,
     hcms=True,
     doc_page_width_pt=1683.77952755906,
     doc_page_height_pt=2383.93700787402,
-    extra_doc_attrs={'ALAYER': '0', 'AUTOCHECK': '1', 'AUTOL': '100', 'AUTOMATIC': '1', 'AUtoSaveInDocDir': '1', 'AutoSave': '1', 'AutoSaveCount': '1', 'AutoSaveDir': '', 'AutoSaveKeep': '0', 'AutoSaveTime': '600000', 'BASEGRID': '13', 'BASEO': '0', 'BRUSH': 'None', 'BRUSHSHADE': '100', 'BaseC': '#c0c0c0', 'CPICT': 'None', 'CSPICT': 'None', 'DCOL': '1', 'DGAP': '0', 'DIIm': '0', 'DISc': '1', 'DPIn': 'sRGB display profile (ICC v2.2)', 'DPIn2': 'sRGB display profile (ICC v2.2)', 'DPIn3': 'PSO Uncoated ISO12647 (ECI)', 'DPInCMYK': 'PSO Uncoated ISO12647 (ECI)', 'DPPr': 'PSO Uncoated ISO12647 (ECI)', 'DPSFo': '0', 'DPSo': '0', 'DPbla': '1', 'DPgam': '0', 'DPuse': '1', 'EmbeddedPath': '0', 'EndArrow': '0', 'FirstLineOffset': '1', 'GRAB': '4', 'GROUPC': '1', 'GUIDELOCK': '0', 'GapHorizontal': '0', 'GapVertical': '40', 'GridType': '0', 'GuideC': '#000080', 'GuideRad': '10', 'HalfRes': '1', 'LINESHADE': '100', 'MAJGRID': '100.001', 'MAJORC': '#00ff00', 'MARGC': '#0000ff', 'MINGRID': '20.001', 'MINORC': '#00ff00', 'PAGESIZE': 'Custom', 'PASPECT': '1', 'PEN': 'Black', 'PENLINE': 'Green', 'PENSHADE': '100', 'PENTEXT': 'Black', 'PICTSCX': '1', 'PICTSCY': '1', 'PICTSHADE': '100', 'PICTSSHADE': '100', 'POLYC': '4', 'POLYCUR': '0', 'POLYF': '0.502', 'POLYIR': '0', 'POLYOCUR': '0', 'POLYR': '0', 'POLYS': '0', 'PRESET': '0', 'PSCALE': '1', 'RANDF': '0', 'SHOWBASE': '0', 'SHOWControl': '0', 'SHOWFRAME': '1', 'SHOWGRID': '0', 'SHOWGUIDES': '0', 'SHOWLAYERM': '0', 'SHOWLINK': '0', 'SHOWMARGIN': '0', 'SHOWPICT': '1', 'STIL': '1', 'STILLINE': '1', 'SUBJECT': '', 'ScratchBottom': '20.001', 'ScratchLeft': '100.001', 'ScratchRight': '100.001', 'ScratchTop': '20.001', 'SnapToElement': '0', 'SnapToGrid': '0', 'SnapToGuides': '0', 'StartArrow': '0', 'StrikeThruPos': '-1', 'StrikeThruWidth': '-1', 'StrokeText': 'Black', 'TabFill': '', 'TabWidth': '36', 'TextBackGround': 'None', 'TextBackGroundShade': '100', 'TextDistBottom': '0', 'TextDistLeft': '0', 'TextDistRight': '0', 'TextDistTop': '0', 'TextLineColor': 'None', 'TextLineShade': '100', 'TextPenShade': '100', 'TextStrokeShade': '100', 'UnderlinePos': '-1', 'UnderlineWidth': '-1', 'VHOCH': '33', 'VHOCHSC': '66', 'VKAPIT': '75', 'VTIEF': '33', 'VTIEFSC': '66', 'WIDTH': '1', 'WIDTHLINE': '5', 'arcStartAngle': '30', 'arcSweepAngle': '300', 'calligraphicPenAngle': '0', 'calligraphicPenFillColor': 'Black', 'calligraphicPenFillColorShade': '100', 'calligraphicPenLineColor': 'Black', 'calligraphicPenLineColorShade': '100', 'calligraphicPenLineWidth': '1', 'calligraphicPenStyle': '1', 'calligraphicPenWidth': '10', 'constrain': '15', 'currentProfile': 'PDF 1.4', 'dispX': '10.001', 'dispY': '10.001', 'renderStack': '2 0 4 3 1', 'rulerMode': '1', 'rulerXoffset': '0', 'rulerYoffset': '0', 'showcolborders': '1', 'showrulers': '1', 'spiralEndAngle': '1080', 'spiralFactor': '1.2', 'spiralStartAngle': '0'},
-    extra_pdf_attrs={'CMethod': '0', 'Clip': '0', 'Encrypt': '0', 'FontEmbedding': '0', 'ImageP': 'sRGB display profile (ICC v2.2)', 'ImagePr': '0', 'InfoString': '', 'Intent': '1', 'Intent2': '0', 'PageLayout': '0', 'PassOwner': '', 'PassUser': '', 'Permissions': '-4', 'PicRes': '300', 'PresentMode': '0', 'PrintP': 'PSO Uncoated ISO12647 (ECI)', 'RGBMode': '1', 'RecalcPic': '0', 'RotateDeg': '0', 'SolidP': 'sRGB display profile (ICC v2.2)', 'Thumbnails': '0', 'UseLayers': '0', 'UseLpi': '0', 'UseProfiles': '0', 'UseProfiles2': '0', 'UseSpotColors': '1', 'Version': '14', 'bleedMarks': '1', 'colorMarks': '0', 'cropMarks': '1', 'displayBookmarks': '0', 'displayFullscreen': '0', 'displayLayers': '0', 'displayThumbs': '0', 'doMultiFile': '0', 'docInfoMarks': '0', 'firstUse': '0', 'fitWindow': '0', 'hideMenuBar': '0', 'hideToolBar': '0', 'openAfterExport': '0', 'rangeSel': '0', 'rangeTxt': '', 'registrationMarks': '0', 'useDocBleeds': '1'},
-    layers=[
-        DocumentLayer(name='Hintergrund', visible=True, printable=True, editable=True, flow=True, transparent=1, blend=0, outline=False, layer_color='#000000'),
-    ],
+    extra_doc_attrs={'AUTOCHECK': '1', 'DPIn3': 'PSO Uncoated ISO12647 (ECI)', 'DPInCMYK': 'PSO Uncoated ISO12647 (ECI)', 'DPPr': 'PSO Uncoated ISO12647 (ECI)', 'GROUPC': '1', 'GapVertical': '40', 'GuideRad': '10', 'MAJGRID': '100.001', 'MINGRID': '20.001', 'PAGESIZE': 'Custom', 'POLYF': '0.502', 'SHOWBASE': '0', 'SHOWGRID': '0', 'SHOWGUIDES': '0', 'SHOWMARGIN': '0', 'ScratchBottom': '20.001', 'ScratchLeft': '100.001', 'ScratchRight': '100.001', 'ScratchTop': '20.001', 'calligraphicPenAngle': '0', 'dispX': '10.001', 'dispY': '10.001', 'renderStack': '2 0 4 3 1'},
+    extra_pdf_attrs={'ImageP': 'sRGB display profile (ICC v2.2)', 'InfoString': '', 'PicRes': '300', 'PrintP': 'PSO Uncoated ISO12647 (ECI)', 'RGBMode': '1', 'RecalcPic': '0', 'SolidP': 'sRGB display profile (ICC v2.2)', 'UseProfiles2': '0', 'Version': '14', 'bleedMarks': '1', 'useDocBleeds': '1'},
 )
-
-doc.add_color('Black', cmyk=(0, 0, 0, 100))
-doc.add_color('Dunkelgrün', cmyk=(85, 35, 95, 10))
-doc.add_color('Gelb', cmyk=(0, 0, 100, 0))
-doc.add_color('Registration', cmyk=(100, 100, 100, 100), register=True)
-doc.add_color('White', cmyk=(0, 0, 0, 0))
 
 doc.add_char_style(CharStyle(name='Default Character Style', font='Gotham Narrow Black', fcolor='Black', fontfeatures='', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
 doc.add_para_style(ParaStyle(name='Default Paragraph Style', bcolor='None', bullet='0', linesp=15, space_before_pt=0, space_after_pt=0, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, paragraph_effect_offset=0, align=0, linesp_mode=0, drop_lines=2, hyph_consecutive_lines=2, direction=0, bshade=100, numeration=0, drop_cap=False, is_default=True))
@@ -74,10 +65,6 @@ page0.add(TextFrame(
     w_mm=594.0000000000016,
     h_mm=427.0605871559641,
     layer=0,
-    xpos_pt=100.001,
-    ypos_pt=1193.37256396735,
-    width_pt=1683.77952755906,
-    height_pt=1210.56544390667,
     fill='Dunkelgrün',
     line_width_pt=1,
     col_gap_mm=0,
@@ -89,10 +76,6 @@ page0.add(TextFrame(
     w_mm=491.28027522935923,
     h_mm=244.27119258409695,
     layer=0,
-    xpos_pt=192.468910135086,
-    ypos_pt=1275.44075727805,
-    width_pt=1392.60550458716,
-    height_pt=692.422278191141,
     line_width_pt=1,
     trail_style='Headlineweiß',
     col_gap_mm=0,
@@ -111,10 +94,6 @@ page0.add(TextFrame(
     w_mm=377.37598988277136,
     h_mm=21.023500433233103,
     layer=0,
-    xpos_pt=1697.87220978112,
-    ypos_pt=2380.37895275591,
-    width_pt=1069.72721541573,
-    height_pt=59.5941744564088,
     rotation_deg=270,
     line_width_pt=1,
     trail_style='Impressum',
@@ -131,10 +110,6 @@ page0.add(TextFrame(
     w_mm=306.77614678899084,
     h_mm=34.48807339449535,
     layer=0,
-    xpos_pt=192.468910135086,
-    ypos_pt=2210.94534443401,
-    width_pt=869.601675937297,
-    height_pt=97.7614678899081,
     line_width_pt=1,
     trail_style='Fließtext',
     col_gap_mm=0,
@@ -149,10 +124,6 @@ page0.add(TextFrame(
     w_mm=233.02752293578,
     h_mm=41.79755751783901,
     layer=0,
-    xpos_pt=192.468910135086,
-    ypos_pt=2005.36342144044,
-    width_pt=660.550458715597,
-    height_pt=118.481265404898,
     line_width_pt=1,
     trail_style='Fließtext',
     col_gap_mm=0,
@@ -168,10 +139,6 @@ page0.add(TextFrame(
     w_mm=235.9403669724773,
     h_mm=41.79755751783866,
     layer=0,
-    xpos_pt=887.074414722242,
-    ypos_pt=2005.36342144044,
-    width_pt=668.807339449542,
-    height_pt=118.481265404897,
     line_width_pt=1,
     trail_style='Fließtext',
     col_gap_mm=0,
@@ -187,10 +154,6 @@ page0.add(ImageFrame(
     w_mm=594.0000000000016,
     h_mm=413.93941284403735,
     layer=0,
-    xpos_pt=100.001,
-    ypos_pt=20.0010000000001,
-    width_pt=1683.77952755906,
-    height_pt=1173.37156396735,
     image='',
     line_width_pt=1,
 ))

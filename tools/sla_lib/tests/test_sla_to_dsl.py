@@ -127,8 +127,27 @@ class PlakatRoundTrip(unittest.TestCase):
         report = _diff_clean(self.ORIGINAL, sla)
         self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
                          msg=f"critical: {[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_CRITICAL]}")
-        self.assertEqual(report.summary[sla_diff.SEVERITY_WARNING], 0,
-                         msg=f"warning: {[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_WARNING]}")
+        # build.py now uses brand=Brand.gruene_noe() which injects ci/* paragraph
+        # styles, brand layers (Bilder/Text/Hilfslinien), and the full 7-color
+        # palette. The original Plakat SLA carries only 5 of 7 brand colors, so
+        # rebuilding adds 2 extra-color warnings (Hellgrün, Magenta). All three
+        # categories of warnings are additive-only (do not change rendering) and
+        # are tolerated the same way as PostkarteRoundTrip.
+        _BRAND_COLOR_NAMES = (
+            "Black", "White", "Registration",
+            "Dunkelgrün", "Hellgrün", "Gelb", "Magenta",
+        )
+        non_brand_warnings = [
+            i for i in report.issues
+            if i.severity == sla_diff.SEVERITY_WARNING
+            and not (
+                i.code in ("extra-style", "extra-layer")
+                or (i.code == "extra-color" and i.right in _BRAND_COLOR_NAMES)
+            )
+        ]
+        self.assertEqual(non_brand_warnings, [],
+                         msg=f"unexpected warning issues: "
+                             f"{[i.short() for i in non_brand_warnings]}")
 
     def test_soft_hyphens_byte_preserved(self):
         sla_path = _run_build(self.TEMPLATE_DIR / "build.py")
