@@ -54,6 +54,13 @@ _BRAND_COLOR_NAMES = (
 # tools/sla_diff.py free of yaml imports. Out-of-sync risk is low — these 7 names
 # are the canonical brand palette.
 
+_LEGACY_LAYER_NAMES = (
+    "Ebene 1",  # Scribus German default; replaced by Brand.gruene_noe()'s 4-layer stack.
+)
+# Source: original SLA layer names that the brand stack replaces. Hardcoded
+# here (rather than YAML-loaded) to keep tools/sla_diff.py free of yaml imports.
+# Add new legacy names if future templates surface them; out-of-sync risk is low.
+
 # Tolerances per RESEARCH.md §Severity rules.
 POSITION_TOLERANCE_PT = 0.5
 SIZE_TOLERANCE_PT = 0.5
@@ -1189,13 +1196,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--strict", action="store_true",
                     help="Exit 1 also when warnings are present (default: exit 1 on critical only).")
     ap.add_argument("--allow-brand-extras", action="store_true",
-                    help="Filter out 'extra-style', 'extra-layer', and brand-color "
-                         "'extra-color' warnings injected by Brand profiles (e.g. "
-                         "Brand.gruene_noe()'s ci/* paragraph styles, Bilder/Text/"
-                         "Hilfslinien layers, and full 7-color palette). Only "
-                         "extra-color warnings whose color NAME matches the brand "
-                         "palette are filtered; non-brand color extras still fail. "
-                         "Critical issues are unaffected.")
+                    help="Filter out 'extra-style', 'extra-layer', brand-color "
+                         "'extra-color', and legacy-layer 'missing-layer' warnings "
+                         "injected by Brand profiles (e.g. Brand.gruene_noe()'s "
+                         "ci/* paragraph styles, Bilder/Text/Hilfslinien layers, "
+                         "full 7-color palette, and replacement of legacy 'Ebene 1' "
+                         "layer). Only missing-layer warnings whose left layer NAME "
+                         "matches a known legacy name are filtered; non-legacy "
+                         "missing layers still fail. Critical issues are unaffected.")
     args = ap.parse_args(argv)
     report = diff(args.left, args.right)
 
@@ -1206,6 +1214,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 i.severity == SEVERITY_WARNING and (
                     i.code in ("extra-style", "extra-layer")
                     or (i.code == "extra-color" and i.right in _BRAND_COLOR_NAMES)
+                    or (i.code == "missing-layer" and i.left in _LEGACY_LAYER_NAMES)
                 )
             )
         ]
