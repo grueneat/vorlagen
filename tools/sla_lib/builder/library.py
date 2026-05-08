@@ -10,6 +10,11 @@ Public surface (matches PLAN.md ``<interfaces>``):
 
     img = library.load("portrait_maria")            # raise if missing
     img = library.load("portrait_maria", optional=True)  # None if missing
+
+    # One-call inject for ImageFrames (preferred for templates):
+    library.inject_into_frame(frame, img, target_w_mm=87, target_h_mm=24)
+
+    # Or low-level: crop + pack manually (legacy callers).
     cropped = library.crop_for_frame(img, target_w_mm=87, target_h_mm=24)
     data, ext = pack_inline_image(cropped, "jpg")
     # ... pass to ImageFrame(inline_image_data=data, inline_image_ext=ext, ...)
@@ -406,7 +411,15 @@ def crop_for_frame(
         watermark_text = img.meta.get("watermark", cig.DEFAULT_WATERMARK_TEXT)
         fitted = cig._apply_watermark_to_image(fitted, text=watermark_text)
 
-    # 5) Deterministic JPEG encode
+    # 5) Deterministic JPEG encode.
+    #
+    # Embed the target DPI in the JFIF density header so any consumer that
+    # honours density (PDF readers, browsers, image editors) sees the image
+    # at its physical mm size, not the JFIF default 72 dpi. NOTE: Scribus
+    # 1.6 does *not* auto-fit on density alone — it needs SCALETYPE=0 on the
+    # ImageFrame (see ``inject_into_frame``); without that, a 2480-px crop
+    # overflows a 595-pt frame ~3.4× and we render only the upper-left
+    # corner (the "sky-only" / "window-only" gallery regression).
     buf = BytesIO()
     fitted.save(
         buf,
@@ -415,8 +428,76 @@ def crop_for_frame(
         optimize=True,
         subsampling=2,
         progressive=False,
+        dpi=(dpi, dpi),
     )
     return buf.getvalue()
+
+
+def inject_into_frame(
+    frame,
+    img: "LibraryImage",
+    *,
+    target_w_mm: float,
+    target_h_mm: float,
+    dpi: int = 300,
+    quality: int = 80,
+    apply_watermark: bool = True,
+) -> None:
+    """Crop ``img`` for ``frame`` and install it as the frame's inline image.
+
+    One-call helper used by every gallery-preview ``build.py`` to populate
+    ImageFrames from the centralised library. Encapsulates three things that
+    every caller has to get right for the gallery to render correctly:
+
+      1. Centre-crop to the frame's aspect via ``crop_for_frame`` (which
+         honours the manifest's ``crop_focus`` saliency anchor — without it
+         every aspect-mismatched slot crops to whatever is at image centre,
+         which produced the "hair-only" / "sky-only" regression).
+      2. Wrap the JPEG bytes via ``pack_inline_image`` (qCompress base64,
+         the format Scribus expects in ``ImageData``).
+      3. Set ``frame.scale_type = 0`` (Scribus enum: ``ScaleAuto``, fit-to-
+         frame). Templates migrated from production SLAs default to
+         ``scale_type = 1`` (manual scale) with ``LOCALSCX/SCY = 1``, which
+         renders the inline image at its native pixel size — for a 2480-px
+         crop on a 595-pt frame that overflows the frame ~3.4× and we see
+         only the top-left corner.
+
+    Round-trip safety: the three production templates that have an
+    ``original_sla`` baseline (zeitung, postkarte, plakat-a1) inject only
+    inside ``build_preview()``, so the change to ``scale_type`` lands on
+    ``template-preview.sla`` and never on the round-trip-validated
+    ``template.sla``.
+
+    Args:
+        frame: ``ImageFrame`` instance from ``sla_lib.builder.primitives``.
+        img: Source library image (from ``library.load`` / ``library.find``).
+        target_w_mm / target_h_mm: Frame dimensions in mm; passed to
+            ``crop_for_frame`` to compute the target aspect.
+        dpi: Pixel density. Defaults to 300 (print-quality).
+        quality: JPEG quality. Defaults to 80 (matches existing pipeline).
+        apply_watermark: Re-stamp Symbolfoto band on cropped output (default
+            True). Disable only for tests that need a clean source.
+    """
+    # Local import keeps the dependency direction one-way: primitives.py
+    # imports nothing from library.py, so we lazy-import the helper here.
+    from sla_lib.builder.primitives import pack_inline_image
+
+    cropped = crop_for_frame(
+        img,
+        target_w_mm=target_w_mm,
+        target_h_mm=target_h_mm,
+        dpi=dpi,
+        quality=quality,
+        apply_watermark=apply_watermark,
+    )
+    data, ext = pack_inline_image(cropped, "jpg")
+    frame.inline_image_data = data
+    frame.inline_image_ext = ext
+    # SCALETYPE=0 = ScaleAuto in Scribus 1.6 — the image is scaled to fit the
+    # frame; with RATIO=1 (the dataclass default) aspect is preserved. Since
+    # the cropped output already matches the frame aspect, this fills the
+    # frame exactly with no letterbox/pillarbox.
+    frame.scale_type = 0
 
 
 def regenerate(id: str, *, force: bool = False, max_attempts: int = 5) -> bool:

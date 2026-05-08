@@ -269,6 +269,22 @@ class CropForFrameTests(unittest.TestCase):
         self.assertEqual(w, round(87 * 300 / 25.4))
         self.assertEqual(h, round(24 * 300 / 25.4))
 
+    def test_jpeg_carries_target_dpi_density(self) -> None:
+        """Output JPEG must embed the target DPI in its JFIF density header.
+
+        Scribus reads JFIF density to compute on-page mm size; without it the
+        default 72 dpi makes a 2480-px crop overflow a 595-pt frame ~3.4×,
+        which surfaced as the live gallery's sky-only / window-only renders
+        (root cause of the user-reported regression). Pinning density keeps
+        the SLA frame's SCALETYPE round-trip-safe AND makes the image render
+        at its physical mm size.
+        """
+        img = library.load("themen_topic1")
+        assert img is not None
+        out = library.crop_for_frame(img, target_w_mm=87, target_h_mm=24, dpi=300)
+        with Image.open(BytesIO(out)) as decoded:
+            self.assertEqual(decoded.info.get("dpi"), (300, 300))
+
     def test_apply_watermark_false_skips_band(self) -> None:
         # Using a fresh non-watermarked source so the test is unambiguous: build
         # an unwatermarked file directly. The library entry already has a
@@ -475,6 +491,51 @@ class CropFocusTests(unittest.TestCase):
         self._set_field("portrait_alice", "crop_focus", [1.2, 0.5])
         errors = library.validate_manifest()
         self.assertTrue(errors, "expected schema violation for crop_focus > 1.0")
+
+
+class InjectIntoFrameTests(unittest.TestCase):
+    """One-call inject helper — encapsulates the three things every gallery
+    build.py must get right: crop to frame aspect, pack as inline JPEG, and
+    set ``scale_type = 0`` (Scribus ScaleAuto) so the inline image actually
+    fits the frame on render. SCALETYPE was the root cause of the live
+    gallery's sky-only / window-only crops.
+    """
+
+    def setUp(self) -> None:
+        self.fx = LibraryFixture()
+        self.p_root = mock.patch.object(library, "LIBRARY_ROOT", self.fx.root)
+        self.p_man = mock.patch.object(library, "MANIFEST_PATH", self.fx.manifest_path)
+        self.p_root.start()
+        self.p_man.start()
+
+    def tearDown(self) -> None:
+        self.p_root.stop()
+        self.p_man.stop()
+        self.fx.cleanup()
+
+    def test_sets_inline_image_and_scale_type(self) -> None:
+        from sla_lib.builder.primitives import ImageFrame
+
+        # Fresh frame with the dataclass default (scale_type=1 = manual scale,
+        # the value migrated from production SLAs that caused the bug).
+        frame = ImageFrame(x_mm=0, y_mm=0, w_mm=87, h_mm=24)
+        self.assertEqual(frame.scale_type, 1, "precondition: default is manual")
+        self.assertIsNone(frame.inline_image_data)
+
+        img = library.load("themen_topic1")
+        assert img is not None
+        library.inject_into_frame(frame, img, target_w_mm=87, target_h_mm=24)
+
+        # Inline image installed, scale_type flipped to ScaleAuto so Scribus
+        # actually fits the image to the frame.
+        self.assertIsNotNone(frame.inline_image_data)
+        self.assertEqual(frame.inline_image_ext, "jpg")
+        self.assertEqual(
+            frame.scale_type, 0,
+            "inject_into_frame must set scale_type=0 (ScaleAuto) — without "
+            "it the inline image renders at native pixel size and overflows "
+            "the frame, the SCALETYPE bug behind the gallery regression",
+        )
 
 
 class ValidateManifestTests(unittest.TestCase):
