@@ -215,23 +215,29 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             anname=f"{label} — Headline",
         ))
         page.add(TextFrame(
-            x_mm=col_x, y_mm=152, w_mm=COL_W_MM, h_mm=90,
+            x_mm=col_x, y_mm=152, w_mm=COL_W_MM, h_mm=70,
             layer=2,
             style="themen-plakat/beleg-body",
             runs=[Run(text=body, paragraph_style="themen-plakat/beleg-body")],
             anname=f"{label} — Body",
         ))
 
-    # Themen-hero photo slot (Issue #11): optional landscape banner at the
-    # bottom of the body area. ~165x24 mm — small enough not to dominate the
-    # belege text, large enough to read as a documentary photo. Conditional
-    # inject — empty slot in fresh checkouts.
+    # Themen-hero photo slot (Issue #11, iter-3 enlargement option a):
+    # the source JPG is 1536×1024 (≈1.5:1). The previous frame at
+    # 290×18 mm let scale_type=0 + ratio=1 fit the photo aspect-preserving
+    # in the height-bound dimension, rendering only ~27×18 mm of visible
+    # photo — too small for an A3-quer Plakat. iter-3 frame: 180×60 mm
+    # (3:1 frame). With the photo's native 1.5:1 aspect and ratio=1 fit,
+    # the photo renders height-bound at w=60×1.5=90, h=60 — ~5× the
+    # previous visible area, dominant enough to read as the hero of
+    # the layout. Body shrunk to h=70 (ends y=222) to make room.
+    # Centered horizontally at x=120 (trim 420 - 180)/2 = 120.
     hero_path = HERE / "samples" / "themen-hero.jpg"
     hero_data, hero_ext = (None, None)
     if hero_path.exists():
         hero_data, hero_ext = pack_inline_image(hero_path.read_bytes(), "jpg")
     page.add(ImageFrame(
-        x_mm=15, y_mm=248, w_mm=290, h_mm=18,
+        x_mm=120, y_mm=225, w_mm=180, h_mm=60,
         inline_image_data=hero_data,
         inline_image_ext=hero_ext,
         scale_type=0, ratio=1,
@@ -255,9 +261,12 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="QR-Code (quelle)",
     ))
 
-    # Quelle (bottom-left)
+    # Quelle (bottom-left). iter-3: relocated to bottom-left corner only
+    # (w=80 instead of 280) so the enlarged hero photo can sit centered
+    # without overlapping the source citation. y=287 sits below the hero's
+    # bottom edge (y=225+60=285) with 2 mm clearance.
     page.add(TextFrame(
-        x_mm=15, y_mm=270, w_mm=280, h_mm=10,
+        x_mm=15, y_mm=287, w_mm=80, h_mm=8,
         layer=2,
         style="themen-plakat/source",
         runs=[Run(
@@ -267,9 +276,9 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Quelle",
     ))
 
-    # Impressum (bottom-right)
+    # Impressum (bottom-right). iter-3: y=287 to align with relocated Quelle.
     page.add(TextFrame(
-        x_mm=305, y_mm=270, w_mm=100, h_mm=10,
+        x_mm=305, y_mm=287, w_mm=100, h_mm=8,
         layer=2,
         style="themen-plakat/impressum",
         runs=[Run(
