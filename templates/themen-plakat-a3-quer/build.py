@@ -230,7 +230,7 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         x_mm=15, y_mm=248, w_mm=290, h_mm=18,
         inline_image_data=hero_data,
         inline_image_ext=hero_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=1,
         anname="Themen-Hero",
     ))

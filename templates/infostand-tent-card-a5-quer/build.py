@@ -166,7 +166,7 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         x_mm=12, y_mm=44, w_mm=44, h_mm=33,
         inline_image_data=hg_data,
         inline_image_ext=hg_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="Hintergrund-Mitmachen",
     ))

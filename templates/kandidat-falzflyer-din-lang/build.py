@@ -210,7 +210,7 @@ def _add_front(doc, page0):
         x_mm=6, y_mm=28, w_mm=87, h_mm=105,
         inline_image_data=portrait_data,
         inline_image_ext=portrait_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P1 Kandidat-Portrait",
     ))
@@ -365,7 +365,7 @@ def _add_back(doc, page1):
         x_mm=6, y_mm=36, w_mm=87, h_mm=24,
         inline_image_data=p4_t1_data,
         inline_image_ext=p4_t1_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 1 — Photo",
     ))
@@ -392,7 +392,7 @@ def _add_back(doc, page1):
         x_mm=6, y_mm=121, w_mm=87, h_mm=24,
         inline_image_data=p4_t2_data,
         inline_image_ext=p4_t2_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 2 — Photo",
     ))
@@ -420,7 +420,7 @@ def _add_back(doc, page1):
         x_mm=105, y_mm=36, w_mm=87, h_mm=24,
         inline_image_data=p5_t3_data,
         inline_image_ext=p5_t3_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P5 Thema 3 — Photo",
     ))

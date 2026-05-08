@@ -285,9 +285,12 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         ))
 
     # Kandidat-Portrait placeholder (optional — slot stays present, image
-    # injected by Codex demo or end user)
+    # injected by Codex demo or end user). scale_type=0 so any injected image
+    # auto-fits the frame (matches all other photo slots in this issue's
+    # templates after the 2026-05-08 scale_type fix).
     page1.add(ImageFrame(
         x_mm=20, y_mm=75, w_mm=65, h_mm=85,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="Kandidat-Portrait",
     ))
