@@ -312,9 +312,9 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Kandidat-Position",
     ))
 
-    # Kontakt-URL
+    # Kontakt-URL — narrows to 50 mm so QR fits to its right (Issue #11).
     page1.add(TextFrame(
-        x_mm=10, y_mm=200, w_mm=85, h_mm=8,
+        x_mm=10, y_mm=200, w_mm=50, h_mm=8,
         layer=LAYER_TEXT,
         style="tueranhaenger/url",
         runs=[Run(text="gruene-moedling.at",
@@ -322,15 +322,32 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Kontakt-URL",
     ))
 
-    # Kontakt-Info
+    # Kontakt-Info — same narrowing.
     page1.add(TextFrame(
-        x_mm=10, y_mm=210, w_mm=85, h_mm=20,
+        x_mm=10, y_mm=210, w_mm=50, h_mm=20,
         layer=LAYER_TEXT,
         style="tueranhaenger/body",
         runs=[Run(text=("maria.beispiel@gruene-moedling.at\n"
                         "+43 660 1234567"),
                   paragraph_style="tueranhaenger/body")],
         anname="Kontakt-Info",
+    ))
+
+    # QR-back slot (Issue #11): 30x30 mm on right side of contact area.
+    # URL encodes the lokale Listen-URL (~31 chars => version 4 = 33 modules,
+    # 30 mm / 33 ≈ 0.91 mm/module — comfortably above D1's 0.5 mm minimum).
+    # Conditional inject — only when samples/qr-back.png is committed.
+    qr_back_path = HERE / "samples" / "qr-back.png"
+    qr_data, qr_ext = (None, None)
+    if qr_back_path.exists():
+        qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
+    page1.add(ImageFrame(
+        x_mm=65, y_mm=200, w_mm=30, h_mm=30,
+        inline_image_data=qr_data,
+        inline_image_ext=qr_ext,
+        scale_type=1, ratio=1,
+        layer=LAYER_BILDER,
+        anname="QR-Code (back)",
     ))
 
     # Impressum (back)

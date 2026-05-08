@@ -1,0 +1,13 @@
+slug: wahlaufruf-postkarte-a6-quer
+images: []
+qr_codes:
+  - name: qr-back
+    target_url: https://noe.gruene.at/
+    output_path: samples/qr-back.png
+    module_color: [28, 72, 33]
+    background_color: [255, 255, 255]
+    embed_logo: shared/logos/sonnenblume-circle.png
+    error_correction: H
+    box_size: 10
+    border: 4
+    note: "Demo URL — endusers replace with their voting-info URL"

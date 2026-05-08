@@ -177,7 +177,9 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             anname="Logo Grüne (cmyk)",
         ))
 
-    # 2x2 grid: 4 cells, each ~70 mm wide, ~39 mm tall, with 2 mm gutter
+    # 2x2 grid: 4 cells, each ~70 mm wide, ~39 mm tall, with 2 mm gutter.
+    # Cell 4 ("Wo informieren") is narrowed to 35 mm so a QR slot fits to its
+    # right (Issue #11 — demo back-side QR encoding the Bezirks-URL).
     cells = [
         (6, 22, "Was wir tun",
          "Klimaschutz, leistbares Wohnen, Bildung — konkret in deiner Gemeinde."),
@@ -186,11 +188,17 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         (6, 62, "Wann gewählt wird",
          "Sonntag, 23. Mai 2026, 7–17 Uhr."),
         (78, 62, "Wo informieren",
-         "gruene-noe.at · Tel. 02742 / 90 230"),
+         "gruene-noe.at"),
     ]
     cell_idx = 1
     for cx, cy, hd, body in cells:
-        cell_w = 68 if cx == 6 else 64
+        if cx == 6:
+            cell_w = 68
+        elif cell_idx == 4:
+            # Cell 4 narrows to 35 mm to make room for QR slot at x=115.
+            cell_w = 35
+        else:
+            cell_w = 64
         # Headline
         page1.add(TextFrame(
             x_mm=cx, y_mm=cy, w_mm=cell_w, h_mm=8,
@@ -208,6 +216,22 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             anname=f"Cell {cell_idx} — Body",
         ))
         cell_idx += 1
+
+    # QR-back slot (Issue #11): 25x25 mm, bottom-right of back, conditional
+    # inject — only embedded when samples/qr-back.png is committed. Fresh
+    # checkouts (no demo content) leave the slot empty.
+    qr_back_path = HERE / "samples" / "qr-back.png"
+    qr_data, qr_ext = (None, None)
+    if qr_back_path.exists():
+        qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
+    page1.add(ImageFrame(
+        x_mm=115, y_mm=62, w_mm=27, h_mm=27,
+        inline_image_data=qr_data,
+        inline_image_ext=qr_ext,
+        scale_type=1, ratio=1,
+        layer=1,
+        anname="QR-Code (back)",
+    ))
 
     # Impressum bottom strip
     page1.add(TextFrame(

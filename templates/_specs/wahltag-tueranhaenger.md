@@ -163,8 +163,9 @@ fordert. Wir liefern „Stanzkontur" als Default (Österreichischer Druckerei-St
 | Kandidat-Portrait (optional) | ImageFrame|  20  |  75  |  65  |  85  | —         | optional / Codex demo (D11)     | (Codex DALL·E generiert; siehe samples/manifest.yml) |
 | Kandidat-Name                | TextFrame |  10  | 168  |  85  |  10  | Dunkelgrün| tueranhaenger/cand-name         | Maria Beispiel                                       |
 | Kandidat-Position            | TextFrame |  10  | 178  |  85  |   8  | Black     | tueranhaenger/cand-pos          | Bürgermeisterkandidatin Mödling                      |
-| Kontakt-URL                  | TextFrame |  10  | 200  |  85  |   8  | Dunkelgrün| tueranhaenger/url               | gruene-moedling.at                                   |
-| Kontakt-Info                 | TextFrame |  10  | 210  |  85  |  20  | Black     | tueranhaenger/body              | maria.beispiel@gruene-moedling.at\n+43 660 1234567   |
+| Kontakt-URL                  | TextFrame |  10  | 200  |  50  |   8  | Dunkelgrün| tueranhaenger/url               | gruene-moedling.at                                   |
+| Kontakt-Info                 | TextFrame |  10  | 210  |  50  |  20  | Black     | tueranhaenger/body              | maria.beispiel@gruene-moedling.at\n+43 660 1234567   |
+| QR-Code (back)               | ImageFrame|  65  | 200  |  30  |  30  | —         | samples/qr-back.png             | Demo: https://noe.gruene.at/themen/ — endusers replace |
 | Impressum (back)             | TextFrame |  10  | 240  |  85  |   6  | Black     | Impressum                       | (gleicher Text wie Page 1)                           |
 
 ```yaml
@@ -281,7 +282,7 @@ slots:
     type: TextFrame
     x_mm: 10
     y_mm: 200
-    w_mm: 85
+    w_mm: 50
     h_mm: 8
     fcolor: "Dunkelgrün"
     style_ref: "tueranhaenger/url"
@@ -290,11 +291,20 @@ slots:
     type: TextFrame
     x_mm: 10
     y_mm: 210
-    w_mm: 85
+    w_mm: 50
     h_mm: 20
     fcolor: "Black"
     style_ref: "tueranhaenger/body"
     example: "maria.beispiel@gruene-moedling.at\n+43 660 1234567"
+  - anname: "QR-Code (back)"
+    type: ImageFrame
+    x_mm: 65
+    y_mm: 200
+    w_mm: 30
+    h_mm: 30
+    fcolor: ""
+    style_ref: "samples/qr-back.png"
+    example: "Demo: https://noe.gruene.at/themen/ — endusers replace with their lokale Listen-URL"
   - anname: "Impressum (back)"
     type: TextFrame
     x_mm: 10
