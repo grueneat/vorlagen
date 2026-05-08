@@ -1,7 +1,8 @@
 ---
 id: '13'
 title: Zentralisierte Demo-Bild-Bibliothek + alle Templates auffüllen
-status: open
+status: done
+ship_state: merged
 priority: high
 labels:
 - templates
