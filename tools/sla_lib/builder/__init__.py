@@ -60,6 +60,7 @@ from .primitives import TextFrame, ImageFrame, Polygon, Line, Anchor, Run, pack_
 from .styles import DocumentLayer, ParaStyle, CharStyle, SoftShadow
 from .brand import Brand
 from . import blocks
+from . import library
 
 __all__ = [
     "Document",
@@ -80,4 +81,5 @@ __all__ = [
     "load_ci",
     "Brand",
     "blocks",
+    "library",
 ]
