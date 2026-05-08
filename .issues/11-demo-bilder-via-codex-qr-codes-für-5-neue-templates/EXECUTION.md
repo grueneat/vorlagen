@@ -36,7 +36,7 @@
 
 ### Phase 6 — Ship
 
-- [ ] Task 13: Push branch + open PR (in progress)
+- [x] Task 13: Push branch + open PR — PR #22 (https://github.com/GrueneAT/vorlagen/pull/22), state OPEN MERGEABLE, base main
 
 ## Verification Results
 
