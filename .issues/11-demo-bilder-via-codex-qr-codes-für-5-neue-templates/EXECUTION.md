@@ -260,3 +260,191 @@ e40a967 11: fix(templates): set scale_type=0 on photo ImageFrames so Scribus aut
 ```
 
 **Iteration-2 status: complete. PR #22 ready for orchestrator-driven merge.**
+
+## Iteration 3 (2026-05-08) — Quickguide + Brand-Bund logo + content fill
+
+**Trigger:** post-iter-2 review surfaced three further polish deltas
+needed before merge of PR #22:
+
+1. The Corporate-Identity Quickguide PDF lives in the workspace but had
+   no in-repo reference; build.py authors need it at-hand to honor
+   logo/typography/color rules systematically.
+2. The placeholder `gruene-cmyk.png` wordmark used by the 5 new
+   templates is not the actual party logo — the official
+   `gruene-logo-bund-dunkel.png` (G-brushstroke + DIE-GRÜNEN-tag) was
+   supplied at the workspace root and needed integration.
+3. Three templates still showed empty / sparse zones in the iter-2
+   gallery previews: Türanhänger back portrait slot empty, Tent-Card
+   middle empty, Themen-Plakat hero photo too small.
+
+### Iteration-3 Tasks
+
+- [x] Iter-3 Delivery A: CD-Quickguide reference + structured notes
+  — commit ff5063f
+  - Copied `260313_DieGrünen_CD-Quickguide.pdf` to
+    `shared/brand/CD-Quickguide.pdf`.
+  - Authored `shared/brand/QUICKGUIDE-NOTES.md` with Farben,
+    Schriften, Schriftgrundlagen formulas, Mindestabstand+Logogrößen
+    (per-template M-table), Layout-Grundprinzipien, Gestaltungs-
+    elemente, Störer-Patterns, and a per-template risk audit.
+  - Cross-checked Quickguide CMYK values against `shared/ci.yml`:
+    all 4 brand colors match, no drift. RGB/HEX/Pantone documented
+    for future digital-asset work.
+
+- [x] Iter-3 Delivery B: Grünen-G brand logo integration
+  — commit 6a02658
+  - Added `shared/logos/gruene-logo-bund-dunkel.png` (24 KB, RGBA,
+    499×445, ~1.12:1 aspect) and `.svg` (17 KB) source.
+  - Updated `shared/logos/README.md` with usage rules and
+    deprecation notice on `gruene-cmyk.png`.
+  - Migrated 8 ImageFrame logo slots across 5 templates from
+    `gruene-cmyk.png` → `gruene-logo-bund-dunkel.png`:
+    - themen-plakat-a3-quer top-left: 60×18 → 32×28 mm
+    - infostand-tent-card panel A + B: 45×14 → 36×32 mm (Panel B
+      rotation coords recalculated)
+    - wahlaufruf-postkarte back: 30×9 → 18×16 mm
+    - kandidat-falzflyer P1 Cover: 35×10 → 20×18 mm
+    - kandidat-falzflyer P2 Teaser: 25×8 → 16×14 mm
+    - kandidat-falzflyer P6 Back: 35×10 → 17×15 mm
+    - wahltag-tueranhaenger back: weiss-in-band kept; new bund-dunkel
+      18×16 below the band on white area
+  - All frame sizes reasoned against Quickguide formula `Logo Print =
+    3 × M`, `M = 0.06 × kurze Kante`, with per-template tolerance
+    documented in `shared/brand/QUICKGUIDE-NOTES.md`.
+  - `gruene-weiss.png` retained on Dunkelgrün surfaces (Wahlaufruf
+    front, Türanhänger Brand-Bars, Falzflyer P3 Closer) — the new
+    bund-dunkel is colored Dunkelgrün and would disappear there.
+
+- [x] Iter-3 Delivery C1: Türanhänger Codex portrait — commit 848fa59
+  - Added `images:` section to Türanhänger manifest with one
+    Bürgermeisterkandidat archetype prompt (male, mid-50s,
+    salt-and-pepper, community-space backdrop) — diversity
+    counter-balances iter-1's Falzflyer female cover portrait per
+    CONTEXT.md D2.
+  - Wired build.py `Kandidat-Portrait` slot to conditionally inject
+    the JPG when committed (matches falzflyer/themen pattern).
+  - Updated cand-name `Maria Beispiel` → `Stefan Beispiel`,
+    cand-pos `Bürgermeisterkandidatin` → `Bürgermeisterkandidat`,
+    contact email accordingly.
+  - Generated portrait via `tools/codex_image_gen.py` —
+    first-attempt success, 198 KB JPG, EU-AI-Act watermark
+    `Symbolfoto — KI-generiert` applied automatically.
+
+- [x] Iter-3 Delivery C2: Tent-Card CTA + Termine — commit c5ded5e
+  - Tightened Body Panel A from h=56 to h=26 mm; freed mid-panel space.
+  - Added `tent/cta` (Gotham Bold 11pt Dunkelgrün) and `tent/termine`
+    (Gotham Book 10pt Black) ParaStyles.
+  - Panel A: "Mitmachen — Komm zu uns!" CTA at (62, 68, 60, 6) +
+    "Nächste Termine" 3-line block at (125, 68, 160, 26).
+  - Panel B (mirrored, rotation 180°): "Get involved — Talk to us!"
+    + "Upcoming dates" 3-line block. Pre-rotation positions computed
+    via `flat_y = 210 - panel_A_y - h`, rotated coords then
+    `(pre_x + w, pre_y + h, ROT=180)`.
+  - Adjusted Body Panel B to h=26 with rotated coords (235, 166).
+
+- [x] Iter-3 Delivery C3: Themen-Plakat hero enlargement — commit 18a06ea
+  - Reframed Themen-Hero from 290×18 mm (rendering only ~27×18 mm of
+    visible photo at the source's 1.5:1 aspect) to 180×60 mm
+    (rendering ~90×60 mm — about 5× the previous visible area,
+    dominant enough to anchor the bottom of the layout).
+  - Shrank evidence body height from 90 to 70 mm; relocated Quelle
+    (now narrowed to 80 mm bottom-left) and Impressum to y=287 mm
+    to clear the enlarged hero edge.
+
+- [x] Iter-3 Delivery C4: existing 3 production templates audit
+  (no commits — intentional skip)
+  - postkarte-a6-kampagne: visual review confirms layout polished,
+    no empty zones — skip.
+  - plakat-a1-hochformat: top half is the original Sujet-Hero image
+    slot per the source SLA — modifying would risk round-trip-diff;
+    skip per C4 guidance.
+  - zeitung-a4-grun: top half is Sujet-Hero, bottom 6 article
+    headlines are placeholder text per the original SLA — modifying
+    would risk round-trip-diff; skip.
+  - All 3 templates' visual_diff still PASS in `bin/validate`.
+
+- [x] Iter-3 Delivery D1+D2: visual review pass + aggregate report
+  - Re-ran `tools/visual_review.py --all --iter 3`. All 5 new
+    templates: ship verdict from Gemini Vision. Per-template details
+    at `reviews/visual-qa-{slug}-iter-3.md`.
+  - Aggregate iter-3 report at `reviews/visual-qa-demo-content-iter3.md`.
+  - Codex Vision returned empty (known 0.128.0 multi-image -i flag
+    limitation, same as iter-1 / iter-2).
+
+- [x] Iter-3 Delivery D5: PR body update + EXECUTION log finalization
+
+### Iteration-3 verification gates
+
+- `python3 -m pytest tools/sla_lib/tests/ templates/_smoke/`: 338
+  passed (same baseline as iter-1/iter-2).
+- `bin/check-stale-previews`: rc=0.
+- `bin/validate`: PASS (3 round-trip-diffed production templates;
+  the 5 new templates skip sla_diff/visual_diff per
+  `previews_for_sla:` design — only check-stale-previews + smoke
+  cover them).
+- `python3 tools/check_ci.py templates/{5-new-slugs}/template.sla`:
+  rc=0 (warnings unchanged from iter-2 — template-local styles +
+  Falz/Stanzkontur spot colors, expected).
+
+### Iteration-3 Deviations from plan
+
+#### Auto-fixed (Rules 1-3)
+
+5. **[Rule 1 - Bug] Tent-Card iter-3 CTA initial placement collided
+   with the existing photo at panel A**
+   - Found during: Iter-3 Delivery C2 first render
+   - Issue: Initial CTA placement at (12, 72, 44, 6) overlapped the
+     `Hintergrund-Mitmachen` photo at (12, 44, 44, 33) which extends
+     to y=77.
+   - Fix: relocated CTA to (62, 68, 60, 6) in the right column above
+     the bullet-list area; same fix mirrored for Panel B.
+   - Files: `templates/infostand-tent-card-a5-quer/build.py`
+   - Commit: c5ded5e (squashed during initial commit; root cause
+     documented in commit body).
+
+6. **[Rule 1 - Bug] Themen-Plakat hero enlargement ran Quelle and
+   Impressum below the new hero edge**
+   - Found during: Iter-3 Delivery C3 first render
+   - Issue: The 60-mm-tall hero ends at y=285; Quelle and Impressum
+     were at y=270 with h=10 — would have rendered behind the hero.
+   - Fix: relocated both bottom-text frames to y=287, narrowed
+     Quelle from w=280 to w=80 (bottom-left corner only) so Impressum
+     can sit at x=305 / w=100 in the right corner.
+   - Files: `templates/themen-plakat-a3-quer/build.py`
+   - Commit: 18a06ea (combined with the hero change, single commit).
+
+#### Blocked (Rule 4)
+
+None.
+
+### Iteration-3 Self-Check
+
+- [x] CD-Quickguide.pdf + QUICKGUIDE-NOTES.md committed
+- [x] gruene-logo-bund-dunkel.{png,svg} committed
+- [x] All `gruene-cmyk.png` in-code references in the 5 new
+  templates' build.py are gone (only documentary comments mention
+  the migration). Verified via grep.
+- [x] Türanhänger has a generated Codex portrait (198 KB,
+  watermarked, manifested, committed)
+- [x] Tent-Card both panels have CTA + Termine (DE + EN, mirrored)
+- [x] Themen-Plakat hero rendered ~5× larger
+- [x] All 5 new templates render without empty/sparse-looking
+  previews
+- [x] All 4 CI gates green (pytest, stale-previews, validate,
+  check_ci)
+- [x] Round-trip-diff still PASS for the 3 production templates
+- [x] PR #22 still OPEN; iteration-3 commits land on the same branch
+- **Result:** PASSED
+
+### Iteration-3 Commits
+
+```
+ff5063f 11: docs(brand): add CD-Quickguide.pdf + QUICKGUIDE-NOTES.md as repo reference
+6a02658 11: feat(branding): integrate Grünen-G brand logo across templates
+848fa59 11: feat(tueranhaenger): add Codex Bürgermeister-Portrait demo
+c5ded5e 11: feat(tent-card): add Mitmachen-CTA + events list per panel
+18a06ea 11: feat(themen-plakat): enlarge themen-hero photo
+```
+
+**Iteration-3 status: complete. PR #22 ready for orchestrator-driven merge after one
+final EXECUTION-log + reviews commit.**
