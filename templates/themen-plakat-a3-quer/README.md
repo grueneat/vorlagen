@@ -27,6 +27,19 @@ ersetzen:
 
 Spec: [`templates/_specs/themen-plakat-a3-quer.md`](../_specs/themen-plakat-a3-quer.md).
 
+## Demo-Bilder (synthetisch, KI-generiert)
+
+Die Galerie-Preview zeigt ein synthetisches Themen-Hero-Bild
+(`samples/themen-hero.jpg`, Wind-Turbine + Weinberg-Hintergrund) und
+einen Demo-QR-Code (`samples/qr-quelle.png`, Demo-URL
+`https://noe.gruene.at/themen/`).
+
+Das Hero-Bild trägt das EU-AI-Act-konforme Caption-Watermark
+„**Symbolfoto — KI-generiert**" am unteren Bildrand und ist im
+Manifest mit `synthetic: true` markiert. **Vor Kampagnen-Einsatz
+durch ein reales Foto + die echte Themen-URL ersetzen** — siehe
+`samples/manifest.yml`.
+
 ## Build
 
 ```bash

@@ -36,6 +36,19 @@ die Druckerei sieht den Pfad als Falz-Anweisung.
 Falzbein gemacht werden (kein Perforieren erforderlich). Bei dickerem Karton
 maschinelle Perforation empfehlen.
 
+## Demo-Bilder (synthetisch, KI-generiert)
+
+Die Galerie-Preview zeigt ein synthetisches Hintergrund-Foto
+(`samples/hintergrund-mitmachen.jpg`, Infostand-Szene mit Personen
+am Tisch) und einen Demo-QR-Code (`samples/qr-mitmachen.png`,
+Demo-URL `https://noe.gruene.at/mitmachen/`, 17 mm — D1-konform).
+
+Das Foto trägt das EU-AI-Act-konforme Caption-Watermark
+„**Symbolfoto — KI-generiert**" am unteren Bildrand und ist im
+Manifest mit `synthetic: true` markiert. **Vor Kampagnen-Einsatz
+durch ein reales Infostand-Foto + die echte Bezirks-/Listen-URL
+ersetzen** — siehe `samples/manifest.yml`.
+
 ## Build
 
 ```bash
