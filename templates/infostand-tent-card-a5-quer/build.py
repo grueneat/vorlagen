@@ -153,9 +153,46 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Body Panel A",
     ))
 
-    # Impressum (just above the fold line — y=96..100 = 4 mm tall)
+    # Hintergrund-Mitmachen photo (Issue #11): optional landscape badge at
+    # bottom-left of Panel A, alongside body. Conditional inject — empty in
+    # fresh checkouts.
+    hintergrund_path = HERE / "samples" / "hintergrund-mitmachen.jpg"
+    hg_data, hg_ext = (None, None)
+    if hintergrund_path.exists():
+        hg_data, hg_ext = pack_inline_image(
+            hintergrund_path.read_bytes(), "jpg"
+        )
+    page.add(ImageFrame(
+        x_mm=12, y_mm=44, w_mm=44, h_mm=33,
+        inline_image_data=hg_data,
+        inline_image_ext=hg_ext,
+        scale_type=1, ratio=1,
+        layer=LAYER_BILDER,
+        anname="Hintergrund-Mitmachen",
+    ))
+
+    # QR-Mitmachen slot (Issue #11): 17x17 mm — enlarged from spec's prior
+    # 14 mm to satisfy D1's 0.5 mm/module minimum at QR version 4 (33 modules,
+    # 17/33 = 0.515 mm/module). Conditional inject.
+    qr_mitmachen_path = HERE / "samples" / "qr-mitmachen.png"
+    qr_data, qr_ext = (None, None)
+    if qr_mitmachen_path.exists():
+        qr_data, qr_ext = pack_inline_image(
+            qr_mitmachen_path.read_bytes(), "png"
+        )
+    page.add(ImageFrame(
+        x_mm=12, y_mm=80, w_mm=17, h_mm=17,
+        inline_image_data=qr_data,
+        inline_image_ext=qr_ext,
+        scale_type=1, ratio=1,
+        layer=LAYER_BILDER,
+        anname="QR-Code (mitmachen, panel A)",
+    ))
+
+    # Impressum (just above the fold line — y=96..100 = 4 mm tall, narrowed
+    # to start at x=35 so it doesn't run under the QR slot)
     page.add(TextFrame(
-        x_mm=12, y_mm=96, w_mm=280, h_mm=4,
+        x_mm=35, y_mm=96, w_mm=257, h_mm=4,
         layer=LAYER_TEXT,
         style="tent/impressum",
         runs=[Run(

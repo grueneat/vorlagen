@@ -112,6 +112,9 @@ für maximalen Reach.
 | Logo Grüne (cmyk, panel A)   | ImageFrame       |  12  |  10  |  45  |  14  | —         | shared/logos/gruene-cmyk.png       | (verwende shared/logos/gruene-cmyk.png)              |
 | Headline Panel A             | TextFrame        |  62  |  10  | 223  |  30  | Dunkelgrün| tent/headline                      | Klimaschutz konkret.                                 |
 | Body Panel A                 | TextFrame        |  62  |  44  | 223  |  56  | Black     | tent/body                          | • Erneuerbare Energie ausbauen\n• Öffis verdoppeln\n• Wärmepumpe statt Gas |
+| Hintergrund-Mitmachen        | ImageFrame       |  12  |  44  |  44  |  33  | —         | samples/hintergrund-mitmachen.jpg  | Demo Hintergrund (synthetic, watermarked) — optional |
+| QR-Code (mitmachen, panel A) | ImageFrame       |  12  |  80  |  17  |  17  | —         | samples/qr-mitmachen.png           | Demo: https://noe.gruene.at/mitmachen/ — endusers replace |
+| Impressum (Tent)             | TextFrame        |  35  |  96  | 257  |   4  | Black     | Impressum                          | Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten. |
 | Falzlinie (horizontal)       | Block:TableTentFold|   0|  105| 297  |   0  | Falz      | —                                  | (FoldLine auf Falz-Layer y=105)                      |
 
 ## Slot-Tabelle — Panel B (y=105–210 mm; **kopfüber gerendert**)
@@ -121,7 +124,8 @@ für maximalen Reach.
 | Logo Grüne (cmyk, panel B)   | ImageFrame|  240 | 196  |  45  |  14  | —         | shared/logos/gruene-cmyk.png    | (verwende shared/logos/gruene-cmyk.png)           |
 | Headline Panel B             | TextFrame |  12  | 170  | 223  |  30  | Dunkelgrün| tent/headline                   | Climate. Concrete.                                |
 | Body Panel B                 | TextFrame |  12  | 113  | 223  |  56  | Black     | tent/body                       | • Renewables: scale up\n• Public transport: double\n• Heat pump, not gas |
-| QR-Code (optional)           | ImageFrame|  12  | 196  |  14  |  14  | —         | optional                        | (Event-Anmeldung)                                 |
+
+> **Note (Issue #11, 2026-05-08):** The previous Panel-B `QR-Code (optional)` slot was 14×14 mm, which violates D1's 0.5 mm/module minimum (33-module QR encoding `noe.gruene.at/mitmachen/` would yield 0.42 mm/module). The QR slot has been **enlarged to 17×17 mm** and **moved to Panel A** (Mitmachen-Seite) — yielding 17/33 ≈ 0.515 mm/module, just above the threshold.
 
 > **Hinweis zur Panel-B-Rotation:** Sowohl die Markdown-Tabelle als auch der eingebettete
 > YAML-Block enthalten die **finalen Frame-Koordinaten** wie sie im SLA stehen werden —
@@ -160,6 +164,24 @@ slots:
     fcolor: "Black"
     style_ref: "tent/body"
     example: "• Erneuerbare Energie ausbauen\n• Öffis verdoppeln\n• Wärmepumpe statt Gas"
+  - anname: "Hintergrund-Mitmachen"
+    type: ImageFrame
+    x_mm: 12
+    y_mm: 44
+    w_mm: 44
+    h_mm: 33
+    fcolor: ""
+    style_ref: "samples/hintergrund-mitmachen.jpg"
+    example: "Demo Hintergrund (synthetic, watermarked) — optional"
+  - anname: "QR-Code (mitmachen, panel A)"
+    type: ImageFrame
+    x_mm: 12
+    y_mm: 80
+    w_mm: 17
+    h_mm: 17
+    fcolor: ""
+    style_ref: "samples/qr-mitmachen.png"
+    example: "Demo: https://noe.gruene.at/mitmachen/ — endusers replace. Enlarged 2026-05-08 per Issue #11 (D1 module-size: 17/33 ≈ 0.515 mm/module)."
   - anname: "Falzlinie"
     type: "Block:TableTentFold"
     x_mm: 0
@@ -198,9 +220,9 @@ slots:
     example: "• Renewables: scale up\n• Public transport: double\n• Heat pump, not gas"
   - anname: "Impressum (Tent)"
     type: TextFrame
-    x_mm: 12
+    x_mm: 35
     y_mm: 96
-    w_mm: 280
+    w_mm: 257
     h_mm: 4
     fcolor: "Black"
     style_ref: "Impressum"

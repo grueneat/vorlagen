@@ -163,16 +163,19 @@ Legende:
 | anname                       | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                       | example                                              |
 |------------------------------|-----------|------|------|------|------|-----------|---------------------------------|------------------------------------------------------|
 | P4 Thema 1 — Headline        | TextFrame |   6  |  20  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Klimaplan umsetzen                                   |
-| P4 Thema 1 — Body            | TextFrame |   6  |  35  |  87  |  60  | Black     | falzflyer/thema-body            | Solar auf jedes Gemeindedach. Heizungstausch fördern. Öffis verdoppeln. |
+| P4 Thema 1 — Photo           | ImageFrame|   6  |  36  |  87  |  24  | —         | samples/themen-klimaschutz.jpg  | Demo themen-photo (synthetic, watermarked)           |
+| P4 Thema 1 — Body            | TextFrame |   6  |  62  |  87  |  32  | Black     | falzflyer/thema-body            | Solar auf jedes Gemeindedach. Heizungstausch fördern. Öffis verdoppeln. |
 | P4 Thema 2 — Headline        | TextFrame |   6  | 105  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Leistbares Wohnen                                    |
-| P4 Thema 2 — Body            | TextFrame |   6  | 120  |  87  |  60  | Black     | falzflyer/thema-body            | Gemeinde-Wohnbau ankurbeln. Mietpreis-Bremse für Neubauten. |
+| P4 Thema 2 — Photo           | ImageFrame|   6  | 121  |  87  |  24  | —         | samples/themen-soziales.jpg     | Demo themen-photo (synthetic, watermarked)           |
+| P4 Thema 2 — Body            | TextFrame |   6  | 147  |  87  |  32  | Black     | falzflyer/thema-body            | Gemeinde-Wohnbau ankurbeln. Mietpreis-Bremse für Neubauten. |
 
 ### Panel 5 — Themen 3+4 (x=99–198 mm)
 
 | anname                       | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                       | example                                              |
 |------------------------------|-----------|------|------|------|------|-----------|---------------------------------|------------------------------------------------------|
 | P5 Thema 3 — Headline        | TextFrame | 105  |  20  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Bildung vor Ort                                      |
-| P5 Thema 3 — Body            | TextFrame | 105  |  35  |  87  |  60  | Black     | falzflyer/thema-body            | Volksschulen ausbauen. Nachmittagsbetreuung gratis. Schulwege sicher. |
+| P5 Thema 3 — Photo           | ImageFrame| 105  |  36  |  87  |  24  | —         | samples/themen-bildung.jpg      | Demo themen-photo (synthetic, watermarked)           |
+| P5 Thema 3 — Body            | TextFrame | 105  |  62  |  87  |  32  | Black     | falzflyer/thema-body            | Volksschulen ausbauen. Nachmittagsbetreuung gratis. Schulwege sicher. |
 | P5 Thema 4 — Headline        | TextFrame | 105  | 105  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Lokale Wirtschaft                                    |
 | P5 Thema 4 — Body            | TextFrame | 105  | 120  |  87  |  60  | Black     | falzflyer/thema-body            | Regionale Lieferketten. Handwerks-Förderung. Klein­betriebe statt Konzern-Filialen. |
 
@@ -183,7 +186,8 @@ Legende:
 | P6 Kontakt-Headline          | TextFrame | 204  |  20  |  87  |  14  | Dunkelgrün| falzflyer/contact-headline      | Sprich mich an                                       |
 | P6 Kontakt-Adresse           | TextFrame | 204  |  35  |  87  |  20  | Black     | falzflyer/contact-body          | Hauptstraße 12\n2340 Mödling                         |
 | P6 Kontakt-Email-Tel         | TextFrame | 204  |  56  |  87  |  20  | Black     | falzflyer/contact-body          | maria.beispiel@gruene-moedling.at\n+43 660 1234567   |
-| P6 QR-Code                   | ImageFrame| 232  |  85  |  35  |  35  | —         | optional / generated            | (QR zur Kandidaten-Webseite)                         |
+| P6 QR-Code (mitmachen)       | ImageFrame| 210  |  85  |  30  |  30  | —         | samples/qr-mitmachen.png        | Demo: https://noe.gruene.at/mitmachen/ — endusers replace |
+| P6 QR-Code (termine)         | ImageFrame| 246  |  85  |  30  |  30  | —         | samples/qr-termine.png          | Demo: https://noe.gruene.at/termine/ — endusers replace   |
 | P6 Logo Grüne                | ImageFrame| 204  | 130  |  35  |  10  | —         | shared/logos/gruene-cmyk.png    | (verwende shared/logos/gruene-cmyk.png)              |
 | P6 Impressum                 | TextFrame | 204  | 145  |  87  |  60  | Black     | Impressum                       | Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten. |
 
@@ -335,12 +339,21 @@ slots:
     fcolor: "Dunkelgrün"
     style_ref: "falzflyer/thema-headline"
     example: "Klimaplan umsetzen"
+  - anname: "P4 Thema 1 — Photo"
+    type: ImageFrame
+    x_mm: 6
+    y_mm: 36
+    w_mm: 87
+    h_mm: 24
+    fcolor: ""
+    style_ref: "samples/themen-klimaschutz.jpg"
+    example: "Demo themen-photo (synthetic, watermarked)"
   - anname: "P4 Thema 1 — Body"
     type: TextFrame
     x_mm: 6
-    y_mm: 35
+    y_mm: 62
     w_mm: 87
-    h_mm: 60
+    h_mm: 32
     fcolor: "Black"
     style_ref: "falzflyer/thema-body"
     example: "Solar auf jedes Gemeindedach. Heizungstausch fördern. Öffis verdoppeln."
@@ -353,12 +366,21 @@ slots:
     fcolor: "Dunkelgrün"
     style_ref: "falzflyer/thema-headline"
     example: "Leistbares Wohnen"
+  - anname: "P4 Thema 2 — Photo"
+    type: ImageFrame
+    x_mm: 6
+    y_mm: 121
+    w_mm: 87
+    h_mm: 24
+    fcolor: ""
+    style_ref: "samples/themen-soziales.jpg"
+    example: "Demo themen-photo (synthetic, watermarked)"
   - anname: "P4 Thema 2 — Body"
     type: TextFrame
     x_mm: 6
-    y_mm: 120
+    y_mm: 147
     w_mm: 87
-    h_mm: 60
+    h_mm: 32
     fcolor: "Black"
     style_ref: "falzflyer/thema-body"
     example: "Gemeinde-Wohnbau ankurbeln. Mietpreis-Bremse für Neubauten."
@@ -372,12 +394,21 @@ slots:
     fcolor: "Dunkelgrün"
     style_ref: "falzflyer/thema-headline"
     example: "Bildung vor Ort"
+  - anname: "P5 Thema 3 — Photo"
+    type: ImageFrame
+    x_mm: 105
+    y_mm: 36
+    w_mm: 87
+    h_mm: 24
+    fcolor: ""
+    style_ref: "samples/themen-bildung.jpg"
+    example: "Demo themen-photo (synthetic, watermarked)"
   - anname: "P5 Thema 3 — Body"
     type: TextFrame
     x_mm: 105
-    y_mm: 35
+    y_mm: 62
     w_mm: 87
-    h_mm: 60
+    h_mm: 32
     fcolor: "Black"
     style_ref: "falzflyer/thema-body"
     example: "Volksschulen ausbauen. Nachmittagsbetreuung gratis."
@@ -427,15 +458,24 @@ slots:
     fcolor: "Black"
     style_ref: "falzflyer/contact-body"
     example: "maria.beispiel@gruene-moedling.at\n+43 660 1234567"
-  - anname: "P6 QR-Code"
+  - anname: "P6 QR-Code (mitmachen)"
     type: ImageFrame
-    x_mm: 232
+    x_mm: 210
     y_mm: 85
-    w_mm: 35
-    h_mm: 35
+    w_mm: 30
+    h_mm: 30
     fcolor: ""
-    style_ref: "optional / generated"
-    example: "QR zur Kandidaten-Webseite"
+    style_ref: "samples/qr-mitmachen.png"
+    example: "Demo: https://noe.gruene.at/mitmachen/ — endusers replace with Bezirks-/Listen-URL"
+  - anname: "P6 QR-Code (termine)"
+    type: ImageFrame
+    x_mm: 246
+    y_mm: 85
+    w_mm: 30
+    h_mm: 30
+    fcolor: ""
+    style_ref: "samples/qr-termine.png"
+    example: "Demo: https://noe.gruene.at/termine/ — endusers replace with Termine-URL"
   - anname: "P6 Logo Grüne"
     type: ImageFrame
     x_mm: 204

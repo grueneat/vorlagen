@@ -197,9 +197,20 @@ def _add_front(doc, page0):
             anname="P1 Logo Grüne",
         ))
 
-    # Kandidat-Portrait placeholder (image frame, optional Codex demo)
+    # Kandidat-Portrait — conditional inject (Issue #11). When
+    # samples/portrait-cover.jpg exists the Codex-generated demo portrait is
+    # embedded; otherwise the slot stays empty (clean fresh checkout).
+    portrait_path = HERE / "samples" / "portrait-cover.jpg"
+    portrait_data, portrait_ext = (None, None)
+    if portrait_path.exists():
+        portrait_data, portrait_ext = pack_inline_image(
+            portrait_path.read_bytes(), "jpg"
+        )
     page0.add(ImageFrame(
         x_mm=6, y_mm=28, w_mm=87, h_mm=105,
+        inline_image_data=portrait_data,
+        inline_image_ext=portrait_ext,
+        scale_type=1, ratio=1,
         layer=LAYER_BILDER,
         anname="P1 Kandidat-Portrait",
     ))
@@ -325,6 +336,22 @@ def _add_front(doc, page0):
 
 
 def _add_back(doc, page1):
+    # Themen-photo slots (Issue #11): 3 small landscape images, one each above
+    # the body of Themen 1, 2, 3. Conditional inject — only when the matching
+    # samples/themen-*.jpg is committed. Theme 4 (Lokale Wirtschaft) stays
+    # text-only to keep panel rhythm.
+    themen_photo_files = {
+        "klimaschutz": HERE / "samples" / "themen-klimaschutz.jpg",
+        "soziales":    HERE / "samples" / "themen-soziales.jpg",
+        "bildung":     HERE / "samples" / "themen-bildung.jpg",
+    }
+
+    def _photo_inline(name):
+        p = themen_photo_files[name]
+        if p.exists():
+            return pack_inline_image(p.read_bytes(), "jpg")
+        return (None, None)
+
     # ---- Panel 4 — Themen 1+2 (x=0..99) -----
     page1.add(TextFrame(
         x_mm=6, y_mm=20, w_mm=87, h_mm=14,
@@ -333,8 +360,17 @@ def _add_back(doc, page1):
                   paragraph_style="falzflyer/thema-headline")],
         anname="P4 Thema 1 — Headline",
     ))
+    p4_t1_data, p4_t1_ext = _photo_inline("klimaschutz")
+    page1.add(ImageFrame(
+        x_mm=6, y_mm=36, w_mm=87, h_mm=24,
+        inline_image_data=p4_t1_data,
+        inline_image_ext=p4_t1_ext,
+        scale_type=1, ratio=1,
+        layer=LAYER_BILDER,
+        anname="P4 Thema 1 — Photo",
+    ))
     page1.add(TextFrame(
-        x_mm=6, y_mm=36, w_mm=87, h_mm=58,
+        x_mm=6, y_mm=62, w_mm=87, h_mm=32,
         layer=LAYER_TEXT, style="falzflyer/thema-body",
         runs=[Run(
             text=("Solar auf jedes Gemeindedach. "
@@ -351,8 +387,17 @@ def _add_back(doc, page1):
                   paragraph_style="falzflyer/thema-headline")],
         anname="P4 Thema 2 — Headline",
     ))
+    p4_t2_data, p4_t2_ext = _photo_inline("soziales")
+    page1.add(ImageFrame(
+        x_mm=6, y_mm=121, w_mm=87, h_mm=24,
+        inline_image_data=p4_t2_data,
+        inline_image_ext=p4_t2_ext,
+        scale_type=1, ratio=1,
+        layer=LAYER_BILDER,
+        anname="P4 Thema 2 — Photo",
+    ))
     page1.add(TextFrame(
-        x_mm=6, y_mm=121, w_mm=87, h_mm=58,
+        x_mm=6, y_mm=147, w_mm=87, h_mm=32,
         layer=LAYER_TEXT, style="falzflyer/thema-body",
         runs=[Run(
             text=("Gemeinde-Wohnbau ankurbeln. "
@@ -370,8 +415,17 @@ def _add_back(doc, page1):
                   paragraph_style="falzflyer/thema-headline")],
         anname="P5 Thema 3 — Headline",
     ))
+    p5_t3_data, p5_t3_ext = _photo_inline("bildung")
+    page1.add(ImageFrame(
+        x_mm=105, y_mm=36, w_mm=87, h_mm=24,
+        inline_image_data=p5_t3_data,
+        inline_image_ext=p5_t3_ext,
+        scale_type=1, ratio=1,
+        layer=LAYER_BILDER,
+        anname="P5 Thema 3 — Photo",
+    ))
     page1.add(TextFrame(
-        x_mm=105, y_mm=36, w_mm=87, h_mm=58,
+        x_mm=105, y_mm=62, w_mm=87, h_mm=32,
         layer=LAYER_TEXT, style="falzflyer/thema-body",
         runs=[Run(
             text=("Volksschulen ausbauen. "
@@ -430,11 +484,35 @@ def _add_back(doc, page1):
         ],
         anname="P6 Kontakt-Email-Tel",
     ))
-    # QR placeholder
+    # QR codes (Issue #11): two slots, qr-mitmachen + qr-termine. Conditional
+    # inject — empty slots in fresh checkouts.
+    qr_mitmachen_path = HERE / "samples" / "qr-mitmachen.png"
+    qr_termine_path = HERE / "samples" / "qr-termine.png"
+    qr_m_data, qr_m_ext = (None, None)
+    qr_t_data, qr_t_ext = (None, None)
+    if qr_mitmachen_path.exists():
+        qr_m_data, qr_m_ext = pack_inline_image(
+            qr_mitmachen_path.read_bytes(), "png"
+        )
+    if qr_termine_path.exists():
+        qr_t_data, qr_t_ext = pack_inline_image(
+            qr_termine_path.read_bytes(), "png"
+        )
     page1.add(ImageFrame(
-        x_mm=232, y_mm=85, w_mm=35, h_mm=35,
+        x_mm=210, y_mm=85, w_mm=30, h_mm=30,
+        inline_image_data=qr_m_data,
+        inline_image_ext=qr_m_ext,
+        scale_type=1, ratio=1,
         layer=LAYER_BILDER,
-        anname="P6 QR-Code",
+        anname="P6 QR-Code (mitmachen)",
+    ))
+    page1.add(ImageFrame(
+        x_mm=246, y_mm=85, w_mm=30, h_mm=30,
+        inline_image_data=qr_t_data,
+        inline_image_ext=qr_t_ext,
+        scale_type=1, ratio=1,
+        layer=LAYER_BILDER,
+        anname="P6 QR-Code (termine)",
     ))
     # P6 Logo Grüne — 35x10mm → scale 0.240
     logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"

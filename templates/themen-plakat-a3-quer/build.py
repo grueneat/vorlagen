@@ -218,6 +218,39 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             anname=f"{label} — Body",
         ))
 
+    # Themen-hero photo slot (Issue #11): optional landscape banner at the
+    # bottom of the body area. ~165x24 mm — small enough not to dominate the
+    # belege text, large enough to read as a documentary photo. Conditional
+    # inject — empty slot in fresh checkouts.
+    hero_path = HERE / "samples" / "themen-hero.jpg"
+    hero_data, hero_ext = (None, None)
+    if hero_path.exists():
+        hero_data, hero_ext = pack_inline_image(hero_path.read_bytes(), "jpg")
+    page.add(ImageFrame(
+        x_mm=15, y_mm=248, w_mm=290, h_mm=18,
+        inline_image_data=hero_data,
+        inline_image_ext=hero_ext,
+        scale_type=1, ratio=1,
+        layer=1,
+        anname="Themen-Hero",
+    ))
+
+    # QR-Quelle slot (Issue #11): small corner QR encoding the Themen-URL.
+    # Placed top-right corner, balancing the top-left logo. 25x25 mm at QR
+    # version 4 = 0.76 mm/module — well above D1's 0.5 mm minimum.
+    qr_path = HERE / "samples" / "qr-quelle.png"
+    qr_data, qr_ext = (None, None)
+    if qr_path.exists():
+        qr_data, qr_ext = pack_inline_image(qr_path.read_bytes(), "png")
+    page.add(ImageFrame(
+        x_mm=380, y_mm=8, w_mm=25, h_mm=25,
+        inline_image_data=qr_data,
+        inline_image_ext=qr_ext,
+        scale_type=1, ratio=1,
+        layer=1,
+        anname="QR-Code (quelle)",
+    ))
+
     # Quelle (bottom-left)
     page.add(TextFrame(
         x_mm=15, y_mm=270, w_mm=280, h_mm=10,
