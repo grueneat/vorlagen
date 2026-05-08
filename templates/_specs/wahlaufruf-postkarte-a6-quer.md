@@ -116,8 +116,9 @@ Legende:
 | Cell 2 — Body                | TextFrame |  78  |  31  |  64  |  30  | Black    | wahlaufruf/cell-body            | Mut zur Veränderung. Faktenbasiert. Generationen­gerecht. |
 | Cell 3 — Headline            | TextFrame |   6  |  62  |  68  |   8  | Dunkelgrün| wahlaufruf/cell-headline       | Wann gewählt wird                                    |
 | Cell 3 — Body                | TextFrame |   6  |  71  |  68  |  20  | Black    | wahlaufruf/cell-body            | Sonntag, 23. Mai 2026, 7–17 Uhr.                     |
-| Cell 4 — Headline            | TextFrame |  78  |  62  |  64  |   8  | Dunkelgrün| wahlaufruf/cell-headline       | Wo informieren                                       |
-| Cell 4 — Body                | TextFrame |  78  |  71  |  64  |  20  | Black    | wahlaufruf/cell-body            | gruene-noe.at · Tel. 02742 / 90 230                  |
+| Cell 4 — Headline            | TextFrame |  78  |  62  |  35  |   8  | Dunkelgrün| wahlaufruf/cell-headline       | Wo informieren                                       |
+| Cell 4 — Body                | TextFrame |  78  |  71  |  35  |  20  | Black    | wahlaufruf/cell-body            | gruene-noe.at                                        |
+| QR-Code (back)               | ImageFrame| 115  |  62  |  27  |  27  | —        | samples/qr-back.png             | Demo: https://noe.gruene.at/ — endusers replace      |
 | Impressum                    | TextFrame |   6  |  96  | 136  |   6  | Black    | Impressum                       | Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten. |
 
 ```yaml
@@ -225,7 +226,7 @@ slots:
     type: TextFrame
     x_mm: 78
     y_mm: 62
-    w_mm: 64
+    w_mm: 35
     h_mm: 8
     fcolor: "Dunkelgrün"
     style_ref: "wahlaufruf/cell-headline"
@@ -234,11 +235,20 @@ slots:
     type: TextFrame
     x_mm: 78
     y_mm: 71
-    w_mm: 64
+    w_mm: 35
     h_mm: 20
     fcolor: "Black"
     style_ref: "wahlaufruf/cell-body"
-    example: "gruene-noe.at · Tel. 02742 / 90 230"
+    example: "gruene-noe.at"
+  - anname: "QR-Code (back)"
+    type: ImageFrame
+    x_mm: 115
+    y_mm: 62
+    w_mm: 27
+    h_mm: 27
+    fcolor: ""
+    style_ref: "samples/qr-back.png"
+    example: "Demo: https://noe.gruene.at/ — endusers replace with their voting-info URL"
   - anname: "Impressum"
     type: TextFrame
     x_mm: 6

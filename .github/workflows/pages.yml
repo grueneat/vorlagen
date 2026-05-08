@@ -47,7 +47,12 @@ jobs:
           set -euo pipefail
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-            xvfb poppler-utils ghostscript imagemagick python3-lxml python3-yaml
+            xvfb poppler-utils ghostscript imagemagick python3-lxml python3-yaml \
+            libzbar0 zbar-tools
+          # Pillow + qrcode + pyzbar required by tools/qr_gen.py and
+          # tools/codex_image_gen.py + their tests (issue #11).
+          sudo pip install --break-system-packages --no-cache-dir \
+            "Pillow==12.2.0" "qrcode[pil]==8.2" "pyzbar==0.1.9"
           # Download + extract AppImage if not restored from cache
           if [ ! -d /opt/squashfs-root ]; then
             sudo curl -fsSL -o /opt/scribus.AppImage "$SCRIBUS_URL"
@@ -64,9 +69,15 @@ jobs:
           xvfb-run -a --server-args="-screen 0 800x600x24" \
             scribus --version 2>&1 | head -3 || true
 
-      - name: Build all templates via DSL
+      - name: Build smoke templates via DSL
+        # Smoke templates (_smoke/) are rebuilt fresh in CI as a sanity check
+        # of the DSL surface. Production templates under templates/<slug>/ are
+        # NOT rebuilt: their template.sla is the committed source of truth and
+        # cross-environment lxml version drift produces non-deterministic
+        # bytes. check_stale_previews validates SHA(template.sla) ==
+        # meta.yml::previews_for_sla using the committed bytes directly.
         run: |
-          for build in templates/_smoke/*/build.py templates/*/build.py; do
+          for build in templates/_smoke/*/build.py; do
             [ -f "$build" ] && python3 "$build"
           done
 

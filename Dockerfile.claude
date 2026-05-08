@@ -56,8 +56,21 @@ RUN echo "deb http://deb.debian.org/debian trixie main" \
         ghostscript \
         imagemagick \
         libxml2-utils \
-        fonts-dejavu-core && \
+        fonts-dejavu-core \
+        libzbar0 \
+        zbar-tools && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Python tooling deps for QR demo-content authoring (issue #11):
+#   - qrcode[pil]==8.2: deterministic branded QR rendering (Dunkelgrün modules,
+#     center-logo embed, ECC=H). Used by tools/qr_gen.py.
+#   - pyzbar==0.1.9: QR decode for scannability tests. Needs libzbar0 at runtime
+#     (installed above) and zbar-tools provides zbarimg for shell-level smoke.
+#   - Pillow is already available via qrcode[pil] (>=9.1.0); the trixie scribus
+#     stack provides 12.2.0 transitively. Do NOT pin Pillow here.
+RUN pip3 install --break-system-packages --no-cache-dir \
+        'qrcode[pil]==8.2' \
+        'pyzbar==0.1.9'
 
 # Brand fonts (proprietary Gotham Narrow, OFL Vollkorn). Source files live at
 # /root/workspace/fonts/ (gitignored; user-controlled drop zone) and are NOT

@@ -100,6 +100,27 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         fcolor="Black",
         language="de",
     ))
+    # iter-3: CTA + Termine styles for Panel A's mid-section.
+    doc.add_para_style(ParaStyle(
+        name="tent/cta",
+        font="Gotham Narrow Bold",
+        fontsize=11,
+        linesp=14,
+        linesp_mode=0,
+        align=0,
+        fcolor="Dunkelgrün",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tent/termine",
+        font="Gotham Narrow Book",
+        fontsize=10,
+        linesp=13,
+        linesp_mode=0,
+        align=0,
+        fcolor="Black",
+        language="de",
+    ))
 
     # Master + 1 page
     doc.add_master(
@@ -116,17 +137,21 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
     )
 
     # ---- PANEL A (y=0..105) — normal orientation ---------------------------
-    # Logo (cmyk) top-left of Panel A — 45x14mm = 127.6x39.7pt → scale ≈ 0.309
-    logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
-    if logo_cmyk.exists():
-        lc_data, lc_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+    # Logo (Brand-Bund) top-left of Panel A. iter-3: migrated from
+    # gruene-cmyk.png wordmark (3.5:1) to gruene-logo-bund-dunkel.png
+    # (~1.12:1 brushstroke G + DIE-GRÜNEN tag). Frame re-sized 36×32 mm
+    # to match the new aspect. On A5-quer (kurze Kante=210) the
+    # Quickguide Print target is 3×M = 37.8 mm — 36 mm sits at 95%. ✓
+    # h=32 keeps clearance to the Hintergrund-Mitmachen photo at y=44.
+    logo_brand = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
+    if logo_brand.exists():
+        lc_data, lc_ext = pack_inline_image(logo_brand.read_bytes(), "png")
         page.add(ImageFrame(
-            x_mm=12, y_mm=10, w_mm=45, h_mm=14,
+            x_mm=12, y_mm=10, w_mm=36, h_mm=32,
             inline_image_data=lc_data, inline_image_ext=lc_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.309, 0.336),
             layer=LAYER_BILDER,
-            anname="Logo Grüne (cmyk, panel A)",
+            anname="Logo Grüne (panel A)",
         ))
 
     # Headline Panel A — placed to the right of the logo
@@ -139,9 +164,10 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Headline Panel A",
     ))
 
-    # Body Panel A — aligned with headline (under it, slightly indented)
+    # Body Panel A — aligned with headline (under it, slightly indented).
+    # iter-3: tightened to h=26 mm to free space below for the events list.
     page.add(TextFrame(
-        x_mm=62, y_mm=44, w_mm=223, h_mm=56,
+        x_mm=62, y_mm=44, w_mm=223, h_mm=26,
         layer=LAYER_TEXT,
         style="tent/body",
         runs=[Run(
@@ -153,9 +179,76 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Body Panel A",
     ))
 
-    # Impressum (just above the fold line — y=96..100 = 4 mm tall)
+    # iter-3: Mitmachen-CTA between the photo (ends y=77) and the QR
+    # (starts y=80) — placed in the right column to keep the photo+QR
+    # column unbroken. Width 60 mm is enough for the German CTA text
+    # at 11pt Bold without truncation.
     page.add(TextFrame(
-        x_mm=12, y_mm=96, w_mm=280, h_mm=4,
+        x_mm=62, y_mm=68, w_mm=60, h_mm=6,
+        layer=LAYER_TEXT,
+        style="tent/cta",
+        runs=[Run(text="Mitmachen — Komm zu uns!",
+                  paragraph_style="tent/cta")],
+        anname="CTA Panel A",
+    ))
+
+    # iter-3: Events list (Nächste Termine) below the CTA. Starts at
+    # y=76 (CTA ends at y=74) and uses h=20 (3 lines × 13pt linesp ≈ 16 mm
+    # plus padding). Full-width body column from x=125 to keep clear of
+    # the CTA above and visually anchor as a separate block.
+    page.add(TextFrame(
+        x_mm=125, y_mm=68, w_mm=160, h_mm=26,
+        layer=LAYER_TEXT,
+        style="tent/termine",
+        runs=[Run(
+            text=("Nächste Termine\n"
+                  "• 12. Juni — Klimastammtisch, GH zur Post (Mödling)\n"
+                  "• 26. Juni — Bezirkstreffen Niederösterreich-Süd"),
+            paragraph_style="tent/termine",
+        )],
+        anname="Termine Panel A",
+    ))
+
+    # Hintergrund-Mitmachen photo (Issue #11): optional landscape badge at
+    # bottom-left of Panel A, alongside body. Conditional inject — empty in
+    # fresh checkouts.
+    hintergrund_path = HERE / "samples" / "hintergrund-mitmachen.jpg"
+    hg_data, hg_ext = (None, None)
+    if hintergrund_path.exists():
+        hg_data, hg_ext = pack_inline_image(
+            hintergrund_path.read_bytes(), "jpg"
+        )
+    page.add(ImageFrame(
+        x_mm=12, y_mm=44, w_mm=44, h_mm=33,
+        inline_image_data=hg_data,
+        inline_image_ext=hg_ext,
+        scale_type=0, ratio=1,
+        layer=LAYER_BILDER,
+        anname="Hintergrund-Mitmachen",
+    ))
+
+    # QR-Mitmachen slot (Issue #11): 17x17 mm — enlarged from spec's prior
+    # 14 mm to satisfy D1's 0.5 mm/module minimum at QR version 4 (33 modules,
+    # 17/33 = 0.515 mm/module). Conditional inject.
+    qr_mitmachen_path = HERE / "samples" / "qr-mitmachen.png"
+    qr_data, qr_ext = (None, None)
+    if qr_mitmachen_path.exists():
+        qr_data, qr_ext = pack_inline_image(
+            qr_mitmachen_path.read_bytes(), "png"
+        )
+    page.add(ImageFrame(
+        x_mm=12, y_mm=80, w_mm=17, h_mm=17,
+        inline_image_data=qr_data,
+        inline_image_ext=qr_ext,
+        scale_type=0, ratio=1,
+        layer=LAYER_BILDER,
+        anname="QR-Code (mitmachen, panel A)",
+    ))
+
+    # Impressum (just above the fold line — y=96..100 = 4 mm tall, narrowed
+    # to start at x=35 so it doesn't run under the QR slot)
+    page.add(TextFrame(
+        x_mm=35, y_mm=96, w_mm=257, h_mm=4,
         layer=LAYER_TEXT,
         style="tent/impressum",
         runs=[Run(
@@ -202,9 +295,11 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         rotation_deg=180,
     ))
 
-    # Body Panel B — original (12, 113, 223, 56) → rotated bbox: x=235, y=169
+    # Body Panel B — iter-3: tightened to h=26 to match Panel A and free
+    # space for the CTA + events list. Pre-rot (12, 140, 223, 26) →
+    # rotated bbox: x=12+223=235, y=140+26=166.
     page.add(TextFrame(
-        x_mm=235, y_mm=169, w_mm=223, h_mm=56,
+        x_mm=235, y_mm=166, w_mm=223, h_mm=26,
         layer=LAYER_TEXT,
         style="tent/body",
         runs=[Run(
@@ -217,16 +312,47 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         rotation_deg=180,
     ))
 
-    # Logo Panel B (rotated 180°)
-    if logo_cmyk.exists():
-        lc2_data, lc2_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+    # iter-3: EN CTA mirroring Panel A's Mitmachen at (62, 68, 60, 6).
+    # Pre-rot panel-B equivalent: (62, 210-68-6=136, 60, 6) →
+    # rotated (62+60, 136+6) = (122, 142).
+    page.add(TextFrame(
+        x_mm=122, y_mm=142, w_mm=60, h_mm=6,
+        layer=LAYER_TEXT,
+        style="tent/cta",
+        runs=[Run(text="Get involved — Talk to us!",
+                  paragraph_style="tent/cta")],
+        anname="CTA Panel B",
+        rotation_deg=180,
+    ))
+
+    # iter-3: EN events list mirroring Panel A's Termine at
+    # (125, 68, 160, 26). Pre-rot (125, 210-68-26=116, 160, 26) →
+    # rotated (125+160, 116+26) = (285, 142).
+    page.add(TextFrame(
+        x_mm=285, y_mm=142, w_mm=160, h_mm=26,
+        layer=LAYER_TEXT,
+        style="tent/termine",
+        runs=[Run(
+            text=("Upcoming dates\n"
+                  "• 12 June — Climate roundtable, GH zur Post (Mödling)\n"
+                  "• 26 June — District meeting, Lower Austria South"),
+            paragraph_style="tent/termine",
+        )],
+        anname="Termine Panel B",
+        rotation_deg=180,
+    ))
+
+    # Logo Panel B (rotated 180°). iter-3: same Brand-Bund logo as Panel A,
+    # 36×32 mm pre-rotation at (12, 178). After rotation 180° around bbox
+    # center: rotated_x = 12+36 = 48, rotated_y = 178+32 = 210.
+    if logo_brand.exists():
+        lc2_data, lc2_ext = pack_inline_image(logo_brand.read_bytes(), "png")
         page.add(ImageFrame(
-            x_mm=57, y_mm=210, w_mm=45, h_mm=14,
+            x_mm=48, y_mm=210, w_mm=36, h_mm=32,
             inline_image_data=lc2_data, inline_image_ext=lc2_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.309, 0.336),
             layer=LAYER_BILDER,
-            anname="Logo Grüne (cmyk, panel B)",
+            anname="Logo Grüne (panel B)",
             rotation_deg=180,
         ))
 

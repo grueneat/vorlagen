@@ -16,8 +16,7 @@ build:
   output: template.sla
 
 # DSL-original — no round-trip diff. SHA pin for stale-check.
-previews_for_sla: a3d0915e4385dad97cad72f92c7ee6d3d6ee913d81c7556d2f26d6e937dc116b
-
+previews_for_sla: 703b25071a4917f8696a5444ab06fc524eb2bb7aed48b284a43c98ae928b1996
 ci_overrides:
   non_ci_styles:
     - "wahlaufruf/headline"

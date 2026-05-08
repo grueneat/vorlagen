@@ -221,6 +221,7 @@ def review_template(slug: str, iteration: int = 1) -> Path:
                     prompt,
                 ],
                 capture_output=True, text=True, timeout=600,
+                stdin=subprocess.DEVNULL,
             )
             sections.append("```\n" + (r.stdout[-3000:] if len(r.stdout) > 3000 else r.stdout) + "\n```\n\n")
         except Exception as e:
@@ -240,6 +241,7 @@ def review_template(slug: str, iteration: int = 1) -> Path:
                     "-p", f"{prompt}\n\nReview the image at {detail.name} (in workspace dir).",
                 ],
                 capture_output=True, text=True, timeout=600,
+                stdin=subprocess.DEVNULL,
             )
             sections.append("```\n" + (r.stdout[-3000:] if len(r.stdout) > 3000 else r.stdout) + "\n```\n\n")
         except Exception as e:

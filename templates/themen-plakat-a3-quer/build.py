@@ -137,25 +137,29 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Seitenhintergrund",
     ))
 
-    # Logo (top-left) — embedded inline so the SLA stays self-contained
-    logo_path = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
+    # Logo (top-left, Brand-Bund) — embedded inline so the SLA stays
+    # self-contained. iter-3: migrated from gruene-cmyk.png (3.5:1 wordmark)
+    # to gruene-logo-bund-dunkel.png (~1.12:1 brushstroke G + DIE-GRÜNEN
+    # tag). Frame re-sized to honor the new aspect (32×28 mm ≈ 1.14:1).
+    # On A3-quer (kurze Kante=297) the Quickguide Print target is
+    # 3×M = 53.5 mm wide; 32 mm sits at 60% of target — modest but
+    # corner-anchored so as not to dominate the headline. scale_type=0,
+    # ratio=1 → Scribus aspect-preserving auto-fit fills the frame.
+    # h=28 keeps the logo bottom edge (y=38) clear of the headline at y=40.
+    logo_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
     if not logo_path.exists():
         raise FileNotFoundError(
-            f"Logo asset missing at {logo_path} — run "
-            f"`bin/refresh-placeholder-logos` or drop the brand logos there."
+            f"Logo asset missing at {logo_path} — Issue #11 iter-3 brand-logo "
+            f"integration requires shared/logos/gruene-logo-bund-dunkel.png."
         )
     logo_bytes = logo_path.read_bytes()
     data, ext = pack_inline_image(logo_bytes, "png")
-    # Use scale_type=0 (free) + explicit LOCALSCX/Y so Scribus renders the
-    # PNG inside the frame (scale_type=1+ratio=1 was rendering blank).
-    # 413x118 px source, 60x18 mm frame ≈ 170.1x51 pt → scale = 51/118 ≈ 0.432
     page.add(ImageFrame(
-        x_mm=15, y_mm=10, w_mm=60, h_mm=18,
+        x_mm=15, y_mm=10, w_mm=32, h_mm=28,
         inline_image_data=data,
         inline_image_ext=ext,
         scale_type=0,
         ratio=1,
-        local_scale=(0.412, 0.432),
         layer=1,
         anname="Logo Grüne (top-left)",
     ))
@@ -211,16 +215,58 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             anname=f"{label} — Headline",
         ))
         page.add(TextFrame(
-            x_mm=col_x, y_mm=152, w_mm=COL_W_MM, h_mm=90,
+            x_mm=col_x, y_mm=152, w_mm=COL_W_MM, h_mm=70,
             layer=2,
             style="themen-plakat/beleg-body",
             runs=[Run(text=body, paragraph_style="themen-plakat/beleg-body")],
             anname=f"{label} — Body",
         ))
 
-    # Quelle (bottom-left)
+    # Themen-hero photo slot (Issue #11, iter-3 enlargement option a):
+    # the source JPG is 1536×1024 (≈1.5:1). The previous frame at
+    # 290×18 mm let scale_type=0 + ratio=1 fit the photo aspect-preserving
+    # in the height-bound dimension, rendering only ~27×18 mm of visible
+    # photo — too small for an A3-quer Plakat. iter-3 frame: 180×60 mm
+    # (3:1 frame). With the photo's native 1.5:1 aspect and ratio=1 fit,
+    # the photo renders height-bound at w=60×1.5=90, h=60 — ~5× the
+    # previous visible area, dominant enough to read as the hero of
+    # the layout. Body shrunk to h=70 (ends y=222) to make room.
+    # Centered horizontally at x=120 (trim 420 - 180)/2 = 120.
+    hero_path = HERE / "samples" / "themen-hero.jpg"
+    hero_data, hero_ext = (None, None)
+    if hero_path.exists():
+        hero_data, hero_ext = pack_inline_image(hero_path.read_bytes(), "jpg")
+    page.add(ImageFrame(
+        x_mm=120, y_mm=225, w_mm=180, h_mm=60,
+        inline_image_data=hero_data,
+        inline_image_ext=hero_ext,
+        scale_type=0, ratio=1,
+        layer=1,
+        anname="Themen-Hero",
+    ))
+
+    # QR-Quelle slot (Issue #11): small corner QR encoding the Themen-URL.
+    # Placed top-right corner, balancing the top-left logo. 25x25 mm at QR
+    # version 4 = 0.76 mm/module — well above D1's 0.5 mm minimum.
+    qr_path = HERE / "samples" / "qr-quelle.png"
+    qr_data, qr_ext = (None, None)
+    if qr_path.exists():
+        qr_data, qr_ext = pack_inline_image(qr_path.read_bytes(), "png")
+    page.add(ImageFrame(
+        x_mm=380, y_mm=8, w_mm=25, h_mm=25,
+        inline_image_data=qr_data,
+        inline_image_ext=qr_ext,
+        scale_type=0, ratio=1,
+        layer=1,
+        anname="QR-Code (quelle)",
+    ))
+
+    # Quelle (bottom-left). iter-3: relocated to bottom-left corner only
+    # (w=80 instead of 280) so the enlarged hero photo can sit centered
+    # without overlapping the source citation. y=287 sits below the hero's
+    # bottom edge (y=225+60=285) with 2 mm clearance.
     page.add(TextFrame(
-        x_mm=15, y_mm=270, w_mm=280, h_mm=10,
+        x_mm=15, y_mm=287, w_mm=80, h_mm=8,
         layer=2,
         style="themen-plakat/source",
         runs=[Run(
@@ -230,9 +276,9 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Quelle",
     ))
 
-    # Impressum (bottom-right)
+    # Impressum (bottom-right). iter-3: y=287 to align with relocated Quelle.
     page.add(TextFrame(
-        x_mm=305, y_mm=270, w_mm=100, h_mm=10,
+        x_mm=305, y_mm=287, w_mm=100, h_mm=8,
         layer=2,
         style="themen-plakat/impressum",
         runs=[Run(

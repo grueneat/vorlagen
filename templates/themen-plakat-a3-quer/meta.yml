@@ -15,8 +15,7 @@ build:
   output: template.sla
 
 # No round-trip diff — this is a DSL-original template (no original_sla key).
-previews_for_sla: cf1eeefd7dbf7b2dacfbd85720f3c02f90fa11daf696c9ba4627258a7a9ddeba
-
+previews_for_sla: a016e61b65087556158f8b967fce68a24bc45568a4b060a3de3f24b857e551f4
 ci_overrides:
   non_ci_styles:
     - "themen-plakat/headline"
@@ -66,8 +65,8 @@ slots:
     anname: "Impressum"
   logo_grueneAT:
     type: image
-    description: Grünen-Logo (top-left)
-    source: shared/logos/gruene-cmyk.png
+    description: Grünen-Logo (top-left, Brand-Bund)
+    source: shared/logos/gruene-logo-bund-dunkel.png
     optional: true
     anname: "Logo Grüne (top-left)"
 

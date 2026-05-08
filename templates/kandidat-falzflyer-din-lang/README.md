@@ -62,6 +62,19 @@ Closer-Panel. D12-Pflicht erfüllt: Wahlkreuz auf farbigem Brand-Hintergrund.
 **Wichtig bei Anpassung:** Panel 3 NIEMALS auf Weiß ändern (Wahlkreuz-Kreis
 verschwindet) und NIEMALS auf Gelb (Wahlkreuz-Kreuz verschwindet).
 
+## Demo-Bilder (synthetisch, KI-generiert)
+
+Die Galerie-Previews zeigen synthetische Demo-Bilder im Cover-Portrait
+(`samples/portrait-cover.jpg`), in den drei Themen-Fotos
+(`samples/themen-{klimaschutz,soziales,bildung}.jpg`), sowie zwei
+Demo-QR-Codes (`samples/qr-{mitmachen,termine}.png`).
+
+Alle Bilder tragen das EU-AI-Act-konforme Caption-Watermark
+„**Symbolfoto — KI-generiert**" am unteren Bildrand und sind im
+Manifest mit `synthetic: true` markiert. **Vor Kampagnen-Einsatz
+durch echte Fotos ersetzen** — siehe `samples/manifest.yml` für die
+Slot-Liste.
+
 ## Build
 
 ```bash

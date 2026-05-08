@@ -17,8 +17,7 @@ build:
   script: build.py
   output: template.sla
 
-previews_for_sla: 5fcc602e0d1f85f74307c1dd2deeac764600d13cb1ebf77212b16c8b94365c48
-
+previews_for_sla: 81be372ba1b692879a93b0ce0ac9fb3cd5684f1be99a5bfc6ebef1e0237f74a9
 ci_overrides:
   non_ci_styles:
     - "tueranhaenger/headline"

@@ -84,6 +84,8 @@ Legende:
 | Beleg 2 — Body                | TextFrame | 147  | 152  | 124  |  90  | Black     | themen-plakat/beleg-body           | Die Solar- und Wind-Branche macht in NÖ 1.2 Mrd. € Jahresumsatz aus — Tendenz steigend. Jeder Euro fließt in die regionale Wertschöpfung zurück. |
 | Beleg 3 — Headline            | TextFrame | 281  | 130  | 124  |  20  | Dunkelgrün| themen-plakat/beleg-headline       | 36 % weniger CO₂                                        |
 | Beleg 3 — Body                | TextFrame | 281  | 152  | 124  |  90  | Black     | themen-plakat/beleg-body           | Seit 2010 hat NÖ den industriellen CO₂-Ausstoß um 36 % reduziert — bei gleichzeitig wachsender Industrie-Produktion. |
+| Themen-Hero                   | ImageFrame|  15  | 248  | 290  |  18  | —         | samples/themen-hero.jpg            | Demo themen photo (synthetic, watermarked) — optional   |
+| QR-Code (quelle)              | ImageFrame| 380  |   8  |  25  |  25  | —         | samples/qr-quelle.png              | Demo: https://noe.gruene.at/themen/ — endusers replace  |
 | Quelle                        | TextFrame |  15  | 270  | 280  |  10  | Dunkelgrün| themen-plakat/source               | Quelle: Statistik Austria, AEA-Energiebilanz NÖ 2024.   |
 | Impressum                     | TextFrame | 305  | 270  | 100  |  10  | Black     | Impressum                          | Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten. |
 
@@ -170,6 +172,24 @@ slots:
     fcolor: "Black"
     style_ref: "themen-plakat/beleg-body"
     example: "Seit 2010 hat NÖ den industriellen CO₂-Ausstoß um 36 % reduziert — bei gleichzeitig wachsender Industrie-Produktion."
+  - anname: "Themen-Hero"
+    type: ImageFrame
+    x_mm: 15
+    y_mm: 248
+    w_mm: 290
+    h_mm: 18
+    fcolor: ""
+    style_ref: "samples/themen-hero.jpg"
+    example: "Demo themen photo (synthetic, watermarked) — optional"
+  - anname: "QR-Code (quelle)"
+    type: ImageFrame
+    x_mm: 380
+    y_mm: 8
+    w_mm: 25
+    h_mm: 25
+    fcolor: ""
+    style_ref: "samples/qr-quelle.png"
+    example: "Demo: https://noe.gruene.at/themen/ — endusers replace"
   - anname: "Quelle"
     type: TextFrame
     x_mm: 15
