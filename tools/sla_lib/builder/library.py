@@ -76,6 +76,49 @@ class LibraryImage:
     bytes: bytes
     meta: dict
 
+    @property
+    def crop_focus_x(self) -> float:
+        """Horizontal saliency anchor in [0, 1]. Default 0.5 (image center).
+
+        Sourced from manifest field ``crop_focus: [x, y]``; falls back to legacy
+        ``centering: [x, y]`` for back-compat. Out-of-range or malformed values
+        silently fall back to 0.5.
+        """
+        return _focus_pair(self.meta)[0]
+
+    @property
+    def crop_focus_y(self) -> float:
+        """Vertical saliency anchor in [0, 1]. Default 0.5 (image center).
+
+        See ``crop_focus_x`` for sourcing rules.
+        """
+        return _focus_pair(self.meta)[1]
+
+
+def _focus_pair(meta: dict) -> tuple[float, float]:
+    """Resolve ``[x, y]`` focus tuple from a manifest entry, with safe defaults.
+
+    Reads ``crop_focus`` first (canonical name), falls back to ``centering``
+    (legacy field name retained for back-compat). Both must be a 2-element
+    list/tuple of numbers in [0, 1]; otherwise the default ``(0.5, 0.5)`` is
+    returned. Out-of-range numbers are clamped, not rejected — defensive against
+    minor manifest typos.
+    """
+    raw = meta.get("crop_focus")
+    if raw is None:
+        raw = meta.get("centering")
+    if not (isinstance(raw, (list, tuple)) and len(raw) == 2):
+        return (0.5, 0.5)
+    try:
+        x = float(raw[0])
+        y = float(raw[1])
+    except (TypeError, ValueError):
+        return (0.5, 0.5)
+    # Clamp to [0, 1]; values outside are usually mistakes (e.g. a percentage).
+    x = max(0.0, min(1.0, x))
+    y = max(0.0, min(1.0, y))
+    return (x, y)
+
 
 class LibraryError(Exception):
     """Raised when a required library ID is missing or the manifest is malformed."""
@@ -108,7 +151,21 @@ LIBRARY_MANIFEST_SCHEMA = {
                         "watermark": {"type": "string"},
                         "model": {"type": "string"},
                         "quality": {"type": "string"},
+                        "crop_focus": {
+                            # Saliency anchor [x, y] in [0, 1] used as the
+                            # ``centering`` argument to PIL.ImageOps.fit when
+                            # cropping for a frame's aspect ratio. Place this
+                            # over the visual subject (face on portraits, main
+                            # object on themen) to avoid sky-only / hair-only
+                            # crops on aspect-mismatched slots.
+                            "type": "array",
+                            "items": {"type": "number", "minimum": 0, "maximum": 1},
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
                         "centering": {
+                            # Legacy alias for ``crop_focus`` — accepted for
+                            # back-compat. New entries should use ``crop_focus``.
                             "type": "array",
                             "items": {"type": "number", "minimum": 0, "maximum": 1},
                             "minItems": 2,
@@ -278,8 +335,10 @@ def crop_for_frame(
          - if ``<stem>-source.jpg`` exists alongside the watermarked file, use
            that (un-watermarked source — cropping won't double-stamp the band).
          - else use ``img.bytes`` directly.
-      3. Center-crop + resize via ``ImageOps.fit(centering=(0.5, 0.5),
-         method=BICUBIC)``.
+      3. Center-crop + resize via ``ImageOps.fit(centering=(cx, cy),
+         method=BICUBIC)`` where ``(cx, cy)`` is the per-image saliency anchor
+         from ``meta["crop_focus"]`` (or legacy ``meta["centering"]``), default
+         ``(0.5, 0.5)``.
       4. If ``apply_watermark=True``, re-stamp the Symbolfoto band on the cropped
          output (R-WATERMARK-CROP fix — band always visible at the cropped
          resolution). Watermark text comes from ``img.meta["watermark"]`` if
@@ -287,8 +346,11 @@ def crop_for_frame(
       5. Encode JPEG with explicit ``quality=quality, optimize=True,
          subsampling=2, progressive=False`` for byte-determinism (RESEARCH §1.4).
 
-    A per-image ``centering: [x, y]`` override in the manifest can bias the
-    crop center (default ``(0.5, 0.5)`` = exact center).
+    A per-image ``crop_focus: [x, y]`` override in the manifest biases the
+    crop center toward the visual subject (e.g. ``[0.50, 0.35]`` keeps a face
+    visible when an aspect-mismatched slot would otherwise crop to hair-only).
+    Both values are in ``[0, 1]``; default ``(0.5, 0.5)`` = exact center.
+    The legacy field name ``centering`` is still accepted as a fallback.
 
     Returns:
         JPEG bytes ready for ``pack_inline_image(bytes, "jpg")``.
@@ -309,16 +371,11 @@ def crop_for_frame(
     except Exception as exc:  # Pillow raises a variety of exceptions
         raise LibraryError(f"library entry {img.id!r}: cannot decode source image: {exc}") from exc
 
-    # 3) center-crop + resize
-    centering = img.meta.get("centering")
-    if (
-        isinstance(centering, (list, tuple))
-        and len(centering) == 2
-        and all(isinstance(v, (int, float)) for v in centering)
-    ):
-        cx, cy = float(centering[0]), float(centering[1])
-    else:
-        cx, cy = 0.5, 0.5
+    # 3) center-crop + resize, biased toward the manifest's saliency anchor
+    # ``crop_focus: [x, y]`` (legacy alias: ``centering``). Default is image
+    # center (0.5, 0.5) when neither field is set. Out-of-range or malformed
+    # values silently degrade to the default — see ``_focus_pair``.
+    cx, cy = _focus_pair(img.meta)
     fitted = ImageOps.fit(
         rgb,
         (target_w_px, target_h_px),

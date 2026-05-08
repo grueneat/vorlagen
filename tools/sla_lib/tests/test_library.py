@@ -8,6 +8,11 @@ Covers:
   - crop_for_frame() watermark-after-crop regression (R-WATERMARK-CROP)
     - portrait source → landscape crop: band visible at the bottom of output
     - landscape source → portrait crop: band visible at the bottom of output
+  - crop_focus saliency anchor (post-merge crop quality fix)
+    - LibraryImage.crop_focus_x/_y read from manifest with default 0.5
+    - crop_for_frame uses focus point, differs from default-centered crop
+    - legacy ``centering`` field still honored for back-compat
+    - malformed crop_focus silently degrades to (0.5, 0.5)
   - validate_manifest() catches schema violations
   - regenerate() (with codex.generate_image mocked) returns True
 
@@ -291,6 +296,185 @@ class CropForFrameTests(unittest.TestCase):
             _bottom_is_dark(out),
             "expected no watermark band when apply_watermark=False",
         )
+
+
+class CropFocusTests(unittest.TestCase):
+    """Saliency-anchor crop tests — the post-merge crop quality fix.
+
+    Background: the live gallery showed ``window-only``, ``hair-only`` and
+    ``sky-only`` crops because every aspect-mismatched slot used the implicit
+    centre (0.5, 0.5). ``crop_focus: [x, y]`` per manifest entry biases the
+    crop toward the visual subject; this fixture-test pins the contract.
+    """
+
+    def setUp(self) -> None:
+        self.fx = LibraryFixture()
+        self.p_root = mock.patch.object(library, "LIBRARY_ROOT", self.fx.root)
+        self.p_man = mock.patch.object(library, "MANIFEST_PATH", self.fx.manifest_path)
+        self.p_root.start()
+        self.p_man.start()
+
+    def tearDown(self) -> None:
+        self.p_root.stop()
+        self.p_man.stop()
+        self.fx.cleanup()
+
+    def _set_field(self, image_id: str, field: str, value) -> None:
+        """Mutate one manifest entry's field (or remove if value is None)."""
+        with open(self.fx.manifest_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        if value is None:
+            data["images"][image_id].pop(field, None)
+        else:
+            data["images"][image_id][field] = value
+        with open(self.fx.manifest_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+
+    # ---- Property accessors --------------------------------------------------
+
+    def test_default_focus_is_image_center(self) -> None:
+        img = library.load("portrait_alice")
+        assert img is not None
+        self.assertEqual(img.crop_focus_x, 0.5)
+        self.assertEqual(img.crop_focus_y, 0.5)
+
+    def test_crop_focus_read_from_manifest(self) -> None:
+        self._set_field("portrait_alice", "crop_focus", [0.50, 0.30])
+        img = library.load("portrait_alice")
+        assert img is not None
+        self.assertAlmostEqual(img.crop_focus_x, 0.50)
+        self.assertAlmostEqual(img.crop_focus_y, 0.30)
+
+    def test_legacy_centering_field_honored(self) -> None:
+        # No crop_focus, but a legacy `centering` from earlier schema. The
+        # property must still pick it up so that any pre-existing entries
+        # don't silently regress to image-center.
+        self._set_field("portrait_alice", "centering", [0.45, 0.55])
+        img = library.load("portrait_alice")
+        assert img is not None
+        self.assertAlmostEqual(img.crop_focus_x, 0.45)
+        self.assertAlmostEqual(img.crop_focus_y, 0.55)
+
+    def test_crop_focus_takes_precedence_over_centering(self) -> None:
+        # If both are set, crop_focus wins (canonical name).
+        self._set_field("portrait_alice", "centering", [0.10, 0.10])
+        self._set_field("portrait_alice", "crop_focus", [0.90, 0.90])
+        img = library.load("portrait_alice")
+        assert img is not None
+        self.assertAlmostEqual(img.crop_focus_x, 0.90)
+        self.assertAlmostEqual(img.crop_focus_y, 0.90)
+
+    def test_malformed_focus_falls_back_to_center(self) -> None:
+        # Wrong arity, wrong types, out-of-range — all degrade to (0.5, 0.5).
+        for bad in ([0.5], "centre", [None, 0.3], [1.2, "x"]):
+            self._set_field("portrait_alice", "crop_focus", bad)
+            img = library.load("portrait_alice")
+            assert img is not None
+            self.assertEqual(img.crop_focus_x, 0.5, f"bad input: {bad!r}")
+            self.assertEqual(img.crop_focus_y, 0.5, f"bad input: {bad!r}")
+
+    def test_out_of_range_focus_is_clamped(self) -> None:
+        # Defensive: numeric typos like 30 (instead of 0.30) clamp to 1.0
+        # rather than raising or returning the default. Avoids silent breakage
+        # on a single bad number.
+        self._set_field("portrait_alice", "crop_focus", [-0.5, 1.5])
+        img = library.load("portrait_alice")
+        assert img is not None
+        self.assertEqual(img.crop_focus_x, 0.0)
+        self.assertEqual(img.crop_focus_y, 1.0)
+
+    # ---- Crop output -------------------------------------------------------
+
+    def test_focus_changes_cropped_pixel_content(self) -> None:
+        """Two distinct focus points must produce visually different crops.
+
+        Strategy: build a 1024×1536 source with a *vertical gradient* (top is
+        bright, bottom is dark). Crop a wide-short region (200×60) from a
+        *portrait* source — the height has to be cropped. With focus y=0.10
+        we keep the brightest top band; with y=0.90 we keep the darkest
+        bottom band. Compare mean luminance.
+
+        This proves the focus argument actually flows through ImageOps.fit,
+        not just survives validation.
+        """
+        gradient_path = self.fx.root / "themen" / "gradient.jpg"
+        # Vertical luminance gradient, 1024 wide × 1536 tall.
+        grad = Image.new("RGB", (1024, 1536))
+        for y in range(1536):
+            v = int(255 * (1 - y / 1535))   # 255 at top, 0 at bottom
+            for x in range(1024):
+                grad.putpixel((x, y), (v, v, v))
+        grad.save(
+            str(gradient_path), format="JPEG", quality=95, optimize=True,
+            subsampling=2, progressive=False,
+        )
+        # Inject as a fresh manifest entry so library.load() picks it up.
+        with open(self.fx.manifest_path, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        data["images"]["themen_gradient"] = {
+            "path": "themen/gradient.jpg",
+            "prompt": "A vertical luminance gradient — long enough to satisfy schema minLength.",
+            "tags": ["themen", "topic:test"],
+            "synthetic": True,
+        }
+        with open(self.fx.manifest_path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+
+        # Crop with focus=top.
+        self._set_field("themen_gradient", "crop_focus", [0.5, 0.10])
+        img_top = library.load("themen_gradient")
+        assert img_top is not None
+        out_top = library.crop_for_frame(
+            img_top, target_w_mm=200, target_h_mm=60, apply_watermark=False,
+        )
+
+        # Crop with focus=bottom.
+        self._set_field("themen_gradient", "crop_focus", [0.5, 0.90])
+        img_bot = library.load("themen_gradient")
+        assert img_bot is not None
+        out_bot = library.crop_for_frame(
+            img_bot, target_w_mm=200, target_h_mm=60, apply_watermark=False,
+        )
+
+        # Pixel content must differ — proves crop_focus reaches ImageOps.fit.
+        self.assertNotEqual(
+            out_top, out_bot,
+            "crop_focus had no effect on output bytes — the parameter is dead",
+        )
+
+        # Stronger check: top crop is brighter than bottom crop on a vertical
+        # gradient. This catches the case where focus axes are swapped.
+        with Image.open(BytesIO(out_top)) as im_t, Image.open(BytesIO(out_bot)) as im_b:
+            mean_top = sum(im_t.convert("L").getdata()) / (im_t.width * im_t.height)
+            mean_bot = sum(im_b.convert("L").getdata()) / (im_b.width * im_b.height)
+        self.assertGreater(
+            mean_top, mean_bot + 30,
+            f"top-focus mean={mean_top:.1f} should be ≫ bottom-focus mean={mean_bot:.1f} "
+            f"on a vertical gradient",
+        )
+
+    def test_focus_determinism(self) -> None:
+        # Same focus + same source → byte-identical output across runs.
+        self._set_field("portrait_alice", "crop_focus", [0.50, 0.35])
+        img1 = library.load("portrait_alice")
+        img2 = library.load("portrait_alice")
+        assert img1 is not None and img2 is not None
+        out1 = library.crop_for_frame(img1, target_w_mm=87, target_h_mm=24)
+        out2 = library.crop_for_frame(img2, target_w_mm=87, target_h_mm=24)
+        self.assertEqual(out1, out2, "crop_for_frame with crop_focus is not deterministic")
+
+    def test_focus_in_manifest_validates(self) -> None:
+        # crop_focus is a valid manifest field per the JSON schema.
+        self._set_field("portrait_alice", "crop_focus", [0.50, 0.35])
+        self.assertEqual(library.validate_manifest(), [])
+
+    def test_focus_out_of_schema_range_caught(self) -> None:
+        # Schema rejects values outside [0, 1] — even though the runtime
+        # clamps them, the manifest itself should fail validation as a
+        # signal that the entry is malformed.
+        self._set_field("portrait_alice", "crop_focus", [1.2, 0.5])
+        errors = library.validate_manifest()
+        self.assertTrue(errors, "expected schema violation for crop_focus > 1.0")
 
 
 class ValidateManifestTests(unittest.TestCase):
