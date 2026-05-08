@@ -61,6 +61,15 @@ from .styles import DocumentLayer, ParaStyle, CharStyle, SoftShadow
 from .brand import Brand
 from . import blocks
 from . import library
+from .composites import (
+    AlignedRow,
+    AlignedColumn,
+    MirroredPair,
+    EqualGapStack,
+    GridSpec,
+    GridCell,
+    HierarchyBlock,
+)
 
 __all__ = [
     "Document",
@@ -82,4 +91,11 @@ __all__ = [
     "Brand",
     "blocks",
     "library",
+    "AlignedRow",
+    "AlignedColumn",
+    "MirroredPair",
+    "EqualGapStack",
+    "GridSpec",
+    "GridCell",
+    "HierarchyBlock",
 ]
