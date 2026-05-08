@@ -14,6 +14,16 @@ build:
 # Round-trip validation (issue #2)
 original_sla: ../../plakat-a1-hochformat-original.sla
 previews_for_sla: b3024d3249bcdcaac923ed4c77c9446f6905c5f87ef93c2ac068743de2889b76
+
+# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+brand_overrides:
+  - id: brand:line_spacing_0.9
+    reason: >-
+      Production template auto-generated from plakat-a1-hochformat-original.sla;
+      the original Plakat carries Headlineweiß linesp=150/fontsize=160 (0.94x)
+      and Impressum linesp=20/fontsize=20 (1.0x). Round-trip diff (tools/sla_
+      diff.py --strict) is the byte-stable contract; modifying linesp would
+      break round-trip.
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"

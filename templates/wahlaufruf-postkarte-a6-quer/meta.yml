@@ -17,6 +17,19 @@ build:
 
 # DSL-original — no round-trip diff. SHA pin for stale-check.
 previews_for_sla: 703b25071a4917f8696a5444ab06fc524eb2bb7aed48b284a43c98ae928b1996
+
+# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+brand_overrides:
+  - id: brand:line_spacing_0.9
+    reason: >-
+      Shared with all templates: CI palette ratios drift from the Quickguide
+      0.9 factor; addressed once at brand-team review level.
+  - id: brand:logo_size_3M
+    reason: >-
+      Front logo (35mm) is intentionally larger than 3*M = 18.90mm to anchor
+      the Wahlkreuz hero on the Vollbild front. Back-side Bund-Dunkel logo
+      (18mm) is 0.9mm under 3*M — also intentional, the back is a content panel
+      not the hero.
 ci_overrides:
   non_ci_styles:
     - "wahlaufruf/headline"

@@ -16,6 +16,19 @@ build:
   output: template.sla
 
 previews_for_sla: cb9a98c5bb8e90c749f20c2e2c425a941e27aa3fc68c2bffc5c9a4585074a45a
+
+# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+brand_overrides:
+  - id: brand:line_spacing_0.9
+    reason: >-
+      Shared with all templates: CI palette ratios drift from Quickguide
+      0.9 factor — addressed at brand-team review level.
+  - id: brand:logo_size_3M
+    reason: >-
+      Both panel logos at 36mm sit 1.8mm under 3*M = 37.80mm — narrow
+      tolerance, intentional sizing chosen so the logo doesn't dominate the
+      reduced height of each tent-card panel (panel height 105mm). Mirroring
+      the same width on both panels is the dominant design constraint.
 ci_overrides:
   non_ci_styles:
     - "tent/headline"

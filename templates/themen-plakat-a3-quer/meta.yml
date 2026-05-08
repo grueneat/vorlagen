@@ -16,6 +16,31 @@ build:
 
 # No round-trip diff — this is a DSL-original template (no original_sla key).
 previews_for_sla: b89e207447b5d61bfe8295a2bd0c36a05af70245071f690bb9efebb789c5f9c7
+
+# Issue #12 — brand_overrides: rules whose violation is INTENTIONAL design.
+# Each entry must have a `reason` explaining why the deviation is acceptable.
+# See shared/brand/SPEC-WRITING-GUIDE.md "Brand-Override-Konvention".
+brand_overrides:
+  - id: brand:line_spacing_0.9
+    reason: >-
+      The CI palette in shared/ci.yml carries linesp/fontsize ratios that drift
+      from the Quickguide 0.9 factor (e.g. ci/body-12 has 13/12 = 1.083). This
+      is real palette-versus-rule drift across all templates and warrants a
+      separate brand-team review (out of scope for #12). Per-template overrides
+      apply uniformly.
+  - id: brand:hl_sl_distance_x2
+    reason: >-
+      Sub-Headline at y=92 sits ~2mm below the 50mm-tall headline frame; the
+      Quickguide 2*baseline (10.8mm) target assumes a body-12 baseline,
+      whereas this Plakat uses a 60pt headline -> 18pt sub pair where the
+      visual rhythm is set by the larger fontsize. Tight HL/SL gap is the
+      Plakat's intentional poster-style hierarchy.
+  - id: brand:logo_size_3M
+    reason: >-
+      Logo at 32mm sits at ~60% of the Quickguide 3*M = 53.46mm target on A3
+      quer (kurze_kante=297mm). The corner-anchored placement intentionally
+      avoids competing with the wide thesis headline; doubling the logo width
+      would push it into the headline's typographic field.
 ci_overrides:
   non_ci_styles:
     - "themen-plakat/headline"
