@@ -16,6 +16,7 @@ from render_pipeline import (  # noqa: E402
     EPOCH_DATE,
     FIXED_PDF_ID,
     _scrub_pdf_metadata,
+    _select_render_source,
     _sha256_of,
     _update_meta_hash,
     _zero_pad_pngs,
@@ -273,6 +274,29 @@ class ZeroPadPngsTests(unittest.TestCase):
             tdir = Path(td)
             _zero_pad_pngs(tdir, "page")  # must not raise
             self.assertEqual(list(tdir.iterdir()), [])
+
+
+class SelectRenderSourceTests(unittest.TestCase):
+    """Issue #13 / D3: render source picks template-preview.sla when present."""
+
+    def test_prefers_preview_when_present(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td)
+            (tdir / "template.sla").write_text("clean", encoding="utf-8")
+            (tdir / "template-preview.sla").write_text("preview", encoding="utf-8")
+            self.assertEqual(
+                _select_render_source(tdir),
+                tdir / "template-preview.sla",
+            )
+
+    def test_falls_back_to_template_when_no_preview(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td)
+            (tdir / "template.sla").write_text("clean", encoding="utf-8")
+            self.assertEqual(
+                _select_render_source(tdir),
+                tdir / "template.sla",
+            )
 
 
 if __name__ == "__main__":
