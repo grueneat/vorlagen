@@ -301,23 +301,33 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             anname="Logo Grüne (Bund-Dunkel, back)",
         ))
 
-    # Kandidat-Portrait placeholder (optional — slot stays present, image
-    # injected by Codex demo or end user). scale_type=0 so any injected image
-    # auto-fits the frame (matches all other photo slots in this issue's
-    # templates after the 2026-05-08 scale_type fix).
+    # Kandidat-Portrait — iter-3 Codex-generated demo portrait
+    # (Bürgermeisterkandidat archetype, male for diversity per CONTEXT.md
+    # D2). Conditional inject — only when samples/portrait-back.jpg is
+    # committed, else slot stays empty. scale_type=0 + ratio=1 →
+    # aspect-preserving auto-fit.
+    portrait_path = HERE / "samples" / "portrait-back.jpg"
+    portrait_data, portrait_ext = (None, None)
+    if portrait_path.exists():
+        portrait_data, portrait_ext = pack_inline_image(
+            portrait_path.read_bytes(), "jpg"
+        )
     page1.add(ImageFrame(
         x_mm=20, y_mm=75, w_mm=65, h_mm=85,
+        inline_image_data=portrait_data,
+        inline_image_ext=portrait_ext,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="Kandidat-Portrait",
     ))
 
-    # Kandidat-Name
+    # Kandidat-Name — iter-3 changed to male persona to match the
+    # Bürgermeisterkandidat portrait (CONTEXT.md D2 diversity guidance).
     page1.add(TextFrame(
         x_mm=10, y_mm=168, w_mm=85, h_mm=10,
         layer=LAYER_TEXT,
         style="tueranhaenger/cand-name",
-        runs=[Run(text="Maria Beispiel",
+        runs=[Run(text="Stefan Beispiel",
                   paragraph_style="tueranhaenger/cand-name")],
         anname="Kandidat-Name",
     ))
@@ -327,7 +337,7 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         x_mm=10, y_mm=178, w_mm=85, h_mm=8,
         layer=LAYER_TEXT,
         style="tueranhaenger/cand-pos",
-        runs=[Run(text="Bürgermeisterkandidatin Mödling",
+        runs=[Run(text="Bürgermeisterkandidat Mödling",
                   paragraph_style="tueranhaenger/cand-pos")],
         anname="Kandidat-Position",
     ))
@@ -347,7 +357,7 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         x_mm=10, y_mm=210, w_mm=50, h_mm=20,
         layer=LAYER_TEXT,
         style="tueranhaenger/body",
-        runs=[Run(text=("maria.beispiel@gruene-moedling.at\n"
+        runs=[Run(text=("stefan.beispiel@gruene-moedling.at\n"
                         "+43 660 1234567"),
                   paragraph_style="tueranhaenger/body")],
         anname="Kontakt-Info",

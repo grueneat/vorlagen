@@ -1,5 +1,21 @@
 slug: wahltag-tueranhaenger
-images: []
+images:
+  - name: portrait-back
+    output_path: samples/portrait-back.jpg
+    prompt: |
+      Documentary photograph of a Central European man in his early 50s,
+      head-and-shoulders portrait, light salt-and-pepper hair, friendly direct gaze,
+      soft late-afternoon window light from camera right, neutral grey-green
+      out-of-focus interior background (community space, wood and glass),
+      50mm lens, shallow depth of field, visible skin texture, warm color balance,
+      slightly desaturated greens. Documentary, unposed, calm half-smile.
+      No watermark. No text overlays. No logos or trademarks. No glamorization.
+      No heavy retouching.
+    size: "1024x1536"
+    synthetic: true
+    note: "synthetic, demo-only — Bürgermeisterkandidat archetype, replace with real candidate"
+    model: gpt-image-2
+    quality: high
 qr_codes:
   - name: qr-back
     target_url: https://noe.gruene.at/themen/
