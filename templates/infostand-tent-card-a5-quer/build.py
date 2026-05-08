@@ -100,6 +100,27 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         fcolor="Black",
         language="de",
     ))
+    # iter-3: CTA + Termine styles for Panel A's mid-section.
+    doc.add_para_style(ParaStyle(
+        name="tent/cta",
+        font="Gotham Narrow Bold",
+        fontsize=11,
+        linesp=14,
+        linesp_mode=0,
+        align=0,
+        fcolor="Dunkelgrün",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tent/termine",
+        font="Gotham Narrow Book",
+        fontsize=10,
+        linesp=13,
+        linesp_mode=0,
+        align=0,
+        fcolor="Black",
+        language="de",
+    ))
 
     # Master + 1 page
     doc.add_master(
@@ -143,9 +164,10 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Headline Panel A",
     ))
 
-    # Body Panel A — aligned with headline (under it, slightly indented)
+    # Body Panel A — aligned with headline (under it, slightly indented).
+    # iter-3: tightened to h=26 mm to free space below for the events list.
     page.add(TextFrame(
-        x_mm=62, y_mm=44, w_mm=223, h_mm=56,
+        x_mm=62, y_mm=44, w_mm=223, h_mm=26,
         layer=LAYER_TEXT,
         style="tent/body",
         runs=[Run(
@@ -155,6 +177,36 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             paragraph_style="tent/body",
         )],
         anname="Body Panel A",
+    ))
+
+    # iter-3: Mitmachen-CTA between the photo (ends y=77) and the QR
+    # (starts y=80) — placed in the right column to keep the photo+QR
+    # column unbroken. Width 60 mm is enough for the German CTA text
+    # at 11pt Bold without truncation.
+    page.add(TextFrame(
+        x_mm=62, y_mm=68, w_mm=60, h_mm=6,
+        layer=LAYER_TEXT,
+        style="tent/cta",
+        runs=[Run(text="Mitmachen — Komm zu uns!",
+                  paragraph_style="tent/cta")],
+        anname="CTA Panel A",
+    ))
+
+    # iter-3: Events list (Nächste Termine) below the CTA. Starts at
+    # y=76 (CTA ends at y=74) and uses h=20 (3 lines × 13pt linesp ≈ 16 mm
+    # plus padding). Full-width body column from x=125 to keep clear of
+    # the CTA above and visually anchor as a separate block.
+    page.add(TextFrame(
+        x_mm=125, y_mm=68, w_mm=160, h_mm=26,
+        layer=LAYER_TEXT,
+        style="tent/termine",
+        runs=[Run(
+            text=("Nächste Termine\n"
+                  "• 12. Juni — Klimastammtisch, GH zur Post (Mödling)\n"
+                  "• 26. Juni — Bezirkstreffen Niederösterreich-Süd"),
+            paragraph_style="tent/termine",
+        )],
+        anname="Termine Panel A",
     ))
 
     # Hintergrund-Mitmachen photo (Issue #11): optional landscape badge at
@@ -243,9 +295,11 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         rotation_deg=180,
     ))
 
-    # Body Panel B — original (12, 113, 223, 56) → rotated bbox: x=235, y=169
+    # Body Panel B — iter-3: tightened to h=26 to match Panel A and free
+    # space for the CTA + events list. Pre-rot (12, 140, 223, 26) →
+    # rotated bbox: x=12+223=235, y=140+26=166.
     page.add(TextFrame(
-        x_mm=235, y_mm=169, w_mm=223, h_mm=56,
+        x_mm=235, y_mm=166, w_mm=223, h_mm=26,
         layer=LAYER_TEXT,
         style="tent/body",
         runs=[Run(
@@ -255,6 +309,36 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             paragraph_style="tent/body",
         )],
         anname="Body Panel B",
+        rotation_deg=180,
+    ))
+
+    # iter-3: EN CTA mirroring Panel A's Mitmachen at (62, 68, 60, 6).
+    # Pre-rot panel-B equivalent: (62, 210-68-6=136, 60, 6) →
+    # rotated (62+60, 136+6) = (122, 142).
+    page.add(TextFrame(
+        x_mm=122, y_mm=142, w_mm=60, h_mm=6,
+        layer=LAYER_TEXT,
+        style="tent/cta",
+        runs=[Run(text="Get involved — Talk to us!",
+                  paragraph_style="tent/cta")],
+        anname="CTA Panel B",
+        rotation_deg=180,
+    ))
+
+    # iter-3: EN events list mirroring Panel A's Termine at
+    # (125, 68, 160, 26). Pre-rot (125, 210-68-26=116, 160, 26) →
+    # rotated (125+160, 116+26) = (285, 142).
+    page.add(TextFrame(
+        x_mm=285, y_mm=142, w_mm=160, h_mm=26,
+        layer=LAYER_TEXT,
+        style="tent/termine",
+        runs=[Run(
+            text=("Upcoming dates\n"
+                  "• 12 June — Climate roundtable, GH zur Post (Mödling)\n"
+                  "• 26 June — District meeting, Lower Austria South"),
+            paragraph_style="tent/termine",
+        )],
+        anname="Termine Panel B",
         rotation_deg=180,
     ))
 

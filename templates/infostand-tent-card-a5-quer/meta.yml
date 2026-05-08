@@ -15,7 +15,7 @@ build:
   script: build.py
   output: template.sla
 
-previews_for_sla: 3e1eec07f9280046e380bbdbc6cf4b504fbd91f28264c4c0a9527371f285688d
+previews_for_sla: 2cfb7239127e516492ae5e94090e76ec670d062fd2ed8b4aca4ffbfae537fe73
 ci_overrides:
   non_ci_styles:
     - "tent/headline"
