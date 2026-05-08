@@ -220,8 +220,14 @@ def _resolve_manifest_path(arg: Path) -> Path:
     raise FileNotFoundError(f"no such path: {p}")
 
 
-def _generate_one(spec: dict, base_dir: Path) -> tuple[bool, str]:
-    """Render a single qr_codes entry. Returns (ok, message)."""
+def _generate_one(spec: dict, base_dir: Path, repo_root: Path) -> tuple[bool, str]:
+    """Render a single qr_codes entry. Returns (ok, message).
+
+    Path resolution:
+      - ``output_path`` is relative to ``base_dir`` (the template root).
+      - ``embed_logo`` is relative to ``repo_root`` (e.g. ``shared/logos/…``).
+        Falls back to relative-to-base_dir if not found at repo root.
+    """
     name = spec.get("name", "<unnamed>")
     url = spec.get("target_url")
     out_rel = spec.get("output_path")
@@ -240,13 +246,17 @@ def _generate_one(spec: dict, base_dir: Path) -> tuple[bool, str]:
     embed_logo_rel = spec.get("embed_logo")
     embed_logo: Path | None = None
     if embed_logo_rel:
-        cand = base_dir / embed_logo_rel
-        if cand.exists():
-            embed_logo = cand
-        else:
-            # Logo missing is non-fatal — render without it but warn.
+        # Try repo-root-relative first (canonical for shared/ paths), then
+        # fall back to template-relative.
+        for cand in (repo_root / embed_logo_rel, base_dir / embed_logo_rel):
+            if cand.exists():
+                embed_logo = cand
+                break
+        if embed_logo is None:
             print(
-                f"WARN {name}: embed_logo {cand} not found, rendering without logo",
+                f"WARN {name}: embed_logo {embed_logo_rel} not found "
+                f"(searched {repo_root} and {base_dir}); "
+                f"rendering without logo",
                 file=sys.stderr,
             )
 
@@ -304,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     base_dir = manifest_path.parent.parent  # .../templates/<slug>
+    repo_root = Path(__file__).resolve().parent.parent
     try:
         manifest = parse_manifest(manifest_path)
     except (ValueError, yaml.YAMLError) as exc:
@@ -320,7 +331,7 @@ def main(argv: list[str] | None = None) -> int:
         if not isinstance(spec, dict):
             failures.append(f"FAIL <non-dict entry>: {spec!r}")
             continue
-        ok, msg = _generate_one(spec, base_dir)
+        ok, msg = _generate_one(spec, base_dir, repo_root)
         print(msg)
         if not ok:
             failures.append(msg)
