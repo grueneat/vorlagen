@@ -391,6 +391,132 @@ def generate_image(prompt: str, output_path: Path, size: str | None) -> int:
     return 0
 
 
+def parse_library_manifest(path: Path) -> dict[str, dict]:
+    """Parse the master library manifest at ``shared/sample-images/manifest.yml``.
+
+    Different shape from the per-template ``parse_manifest()``: the library
+    manifest's ``images:`` is a dict keyed by ID (e.g. ``portrait_maria``),
+    not a list of entries. Returns ``dict[id] -> entry`` for direct lookup.
+
+    Raises ValueError on malformed input. FileNotFoundError if the manifest
+    file is absent.
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"library manifest not found: {path}")
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: top-level YAML must be a mapping")
+    images = data.get("images")
+    if images is None:
+        raise ValueError(f"{path}: missing required key `images:`")
+    if not isinstance(images, dict):
+        raise ValueError(
+            f"{path}: invalid `images:` value (expected mapping keyed by ID, got "
+            f"{type(images).__name__})"
+        )
+    return dict(images)
+
+
+def regen_library(
+    manifest_path: Path,
+    *,
+    ids: list[str] | None = None,
+    force: bool = False,
+    max_attempts: int = 5,
+    dry_run: bool = False,
+) -> int:
+    """Regenerate library images from the master manifest.
+
+    Args:
+        manifest_path: Path to ``shared/sample-images/manifest.yml``.
+        ids: Optional subset of IDs to regenerate. None = all entries.
+        force: Skip the mtime/freshness check; always regenerate.
+        max_attempts: Per-image retry cap (D7).
+        dry_run: Print plan without invoking codex.
+
+    Returns:
+        0 if all targeted entries succeeded; 1 if any failed.
+    """
+    images = parse_library_manifest(manifest_path)
+    target_ids: list[str]
+    if ids is None:
+        target_ids = list(images.keys())
+    else:
+        unknown = [i for i in ids if i not in images]
+        if unknown:
+            sys.stderr.write(f"unknown library IDs: {unknown}\n")
+            return 1
+        target_ids = list(ids)
+
+    library_root = manifest_path.parent
+    if not dry_run:
+        status = codex_login_status()
+        if status != "ok":
+            sys.stderr.write(
+                f"codex auth precheck failed: {status}\n"
+                f"Run `codex login` first.\n"
+            )
+            return 1
+
+    fail_count = 0
+    write_count = 0
+    skip_count = 0
+
+    for img_id in target_ids:
+        entry = images[img_id]
+        if not isinstance(entry, dict):
+            sys.stderr.write(f"library[{img_id}]: not a mapping\n")
+            fail_count += 1
+            continue
+        prompt = entry.get("prompt")
+        rel_path = entry.get("path")
+        size = entry.get("size")
+        if not prompt or not rel_path:
+            sys.stderr.write(f"library[{img_id}]: missing prompt or path\n")
+            fail_count += 1
+            continue
+        out_path = (library_root / rel_path).resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not force and not image_needs_regen(manifest_path, out_path):
+            print(f"[skip] {img_id} -> {rel_path} (exists, newer than manifest)")
+            skip_count += 1
+            continue
+
+        if dry_run:
+            print(f"[gen ] {img_id} -> {rel_path}")
+            print(f"  prompt: {prompt[:80]}...")
+            continue
+
+        attempts = 0
+        rc = -1
+        while attempts < max_attempts:
+            attempts += 1
+            print(f"[gen ] {img_id} -> {rel_path} (attempt {attempts}/{max_attempts})")
+            rc = generate_image(prompt, out_path, size)
+            if rc == 0 and out_path.exists():
+                break
+            print(f"  attempt {attempts} failed (rc={rc}, exists={out_path.exists()})")
+
+        if rc != 0 or not out_path.exists():
+            sys.stderr.write(
+                f"  FAIL: {img_id} hit {max_attempts}-attempt cap; "
+                f"manual fallback may be needed.\n"
+            )
+            fail_count += 1
+            continue
+        sz_kb = out_path.stat().st_size // 1024
+        print(f"  wrote {rel_path} ({sz_kb} KB, {attempts} attempt(s))")
+        write_count += 1
+
+    print(
+        f"\nLibrary regen summary: {write_count} written, {skip_count} skipped, "
+        f"{fail_count} failed (of {len(target_ids)} targeted)."
+    )
+    return 1 if fail_count else 0
+
+
 def _resolve_manifest_path(arg: Path) -> Path:
     """Accept either a templates/<slug>/ directory or the manifest file itself."""
     p = Path(arg)
@@ -461,7 +587,44 @@ def main(argv: list[str] | None = None) -> int:
             "the slot is logged and skipped. Default 5."
         ),
     )
+    parser.add_argument(
+        "--library",
+        type=Path,
+        default=None,
+        metavar="MANIFEST",
+        help=(
+            "Library mode (D6, issue #13): regenerate images from the master "
+            "library manifest at shared/sample-images/manifest.yml instead of "
+            "a per-template manifest. The library manifest's `images:` is "
+            "keyed by ID (dict), not a list."
+        ),
+    )
+    parser.add_argument(
+        "--single",
+        type=str,
+        default=None,
+        metavar="ID",
+        help="In library mode, regenerate only this ID.",
+    )
     args = parser.parse_args(argv)
+
+    # Library mode (issue #13).
+    if args.library is not None:
+        manifest_path = args.library
+        if not manifest_path.exists():
+            sys.stderr.write(f"library manifest not found: {manifest_path}\n")
+            return 1
+        try:
+            return regen_library(
+                manifest_path,
+                ids=[args.single] if args.single else None,
+                force=args.force,
+                max_attempts=args.max_attempts,
+                dry_run=args.dry_run,
+            )
+        except (ValueError, yaml.YAMLError) as exc:
+            sys.stderr.write(f"library manifest parse error: {exc}\n")
+            return 1
 
     if args.target is None:
         parser.print_help()

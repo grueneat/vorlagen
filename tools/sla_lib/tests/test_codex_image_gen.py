@@ -329,5 +329,176 @@ class GenerateImageRecoveryAndWatermarkTests(unittest.TestCase):
             self.assertFalse(target.exists())
 
 
+class ParseLibraryManifestTests(unittest.TestCase):
+    """parse_library_manifest — dict-keyed-by-id schema (issue #13)."""
+
+    def _write(self, td: Path, body: str) -> Path:
+        m = td / "manifest.yml"
+        m.write_text(body, encoding="utf-8")
+        return m
+
+    def test_dict_form_parses_correctly(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tdpath = Path(td)
+            m = self._write(tdpath, """
+images:
+  portrait_alice:
+    path: portraits/alice.jpg
+    prompt: A long-enough demo prompt for alice.
+    tags: [portrait]
+    synthetic: true
+  themen_topic1:
+    path: themen/topic1.jpg
+    prompt: A long-enough demo prompt for topic1.
+    tags: [themen]
+    synthetic: true
+""")
+            data = codex_image_gen.parse_library_manifest(m)
+            self.assertEqual(set(data.keys()), {"portrait_alice", "themen_topic1"})
+            self.assertEqual(data["portrait_alice"]["path"], "portraits/alice.jpg")
+
+    def test_missing_images_key_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            m = self._write(Path(td), "slug: demo\n")
+            with self.assertRaises(ValueError):
+                codex_image_gen.parse_library_manifest(m)
+
+    def test_list_images_raises(self) -> None:
+        # Per-template manifests use list — library mode rejects.
+        with tempfile.TemporaryDirectory() as td:
+            m = self._write(Path(td), """
+images:
+  - id: foo
+    prompt: bar
+""")
+            with self.assertRaises(ValueError):
+                codex_image_gen.parse_library_manifest(m)
+
+    def test_missing_file_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            with self.assertRaises(FileNotFoundError):
+                codex_image_gen.parse_library_manifest(Path(td) / "nope.yml")
+
+
+class RegenLibraryTests(unittest.TestCase):
+    """regen_library — iterates entries, dispatches to generate_image."""
+
+    def _scaffold(self, td: Path) -> Path:
+        """Create a tiny library manifest with two entries; no JPGs yet."""
+        m = td / "manifest.yml"
+        m.write_text(
+            """
+images:
+  portrait_alice:
+    path: portraits/alice.jpg
+    prompt: A long-enough demo prompt for alice (>=20 chars).
+    tags: [portrait]
+    synthetic: true
+    size: "1024x1536"
+  themen_topic1:
+    path: themen/topic1.jpg
+    prompt: A long-enough demo prompt for topic1 (>=20 chars).
+    tags: [themen]
+    synthetic: true
+    size: "1536x1024"
+""",
+            encoding="utf-8",
+        )
+        return m
+
+    def test_regen_all_calls_generate_image_per_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            m = self._scaffold(Path(td))
+            calls = []
+
+            def fake_gen(prompt, output_path, size):
+                calls.append((output_path.name, size))
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                Image.new("RGB", (64, 64), (180, 180, 180)).save(
+                    str(output_path), format="JPEG", quality=80
+                )
+                return 0
+
+            with mock.patch.object(codex_image_gen, "generate_image", side_effect=fake_gen), \
+                    mock.patch.object(codex_image_gen, "codex_login_status", return_value="ok"):
+                rc = codex_image_gen.regen_library(m, force=True)
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(calls), 2)
+            names = sorted(c[0] for c in calls)
+            self.assertEqual(names, ["alice.jpg", "topic1.jpg"])
+
+    def test_single_id_filters_to_one_entry(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            m = self._scaffold(Path(td))
+
+            def fake_gen(prompt, output_path, size):
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                Image.new("RGB", (64, 64), (180, 180, 180)).save(
+                    str(output_path), format="JPEG", quality=80
+                )
+                return 0
+
+            with mock.patch.object(codex_image_gen, "generate_image", side_effect=fake_gen) as gm, \
+                    mock.patch.object(codex_image_gen, "codex_login_status", return_value="ok"):
+                rc = codex_image_gen.regen_library(m, ids=["themen_topic1"], force=True)
+            self.assertEqual(rc, 0)
+            self.assertEqual(gm.call_count, 1)
+
+    def test_unknown_id_returns_nonzero(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            m = self._scaffold(Path(td))
+            with mock.patch.object(codex_image_gen, "codex_login_status", return_value="ok"):
+                rc = codex_image_gen.regen_library(m, ids=["never_existed"], force=True)
+            self.assertEqual(rc, 1)
+
+    def test_force_bypasses_skip(self) -> None:
+        # Pre-populate the output so the mtime check would otherwise skip.
+        with tempfile.TemporaryDirectory() as td:
+            tdpath = Path(td)
+            m = self._scaffold(tdpath)
+            (tdpath / "portraits").mkdir()
+            (tdpath / "themen").mkdir()
+            Image.new("RGB", (64, 64), (180, 180, 180)).save(
+                str(tdpath / "portraits" / "alice.jpg"), format="JPEG"
+            )
+            Image.new("RGB", (64, 64), (180, 180, 180)).save(
+                str(tdpath / "themen" / "topic1.jpg"), format="JPEG"
+            )
+            # bump mtime so they look fresh
+            now = time.time()
+            import os
+            os.utime(tdpath / "portraits" / "alice.jpg", (now + 60, now + 60))
+            os.utime(tdpath / "themen" / "topic1.jpg", (now + 60, now + 60))
+
+            def fake_gen(prompt, output_path, size):
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                Image.new("RGB", (64, 64), (200, 100, 100)).save(
+                    str(output_path), format="JPEG", quality=80
+                )
+                return 0
+
+            # Without --force: skips both.
+            with mock.patch.object(codex_image_gen, "generate_image", side_effect=fake_gen) as gm, \
+                    mock.patch.object(codex_image_gen, "codex_login_status", return_value="ok"):
+                rc = codex_image_gen.regen_library(m, force=False)
+            self.assertEqual(rc, 0)
+            self.assertEqual(gm.call_count, 0)
+
+            # With --force: generates both.
+            with mock.patch.object(codex_image_gen, "generate_image", side_effect=fake_gen) as gm, \
+                    mock.patch.object(codex_image_gen, "codex_login_status", return_value="ok"):
+                rc = codex_image_gen.regen_library(m, force=True)
+            self.assertEqual(rc, 0)
+            self.assertEqual(gm.call_count, 2)
+
+    def test_dry_run_does_not_call_codex(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            m = self._scaffold(Path(td))
+            with mock.patch.object(codex_image_gen, "generate_image") as gm:
+                rc = codex_image_gen.regen_library(m, force=True, dry_run=True)
+            self.assertEqual(rc, 0)
+            gm.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
