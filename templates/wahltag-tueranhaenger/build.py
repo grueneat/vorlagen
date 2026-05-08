@@ -25,6 +25,7 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
+    library,
 )
 from sla_lib.builder.blocks import DoorHangerCutout  # noqa: E402
 
@@ -301,17 +302,18 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             anname="Logo Grüne (Bund-Dunkel, back)",
         ))
 
-    # Kandidat-Portrait — iter-3 Codex-generated demo portrait
-    # (Bürgermeisterkandidat archetype, male for diversity per CONTEXT.md
-    # D2). Conditional inject — only when samples/portrait-back.jpg is
-    # committed, else slot stays empty. scale_type=0 + ratio=1 →
-    # aspect-preserving auto-fit.
-    portrait_path = HERE / "samples" / "portrait-back.jpg"
+    # Kandidat-Portrait — central library reference (#13). The
+    # Bürgermeisterkandidat archetype (male for diversity per CONTEXT D2)
+    # lives at portrait_stefan in the central library. Frame 65×85mm portrait
+    # ratio (~0.76:1); source 1024×1536 (~0.67:1) — minor center-crop.
+    # library.crop_for_frame re-stamps the watermark on the cropped output.
     portrait_data, portrait_ext = (None, None)
-    if portrait_path.exists():
-        portrait_data, portrait_ext = pack_inline_image(
-            portrait_path.read_bytes(), "jpg"
+    portrait_img = library.load("portrait_stefan", optional=True)
+    if portrait_img is not None:
+        portrait_bytes = library.crop_for_frame(
+            portrait_img, target_w_mm=65, target_h_mm=85
         )
+        portrait_data, portrait_ext = pack_inline_image(portrait_bytes, "jpg")
     page1.add(ImageFrame(
         x_mm=20, y_mm=75, w_mm=65, h_mm=85,
         inline_image_data=portrait_data,

@@ -22,6 +22,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / "tools"))
 
+from sla_lib.builder import library  # noqa: E402
 from sla_lib.builder import (  # noqa: E402
     Brand,
     Document,
@@ -209,15 +210,15 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Termine Panel A",
     ))
 
-    # Hintergrund-Mitmachen photo (Issue #11): optional landscape badge at
-    # bottom-left of Panel A, alongside body. Conditional inject — empty in
-    # fresh checkouts.
-    hintergrund_path = HERE / "samples" / "hintergrund-mitmachen.jpg"
+    # Hintergrund-Mitmachen photo — central library reference (#13).
+    # Frame 44×33mm landscape (~1.33:1); source 1536×1024 (~1.5:1) — minor
+    # crop. library.crop_for_frame re-stamps the watermark band on the
+    # cropped output.
     hg_data, hg_ext = (None, None)
-    if hintergrund_path.exists():
-        hg_data, hg_ext = pack_inline_image(
-            hintergrund_path.read_bytes(), "jpg"
-        )
+    hg_img = library.load("kontext_infostand_szene", optional=True)
+    if hg_img is not None:
+        hg_bytes = library.crop_for_frame(hg_img, target_w_mm=44, target_h_mm=33)
+        hg_data, hg_ext = pack_inline_image(hg_bytes, "jpg")
     page.add(ImageFrame(
         x_mm=12, y_mm=44, w_mm=44, h_mm=33,
         inline_image_data=hg_data,

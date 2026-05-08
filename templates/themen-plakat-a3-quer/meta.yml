@@ -15,7 +15,7 @@ build:
   output: template.sla
 
 # No round-trip diff — this is a DSL-original template (no original_sla key).
-previews_for_sla: a016e61b65087556158f8b967fce68a24bc45568a4b060a3de3f24b857e551f4
+previews_for_sla: 15455d24180c2f52944dbd1b7b949a5359a8181910e0e92654bf701ec737eb88
 ci_overrides:
   non_ci_styles:
     - "themen-plakat/headline"

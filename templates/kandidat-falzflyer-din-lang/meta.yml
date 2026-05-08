@@ -15,7 +15,7 @@ build:
   script: build.py
   output: template.sla
 
-previews_for_sla: 0035232bf67b12e999bb1ec2d4828f63fbc186da20f2fcbbf47115d4a746855d
+previews_for_sla: 24c2a85ead94f34831a7207b8eebe55df52caef612cd4cb2dabe31a74064be44
 ci_overrides:
   non_ci_styles:
     - "falzflyer/cand-name"

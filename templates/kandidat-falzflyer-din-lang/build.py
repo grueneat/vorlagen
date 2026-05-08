@@ -25,6 +25,7 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
+    library,
 )
 from sla_lib.builder.blocks import FoldLine  # noqa: E402
 
@@ -201,15 +202,17 @@ def _add_front(doc, page0):
             anname="P1 Logo Grüne",
         ))
 
-    # Kandidat-Portrait — conditional inject (Issue #11). When
-    # samples/portrait-cover.jpg exists the Codex-generated demo portrait is
-    # embedded; otherwise the slot stays empty (clean fresh checkout).
-    portrait_path = HERE / "samples" / "portrait-cover.jpg"
+    # Kandidat-Portrait — central library reference (#13). When the library
+    # has the entry, the demo portrait is cropped to the 87×105mm frame and
+    # embedded with watermark re-applied (R-WATERMARK-CROP). On fresh
+    # checkouts without the library JPGs, the slot stays empty.
     portrait_data, portrait_ext = (None, None)
-    if portrait_path.exists():
-        portrait_data, portrait_ext = pack_inline_image(
-            portrait_path.read_bytes(), "jpg"
+    portrait_img = library.load("portrait_maria", optional=True)
+    if portrait_img is not None:
+        portrait_bytes = library.crop_for_frame(
+            portrait_img, target_w_mm=87, target_h_mm=105
         )
+        portrait_data, portrait_ext = pack_inline_image(portrait_bytes, "jpg")
     page0.add(ImageFrame(
         x_mm=6, y_mm=28, w_mm=87, h_mm=105,
         inline_image_data=portrait_data,
@@ -341,21 +344,27 @@ def _add_front(doc, page0):
 
 
 def _add_back(doc, page1):
-    # Themen-photo slots (Issue #11): 3 small landscape images, one each above
-    # the body of Themen 1, 2, 3. Conditional inject — only when the matching
-    # samples/themen-*.jpg is committed. Theme 4 (Lokale Wirtschaft) stays
-    # text-only to keep panel rhythm.
-    themen_photo_files = {
-        "klimaschutz": HERE / "samples" / "themen-klimaschutz.jpg",
-        "soziales":    HERE / "samples" / "themen-soziales.jpg",
-        "bildung":     HERE / "samples" / "themen-bildung.jpg",
+    # Themen-photo slots (issue #13): 3 small landscape images cropped from
+    # central library. Frame aspect 87×24mm = 3.6:1 — aggressive horizontal
+    # crop from 1.5:1 source (1536×1024). library.crop_for_frame() re-applies
+    # the Symbolfoto watermark band on the cropped output (R-WATERMARK-CROP).
+    # Theme 4 (Lokale Wirtschaft) stays text-only to keep panel rhythm.
+    THEMEN_LIBRARY_IDS = {
+        "klimaschutz": "themen_klimaschutz_solar",
+        "soziales":    "themen_soziales_kaffeehaus",  # D8 fix: kaffeehaus, not gemeindebau
+        "bildung":     "themen_bildung_volksschule",
     }
+    THEMEN_FRAME_W_MM = 87.0
+    THEMEN_FRAME_H_MM = 24.0
 
     def _photo_inline(name):
-        p = themen_photo_files[name]
-        if p.exists():
-            return pack_inline_image(p.read_bytes(), "jpg")
-        return (None, None)
+        img = library.load(THEMEN_LIBRARY_IDS[name], optional=True)
+        if img is None:
+            return (None, None)
+        cropped = library.crop_for_frame(
+            img, target_w_mm=THEMEN_FRAME_W_MM, target_h_mm=THEMEN_FRAME_H_MM
+        )
+        return pack_inline_image(cropped, "jpg")
 
     # ---- Panel 4 — Themen 1+2 (x=0..99) -----
     page1.add(TextFrame(
