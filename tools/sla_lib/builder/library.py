@@ -10,6 +10,11 @@ Public surface (matches PLAN.md ``<interfaces>``):
 
     img = library.load("portrait_maria")            # raise if missing
     img = library.load("portrait_maria", optional=True)  # None if missing
+
+    # One-call inject for ImageFrames (preferred for templates):
+    library.inject_into_frame(frame, img, target_w_mm=87, target_h_mm=24)
+
+    # Or low-level: crop + pack manually (legacy callers).
     cropped = library.crop_for_frame(img, target_w_mm=87, target_h_mm=24)
     data, ext = pack_inline_image(cropped, "jpg")
     # ... pass to ImageFrame(inline_image_data=data, inline_image_ext=ext, ...)
@@ -76,6 +81,49 @@ class LibraryImage:
     bytes: bytes
     meta: dict
 
+    @property
+    def crop_focus_x(self) -> float:
+        """Horizontal saliency anchor in [0, 1]. Default 0.5 (image center).
+
+        Sourced from manifest field ``crop_focus: [x, y]``; falls back to legacy
+        ``centering: [x, y]`` for back-compat. Out-of-range or malformed values
+        silently fall back to 0.5.
+        """
+        return _focus_pair(self.meta)[0]
+
+    @property
+    def crop_focus_y(self) -> float:
+        """Vertical saliency anchor in [0, 1]. Default 0.5 (image center).
+
+        See ``crop_focus_x`` for sourcing rules.
+        """
+        return _focus_pair(self.meta)[1]
+
+
+def _focus_pair(meta: dict) -> tuple[float, float]:
+    """Resolve ``[x, y]`` focus tuple from a manifest entry, with safe defaults.
+
+    Reads ``crop_focus`` first (canonical name), falls back to ``centering``
+    (legacy field name retained for back-compat). Both must be a 2-element
+    list/tuple of numbers in [0, 1]; otherwise the default ``(0.5, 0.5)`` is
+    returned. Out-of-range numbers are clamped, not rejected — defensive against
+    minor manifest typos.
+    """
+    raw = meta.get("crop_focus")
+    if raw is None:
+        raw = meta.get("centering")
+    if not (isinstance(raw, (list, tuple)) and len(raw) == 2):
+        return (0.5, 0.5)
+    try:
+        x = float(raw[0])
+        y = float(raw[1])
+    except (TypeError, ValueError):
+        return (0.5, 0.5)
+    # Clamp to [0, 1]; values outside are usually mistakes (e.g. a percentage).
+    x = max(0.0, min(1.0, x))
+    y = max(0.0, min(1.0, y))
+    return (x, y)
+
 
 class LibraryError(Exception):
     """Raised when a required library ID is missing or the manifest is malformed."""
@@ -108,7 +156,21 @@ LIBRARY_MANIFEST_SCHEMA = {
                         "watermark": {"type": "string"},
                         "model": {"type": "string"},
                         "quality": {"type": "string"},
+                        "crop_focus": {
+                            # Saliency anchor [x, y] in [0, 1] used as the
+                            # ``centering`` argument to PIL.ImageOps.fit when
+                            # cropping for a frame's aspect ratio. Place this
+                            # over the visual subject (face on portraits, main
+                            # object on themen) to avoid sky-only / hair-only
+                            # crops on aspect-mismatched slots.
+                            "type": "array",
+                            "items": {"type": "number", "minimum": 0, "maximum": 1},
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
                         "centering": {
+                            # Legacy alias for ``crop_focus`` — accepted for
+                            # back-compat. New entries should use ``crop_focus``.
                             "type": "array",
                             "items": {"type": "number", "minimum": 0, "maximum": 1},
                             "minItems": 2,
@@ -278,8 +340,10 @@ def crop_for_frame(
          - if ``<stem>-source.jpg`` exists alongside the watermarked file, use
            that (un-watermarked source — cropping won't double-stamp the band).
          - else use ``img.bytes`` directly.
-      3. Center-crop + resize via ``ImageOps.fit(centering=(0.5, 0.5),
-         method=BICUBIC)``.
+      3. Center-crop + resize via ``ImageOps.fit(centering=(cx, cy),
+         method=BICUBIC)`` where ``(cx, cy)`` is the per-image saliency anchor
+         from ``meta["crop_focus"]`` (or legacy ``meta["centering"]``), default
+         ``(0.5, 0.5)``.
       4. If ``apply_watermark=True``, re-stamp the Symbolfoto band on the cropped
          output (R-WATERMARK-CROP fix — band always visible at the cropped
          resolution). Watermark text comes from ``img.meta["watermark"]`` if
@@ -287,8 +351,11 @@ def crop_for_frame(
       5. Encode JPEG with explicit ``quality=quality, optimize=True,
          subsampling=2, progressive=False`` for byte-determinism (RESEARCH §1.4).
 
-    A per-image ``centering: [x, y]`` override in the manifest can bias the
-    crop center (default ``(0.5, 0.5)`` = exact center).
+    A per-image ``crop_focus: [x, y]`` override in the manifest biases the
+    crop center toward the visual subject (e.g. ``[0.50, 0.35]`` keeps a face
+    visible when an aspect-mismatched slot would otherwise crop to hair-only).
+    Both values are in ``[0, 1]``; default ``(0.5, 0.5)`` = exact center.
+    The legacy field name ``centering`` is still accepted as a fallback.
 
     Returns:
         JPEG bytes ready for ``pack_inline_image(bytes, "jpg")``.
@@ -309,16 +376,11 @@ def crop_for_frame(
     except Exception as exc:  # Pillow raises a variety of exceptions
         raise LibraryError(f"library entry {img.id!r}: cannot decode source image: {exc}") from exc
 
-    # 3) center-crop + resize
-    centering = img.meta.get("centering")
-    if (
-        isinstance(centering, (list, tuple))
-        and len(centering) == 2
-        and all(isinstance(v, (int, float)) for v in centering)
-    ):
-        cx, cy = float(centering[0]), float(centering[1])
-    else:
-        cx, cy = 0.5, 0.5
+    # 3) center-crop + resize, biased toward the manifest's saliency anchor
+    # ``crop_focus: [x, y]`` (legacy alias: ``centering``). Default is image
+    # center (0.5, 0.5) when neither field is set. Out-of-range or malformed
+    # values silently degrade to the default — see ``_focus_pair``.
+    cx, cy = _focus_pair(img.meta)
     fitted = ImageOps.fit(
         rgb,
         (target_w_px, target_h_px),
@@ -349,7 +411,15 @@ def crop_for_frame(
         watermark_text = img.meta.get("watermark", cig.DEFAULT_WATERMARK_TEXT)
         fitted = cig._apply_watermark_to_image(fitted, text=watermark_text)
 
-    # 5) Deterministic JPEG encode
+    # 5) Deterministic JPEG encode.
+    #
+    # Embed the target DPI in the JFIF density header so any consumer that
+    # honours density (PDF readers, browsers, image editors) sees the image
+    # at its physical mm size, not the JFIF default 72 dpi. NOTE: Scribus
+    # 1.6 does *not* auto-fit on density alone — it needs SCALETYPE=0 on the
+    # ImageFrame (see ``inject_into_frame``); without that, a 2480-px crop
+    # overflows a 595-pt frame ~3.4× and we render only the upper-left
+    # corner (the "sky-only" / "window-only" gallery regression).
     buf = BytesIO()
     fitted.save(
         buf,
@@ -358,8 +428,76 @@ def crop_for_frame(
         optimize=True,
         subsampling=2,
         progressive=False,
+        dpi=(dpi, dpi),
     )
     return buf.getvalue()
+
+
+def inject_into_frame(
+    frame,
+    img: "LibraryImage",
+    *,
+    target_w_mm: float,
+    target_h_mm: float,
+    dpi: int = 300,
+    quality: int = 80,
+    apply_watermark: bool = True,
+) -> None:
+    """Crop ``img`` for ``frame`` and install it as the frame's inline image.
+
+    One-call helper used by every gallery-preview ``build.py`` to populate
+    ImageFrames from the centralised library. Encapsulates three things that
+    every caller has to get right for the gallery to render correctly:
+
+      1. Centre-crop to the frame's aspect via ``crop_for_frame`` (which
+         honours the manifest's ``crop_focus`` saliency anchor — without it
+         every aspect-mismatched slot crops to whatever is at image centre,
+         which produced the "hair-only" / "sky-only" regression).
+      2. Wrap the JPEG bytes via ``pack_inline_image`` (qCompress base64,
+         the format Scribus expects in ``ImageData``).
+      3. Set ``frame.scale_type = 0`` (Scribus enum: ``ScaleAuto``, fit-to-
+         frame). Templates migrated from production SLAs default to
+         ``scale_type = 1`` (manual scale) with ``LOCALSCX/SCY = 1``, which
+         renders the inline image at its native pixel size — for a 2480-px
+         crop on a 595-pt frame that overflows the frame ~3.4× and we see
+         only the top-left corner.
+
+    Round-trip safety: the three production templates that have an
+    ``original_sla`` baseline (zeitung, postkarte, plakat-a1) inject only
+    inside ``build_preview()``, so the change to ``scale_type`` lands on
+    ``template-preview.sla`` and never on the round-trip-validated
+    ``template.sla``.
+
+    Args:
+        frame: ``ImageFrame`` instance from ``sla_lib.builder.primitives``.
+        img: Source library image (from ``library.load`` / ``library.find``).
+        target_w_mm / target_h_mm: Frame dimensions in mm; passed to
+            ``crop_for_frame`` to compute the target aspect.
+        dpi: Pixel density. Defaults to 300 (print-quality).
+        quality: JPEG quality. Defaults to 80 (matches existing pipeline).
+        apply_watermark: Re-stamp Symbolfoto band on cropped output (default
+            True). Disable only for tests that need a clean source.
+    """
+    # Local import keeps the dependency direction one-way: primitives.py
+    # imports nothing from library.py, so we lazy-import the helper here.
+    from sla_lib.builder.primitives import pack_inline_image
+
+    cropped = crop_for_frame(
+        img,
+        target_w_mm=target_w_mm,
+        target_h_mm=target_h_mm,
+        dpi=dpi,
+        quality=quality,
+        apply_watermark=apply_watermark,
+    )
+    data, ext = pack_inline_image(cropped, "jpg")
+    frame.inline_image_data = data
+    frame.inline_image_ext = ext
+    # SCALETYPE=0 = ScaleAuto in Scribus 1.6 — the image is scaled to fit the
+    # frame; with RATIO=1 (the dataclass default) aspect is preserved. Since
+    # the cropped output already matches the frame aspect, this fills the
+    # frame exactly with no letterbox/pillarbox.
+    frame.scale_type = 0
 
 
 def regenerate(id: str, *, force: bool = False, max_attempts: int = 5) -> bool:

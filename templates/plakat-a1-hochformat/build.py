@@ -226,12 +226,12 @@ def build_preview():
                 img = library.load(lib_id, optional=True)
                 if img is None:
                     continue
-                cropped = library.crop_for_frame(
-                    img, target_w_mm=w, target_h_mm=h
+                # inject_into_frame handles crop + pack + sets scale_type=0
+                # (Scribus ScaleAuto). The crop already matches the frame
+                # aspect via crop_for_frame, so RATIO=1 fills exactly.
+                library.inject_into_frame(
+                    frame, img, target_w_mm=w, target_h_mm=h
                 )
-                data, ext = pack_inline_image(cropped, "jpg")
-                frame.inline_image_data = data
-                frame.inline_image_ext = ext
     return doc
 
 

@@ -19,6 +19,11 @@
 #
 # Manifest schema enforced by tools/sla_lib/builder/library.py::validate_manifest()
 # (Draft 2020-12 JSON Schema).
+#
+# crop_focus: [x, y] — saliency anchor in [0, 1] used by library.crop_for_frame()
+# when an aspect-mismatched template slot forces a center-crop. Place it over the
+# visual subject (face on portraits, main object on themen). Default is image
+# centre; override per entry to avoid sky-only / hair-only / window-only crops.
 
 images:
   # ── Portraits ──────────────────────────────────────────────────────────────
@@ -38,6 +43,9 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Eyes sit ~⅓ down from the top — keep them in frame on landscape/square
+    # crops where the implicit centre would land on hair below the chin.
+    crop_focus: [0.50, 0.32]
 
   portrait_stefan:
     path: portraits/stefan-beispiel.jpg
@@ -57,6 +65,8 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Stefan's face sits a touch lower than Maria's — eyes ~38% from the top.
+    crop_focus: [0.50, 0.38]
 
   # ── Themen ─────────────────────────────────────────────────────────────────
   themen_klimaschutz_solar:
@@ -75,6 +85,9 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Solar roof sits slightly right of centre, vertically just above mid —
+    # keep panels in frame on portrait crops (postkarte hero is 84×127 mm).
+    crop_focus: [0.55, 0.45]
 
   themen_klimaschutz_windrad:
     path: themen/klimaschutz-windrad.jpg
@@ -89,6 +102,9 @@ images:
     license_note: "AI-generated demo image; not a real place. Replace with real local Klimaschutz/Energie photo for production use."
     size: "1536x1024"
     watermark: "Symbolfoto — KI-generiert"
+    # Turbine sits right of centre (~⅔ across), vertically spans top to mid;
+    # without this the zeitung cover and plakat A1 hero crop to sky-only.
+    crop_focus: [0.65, 0.50]
 
   themen_soziales_kaffeehaus:
     # NOTE D8 fix: bytes migrated from kandidat-falzflyer-din-lang/samples/themen-soziales.jpg
@@ -106,6 +122,9 @@ images:
     license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
     size: "1536x1024"
     watermark: "Symbolfoto — KI-generiert"
+    # Two patrons in the booth sit slightly left of centre, around the
+    # window-light line; aim there to keep figures in frame on tight crops.
+    crop_focus: [0.42, 0.55]
 
   themen_bildung_volksschule:
     path: themen/bildung-volksschule.jpg
@@ -119,6 +138,9 @@ images:
     license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
     size: "1536x1024"
     watermark: "Symbolfoto — KI-generiert"
+    # Children walk across the lower half of the frame; school facade is upper
+    # left. Bias slightly down-and-centre so kids stay visible on tall crops.
+    crop_focus: [0.50, 0.60]
 
   themen_soziales_gemeindebau:
     # NEW (issue #13) — distinct from soziales_kaffeehaus (a separate, equally
@@ -140,6 +162,10 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Two residents stand right of centre near the stairwell entrance; the
+    # bottom half is path/garden — bias toward them to avoid window-only
+    # crops on the zeitung P1 hero (used to show the upper-right facade).
+    crop_focus: [0.55, 0.60]
 
   themen_bildung_erwachsenenbildung:
     path: themen/bildung-erwachsenenbildung.jpg
@@ -159,6 +185,9 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Learners around the workshop table sit roughly mid-frame, slightly
+    # below the pendant lamps — bias just below centre.
+    crop_focus: [0.50, 0.55]
 
   themen_wirtschaft_handwerk:
     path: themen/wirtschaft-handwerk.jpg
@@ -178,6 +207,9 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Two craftspeople flank the workbench, slightly left and right of centre;
+    # the centre of action (chisel + hands on oak piece) sits a touch below mid.
+    crop_focus: [0.50, 0.55]
 
   themen_verkehr_radweg:
     path: themen/verkehr-radweg.jpg
@@ -197,6 +229,9 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Cyclists ride away from camera at left-of-centre on the path; tree
+    # canopy fills the upper-left, river is right. Bias toward the riders.
+    crop_focus: [0.40, 0.55]
 
   # ── Kontext ────────────────────────────────────────────────────────────────
   kontext_infostand_szene:
@@ -212,6 +247,9 @@ images:
     license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
     size: "1536x1024"
     watermark: "Symbolfoto — KI-generiert"
+    # Group around the table is centred horizontally; the conversation sits
+    # in the lower half of the frame (table + people), upper half is sky/town.
+    crop_focus: [0.50, 0.55]
 
   kontext_buergerversammlung:
     path: kontext/buergerversammlung.jpg
@@ -234,6 +272,9 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Speaker stands left-of-centre, audience fills mid-frame and right; the
+    # action line runs through ~y=0.55. Bias slightly left to keep the speaker.
+    crop_focus: [0.45, 0.55]
 
   kontext_stammtisch_cafe:
     path: kontext/stammtisch-cafe.jpg
@@ -255,3 +296,6 @@ images:
     watermark: "Symbolfoto — KI-generiert"
     model: gpt-image-2
     quality: high
+    # Faces around the round table sit roughly mid-frame, slightly below the
+    # pendant lamp; cropping slightly low keeps the conversation in frame.
+    crop_focus: [0.50, 0.55]
