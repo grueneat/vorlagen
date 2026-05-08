@@ -142,6 +142,59 @@ def build_codex_prompt(prompt: str, output_abspath: Path, size: str | None) -> s
     )
 
 
+def _apply_watermark_to_image(
+    im: "Image.Image",
+    text: str = DEFAULT_WATERMARK_TEXT,
+    *,
+    font_path: Path | None = None,
+    band_height_pct: float = 0.04,
+    text_color: tuple[int, int, int, int] = (255, 255, 255, 230),
+    bg_color: tuple[int, int, int, int] = (0, 0, 0, 160),
+) -> "Image.Image":
+    """Stamp the bottom Symbolfoto-band onto a PIL.Image. Returns a new RGB Image.
+
+    Pure in-memory operation — no I/O. Reusable from
+    ``library.crop_for_frame()`` so a freshly cropped image can have the
+    Symbolfoto band re-applied at the cropped resolution (R-WATERMARK-CROP fix
+    for #13: when ``ImageOps.fit`` crops portrait→landscape, the source band
+    can be cropped off; we re-stamp at the output dimensions instead).
+
+    Args:
+        im: source PIL.Image (any mode; converted to RGB internally).
+        text: caption text. Defaults to DEFAULT_WATERMARK_TEXT.
+        font_path: optional explicit font; otherwise the brand-aware fallback
+            chain in ``_load_watermark_font`` is used.
+        band_height_pct: band height as a fraction of image height (default 4%).
+        text_color: RGBA tuple for the caption (default white at ~90% alpha).
+        bg_color: RGBA tuple for the band fill (default black at ~63% alpha).
+
+    Returns:
+        A new RGB PIL.Image with the band overlaid. Input image is not mutated.
+    """
+    base = im.convert("RGB")
+    width, height = base.size
+    band_h = max(40, int(height * band_height_pct))
+
+    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    # Filled rectangle for the band background.
+    draw.rectangle((0, height - band_h, width, height), fill=bg_color)
+
+    # Load font with the fallback chain.
+    font_size = max(14, min(36, height // 60))
+    font = _load_watermark_font(font_path, font_size)
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    text_x = (width - text_w) // 2 - bbox[0]
+    text_y = height - band_h + (band_h - text_h) // 2 - bbox[1]
+    draw.text((text_x, text_y), text, font=font, fill=text_color)
+
+    # Composite the overlay over the base.
+    return Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
+
+
 def add_demo_watermark(
     image_path: Path,
     text: str = DEFAULT_WATERMARK_TEXT,
@@ -163,36 +216,36 @@ def add_demo_watermark(
       3. DejaVu Sans (Debian default)
       4. Pillow's ImageFont.load_default() (worst case — small bitmap font)
 
-    Re-saves as JPEG q=80 if path ends in ``.jpg``/``.jpeg``, else preserves
-    the source format. Returns ``image_path`` for chainability.
+    Re-saves as JPEG q=80 + ``optimize=True``, ``subsampling=2``,
+    ``progressive=False`` if path ends in ``.jpg``/``.jpeg`` (these knobs are
+    pinned for byte-determinism per RESEARCH §1.4); else preserves the source
+    format. Returns ``image_path`` for chainability.
+
+    Implementation note: thin wrapper around ``_apply_watermark_to_image`` —
+    open file → call core helper → save. Library code can reach the same
+    rendering on an in-memory PIL.Image without round-tripping through disk.
     """
     image_path = Path(image_path)
-    base = Image.open(str(image_path)).convert("RGB")
-    width, height = base.size
-    band_h = max(40, int(height * band_height_pct))
-
-    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-    # Filled rectangle for the band background.
-    draw.rectangle((0, height - band_h, width, height), fill=bg_color)
-
-    # Load font with the fallback chain.
-    font_size = max(14, min(36, height // 60))
-    font = _load_watermark_font(font_path, font_size)
-
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
-    text_x = (width - text_w) // 2 - bbox[0]
-    text_y = height - band_h + (band_h - text_h) // 2 - bbox[1]
-    draw.text((text_x, text_y), text, font=font, fill=text_color)
-
-    # Composite the overlay over the base.
-    combined = Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
+    with Image.open(str(image_path)) as opened:
+        combined = _apply_watermark_to_image(
+            opened,
+            text,
+            font_path=font_path,
+            band_height_pct=band_height_pct,
+            text_color=text_color,
+            bg_color=bg_color,
+        )
 
     suffix = image_path.suffix.lower()
     if suffix in (".jpg", ".jpeg"):
-        combined.save(str(image_path), format="JPEG", quality=80, optimize=True)
+        combined.save(
+            str(image_path),
+            format="JPEG",
+            quality=80,
+            optimize=True,
+            subsampling=2,
+            progressive=False,
+        )
     else:
         combined.save(str(image_path), optimize=True)
     return image_path

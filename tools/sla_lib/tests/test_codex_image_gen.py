@@ -79,6 +79,35 @@ class AddDemoWatermarkTests(unittest.TestCase):
             self.assertEqual(result, jpg)
 
 
+class ApplyWatermarkToImageTests(unittest.TestCase):
+    """_apply_watermark_to_image — pure in-memory variant for library reuse."""
+
+    def test_returns_new_image_with_band(self) -> None:
+        # Solid mid-grey source so the band's contribution is unambiguous.
+        src = Image.new("RGB", (512, 768), (180, 180, 180))
+        out = codex_image_gen._apply_watermark_to_image(src)
+        self.assertIsInstance(out, Image.Image)
+        self.assertEqual(out.size, src.size)
+
+        # Bottom-center pixel must be much darker than top-center pixel.
+        w, h = out.size
+        top = out.getpixel((w // 2, 5))
+        bottom = out.getpixel((w // 2, h - 5))
+        self.assertLess(
+            sum(bottom) / 3,
+            sum(top) / 3,
+            "bottom row should be in the dark watermark band",
+        )
+
+    def test_does_not_mutate_input(self) -> None:
+        src = Image.new("RGB", (256, 384), (180, 180, 180))
+        # Capture a reference pixel from the bottom row before the call.
+        before = src.getpixel((128, 380))
+        _ = codex_image_gen._apply_watermark_to_image(src)
+        # Source pixel must be unchanged.
+        self.assertEqual(src.getpixel((128, 380)), before)
+
+
 class RecoverCodexOutputTests(unittest.TestCase):
     """recover_codex_output — copies newest cache file when target missing."""
 
