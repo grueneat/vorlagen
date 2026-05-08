@@ -33,6 +33,17 @@ ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = ROOT / "templates"
 
 
+def _is_renderable(meta: dict) -> bool:
+    """Mirror tools/render_pipeline.py::_is_renderable.
+
+    Templates with either ``original_sla:`` (round-trip path) or
+    ``previews_for_sla:`` (DSL-only path) qualify for stale-check.
+    """
+    if not isinstance(meta, dict):
+        return False
+    return bool(meta.get("original_sla")) or bool(meta.get("previews_for_sla"))
+
+
 def _sha256_of(p: Path) -> str:
     """Return SHA256 hex digest of the raw bytes of file p."""
     return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -55,8 +66,8 @@ def _check_template(tdir: Path) -> list[str]:
 
     if not isinstance(meta, dict):
         return []
-    if not meta.get("original_sla"):
-        return []  # No original_sla → skip (smoke templates, etc.)
+    if not _is_renderable(meta):
+        return []  # Smoke templates, scaffolding stubs, etc.
 
     tid = meta.get("id", tdir.name)
     is_family = meta.get("type") == "family"

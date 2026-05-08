@@ -45,6 +45,23 @@ EPOCH_DATE = b"D:20000101000000Z"   # 16 bytes; same as D:YYYYMMDDhhmmssZ
 FIXED_PDF_ID = b"00000000000000000000000000000000"  # 32 hex chars
 
 
+def _is_renderable(meta: dict) -> bool:
+    """Return True when this template should be touched by the render pipeline.
+
+    Two flavours qualify:
+      - ``original_sla:`` — round-trip templates (build.py output is sla_diffed
+        against a hand-authored original SLA).
+      - ``previews_for_sla:`` — DSL-only templates with no upstream original;
+        still emit gallery previews and pin a SHA for stale-check.
+
+    Templates without either (smoke fixtures, in-flight scaffolding) are
+    intentionally skipped. This widens the issue #4 filter to admit the 5 new
+    DSL-only templates from PR #20.
+    """
+    if not isinstance(meta, dict):
+        return False
+    return bool(meta.get("original_sla")) or bool(meta.get("previews_for_sla"))
+
 
 # ---------------------------------------------------------------------------
 # PDF byte-scrub for idempotent renders
@@ -638,19 +655,25 @@ def main(argv=None) -> int:
             if d.is_dir() and not d.name.startswith("_")
         )
 
-    # Filter to only directories with meta.yml::original_sla (skip smoke, etc.).
+    # Filter to only renderable directories. A template is renderable if its
+    # meta.yml has either:
+    #   - `original_sla:` — the round-trip path (build → diff against original)
+    #   - `previews_for_sla:` — DSL-only templates that have no original to
+    #     round-trip against, but still track a SHA pin for stale-check.
+    # Either qualifies; templates without both (smoke fixtures, scaffolding
+    # stubs, etc.) are skipped.
     work = []
     for tdir in candidates:
         meta_path = tdir / "meta.yml"
         if not meta_path.exists():
             continue
         meta = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
-        if not meta.get("original_sla"):
+        if not _is_renderable(meta):
             continue
         work.append(tdir)
 
     if not work:
-        print("No templates with original_sla found.", file=sys.stderr)
+        print("No renderable templates found (need original_sla or previews_for_sla).", file=sys.stderr)
         return 1
 
     results: dict[str, int] = {}
