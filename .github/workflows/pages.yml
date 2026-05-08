@@ -52,7 +52,9 @@ jobs:
           # Pillow + qrcode + pyzbar + jsonschema required by tools/qr_gen.py,
           # tools/codex_image_gen.py, tools/sla_lib/builder/library.py and tests
           # (issues #11, #13).
-          sudo pip install --break-system-packages --no-cache-dir \
+          # --ignore-installed sidesteps apt-installed python3-jsonschema
+          # (Debian's variant lacks pip RECORD, blocking version upgrade).
+          sudo pip install --break-system-packages --ignore-installed --no-cache-dir \
             "Pillow==12.2.0" "qrcode[pil]==8.2" "pyzbar==0.1.9" "jsonschema==4.26.0"
           # Download + extract AppImage if not restored from cache
           if [ ! -d /opt/squashfs-root ]; then
