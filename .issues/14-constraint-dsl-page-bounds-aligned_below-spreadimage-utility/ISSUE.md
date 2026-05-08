@@ -49,7 +49,7 @@ This issue lays the foundation; per-template fixes (#16 Zeitung overflow, #17–
    - Add `inside_page`, `aligned_below`, `SpreadImage` to `templates/_specs/SCHEMA.md` §6 (Constraint catalogue) and `shared/brand/SPEC-WRITING-GUIDE.md` §4 (Constraint examples).
    - Document the `SpreadImage` migration recipe (one frame at `x=page_w` → `SpreadImage(left, right, src, w=2×page_w)`).
 
-## Acceptance criteria
+## Acceptance Criteria
 
 - [ ] `inside_page` exists as a public factory in `tools/sla_lib/builder/constraints.py` and has unit tests covering the 5 directions × rotation cases.
 - [ ] `inside_page` runs on every template under `python3 -m sla_lib.builder.structural_check --all` without per-template opt-in; warnings vs. errors split by 0.5 mm tolerance.
