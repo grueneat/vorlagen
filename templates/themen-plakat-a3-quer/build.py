@@ -246,7 +246,7 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         x_mm=380, y_mm=8, w_mm=25, h_mm=25,
         inline_image_data=qr_data,
         inline_image_ext=qr_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=1,
         anname="QR-Code (quelle)",
     ))

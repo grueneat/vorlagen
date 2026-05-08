@@ -502,7 +502,7 @@ def _add_back(doc, page1):
         x_mm=210, y_mm=85, w_mm=30, h_mm=30,
         inline_image_data=qr_m_data,
         inline_image_ext=qr_m_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P6 QR-Code (mitmachen)",
     ))
@@ -510,7 +510,7 @@ def _add_back(doc, page1):
         x_mm=246, y_mm=85, w_mm=30, h_mm=30,
         inline_image_data=qr_t_data,
         inline_image_ext=qr_t_ext,
-        scale_type=1, ratio=1,
+        scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P6 QR-Code (termine)",
     ))
