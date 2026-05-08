@@ -382,11 +382,36 @@ Spec-Update + Reviewer-Sign-off auseinanderlaufen.
 `tools/spec_check.py SLUG` vergleicht mechanisch:
 
 - Slot-`anname` aus YAML ↔ `meta.yml.slots.<key>.anname` ↔ SLA `PAGEOBJECT/@ANNAME`.
-- Slot-`x_mm/y_mm/w_mm/h_mm` aus YAML ↔ SLA-Frame-Position (Toleranz 0.1 mm default).
+- Slot-`x_mm/y_mm/w_mm/h_mm` aus YAML ↔ SLA-Frame-Position.
 - Slot-`fcolor` aus YAML ↔ SLA `PCOLOR`/`PCOLOR2`.
 
-Wenn Spec und SLA divergieren: `spec_check.py` exit 1, Markdown-Drift-Report. Bei
-legitimem Implementierungs-Finding („Slot zu eng für realistischen Text") wird die Spec
+### Toleranz und Severity-Buckets (Issue #12 D8)
+
+Default-Toleranz: **0.5 mm** (vorher 0.1 mm). Drift wird in drei Buckets klassifiziert:
+
+| Drift-Magnitude | Severity | Verhalten |
+|---|---|---|
+| `< 0.05 mm` | silent | Nicht gemeldet (Sub-Pixel-Float-Rauschen) |
+| `0.05 mm <= d <= tolerance` | info | Geloggt mit `info:`-Präfix, exit 0 |
+| `d > tolerance` | error | Geloggt mit `error:`-Präfix, exit 1 |
+
+Hintergrund: Bei Build-Loop-Refinements (Heuristik-Tuning, Style-Adjustments) entstehen
+oft 0.1–0.4 mm-Drifts ohne visuellen Effekt — die alte 0.1 mm-Schwelle erzeugte
+CI-Noise. Die 0.5 mm-Schwelle entspricht dem typografischen Auflösungsvermögen bei
+A4-Druck und tolerierter Position-Genauigkeit der meisten Druckereien.
+
+Legacy-Verhalten: `python3 tools/spec_check.py --tolerance-mm 0.1` reaktiviert die alte
+0.1 mm-Schwelle für Build-Loop-Refinement-Phasen.
+
+### Float-Slot-Positions
+
+Spec-`slots.<i>.x_mm/y_mm/w_mm/h_mm` akzeptieren **Floats mit 1 Nachkommastelle**, z.B.
+`x_mm: 12.5`. Legacy-`int`-Werte (z.B. `x_mm: 12`) bleiben gültig — der YAML-Parser
+coerce'd in beide Richtungen.
+
+Wenn Spec und SLA divergieren: `spec_check.py` exit 1 nur bei error-Bucket-Drifts;
+info-Bucket-Drifts sind im CI-Run "PASS mit info:". Bei legitimem
+Implementierungs-Finding („Slot zu eng für realistischen Text") wird die Spec
 aktualisiert und der Spec-Check re-validiert.
 
 ### Escape-Hatch
@@ -456,8 +481,114 @@ slots:
 
 ---
 
+## 12. Constraints (Issue #12 — Spec-System v2)
+
+### Constraints in Prosa beschreiben, nicht parallel YAML
+
+Strukturelle Constraints (Ausrichtungs-, Symmetrie-, Hierarchie- und Distanz-Invarianten)
+werden in der Spec **als deutsche Prosa** beschrieben — NICHT als zweite YAML-Liste
+neben der Slot-Tabelle (CONTEXT D6).
+
+Begründung: Constraints leben als Code in `templates/<slug>/build.py::CONSTRAINTS`
+(siehe `tools/sla_lib/builder/constraints.py` für die Factories: `same_y`, `same_x`,
+`same_size`, `mirrored_x`, `mirrored_y`, `inside`, `equal_gap`, `hierarchy`,
+`same_style`, `distance_x`, `distance_y`). Doppelte Source-of-Truth (YAML in Spec +
+Python in build.py) würde zwangsläufig auseinanderlaufen. Code ist Vertrag; Spec-Prosa
+ist menschliche Erläuterung des Vertrags.
+
+Konvention pro Constraint in der Spec:
+
+```markdown
+### Strukturelle Constraints
+
+- **Beleg-Headlines (3 Spalten) horizontal ausgerichtet.** Code-Verweis:
+  `CONSTRAINTS["beleg_headlines_row"]` in `build.py`. Prüft `same_y` mit
+  Toleranz 0.5 mm.
+- **Headline → Sub-Headline-Distanz 52 mm.** Code-Verweis:
+  `CONSTRAINTS["hl_to_sub"]`. Prüft `distance_y(equals=52.0)`.
+- **Brand-Constraints.** Automatisch aktiv via `BRAND_CONSTRAINTS` (siehe
+  `tools/sla_lib/builder/brand_constraints.py`); 8 Regeln zu Color-Palette,
+  Font-Family, Line-Spacing, HL/SL-Distanz, Logo-Größe, Text-auf-Grün, Bleed,
+  Wahlkreuz-Hintergrund. Diese Spec NICHT wiederholen.
+```
+
+Wenn ein Template eine Brand-Regel intentional verletzt (z.B. Logo bewusst kleiner als
+3×M wegen Layout-Beschränkung), MUSS:
+
+1. Die Spec-Prosa die Verletzung erwähnen UND begründen.
+2. `meta.yml.brand_overrides` einen passenden Eintrag tragen (siehe §13).
+
+### Worked Example (themen-plakat-a3-quer)
+
+Die `templates/themen-plakat-a3-quer/build.py` hat:
+
+```python
+CONSTRAINTS = [
+    same_y("Beleg 1 — Headline", "Beleg 2 — Headline", "Beleg 3 — Headline",
+           name="beleg_headlines_row"),
+    distance_y("Headline These", "Sub-Headline", equals=52.0,
+               name="hl_to_sub"),
+    same_style("Beleg 1 — Headline", "Beleg 2 — Headline", "Beleg 3 — Headline",
+               name="beleg_hd_style_consistent"),
+    # ... weitere
+]
+```
+
+Die Spec referenziert diese **nur in Prosa**, mit `name`-Identifier zum Cross-Lookup —
+keine zweite YAML-Liste mit Constraint-Daten.
+
+---
+
+## 13. Brand-Overrides in meta.yml (Issue #12)
+
+Wenn ein Template eine `BRAND_CONSTRAINTS`-Regel intentional verletzt, listet
+`templates/<slug>/meta.yml` die Override-IDs unter `brand_overrides`:
+
+```yaml
+brand_overrides:
+  - id: brand:logo_size_3M
+    reason: "Logo bei 32mm sitzt bei ~60% des Quickguide 3*M = 53.46mm Targets
+              auf A3 quer (kurze_kante=297mm). Eckpositionierung vermeidet
+              Konkurrenz mit der breiten Headline; Verdoppeln würde das Logo
+              ins typografische Feld der Headline drängen."
+  - id: brand:hl_sl_distance_x2
+    reason: "Sub-Headline bei y=92 sitzt ~2mm unter dem 50mm-Headline-Frame; das
+              Quickguide-Target 2×Baseline (10.8mm) ist für Body-Größen gedacht,
+              nicht für 60pt-Headlines auf einem Plakat. Knapper HL/SL-Abstand ist
+              die intentionale Plakat-Hierarchie."
+```
+
+### Schema-Validierung
+
+Format: Liste von `{id, reason}`-Objekten:
+
+- `id`: matched `^brand:[A-Za-z_0-9.]+$`. Muss eine bekannte Regel-ID aus
+  `BRAND_CONSTRAINTS` sein (typo-Detection: warning, nicht error).
+- `reason`: Non-empty string. Erklärung MUSS verständlich für Brand-Reviewer:innen
+  sein — kein „siehe Spec", keine Abkürzung wie „intentional".
+
+Validiert durch `tools/sla_lib/builder/meta_schema.py::load_brand_overrides`. Bei
+Schema-Verletzung (fehlende `id`, fehlende `reason`, ungültiges Pattern):
+`ValueError`-Raise mit klarem Pointer auf die Stelle. `structural_check` markiert
+übersprungene Regeln im Markdown-Report als `SKIP <id> (overridden in meta.yml: <reason>)`.
+
+### Wann ist ein Override gerechtfertigt?
+
+- **Ja** — Logo bewusst kleiner für Layout-Komposition (Türanhänger, Falzflyer).
+- **Ja** — HL/SL-Abstand bewusst tighter wegen Format-Beschränkung (schmale Spalte).
+- **Ja** — Bleed bewusst 2mm wegen Stanzkontur-Toleranz der Druckerei.
+- **Ja** — Line-Spacing-Faktor 0.9 weicht ab, weil CI-Palette pre-existing drift hat
+  (CI-Brand-Team-Review pending).
+- **Nein** — Override als Workaround für einen Implementierungs-Bug. Den Bug fixen.
+- **Nein** — Override ohne klare Begründung. Das ist nur stille Akzeptanz von Drift.
+
+---
+
 ## Versionierung
 
-Diese Datei: SCHEMA v1 (2026-05-07). Änderungen an Pflichtfeldern oder Konventionen
-erfordern PR + Review. Specs, die einer früheren Version folgen, müssen vor Gate 3
-nachgezogen werden.
+Diese Datei: SCHEMA v2 (2026-05-08; Issue #12). Änderungen an Pflichtfeldern oder
+Konventionen erfordern PR + Review. Specs, die einer früheren Version folgen, müssen vor
+Gate 3 nachgezogen werden.
+
+Issue #12 erweitert um: §11 Severity-Buckets + Float-Slots, §12 Constraint-Prosa-
+Konvention, §13 Brand-Overrides-Format.
