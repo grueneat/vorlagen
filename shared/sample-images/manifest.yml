@@ -1,0 +1,136 @@
+# Master library manifest — shared/sample-images/manifest.yml
+#
+# Issue #13: zentralisierte Demo-Bild-Bibliothek + alle Templates auffüllen.
+# Each entry documents:
+#   - path: relative to shared/sample-images/
+#   - prompt: verbatim Codex prompt (regenerable via tools/codex_image_gen.py --library)
+#   - tags: discovery hints (D4 — permissive)
+#   - synthetic: true for AI-generated content (D5 — license + EU AI Act Art 50)
+#   - license_note: human-readable disclaimer
+#   - size: "WxH" (Codex generation size)
+#   - watermark: caption text overlaid on bottom 4% band ("Symbolfoto — KI-generiert")
+#   - model / quality (optional): Codex generation parameters
+#
+# All bytes carry the Symbolfoto bottom-band watermark; library.crop_for_frame()
+# re-applies the band on cropped variants (R-WATERMARK-CROP).
+#
+# Library layout: portraits/, themen/, kontext/, qr/. QR codes stay
+# template-specific (D9) — qr/ is intentionally empty in the library manifest.
+#
+# Manifest schema enforced by tools/sla_lib/builder/library.py::validate_manifest()
+# (Draft 2020-12 JSON Schema).
+
+images:
+  # ── Portraits ──────────────────────────────────────────────────────────────
+  portrait_maria:
+    path: portraits/maria-beispiel.jpg
+    prompt: |
+      Documentary photograph of a Central European woman in her mid-40s,
+      head-and-shoulders portrait, soft afternoon window light from camera left,
+      neutral grey-green out-of-focus background, 50mm lens, shallow depth of field,
+      visible pores and natural skin texture, warm color balance, slightly desaturated greens.
+      Documentary, unposed, gaze slightly past camera, half-smile.
+      No watermark. No text overlays. No logos or trademarks. No glamorization. No heavy retouching.
+    tags: [portrait, gender:female, age:40s, kandidatin, austrian, setting:office, composition:portrait]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real person. Replace with real candidate photo for production use."
+    size: "1024x1536"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
+  portrait_stefan:
+    path: portraits/stefan-beispiel.jpg
+    prompt: |
+      Documentary photograph of a Central European man in his early 50s,
+      head-and-shoulders portrait, light salt-and-pepper hair, friendly direct gaze,
+      soft late-afternoon window light from camera right, neutral grey-green
+      out-of-focus interior background (community space, wood and glass),
+      50mm lens, shallow depth of field, visible skin texture, warm color balance,
+      slightly desaturated greens. Documentary, unposed, calm half-smile.
+      No watermark. No text overlays. No logos or trademarks. No glamorization.
+      No heavy retouching.
+    tags: [portrait, gender:male, age:50s, kandidat, austrian, setting:community, composition:portrait]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real person. Replace with real candidate photo for production use."
+    size: "1024x1536"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
+  # ── Themen ─────────────────────────────────────────────────────────────────
+  themen_klimaschutz_solar:
+    path: themen/klimaschutz-solar.jpg
+    # Original prompt for migrated bytes from #11
+    # (templates/kandidat-falzflyer-din-lang/samples/themen-klimaschutz.jpg).
+    prompt: |
+      Documentary photograph, landscape orientation, of a rooftop solar installation
+      on a Niederösterreich farmhouse with vineyards in the background, golden-hour light,
+      24mm lens, natural color balance, slightly desaturated greens. Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks.
+    tags: [themen, topic:klimaschutz, subtopic:solar, composition:landscape, austrian, outdoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real local Klimaschutz/Energie photo for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
+  themen_klimaschutz_windrad:
+    path: themen/klimaschutz-windrad.jpg
+    prompt: |
+      Documentary photograph, landscape orientation, of a Niederösterreich
+      wind-turbine on a rolling hill at golden hour, mid-distance framing, 35mm lens,
+      natural color balance, slightly desaturated greens, warm afternoon palette.
+      Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks.
+    tags: [themen, topic:klimaschutz, subtopic:windrad, composition:landscape, austrian, outdoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real local Klimaschutz/Energie photo for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+
+  themen_soziales_kaffeehaus:
+    # NOTE D8 fix: bytes migrated from kandidat-falzflyer-din-lang/samples/themen-soziales.jpg
+    # are a Wiener Kaffeehaus (NOT a Gemeindebau). ID renamed to match the
+    # actual subject. A separate themen_soziales_gemeindebau is generated
+    # fresh in Phase 3 (Task 6) for the iconic-Soziales-theme variant.
+    path: themen/soziales-kaffeehaus.jpg
+    prompt: |
+      Documentary photograph, landscape, of a Wiener Kaffeehaus interior with brass fittings,
+      two patrons in conversation at a wooden booth (faces not toward camera), late-afternoon
+      window light, 35mm lens, warm tones. Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks.
+    tags: [themen, topic:soziales, subtopic:kaffeehaus, composition:landscape, austrian, indoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+
+  themen_bildung_volksschule:
+    path: themen/bildung-volksschule.jpg
+    prompt: |
+      Documentary photograph, landscape, of a small-town Austrian schoolyard with children
+      (faces obscured / motion blur), Niederösterreich Dorfstraße in the background,
+      overcast diffused daylight, 35mm lens, natural colors. Authentic, unposed.
+      No watermark. No text overlays. No logos or trademarks.
+    tags: [themen, topic:bildung, subtopic:volksschule, composition:landscape, austrian, outdoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+
+  # ── Kontext ────────────────────────────────────────────────────────────────
+  kontext_infostand_szene:
+    path: kontext/infostand-szene.jpg
+    prompt: |
+      Documentary photograph, landscape, of a Grüne Niederösterreich Infostand
+      on a small-town square, group of people in mid-conversation around a table
+      with leaflets (no logos or party banners visible), bright overcast daylight,
+      35mm lens, authentic and candid. Faces partially obscured.
+      No watermark. No text overlays. No logos or trademarks.
+    tags: [kontext, scene:infostand, composition:landscape, austrian, outdoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"

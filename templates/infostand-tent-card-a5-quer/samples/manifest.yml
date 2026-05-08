@@ -1,16 +1,9 @@
 slug: infostand-tent-card-a5-quer
-images:
-  - name: hintergrund-mitmachen
-    output_path: samples/hintergrund-mitmachen.jpg
-    prompt: |
-      Documentary photograph, landscape, of a Grüne Niederösterreich Infostand
-      on a small-town square, group of people in mid-conversation around a table
-      with leaflets (no logos or party banners visible), bright overcast daylight,
-      35mm lens, authentic and candid. Faces partially obscured.
-      No watermark. No text overlays. No logos or trademarks.
-    size: "1536x1024"
-    synthetic: true
-    note: "synthetic, demo-only — optional Hintergrund auf Mitmachen-Seite"
+# Image bytes live in the central library at shared/sample-images/.
+# Library binding happens in build.py via library.load(<id>) (issue #13).
+uses_from_library:
+  - id: kontext_infostand_szene
+    anname: "Hintergrund-Mitmachen"
 qr_codes:
   - name: qr-mitmachen
     target_url: https://noe.gruene.at/mitmachen/
