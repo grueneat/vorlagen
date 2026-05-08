@@ -163,18 +163,21 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
 
     # ---- PAGE 2: Back (2x2 grid + Impressum) ---------------------------
     # White background (no full-page poly needed; default is white)
-    # Logo (cmyk) top-left — 30x9mm = 85x25.5pt → scale ≈ 0.206
-    logo_cmyk_path = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
-    if logo_cmyk_path.exists():
-        lc_data, lc_ext = pack_inline_image(logo_cmyk_path.read_bytes(), "png")
+    # Logo (Brand-Bund) top-left. iter-3: migrated from gruene-cmyk.png
+    # wordmark to gruene-logo-bund-dunkel.png. Frame re-sized to 18×16 mm
+    # to honor the new ~1.12:1 aspect within the cramped y=6..22 corner
+    # (cells start at y=22). On A6 (kurze Kante=105) the Quickguide
+    # Print target is 3×M = 18.9 mm — 18 mm sits at 95%. ✓
+    logo_brand_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
+    if logo_brand_path.exists():
+        lc_data, lc_ext = pack_inline_image(logo_brand_path.read_bytes(), "png")
         page1.add(ImageFrame(
-            x_mm=6, y_mm=6, w_mm=30, h_mm=9,
+            x_mm=6, y_mm=6, w_mm=18, h_mm=16,
             inline_image_data=lc_data,
             inline_image_ext=lc_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.206, 0.216),
             layer=1,
-            anname="Logo Grüne (cmyk)",
+            anname="Logo Grüne (Bund-Dunkel)",
         ))
 
     # 2x2 grid: 4 cells, each ~70 mm wide, ~39 mm tall, with 2 mm gutter.

@@ -137,25 +137,29 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Seitenhintergrund",
     ))
 
-    # Logo (top-left) — embedded inline so the SLA stays self-contained
-    logo_path = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
+    # Logo (top-left, Brand-Bund) — embedded inline so the SLA stays
+    # self-contained. iter-3: migrated from gruene-cmyk.png (3.5:1 wordmark)
+    # to gruene-logo-bund-dunkel.png (~1.12:1 brushstroke G + DIE-GRÜNEN
+    # tag). Frame re-sized to honor the new aspect (32×28 mm ≈ 1.14:1).
+    # On A3-quer (kurze Kante=297) the Quickguide Print target is
+    # 3×M = 53.5 mm wide; 32 mm sits at 60% of target — modest but
+    # corner-anchored so as not to dominate the headline. scale_type=0,
+    # ratio=1 → Scribus aspect-preserving auto-fit fills the frame.
+    # h=28 keeps the logo bottom edge (y=38) clear of the headline at y=40.
+    logo_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
     if not logo_path.exists():
         raise FileNotFoundError(
-            f"Logo asset missing at {logo_path} — run "
-            f"`bin/refresh-placeholder-logos` or drop the brand logos there."
+            f"Logo asset missing at {logo_path} — Issue #11 iter-3 brand-logo "
+            f"integration requires shared/logos/gruene-logo-bund-dunkel.png."
         )
     logo_bytes = logo_path.read_bytes()
     data, ext = pack_inline_image(logo_bytes, "png")
-    # Use scale_type=0 (free) + explicit LOCALSCX/Y so Scribus renders the
-    # PNG inside the frame (scale_type=1+ratio=1 was rendering blank).
-    # 413x118 px source, 60x18 mm frame ≈ 170.1x51 pt → scale = 51/118 ≈ 0.432
     page.add(ImageFrame(
-        x_mm=15, y_mm=10, w_mm=60, h_mm=18,
+        x_mm=15, y_mm=10, w_mm=32, h_mm=28,
         inline_image_data=data,
         inline_image_ext=ext,
         scale_type=0,
         ratio=1,
-        local_scale=(0.412, 0.432),
         layer=1,
         anname="Logo Grüne (top-left)",
     ))

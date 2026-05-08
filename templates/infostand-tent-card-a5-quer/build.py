@@ -116,17 +116,21 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
     )
 
     # ---- PANEL A (y=0..105) — normal orientation ---------------------------
-    # Logo (cmyk) top-left of Panel A — 45x14mm = 127.6x39.7pt → scale ≈ 0.309
-    logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
-    if logo_cmyk.exists():
-        lc_data, lc_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+    # Logo (Brand-Bund) top-left of Panel A. iter-3: migrated from
+    # gruene-cmyk.png wordmark (3.5:1) to gruene-logo-bund-dunkel.png
+    # (~1.12:1 brushstroke G + DIE-GRÜNEN tag). Frame re-sized 36×32 mm
+    # to match the new aspect. On A5-quer (kurze Kante=210) the
+    # Quickguide Print target is 3×M = 37.8 mm — 36 mm sits at 95%. ✓
+    # h=32 keeps clearance to the Hintergrund-Mitmachen photo at y=44.
+    logo_brand = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
+    if logo_brand.exists():
+        lc_data, lc_ext = pack_inline_image(logo_brand.read_bytes(), "png")
         page.add(ImageFrame(
-            x_mm=12, y_mm=10, w_mm=45, h_mm=14,
+            x_mm=12, y_mm=10, w_mm=36, h_mm=32,
             inline_image_data=lc_data, inline_image_ext=lc_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.309, 0.336),
             layer=LAYER_BILDER,
-            anname="Logo Grüne (cmyk, panel A)",
+            anname="Logo Grüne (panel A)",
         ))
 
     # Headline Panel A — placed to the right of the logo
@@ -254,16 +258,17 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         rotation_deg=180,
     ))
 
-    # Logo Panel B (rotated 180°)
-    if logo_cmyk.exists():
-        lc2_data, lc2_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+    # Logo Panel B (rotated 180°). iter-3: same Brand-Bund logo as Panel A,
+    # 36×32 mm pre-rotation at (12, 178). After rotation 180° around bbox
+    # center: rotated_x = 12+36 = 48, rotated_y = 178+32 = 210.
+    if logo_brand.exists():
+        lc2_data, lc2_ext = pack_inline_image(logo_brand.read_bytes(), "png")
         page.add(ImageFrame(
-            x_mm=57, y_mm=210, w_mm=45, h_mm=14,
+            x_mm=48, y_mm=210, w_mm=36, h_mm=32,
             inline_image_data=lc2_data, inline_image_ext=lc2_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.309, 0.336),
             layer=LAYER_BILDER,
-            anname="Logo Grüne (cmyk, panel B)",
+            anname="Logo Grüne (panel B)",
             rotation_deg=180,
         ))
 

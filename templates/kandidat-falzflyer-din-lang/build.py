@@ -183,16 +183,20 @@ def _add_front(doc, page0):
     ))
 
     # ---- Panel 1 (Cover) — x=0..99 -----
-    # Logo (cmyk) top-left corner
-    logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
+    # Logo (Brand-Bund) top-left corner. iter-3: migrated from
+    # gruene-cmyk.png wordmark to gruene-logo-bund-dunkel.png.
+    # Frame 20×18 mm honors the new ~1.12:1 aspect within the
+    # available y=10..28 zone (portrait starts at y=28). On DIN-lang
+    # (kurze Kante=105) Quickguide Print target = 3×M = 18.9 mm —
+    # 20 mm sits at 106 %, well within tolerance.
+    logo_brand = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
     logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
-    if logo_cmyk.exists():
-        lc_data, lc_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+    if logo_brand.exists():
+        lc_data, lc_ext = pack_inline_image(logo_brand.read_bytes(), "png")
         page0.add(ImageFrame(
-            x_mm=6, y_mm=10, w_mm=35, h_mm=10,
+            x_mm=6, y_mm=10, w_mm=20, h_mm=18,
             inline_image_data=lc_data, inline_image_ext=lc_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.240, 0.240),
             layer=LAYER_BILDER,
             anname="P1 Logo Grüne",
         ))
@@ -261,14 +265,15 @@ def _add_front(doc, page0):
         anname="P2 Teaser-Body",
     ))
 
-    # P2 small logo at bottom of panel — 25x8mm → scale ≈ 0.172
-    if logo_cmyk.exists():
-        lc2_data, lc2_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+    # P2 small logo at bottom of panel. iter-3: bund-dunkel at 16×14 mm
+    # honors the new ~1.12:1 aspect; bottom-anchored within y=188..205
+    # (panel bottom at y=210, leaving 5 mm clearance).
+    if logo_brand.exists():
+        lc2_data, lc2_ext = pack_inline_image(logo_brand.read_bytes(), "png")
         page0.add(ImageFrame(
-            x_mm=105, y_mm=188, w_mm=25, h_mm=8,
+            x_mm=105, y_mm=188, w_mm=16, h_mm=14,
             inline_image_data=lc2_data, inline_image_ext=lc2_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.172, 0.192),
             layer=LAYER_BILDER,
             anname="P2 Logo (klein)",
         ))
@@ -514,15 +519,16 @@ def _add_back(doc, page1):
         layer=LAYER_BILDER,
         anname="P6 QR-Code (termine)",
     ))
-    # P6 Logo Grüne — 35x10mm → scale 0.240
-    logo_cmyk = HERE.parents[1] / "shared" / "logos" / "gruene-cmyk.png"
-    if logo_cmyk.exists():
-        lc6_data, lc6_ext = pack_inline_image(logo_cmyk.read_bytes(), "png")
+    # P6 Logo Grüne (Brand-Bund). iter-3: bund-dunkel at 17×15 mm honors
+    # the new ~1.13:1 aspect and fits the y=130..145 corner above
+    # Impressum (which starts at y=145).
+    logo_brand_p6 = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
+    if logo_brand_p6.exists():
+        lc6_data, lc6_ext = pack_inline_image(logo_brand_p6.read_bytes(), "png")
         page1.add(ImageFrame(
-            x_mm=204, y_mm=130, w_mm=35, h_mm=10,
+            x_mm=204, y_mm=130, w_mm=17, h_mm=15,
             inline_image_data=lc6_data, inline_image_ext=lc6_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.240, 0.240),
             layer=LAYER_BILDER,
             anname="P6 Logo Grüne",
         ))

@@ -272,7 +272,7 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Brand-Bar (Rückseite)",
     ))
 
-    # Logo (white on Dunkelgrün, back)
+    # Logo (white) on Dunkelgrün Brand-Bar (back, top) — matches front pattern.
     if logo_weiss.exists():
         lw_data2, lw_ext2 = pack_inline_image(logo_weiss.read_bytes(), "png")
         page1.add(ImageFrame(
@@ -281,7 +281,24 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             scale_type=0, ratio=1,
             local_scale=(0.240, 0.240),
             layer=LAYER_BILDER,
-            anname="Logo Grüne (cmyk, back)",
+            anname="Logo Grüne (weiss, back-band)",
+        ))
+
+    # iter-3: Brand-Bund logo on the white area below the Brand-Bar.
+    # Reinforces brand recognition on the contact side of the door-hanger.
+    # On A6-format-equivalent (kurze Kante=105) Quickguide Print target
+    # is 3×M = 18.9 mm — 18×16 mm sits at 95 % of target with the new
+    # ~1.12:1 aspect. Positioned at x=68..86, y=24..40 (right of band's
+    # white-logo, occupying the thin slot above the portrait at y=75).
+    logo_brand_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
+    if logo_brand_path.exists():
+        lb_data, lb_ext = pack_inline_image(logo_brand_path.read_bytes(), "png")
+        page1.add(ImageFrame(
+            x_mm=68, y_mm=24, w_mm=18, h_mm=16,
+            inline_image_data=lb_data, inline_image_ext=lb_ext,
+            scale_type=0, ratio=1,
+            layer=LAYER_BILDER,
+            anname="Logo Grüne (Bund-Dunkel, back)",
         ))
 
     # Kandidat-Portrait placeholder (optional — slot stays present, image
