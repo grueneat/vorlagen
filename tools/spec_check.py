@@ -9,9 +9,18 @@ Usage::
 
     tools/spec_check.py SLUG                    # check one template
     tools/spec_check.py --all                   # check all under templates/_specs/
-    tools/spec_check.py --tolerance-mm 0.1      # default tolerance
+    tools/spec_check.py --tolerance-mm 0.1      # tighten default 0.5mm tolerance
 
-Exit 0 on all-match, 1 on drift.
+Severity buckets (Issue #12, CONTEXT D8):
+- drift < 0.05mm      : silent (sub-pixel float-precision noise; not reported)
+- 0.05 <= d <= tol    : info (logged; non-blocking)
+- d > tolerance       : error (logged; exit 1)
+
+The default tolerance is 0.5mm — typography and frame placement at print
+scale tolerates this comfortably. Pass --tolerance-mm 0.1 for the legacy
+build-loop refinement scale.
+
+Exit 0 on no errors (info-only is OK), 1 on any error.
 
 Skip rules:
 - Slots whose ``anname`` starts with ``internal:`` or ``_`` are ignored on the
@@ -109,14 +118,34 @@ def _sla_pageobjects(sla_path: Path) -> list[dict]:
     return out
 
 
-def check(slug: str, tolerance_mm: float = 0.1) -> tuple[int, list[str]]:
-    """Compare spec slots vs SLA frames. Returns (drift_count, messages)."""
+_SILENT_THRESHOLD_MM = 0.05
+
+
+def _classify(drift_mm: float, tolerance_mm: float) -> str:
+    """Bucket a drift magnitude.
+
+    Returns "silent" | "info" | "error".
+    """
+    if drift_mm < _SILENT_THRESHOLD_MM:
+        return "silent"
+    if drift_mm <= tolerance_mm:
+        return "info"
+    return "error"
+
+
+def check(slug: str, tolerance_mm: float = 0.5) -> tuple[int, list[str]]:
+    """Compare spec slots vs SLA frames. Returns (error_count, messages).
+
+    Severity buckets (CONTEXT D8): drift below SILENT_THRESHOLD (0.05mm)
+    is silent; below tolerance is "info:"; above is "error:" and counted
+    toward the returned error_count.
+    """
     spec_path = SPECS_DIR / f"{slug}.md"
     sla_path = TEMPLATES_DIR / slug / "template.sla"
     if not spec_path.exists():
-        return 1, [f"spec not found: {spec_path}"]
+        return 1, [f"error: spec not found: {spec_path}"]
     if not sla_path.exists():
-        return 1, [f"sla not found: {sla_path}"]
+        return 1, [f"error: sla not found: {sla_path}"]
 
     spec_slots = _load_spec_slots(spec_path)
     sla_frames = _sla_pageobjects(sla_path)
@@ -129,8 +158,8 @@ def check(slug: str, tolerance_mm: float = 0.1) -> tuple[int, list[str]]:
     spec_annames = {s.get("anname", "") for s in spec_slots if s.get("anname")}
     sla_annames = set(sla_by_anname.keys())
 
-    msgs = []
-    drift = 0
+    msgs: list[str] = []
+    errors = 0
 
     # Anname-missing: in spec but not SLA
     for s in spec_slots:
@@ -138,8 +167,8 @@ def check(slug: str, tolerance_mm: float = 0.1) -> tuple[int, list[str]]:
         if not an:
             continue
         if an not in sla_by_anname:
-            msgs.append(f"  [missing-in-sla] anname '{an}' in spec but not found in SLA")
-            drift += 1
+            msgs.append(f"error: [missing-in-sla] anname '{an}' in spec but not found in SLA")
+            errors += 1
             continue
         # Geometry check: take first SLA frame with this anname
         # (multiple SLA frames sharing one anname is unusual but allowed)
@@ -153,19 +182,24 @@ def check(slug: str, tolerance_mm: float = 0.1) -> tuple[int, list[str]]:
             except (TypeError, ValueError):
                 continue
             sla_v = sf[axis]
-            if abs(spec_v - sla_v) > tolerance_mm:
-                msgs.append(
-                    f"  [drift] '{an}' {axis}: spec={spec_v:.2f} sla={sla_v:.2f} "
-                    f"(diff {abs(spec_v - sla_v):.2f} > tol {tolerance_mm})"
-                )
-                drift += 1
+            d = abs(spec_v - sla_v)
+            severity = _classify(d, tolerance_mm)
+            if severity == "silent":
+                continue
+            line = (
+                f"{severity}: [drift] '{an}' {axis}: spec={spec_v:.2f} "
+                f"sla={sla_v:.2f} (diff {d:.2f} {'>' if severity == 'error' else '<='} tol {tolerance_mm})"
+            )
+            msgs.append(line)
+            if severity == "error":
+                errors += 1
 
     # Anname-extra: in SLA but not spec (warning, not blocker — out-of-scope SLA frames)
     extra = sla_annames - spec_annames
     for an in sorted(extra):
-        msgs.append(f"  [extra-in-sla] anname '{an}' in SLA but not declared in spec (warn)")
+        msgs.append(f"warn: [extra-in-sla] anname '{an}' in SLA but not declared in spec")
 
-    return drift, msgs
+    return errors, msgs
 
 
 def main(argv=None) -> int:
@@ -175,8 +209,10 @@ def main(argv=None) -> int:
     ap.add_argument("slug", nargs="?", help="Template slug (e.g. themen-plakat-a3-quer)")
     ap.add_argument("--all", action="store_true",
                     help="Check every spec under templates/_specs/")
-    ap.add_argument("--tolerance-mm", type=float, default=0.1,
-                    help="Per-axis tolerance in mm (default 0.1)")
+    ap.add_argument("--tolerance-mm", type=float, default=0.5,
+                    help=("Per-axis tolerance in mm (default 0.5). Drifts "
+                          "<0.05mm are silent; 0.05<=d<=tol are info; "
+                          ">tol are error. Pass 0.1 for legacy behavior."))
     args = ap.parse_args(argv)
 
     if args.all:
@@ -192,20 +228,24 @@ def main(argv=None) -> int:
             return 0
         slugs = [args.slug]
 
-    overall_drift = 0
+    overall_errors = 0
     for slug in slugs:
-        drift, msgs = check(slug, tolerance_mm=args.tolerance_mm)
-        if drift > 0:
-            print(f"DRIFT: {slug} ({drift} issues)")
+        errors, msgs = check(slug, tolerance_mm=args.tolerance_mm)
+        info_count = sum(1 for m in msgs if m.startswith("info:"))
+        warn_count = sum(1 for m in msgs if m.startswith("warn:"))
+        if errors > 0:
+            print(f"DRIFT: {slug} ({errors} errors, {info_count} info)")
             for m in msgs:
                 print(m)
-            overall_drift += drift
+            overall_errors += errors
         else:
-            warnings = [m for m in msgs if "[extra-in-sla]" in m]
-            print(f"OK:    {slug} (no drift; {len(warnings)} extras)")
-            for m in warnings[:3]:  # truncate noise
+            print(f"OK:    {slug} (0 errors, {info_count} info, {warn_count} extras)")
+            for m in msgs:
+                if m.startswith("info:"):
+                    print(m)
+            for m in [x for x in msgs if x.startswith("warn:")][:3]:
                 print(m)
-    return 1 if overall_drift else 0
+    return 1 if overall_errors else 0
 
 
 if __name__ == "__main__":
