@@ -70,6 +70,21 @@ from .composites import (
     GridCell,
     HierarchyBlock,
 )
+from .constraints import (
+    same_y,
+    same_x,
+    same_size,
+    mirrored_x,
+    mirrored_y,
+    inside,
+    equal_gap,
+    hierarchy,
+    same_style,
+    distance_y,
+    distance_x,
+    Constraint,
+    Violation,
+)
 
 __all__ = [
     "Document",
@@ -98,4 +113,17 @@ __all__ = [
     "GridSpec",
     "GridCell",
     "HierarchyBlock",
+    "same_y",
+    "same_x",
+    "same_size",
+    "mirrored_x",
+    "mirrored_y",
+    "inside",
+    "equal_gap",
+    "hierarchy",
+    "same_style",
+    "distance_y",
+    "distance_x",
+    "Constraint",
+    "Violation",
 ]
