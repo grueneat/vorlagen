@@ -26,7 +26,7 @@
   - All 8 builds OK; 3 production round-trips GREEN; check-stale-previews clean;
     321 unit tests pass; bin/render-gallery 8/8 OK.
 - [x] Task 13: Visual review pass — commit 614438d (reviews/library-content-iter1.md)
-- [ ] Task 14: Push branch and open PR (next)
+- [x] Task 14: Push branch and open PR — PR #26 https://github.com/GrueneAT/vorlagen/pull/26
 
 Plus a chore-level rebuild commit:
 - 84707e3: rebuild templates after full 13-image library available
