@@ -120,6 +120,84 @@ images:
     size: "1536x1024"
     watermark: "Symbolfoto — KI-generiert"
 
+  themen_soziales_gemeindebau:
+    # NEW (issue #13) — distinct from soziales_kaffeehaus (a separate, equally
+    # valid Soziales-thema variant; iconic Gemeindebau composition).
+    path: themen/soziales-gemeindebau.jpg
+    prompt: |
+      Documentary photograph, landscape, of a small Gemeindebau (council
+      housing) courtyard in Niederösterreich — modest 3-4 story building with
+      plaster facade and uniform window grid, two residents in mid-conversation
+      near a stairwell entrance (faces obscured / partial profile), late-spring
+      morning, soft diffuse light, 35mm lens, natural color balance, slightly
+      desaturated greens. Modest, lived-in character, no luxury cues.
+      Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks. No party flags.
+    tags: [themen, topic:soziales, subtopic:gemeindebau, composition:landscape, austrian, outdoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
+  themen_bildung_erwachsenenbildung:
+    path: themen/bildung-erwachsenenbildung.jpg
+    prompt: |
+      Documentary photograph, landscape, of an adult-education evening course
+      in a small Austrian community center (Volkshochschule-style room), 4-6 adult
+      learners aged 30-60 around a workshop table with laptops and notebooks,
+      soft warm overhead light from pendant lamps, late evening, 35mm lens,
+      natural color balance, slightly desaturated greens. Faces partially turned
+      away from camera or showing concentrated expressions, no direct camera gaze.
+      Wood-paneled walls, modest community-space character. Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks. No school/uni branding.
+    tags: [themen, topic:bildung, subtopic:erwachsenenbildung, composition:landscape, austrian, indoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
+  themen_wirtschaft_handwerk:
+    path: themen/wirtschaft-handwerk.jpg
+    prompt: |
+      Documentary photograph, landscape, of a small Austrian Tischlerei
+      (carpentry workshop) interior, two craftspeople working at a workbench
+      with hand tools and a partially-finished oak piece, sawdust catching the
+      light, large warm afternoon window from camera left, 35mm lens, natural
+      color balance, slightly desaturated greens, warm wood tones. Faces in
+      profile or partial, focused on work, no direct camera gaze. Traditional
+      workshop character, modest scale (not industrial). Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks. No brand names on tools.
+    tags: [themen, topic:wirtschaft, subtopic:handwerk, composition:landscape, austrian, indoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
+  themen_verkehr_radweg:
+    path: themen/verkehr-radweg.jpg
+    prompt: |
+      Documentary photograph, landscape, of a separated cycle path along the
+      Donau riverside in Niederösterreich, two cyclists in mid-distance riding
+      away from camera, late spring morning, soft diffuse overcast light, mature
+      deciduous trees alongside the path, 35mm lens, natural color balance,
+      slightly desaturated greens. Mid-life adult cyclists in everyday clothing
+      (no racing gear), modest commuter or leisure character. No vehicles. No
+      text on signage. Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks. No bicycle-brand visible.
+    tags: [themen, topic:verkehr, subtopic:radweg, composition:landscape, austrian, outdoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
   # ── Kontext ────────────────────────────────────────────────────────────────
   kontext_infostand_szene:
     path: kontext/infostand-szene.jpg
@@ -134,3 +212,46 @@ images:
     license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
     size: "1536x1024"
     watermark: "Symbolfoto — KI-generiert"
+
+  kontext_buergerversammlung:
+    path: kontext/buergerversammlung.jpg
+    prompt: |
+      Documentary photograph, landscape, of a Bürgerversammlung in a small
+      Austrian Gemeindesaal (town hall room), 12-18 attendees seated in rows of
+      folding chairs facing a low stage with speaker's table and a single
+      standing speaker (back to camera), late afternoon ambient light through
+      side windows, 24mm lens, natural color balance, slightly desaturated
+      greens. Mixed-age audience (30s to 70s), engaged-listening posture, no
+      raised hands, no party banners or political signage visible. Modest
+      community-hall character (wood panels, modest stage curtain). Authentic
+      and unposed.
+      No watermark. No text overlays. No logos or trademarks. No party flags.
+      No campaign posters in background.
+    tags: [kontext, scene:versammlung, composition:landscape, austrian, indoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+
+  kontext_stammtisch_cafe:
+    path: kontext/stammtisch-cafe.jpg
+    prompt: |
+      Documentary photograph, landscape, of a Stammtisch in a small Austrian
+      village Gasthof, round wooden table with 4-5 adults aged 40-65 in casual
+      conversation, half-empty coffee cups and a folded newspaper on the table,
+      warm interior light from a brass pendant lamp, late afternoon, 35mm lens,
+      natural color balance, slightly desaturated greens, warm tones. Faces
+      in mid-conversation (in profile or three-quarter), no direct camera gaze,
+      no posed group shot character. Modest village-Gasthof character, dark
+      wood interior, no chain-restaurant visual cues. Authentic and unposed.
+      No watermark. No text overlays. No logos or trademarks. No newspaper
+      headlines legible.
+    tags: [kontext, scene:stammtisch, composition:landscape, austrian, indoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
