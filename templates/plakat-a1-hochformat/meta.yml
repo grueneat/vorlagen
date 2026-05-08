@@ -13,7 +13,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../plakat-a1-hochformat-original.sla
-previews_for_sla: 5c9a04ed876a8bdfad9ed7bb1851fbe4e39fd6119db1469f18b06f1c07bad48c
+previews_for_sla: b3024d3249bcdcaac923ed4c77c9446f6905c5f87ef93c2ac068743de2889b76
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
