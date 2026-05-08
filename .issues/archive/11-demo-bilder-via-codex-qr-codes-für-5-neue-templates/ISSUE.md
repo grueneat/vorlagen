@@ -2,6 +2,7 @@
 id: '11'
 title: Demo-Bilder via Codex + QR-Codes für 5 neue Templates
 status: open
+ship_state: merged
 priority: medium
 labels:
 - templates
