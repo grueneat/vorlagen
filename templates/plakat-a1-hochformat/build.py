@@ -10,6 +10,8 @@ sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 from sla_lib.builder import (  # noqa: E402
     Brand, Document, TextFrame, ImageFrame, Polygon, Run,
     ParaStyle, CharStyle, SoftShadow,
+    # Issue #12 — constraints
+    same_size,
 )
 
 from sla_lib.builder import library, pack_inline_image  # noqa: E402  (issue #13)
@@ -233,6 +235,28 @@ def build_preview():
                     frame, img, target_w_mm=w, target_h_mm=h
                 )
     return doc
+
+
+# Public alias for structural_check (Issue #12, D13). Mirrors the clean
+# end-user template — NOT the preview variant.
+build_doc = build_template
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+#
+# Production template auto-generated from plakat-a1-hochformat-original.sla;
+# only 1 ANNAME exposed in the source SLA ("Hero"). The Hero slot is the
+# anchor for build_preview() injects; CONSTRAINTS provide a sanity assertion
+# placeholder that references the slot — self-checking that the anchor's
+# anname stays stable across regenerations.
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # Trivial self-witness: same_size on a single target is a no-op
+    # predicate but ensures the "Hero" anname remains discoverable to
+    # structural_check (orphan-anname warning would catch a rename drift).
+    same_size("Hero", name="hero_anname_anchor"),
+]
 
 
 if __name__ == "__main__":

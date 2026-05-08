@@ -17,6 +17,17 @@ build:
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
 previews_for_sla: 9e914ec9e9473d3ea68d6a57d70bd2d2a4b23dec5eb25f39e203cbba8755437e
+
+# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+brand_overrides:
+  - id: brand:line_spacing_0.9
+    reason: >-
+      Production template auto-generated from gruene-zeitung-vorlage-original
+      .sla; multiple per-template para-styles drift from Quickguide 0.9 factor
+      (e.g. Titelseite Header 46/55=0.84, Bildunterschrift weiß 12/10=1.2x).
+      The Zeitung uses journalism conventions (tighter headline leading, looser
+      caption leading) that differ from the unified-Quickguide rule. Round-
+      trip diff is the byte-stable contract.
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"

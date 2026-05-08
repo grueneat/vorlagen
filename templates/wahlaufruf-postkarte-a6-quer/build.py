@@ -23,6 +23,12 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
+    # Issue #12 — composites + constraints
+    AlignedRow,
+    same_y,
+    same_x,
+    same_style,
+    inside,
 )
 
 
@@ -37,7 +43,9 @@ BLEED_MM = 3.0
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-def build(out_path: str | Path = HERE / "template.sla") -> None:
+def build_doc() -> Document:
+    """Issue #12 D13: return constructed Document; persistence is the
+    caller's job (CLI wrapper below or structural_check)."""
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Wahlaufruf-Postkarte A6 quer",
@@ -193,6 +201,10 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         (78, 62, "Wo informieren",
          "gruene-noe.at"),
     ]
+    # Issue #12 — construct-then-add convention: each cell's hd/bd frame
+    # assigned to a named local before page.add. AlignedRow with single
+    # child preserves byte-stable interleave order while documenting the
+    # row-alignment intent (cells in same row share y).
     cell_idx = 1
     for cx, cy, hd, body in cells:
         if cx == 6:
@@ -202,22 +214,24 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             cell_w = 35
         else:
             cell_w = 64
-        # Headline
-        page1.add(TextFrame(
+        cell_hd = TextFrame(
             x_mm=cx, y_mm=cy, w_mm=cell_w, h_mm=8,
             layer=2,
             style="wahlaufruf/cell-headline",
             runs=[Run(text=hd, paragraph_style="wahlaufruf/cell-headline")],
             anname=f"Cell {cell_idx} — Headline",
-        ))
-        # Body
-        page1.add(TextFrame(
+        )
+        cell_bd = TextFrame(
             x_mm=cx, y_mm=cy + 9, w_mm=cell_w, h_mm=30 if cell_idx <= 2 else 20,
             layer=2,
             style="wahlaufruf/cell-body",
             runs=[Run(text=body, paragraph_style="wahlaufruf/cell-body")],
             anname=f"Cell {cell_idx} — Body",
-        ))
+        )
+        page1.add(AlignedRow(y_mm=cy, children=[cell_hd],
+                              name=f"cell{cell_idx}_hd_row"))
+        page1.add(AlignedRow(y_mm=cy + 9, children=[cell_bd],
+                              name=f"cell{cell_idx}_bd_row"))
         cell_idx += 1
 
     # QR-back slot (Issue #11): 25x25 mm, bottom-right of back, conditional
@@ -249,9 +263,42 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Impressum",
     ))
 
+    return doc
+
+
+def build(out_path: str | Path = HERE / "template.sla") -> Path:
+    doc = build_doc()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # Top row of 2x2 grid: cells 1+2 share y=22 (headline) and y=31 (body).
+    same_y("Cell 1 — Headline", "Cell 2 — Headline", name="back_row1_hd"),
+    same_y("Cell 1 — Body", "Cell 2 — Body", name="back_row1_bd"),
+    # Bottom row of 2x2 grid: cells 3+4 share y=62 (headline) and y=71 (body).
+    same_y("Cell 3 — Headline", "Cell 4 — Headline", name="back_row2_hd"),
+    same_y("Cell 3 — Body", "Cell 4 — Body", name="back_row2_bd"),
+    # Left column shared x: cells 1 & 3 left-aligned.
+    same_x("Cell 1 — Headline", "Cell 3 — Headline", name="back_col1_x"),
+    # Right column shared x: cells 2 & 4 left-aligned at x=78.
+    same_x("Cell 2 — Headline", "Cell 4 — Headline", name="back_col2_x"),
+    # Style consistency across all 4 cell-headlines and all 4 cell-bodies.
+    same_style(
+        "Cell 1 — Headline", "Cell 2 — Headline",
+        "Cell 3 — Headline", "Cell 4 — Headline",
+        name="cell_hd_style_consistent",
+    ),
+    same_style(
+        "Cell 1 — Body", "Cell 2 — Body",
+        "Cell 3 — Body", "Cell 4 — Body",
+        name="cell_bd_style_consistent",
+    ),
+]
 
 
 if __name__ == "__main__":

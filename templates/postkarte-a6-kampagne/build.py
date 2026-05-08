@@ -10,6 +10,8 @@ sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 from sla_lib.builder import (  # noqa: E402
     Brand, Document, DocumentLayer, TextFrame, ImageFrame, Polygon, Run,
     ParaStyle, CharStyle, SoftShadow,
+    # Issue #12 — constraints
+    inside,
 )
 from sla_lib.builder.blocks import PageBackground  # noqa: E402
 from sla_lib.builder import library, pack_inline_image  # noqa: E402  (issue #13)
@@ -404,6 +406,27 @@ def build_preview():
                     frame, img, target_w_mm=w, target_h_mm=h
                 )
     return doc
+
+
+# Public alias for structural_check (Issue #12, D13). Mirrors the clean
+# end-user template — NOT the preview variant. Do not call save() on it
+# inside this module — that's the CLI block's job below.
+build_doc = build_template
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+#
+# Production template auto-generated from postkarte-vorlage-original.sla;
+# only 2 ANNAMEs are exposed in the source SLA (P1 Hero, Seitenhintergrund).
+# CONSTRAINTS use string-anname references because the production build
+# does not expose Frame locals.
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # P1 Hero photo frame must sit inside the Seitenhintergrund (page bg)
+    # — sanity check that the demo-content slot doesn't bleed off-page.
+    inside("P1 Hero", "Seitenhintergrund", name="hero_inside_page_bg"),
+]
 
 
 if __name__ == "__main__":

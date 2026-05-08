@@ -25,6 +25,16 @@ build:
 # colors that the original Postkarte ships with.
 original_sla: ../../postkarte-vorlage-original.sla
 previews_for_sla: 988fefe04151d2dedb731cd44b7e5a52e0c9e59cd8960df07844871afa4f9174
+
+# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+brand_overrides:
+  - id: brand:line_spacing_0.9
+    reason: >-
+      Production template auto-generated from postkarte-vorlage-original.sla;
+      the original's per-template para-styles drift from Quickguide 0.9 factor
+      (e.g. Fließtext 13/12=1.083, Headline sehr wichtig 23/27=0.85). Round-
+      trip diff (tools/sla_diff.py --strict) is the byte-stable contract for
+      this template; tightening linesp would break round-trip.
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"

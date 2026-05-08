@@ -26,6 +26,13 @@ from sla_lib.builder import (  # noqa: E402
     ParaStyle,
     pack_inline_image,
     library,
+    # Issue #12 — constraints
+    same_y,
+    same_x,
+    same_size,
+    same_style,
+    equal_gap,
+    distance_y,
 )
 from sla_lib.builder.blocks import FoldLine  # noqa: E402
 
@@ -568,7 +575,9 @@ def _add_back(doc, page1):
     ))
 
 
-def build(out_path: str | Path = HERE / "template.sla") -> None:
+def build_doc() -> Document:
+    """Issue #12 D13: return constructed Document; persistence is the
+    caller's job (CLI wrapper below or structural_check)."""
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Kandidat-Falzflyer DIN-lang",
@@ -599,9 +608,74 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
     _add_front(doc, page0)
     _add_back(doc, page1)
 
+    return doc
+
+
+def build(out_path: str | Path = HERE / "template.sla") -> Path:
+    doc = build_doc()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+#
+# 6-panel layout (front P1/P2/P3, back P4/P5/P6) with 4 themen-modules
+# spread across P4+P5. CONSTRAINTS capture cross-panel alignment and
+# style consistency.
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # All 4 themen-headlines share style.
+    same_style(
+        "P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
+        "P5 Thema 3 — Headline", "P5 Thema 4 — Headline",
+        name="thema_headline_style_consistent",
+    ),
+    # All 4 themen-bodies share style.
+    same_style(
+        "P4 Thema 1 — Body", "P4 Thema 2 — Body",
+        "P5 Thema 3 — Body", "P5 Thema 4 — Body",
+        name="thema_body_style_consistent",
+    ),
+    # Top row themen-headlines (P4 T1 + P5 T3) share y=20.
+    same_y(
+        "P4 Thema 1 — Headline", "P5 Thema 3 — Headline",
+        name="thema_top_row_y",
+    ),
+    # Bottom row themen-headlines (P4 T2 + P5 T4) share y=105.
+    same_y(
+        "P4 Thema 2 — Headline", "P5 Thema 4 — Headline",
+        name="thema_bottom_row_y",
+    ),
+    # Themen-photos (P4 T1 + P4 T2) on Panel 4 share x=6.
+    same_x(
+        "P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
+        name="p4_themen_left_edge",
+    ),
+    # Themen-headlines (P4 T1 + P4 T2) on Panel 4 share x=6.
+    same_x(
+        "P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
+        name="p4_themen_hd_left_edge",
+    ),
+    # Same-panel HL -> body distance: distance_y(thema-1-hd, thema-1-body) ~= 42mm.
+    distance_y(
+        "P4 Thema 1 — Headline", "P4 Thema 1 — Body", equals=42.0,
+        name="thema1_hd_to_body",
+    ),
+    # Themen-photo size match across all 3 photos (P4 T1, P4 T2, P5 T3).
+    same_size(
+        "P4 Thema 1 — Photo", "P4 Thema 2 — Photo", "P5 Thema 3 — Photo",
+        axis="both",
+        name="thema_photos_uniform_size",
+    ),
+    # Same-panel themen vertical gap: top hd at y=20, bottom hd at y=105
+    # — distance 85mm captures the panel-half-height stride.
+    distance_y(
+        "P4 Thema 1 — Headline", "P4 Thema 2 — Headline", equals=85.0,
+        name="p4_thema_vertical_stride",
+    ),
+]
 
 
 if __name__ == "__main__":

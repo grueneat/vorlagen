@@ -26,6 +26,10 @@ from sla_lib.builder import (  # noqa: E402
     ParaStyle,
     pack_inline_image,
     library,
+    # Issue #12 — composites + constraints
+    same_x,
+    same_style,
+    distance_y,
 )
 from sla_lib.builder.blocks import DoorHangerCutout  # noqa: E402
 
@@ -44,7 +48,9 @@ LAYER_TEXT = 2
 LAYER_STANZKONTUR = 3
 
 
-def build(out_path: str | Path = HERE / "template.sla") -> None:
+def build_doc() -> Document:
+    """Issue #12 D13: return constructed Document; persistence is the
+    caller's job (CLI wrapper below or structural_check)."""
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Wahltag-Türanhänger",
@@ -404,9 +410,48 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         layer_idx=LAYER_STANZKONTUR,
     ))
 
+    return doc
+
+
+def build(out_path: str | Path = HERE / "template.sla") -> Path:
+    doc = build_doc()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+#
+# The Türanhänger has minor structural symmetry (front + back panels share
+# x=10 left margin / x=20 portrait alignment) and a clear hierarchy
+# (Headline -> Sub -> Bullet body) on the front panel. CONSTRAINTS below
+# capture the alignment + hierarchy invariants in pure metadata form.
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # Front-panel left edge alignment: Headline / Sub / Bullets / Impressum
+    # all start at x=10mm.
+    same_x(
+        "Headline-Wahltag", "Sub-Headline", "Bullet-Liste", "Impressum",
+        name="front_panel_left_edge",
+    ),
+    # HL -> SL distance (top of HL at y=128, top of SL at y=160 — gap 32mm).
+    distance_y(
+        "Headline-Wahltag", "Sub-Headline", equals=32.0,
+        name="front_hl_to_sl_distance",
+    ),
+    # Style consistency check: the impressum on both pages uses the same style.
+    same_style(
+        "Impressum", "Impressum (back)",
+        name="impressum_style_consistent",
+    ),
+    # Back-panel: Kandidat-Name and Kandidat-Position share x for clean
+    # left-aligned candidate caption block.
+    same_x(
+        "Kandidat-Name", "Kandidat-Position",
+        name="back_kandidat_caption_left_edge",
+    ),
+]
 
 
 if __name__ == "__main__":

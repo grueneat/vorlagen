@@ -138,6 +138,14 @@ jobs:
             [ -f "$sla" ] && python3 tools/check_ci.py "$sla" || true
           done
 
+      - name: Run structural check (Issue #12)
+        # Walks each template's build_doc(), evaluates module-level CONSTRAINTS
+        # and global BRAND_CONSTRAINTS list, honours meta.yml::brand_overrides.
+        # Performance budget: <30s for all 8 templates (CONTEXT D11).
+        run: |
+          set -euo pipefail
+          PYTHONPATH=tools python3 -m sla_lib.builder.structural_check --all
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist

@@ -409,6 +409,21 @@ class Document:
         tree = etree.ElementTree(root)
         tree.write(str(path), encoding="UTF-8", xml_declaration=True, standalone=False, pretty_print=True)
 
+    # ---- structural-check anchor (Issue #12) ----------------------------
+    def iter_all_primitives(self) -> Iterable:
+        """Yield every primitive across master pages and doc pages, in stable
+        order: masters first, then pages; per-page items in ``page.items``
+        order (already flattened by ``Page.add`` at insertion time).
+
+        This is the single orchestration anchor used by
+        ``tools/sla_lib/builder/structural_check.py`` to walk a built
+        Document. No caching, no filtering — KISS. Constraint and
+        brand-rule predicates do their own filtering via ``isinstance``
+        / anname matching.
+        """
+        for page in (*self.masters, *self.pages):
+            yield from page.items
+
     # ---- chain ID pre-allocation ---------------------------------------
     def _preallocate_chain_ids(self) -> None:
         """Walk all TextFrames; for each chain (head with BACKITEM=-1, follow
