@@ -10,6 +10,8 @@ sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 from sla_lib.builder import (  # noqa: E402
     Brand, Document, TextFrame, ImageFrame, Polygon, Run,
     ParaStyle, CharStyle, SoftShadow,
+    # Issue #12 — constraints
+    same_size,
 )
 from sla_lib.builder import library, pack_inline_image  # noqa: E402  (issue #13)
 from sla_lib.builder.blocks import ColumnTextStory, PageNumber  # noqa: E402
@@ -2523,6 +2525,35 @@ def build_preview():
 # Public alias for structural_check (Issue #12, D13). Mirrors the clean
 # end-user template — NOT the preview variant.
 build_doc = build_template
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+#
+# Largest production template (~14 pages, ~870 primitives). CONSTRAINTS
+# focus on the meaningful named-anchor slots that author-templates use
+# (Hero photos, portrait slots, foto-spreads). Each anname is the
+# build_preview() inject anchor for that page.
+#
+# Performance budget (CONTEXT D11): structural_check on Zeitung must stay
+# <5s. 5 entries chosen for sufficient witness coverage without scanning
+# every internal sub-frame.
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # Hero anchor presence (orphan-warning catches rename drift on
+    # build.py regenerations from the upstream original SLA).
+    same_size("Cover Hero", name="cover_hero_anchor"),
+    same_size("P1 Hero", name="p1_hero_anchor"),
+    same_size("P3 Hero", name="p3_hero_anchor"),
+    same_size("P5 Hero", name="p5_hero_anchor"),
+    same_size("P13 Hero", name="p13_hero_anchor"),
+    # Portrait slot witness.
+    same_size("P7 Portrait", name="p7_portrait_anchor"),
+    same_size("P10 Portrait", name="p10_portrait_anchor"),
+    # Foto-spread + spread witnesses.
+    same_size("P4 Foto-Spread", name="p4_fotospread_anchor"),
+    same_size("P9 Spread", name="p9_spread_anchor"),
+]
 
 
 if __name__ == "__main__":
