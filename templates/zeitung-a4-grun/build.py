@@ -2520,6 +2520,11 @@ def build_preview():
     return doc
 
 
+# Public alias for structural_check (Issue #12, D13). Mirrors the clean
+# end-user template — NOT the preview variant.
+build_doc = build_template
+
+
 if __name__ == "__main__":
     build_template().save(HERE / "template.sla")
     print(f"OK: {HERE / 'template.sla'}")

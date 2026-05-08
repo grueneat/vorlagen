@@ -52,7 +52,9 @@ LAYER_TEXT = 2
 LAYER_FALZ = 3
 
 
-def build(out_path: str | Path = HERE / "template.sla") -> None:
+def build_doc() -> Document:
+    """Issue #12 D13: return constructed Document; persistence is the
+    caller's job (CLI wrapper below or structural_check)."""
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Infostand-Tent-Card A5 quer",
@@ -357,6 +359,11 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
             rotation_deg=180,
         ))
 
+    return doc
+
+
+def build(out_path: str | Path = HERE / "template.sla") -> Path:
+    doc = build_doc()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path

@@ -42,7 +42,12 @@ COL_W_MM = (TRIM_W_MM - 2 * MARGIN_X_MM - 2 * GUTTER_MM) / 3  # ≈ 124.67
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-def build(out_path: str | Path = HERE / "template.sla") -> None:
+def build_doc() -> Document:
+    """Construct the Themen-Plakat Document. Issue #12 D13 contract.
+
+    Returns the Document without saving — callers (CLI / structural_check)
+    decide where (or whether) to persist.
+    """
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Themen-Plakat A3 quer",
@@ -299,6 +304,11 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
         anname="Impressum",
     ))
 
+    return doc
+
+
+def build(out_path: str | Path = HERE / "template.sla") -> Path:
+    doc = build_doc()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
