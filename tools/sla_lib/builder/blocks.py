@@ -133,22 +133,58 @@ class PageNumber:
 
 # ---------------------------------------------------------------------------
 # Block 2: Impressum
-# Corpus: templates/postkarte-a6-kampagne/build.py:294 (trail_style='Impressum'),
-#         templates/zeitung-a4-grun/build.py:3205 (trail_style='Impressum').
+# Corpus:
+#   1-Run default: baseline shape (documented baseline; no corpus site today)
+#   2-Run prefix:  templates/postkarte-a6-kampagne/build.py:223-236 (page1)
+#                  templates/plakat-a1-hochformat/build.py:91-105 (page0)
+#   3-Run heading: templates/zeitung-a4-grun/build.py:2445-2459 (page13)
 # ---------------------------------------------------------------------------
 @dataclass
 class Impressum:
     """Bottom-of-page legal text block with trail_style='Impressum'.
 
-    Corpus:
-    - templates/postkarte-a6-kampagne/build.py:294 — TextFrame with
-      trail_style='Impressum', w_mm≈95, h_mm≈6
-    - templates/zeitung-a4-grun/build.py:3205 — TextFrame with
-      trail_style='Impressum' spanning full column width
+    Four substitutable shapes (>=1 corpus site each):
+
+    1. **1-Run body (default):** emits a single Run with the body text.
+       Baseline shape; backward-compatible with existing call sites.
+
+    2. **2-Run with bold prefix (Postkarte build.py:223-236, Plakat build.py:91-105):**
+       Set ``prefix_text`` to emit two Runs in the same paragraph — a bold prefix
+       Run followed by the body Run. No paragraph separator between them (same line,
+       font switch mid-line). Optionally set ``prefix_features`` and ``prefix_fshade``.
+       Postkarte carries ``features='inherit'``; Plakat omits it.
+
+    3. **3-Run heading + para-spacer + body (Zeitung build.py:2445-2459):**
+       Set ``heading_text`` (and ``heading_paragraph_style``) to emit three Runs:
+       heading (separator='para'), empty spacer (has_itext=False, separator='para'),
+       then body. The spacer paragraph carries the heading style so its line height
+       matches the heading, providing correct vertical spacing.
+
+    4. **Full ``runs=`` override (escape hatch):**
+       Pass a complete ``Sequence[Run]`` to bypass all of the above and emit
+       exactly those runs verbatim.
+
+    Frame-attr passthroughs (all three corpus sites carry these explicitly):
+    ``rotation_deg`` (Plakat), ``line_width_pt``, ``col_gap_mm``.
 
     Usage::
 
-        page.add(Impressum(x_mm=5, y_mm=142, w_mm=95))
+        page.add(Impressum(x_mm=5, y_mm=142, w_mm=95))  # 1-Run default
+
+        page.add(Impressum(                              # 2-Run bold-prefix (Postkarte)
+            x_mm=61.66, y_mm=135.44, w_mm=41.94, h_mm=10.62,
+            layer=0, line_width_pt=1, col_gap_mm=0,
+            fcolor='White', prefix_text='Impressum:',
+            prefix_features='inherit', prefix_fshade=100,
+            body_fshade=100,
+        ))
+
+        page.add(Impressum(                              # 3-Run heading (Zeitung)
+            x_mm=54.86, y_mm=118.89, w_mm=103.46, h_mm=30.47,
+            layer=0, line_width_pt=1, col_gap_mm=0,
+            heading_text='Impressum',
+            heading_paragraph_style='Inhaltsheadline Titelseite',
+        ))
     """
 
     text: str = DEFAULT_IMPRESSUM
@@ -160,18 +196,78 @@ class Impressum:
     layer: int = 2
     anname: str = "Impressum"
 
+    # A1. Bold-prefix Run (Postkarte build.py:223-236, Plakat build.py:91-105).
+    # When prefix_text is set the block emits TWO Runs in the body paragraph:
+    # prefix in prefix_font then `text` in the trail_style font.
+    prefix_text: Optional[str] = None
+    prefix_font: str = "Gotham Narrow Bold"
+    prefix_features: Optional[str] = None    # Postkarte: 'inherit'; Plakat: omit
+    prefix_fshade: Optional[int] = 100       # both corpus sites: 100
+
+    # A2. Rotation passthrough (Plakat build.py:91-105). 270 = vertical right-margin.
+    rotation_deg: float = 0
+
+    # A3. Heading + spacer + body (Zeitung build.py:2445-2459).
+    # When heading_text is set the block emits THREE Runs: heading (separator='para'),
+    # empty spacer (separator='para', has_itext=False), then body.
+    heading_text: Optional[str] = None
+    heading_font: Optional[str] = None           # default: inherit from heading_paragraph_style
+    heading_paragraph_style: Optional[str] = None  # e.g. 'Inhaltsheadline Titelseite'
+
+    # Frame-attr passthroughs (all three corpus sites carry these explicitly).
+    line_width_pt: Optional[float] = None
+    col_gap_mm: Optional[float] = None
+
+    # Body Run passthrough (shared fcolor/fshade applied to body Run in 2- and 3-Run shapes).
+    body_fshade: Optional[int] = None
+
+    # Escape hatch for future idioms outside the three above.
+    # If set, overrides the run-building logic entirely.
+    runs: Optional[Sequence[Run]] = None
+
     def emit(self) -> Iterable:
-        yield TextFrame(
+        if self.runs is not None:
+            body_runs = list(self.runs)                          # 1) full override
+        elif self.heading_text is not None:
+            # 2) 3-Run heading + spacer + body (Zeitung)
+            body_runs = [
+                Run(text=self.heading_text, separator='para',
+                    paragraph_style=self.heading_paragraph_style,
+                    font=self.heading_font),
+                Run(text='', has_itext=False, separator='para',
+                    paragraph_style=self.heading_paragraph_style),
+                Run(text=self.text, fcolor=self.fcolor, fshade=self.body_fshade),
+            ]
+        elif self.prefix_text is not None:
+            # 3) 2-Run bold-prefix idiom (Postkarte, Plakat)
+            body_runs = [
+                Run(text=self.prefix_text, font=self.prefix_font,
+                    fcolor=self.fcolor, features=self.prefix_features,
+                    fshade=self.prefix_fshade),
+                Run(text=self.text, fcolor=self.fcolor, fshade=self.body_fshade),
+            ]
+        else:
+            # 4) 1-Run baseline (existing behaviour — all new kwargs at default)
+            body_runs = [Run(text=self.text, paragraph_style=None)]
+
+        tf_kwargs: dict = dict(
             x_mm=self.x_mm,
             y_mm=self.y_mm,
             w_mm=self.w_mm,
             h_mm=self.h_mm,
             trail_style="Impressum",
-            runs=[Run(text=self.text, paragraph_style=None)],
+            runs=body_runs,
             fcolor=self.fcolor,
             layer=self.layer,
             anname=self.anname,
         )
+        if self.rotation_deg:
+            tf_kwargs["rotation_deg"] = self.rotation_deg
+        if self.line_width_pt is not None:
+            tf_kwargs["line_width_pt"] = self.line_width_pt
+        if self.col_gap_mm is not None:
+            tf_kwargs["col_gap_mm"] = self.col_gap_mm
+        yield TextFrame(**tf_kwargs)
 
 
 # ---------------------------------------------------------------------------

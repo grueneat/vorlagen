@@ -1,7 +1,8 @@
 ---
 id: '9'
 title: 'Post-migration DSL hygiene: Impressum widening, fresh-run test, extras audit'
-status: open
+status: done
+ship_state: pr_open
 priority: medium
 labels:
 - dsl

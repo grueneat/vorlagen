@@ -184,6 +184,92 @@ class ImpressumTests(unittest.TestCase):
         self.assertGreater(len(xml), 100)
         self.assertIn("<SCRIBUSUTF8NEW", xml)
 
+    def test_impressum_with_bold_prefix(self):
+        """2-Run bold-prefix idiom (Postkarte build.py:223-236).
+
+        prefix_text='Impressum:' emits two ITEXT children in one paragraph:
+        first with Gotham Narrow Bold, second with the body text.
+        """
+        parsed = _save(self._doc_with_block(
+            prefix_text='Impressum:', prefix_features='inherit'))
+        tf = next(o for o in parsed.page_objects() if o.attrib.get('PTYPE') == '4')
+        story = tf.find('StoryText')
+        itexts = story.findall('ITEXT')
+        self.assertEqual(len(itexts), 2,
+                         f"Expected 2 ITEXT elements, got {len(itexts)}")
+        self.assertEqual(itexts[0].attrib.get('FONT'), 'Gotham Narrow Bold',
+                         "First ITEXT must carry Gotham Narrow Bold font")
+        self.assertEqual(itexts[0].attrib.get('CH'), 'Impressum:')
+        self.assertNotEqual(itexts[1].attrib.get('FONT'), 'Gotham Narrow Bold',
+                            "Second ITEXT must not carry Gotham Narrow Bold font")
+        self.assertIn('Grünen Niederösterreich', itexts[1].attrib.get('CH', ''))
+
+    def test_impressum_rotated(self):
+        """rotation_deg=270 passthrough (Plakat build.py:91-105).
+
+        Frame must carry ROT='270'; Run shape stays 1-Run (baseline).
+        """
+        parsed = _save(self._doc_with_block(rotation_deg=270))
+        tf = next(o for o in parsed.page_objects() if o.attrib.get('PTYPE') == '4')
+        self.assertEqual(tf.attrib.get('ROT'), '270',
+                         "Frame must carry ROT='270' when rotation_deg=270")
+        story = tf.find('StoryText')
+        itexts = story.findall('ITEXT')
+        self.assertEqual(len(itexts), 1,
+                         "rotation_deg alone must not change Run count (1-Run baseline)")
+
+    def test_impressum_with_heading(self):
+        """3-Run heading + spacer + body schema (Zeitung build.py:2445-2459).
+
+        heading_text='Impressum' with heading_paragraph_style emits:
+        heading ITEXT + para + empty spacer + para + body ITEXT.
+        """
+        xml = _save_to_str(self._doc_with_block(
+            heading_text='Impressum',
+            heading_paragraph_style='Inhaltsheadline Titelseite'))
+        self.assertIn('Inhaltsheadline Titelseite', xml,
+                      "Heading paragraph style must appear in emitted SLA")
+        parsed = _save(self._doc_with_block(
+            heading_text='Impressum',
+            heading_paragraph_style='Inhaltsheadline Titelseite'))
+        tf = next(o for o in parsed.page_objects() if o.attrib.get('PTYPE') == '4')
+        story = tf.find('StoryText')
+        itexts = story.findall('ITEXT')
+        paras = story.findall('para')
+        self.assertEqual(len(itexts), 2,
+                         f"Expected 2 non-empty ITEXT elements, got {len(itexts)}")
+        self.assertGreaterEqual(len(paras), 2,
+                                f"Expected >= 2 para separators, got {len(paras)}")
+        self.assertEqual(itexts[0].attrib.get('CH'), 'Impressum',
+                         "First ITEXT must be the heading text")
+        self.assertIn('Grünen Niederösterreich', itexts[1].attrib.get('CH', ''),
+                      "Last ITEXT must contain the default body marker")
+
+    def test_impressum_baseline_unchanged(self):
+        """Backward-compat: default Impressum (no new kwargs) produces 1-Run, no rotation.
+
+        Verifies the else-branch in emit() is taken and existing corpus call
+        sites continue to work byte-identically.
+        """
+        doc1 = self._doc_with_block()
+        doc2 = Document(title='x', template_id='x')
+        page2 = doc2.add_page(size='A6')
+        page2.add(Impressum(x_mm=5, y_mm=142, w_mm=95))
+        for doc in (doc1, doc2):
+            xml = _save_to_str(doc)
+            self.assertIn('<SCRIBUSUTF8NEW', xml)
+            parsed = _save(doc)
+            tf = next(o for o in parsed.page_objects() if o.attrib.get('PTYPE') == '4')
+            story = tf.find('StoryText')
+            itexts = story.findall('ITEXT')
+            self.assertEqual(len(itexts), 1,
+                             "Default Impressum must produce exactly 1 ITEXT")
+            self.assertIn('Grünen Niederösterreich', itexts[0].attrib.get('CH', ''))
+            rot = tf.attrib.get('ROT')
+            if rot is not None:
+                self.assertAlmostEqual(float(rot), 0.0,
+                                       msg="Default Impressum must not rotate the frame")
+
 
 # ---------------------------------------------------------------------------
 # PageBackground
