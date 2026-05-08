@@ -33,6 +33,8 @@ The acceptance-criteria language about "exactly two `inside_page` errors today" 
 
 ## Codebase Analysis — interfaces
 
+<interfaces>
+
 ### `Constraint` (free-form, per-template opt-in)
 
 ```
@@ -121,6 +123,8 @@ class ImageFrame:
 
 - `_xy_pt()` (line ~ in `_Frame`): if `anchor is not None`, **ignores** `x_mm/y_mm` and uses `resolve_anchor(page.width_pt, page.height_pt, anchor)`. **inside_page bbox math must mirror this.**
 - `local_offset_mm` is in **frame-mm at LOCALSCX=1**, NEGATIVE x for "shift the image to the left so the right half shows" — so `SpreadImage` right half passes `local_offset_mm=(-frame_w_mm, 0)`.
+
+</interfaces>
 
 ### `structural_check` orchestrator
 
