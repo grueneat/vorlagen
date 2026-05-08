@@ -85,6 +85,7 @@ from .constraints import (
     Constraint,
     Violation,
 )
+from .brand_constraints import BRAND_CONSTRAINTS, BrandRule
 
 __all__ = [
     "Document",
@@ -126,4 +127,6 @@ __all__ = [
     "distance_x",
     "Constraint",
     "Violation",
+    "BRAND_CONSTRAINTS",
+    "BrandRule",
 ]
