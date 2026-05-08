@@ -297,13 +297,18 @@ class GenerateImageRecoveryAndWatermarkTests(unittest.TestCase):
                 Image.new("RGB", (64, 96), (200, 200, 200)).save(str(cached_png))
                 return _FakeResult()
 
+            # Pin time.time() to 0.0 so any cached_png mtime is unambiguously
+            # >= started_at — avoids mtime-vs-time.time() granularity races on
+            # fast CI runners (this test was intermittently flaky in #11+#13).
             with mock.patch.object(
                 codex_image_gen.subprocess, "run", side_effect=_fake_run_then_drop_image
             ), mock.patch.object(
                 codex_image_gen, "DEFAULT_CODEX_GEN_DIR", cache_dir
             ), mock.patch.object(
                 codex_image_gen, "add_demo_watermark"
-            ) as wm_mock:
+            ) as wm_mock, mock.patch.object(
+                codex_image_gen.time, "time", return_value=0.0
+            ):
                 rc = codex_image_gen.generate_image(
                     "prompt", target, size="1024x1536"
                 )
