@@ -2,6 +2,7 @@
 id: '12'
 title: 'Spec-System v2: Constraint-DSL + Spec-Writing-Guide + spec_check tolerances'
 status: open
+ship_state: merged
 priority: high
 labels:
 - spec
