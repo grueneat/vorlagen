@@ -24,6 +24,11 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
+    # Issue #12 — composites + free-form constraints
+    AlignedRow,
+    same_y,
+    same_style,
+    distance_y,
 )
 
 
@@ -170,8 +175,15 @@ def build_doc() -> Document:
         anname="Logo Grüne (top-left)",
     ))
 
+    # Issue #12 vorzeige refactor — construct-then-add convention.
+    # All frames assigned to named locals BEFORE page.add() so the
+    # module-level CONSTRAINTS list can reference them by anname (the
+    # locals themselves are out of scope at constraint-eval time, but
+    # their annames live on as string labels). This convention is
+    # documented in shared/brand/SPEC-WRITING-GUIDE.md "Construct-then-add".
+
     # Headline — These (60 pt Vollkorn Black Italic Dunkelgrün)
-    page.add(TextFrame(
+    headline = TextFrame(
         x_mm=15, y_mm=40, w_mm=390, h_mm=50,
         layer=2,
         style="themen-plakat/headline",
@@ -180,10 +192,11 @@ def build_doc() -> Document:
             paragraph_style="themen-plakat/headline",
         )],
         anname="Headline These",
-    ))
+    )
+    page.add(headline)
 
     # Sub-Headline (18 pt Gotham Book Dunkelgrün)
-    page.add(TextFrame(
+    subheadline = TextFrame(
         x_mm=15, y_mm=92, w_mm=390, h_mm=16,
         layer=2,
         style="themen-plakat/sub",
@@ -192,9 +205,18 @@ def build_doc() -> Document:
             paragraph_style="themen-plakat/sub",
         )],
         anname="Sub-Headline",
-    ))
+    )
+    page.add(subheadline)
 
-    # Three evidence columns
+    # Three evidence columns. The original byte-stable order interleaves
+    # headline-i then body-i per iteration; we preserve that emit order
+    # by using a per-iteration AlignedRow over the [hd_i, bd_i] pair
+    # (each row has just one column so no horizontal alignment effect
+    # — the composite acts as a structural marker tying hd-i to bd-i and
+    # documenting "these two share alignment intent" as a layout signal
+    # readable by structural_check). Cross-row constraints (every
+    # headline shares y, every body shares y) live in the module-level
+    # CONSTRAINTS list using anname strings.
     belege = [
         ("12 700 grüne Jobs",
          "In Niederösterreich arbeiten 12 700 Menschen direkt in der "
@@ -213,20 +235,25 @@ def build_doc() -> Document:
     ]
     for i, (hd, body, label) in enumerate(belege):
         col_x = MARGIN_X_MM + i * (COL_W_MM + GUTTER_MM)
-        page.add(TextFrame(
+        beleg_hd = TextFrame(
             x_mm=col_x, y_mm=130, w_mm=COL_W_MM, h_mm=20,
             layer=2,
             style="themen-plakat/beleg-headline",
             runs=[Run(text=hd, paragraph_style="themen-plakat/beleg-headline")],
             anname=f"{label} — Headline",
-        ))
-        page.add(TextFrame(
+        )
+        beleg_bd = TextFrame(
             x_mm=col_x, y_mm=152, w_mm=COL_W_MM, h_mm=70,
             layer=2,
             style="themen-plakat/beleg-body",
             runs=[Run(text=body, paragraph_style="themen-plakat/beleg-body")],
             anname=f"{label} — Body",
-        ))
+        )
+        # AlignedRow with single child = identity emit; preserves
+        # by-construction the per-row y discipline. We add hd, then bd,
+        # mirroring the pre-#12 emit order.
+        page.add(AlignedRow(y_mm=130, children=[beleg_hd], name=f"{label}_hd_row"))
+        page.add(AlignedRow(y_mm=152, children=[beleg_bd], name=f"{label}_bd_row"))
 
     # Themen-hero photo slot (Issue #11, iter-3 enlargement option a):
     # the source JPG is 1536×1024 (≈1.5:1). The previous frame at
@@ -312,6 +339,49 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+#
+# Pure metadata: NOT consumed by build_doc() / build(). Each Constraint
+# uses anname-string references, which works regardless of where the
+# Frame instances were constructed (build_doc locals are out of scope
+# here). See shared/brand/SPEC-WRITING-GUIDE.md "Construct-then-add"
+# for the convention.
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # All three beleg-headlines share y=130 (the row alignment baseline).
+    same_y(
+        "Beleg 1 — Headline",
+        "Beleg 2 — Headline",
+        "Beleg 3 — Headline",
+        name="beleg_headlines_row",
+    ),
+    # All three beleg-bodies share y=152.
+    same_y(
+        "Beleg 1 — Body",
+        "Beleg 2 — Body",
+        "Beleg 3 — Body",
+        name="beleg_bodies_row",
+    ),
+    # Vertical hierarchy: headline -> subheadline distance.
+    distance_y("Headline These", "Sub-Headline", equals=52.0,
+                name="hl_to_sub"),
+    # Beleg-headline-to-body distance per column.
+    distance_y("Beleg 1 — Headline", "Beleg 1 — Body", equals=22.0,
+                name="beleg1_hd_to_body"),
+    # Style consistency across the three Beleg-headlines.
+    same_style(
+        "Beleg 1 — Headline", "Beleg 2 — Headline", "Beleg 3 — Headline",
+        name="beleg_hd_style_consistent",
+    ),
+    # Style consistency across the three Beleg-bodies.
+    same_style(
+        "Beleg 1 — Body", "Beleg 2 — Body", "Beleg 3 — Body",
+        name="beleg_body_style_consistent",
+    ),
+]
 
 
 if __name__ == "__main__":
