@@ -33,6 +33,9 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
+    # Issue #12 — constraints
+    same_style,
+    same_size,
 )
 from sla_lib.builder.blocks import TableTentFold  # noqa: E402
 
@@ -367,6 +370,44 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
+
+
+# ---------------------------------------------------------------------------
+# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+#
+# Tent-card has a fold at y=105 (A4-quer halved). Panel B (bottom) is
+# rotated 180°, so its frame coords are MEASURED in the rotated frame
+# (top-down from y=210 down to y=105 — i.e. distances below the fold).
+# Asserting geometric mirroring around y=105 directly does not match the
+# coordinate system; instead we assert structural sameness: panels share
+# size, headlines/bodies share style, panel-cta and panel-termine share
+# style consistency.
+# ---------------------------------------------------------------------------
+CONSTRAINTS = [
+    # Style consistency: both panels' headlines / bodies / CTAs / Termine
+    # use the same paragraph style.
+    same_style(
+        "Headline Panel A", "Headline Panel B",
+        name="panel_headline_style_consistent",
+    ),
+    same_style(
+        "Body Panel A", "Body Panel B",
+        name="panel_body_style_consistent",
+    ),
+    same_style(
+        "CTA Panel A", "CTA Panel B",
+        name="panel_cta_style_consistent",
+    ),
+    same_style(
+        "Termine Panel A", "Termine Panel B",
+        name="panel_termine_style_consistent",
+    ),
+    # Panel A and Panel B headlines share width/height.
+    same_size(
+        "Headline Panel A", "Headline Panel B", axis="both",
+        name="panel_headline_size_match",
+    ),
+]
 
 
 if __name__ == "__main__":
