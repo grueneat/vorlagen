@@ -1,16 +1,9 @@
 slug: themen-plakat-a3-quer
-images:
-  - name: themen-hero
-    output_path: samples/themen-hero.jpg
-    prompt: |
-      Documentary photograph, landscape orientation, of a Niederösterreich
-      wind-turbine on a rolling hill at golden hour, mid-distance framing, 35mm lens,
-      natural color balance, slightly desaturated greens, warm afternoon palette.
-      Authentic and unposed.
-      No watermark. No text overlays. No logos or trademarks.
-    size: "1536x1024"
-    synthetic: true
-    note: "synthetic, demo-only — replace with real local Klimaschutz/Energie photo"
+# Image bytes live in the central library at shared/sample-images/.
+# Library binding happens in build.py via library.load(<id>) (issue #13).
+uses_from_library:
+  - id: themen_klimaschutz_windrad
+    anname: "Themen-Hero"
 qr_codes:
   - name: qr-quelle
     target_url: https://noe.gruene.at/themen/

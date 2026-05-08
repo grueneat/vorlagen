@@ -444,6 +444,19 @@ def _run_visual_diff(tid: str, tdir: Path, args) -> int:
 # Per-template orchestration
 # ---------------------------------------------------------------------------
 
+def _select_render_source(template_dir: Path) -> Path:
+    """Prefer template-preview.sla (gallery render) over template.sla.
+
+    Production templates emit a separate preview-SLA (issue #13, D3) so the
+    round-trip-stable template.sla stays clean. Gallery renders use the
+    preview when present; SHA tracking and sla_diff still target template.sla.
+    """
+    preview = template_dir / "template-preview.sla"
+    if preview.exists():
+        return preview
+    return template_dir / "template.sla"
+
+
 def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
     """Render a single-SLA template (postkarte, zeitung).
 
@@ -452,11 +465,12 @@ def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
     """
     tid = meta["id"]
     template_sla = tdir / "template.sla"
+    render_source = _select_render_source(tdir)
     preview_pdf = tdir / "preview.pdf"
     dpi = int(meta.get("preview_dpi", DEFAULT_DPI))
 
-    print(f"[{tid}] rendering template.sla → preview.pdf …")
-    render_sla_to_pdf(template_sla, preview_pdf)
+    print(f"[{tid}] rendering {render_source.name} → preview.pdf …")
+    render_sla_to_pdf(render_source, preview_pdf)
     _scrub_pdf_metadata(preview_pdf)
     print(f"[{tid}] rasterising at {dpi} dpi …")
 

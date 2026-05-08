@@ -142,6 +142,59 @@ def build_codex_prompt(prompt: str, output_abspath: Path, size: str | None) -> s
     )
 
 
+def _apply_watermark_to_image(
+    im: "Image.Image",
+    text: str = DEFAULT_WATERMARK_TEXT,
+    *,
+    font_path: Path | None = None,
+    band_height_pct: float = 0.04,
+    text_color: tuple[int, int, int, int] = (255, 255, 255, 230),
+    bg_color: tuple[int, int, int, int] = (0, 0, 0, 160),
+) -> "Image.Image":
+    """Stamp the bottom Symbolfoto-band onto a PIL.Image. Returns a new RGB Image.
+
+    Pure in-memory operation — no I/O. Reusable from
+    ``library.crop_for_frame()`` so a freshly cropped image can have the
+    Symbolfoto band re-applied at the cropped resolution (R-WATERMARK-CROP fix
+    for #13: when ``ImageOps.fit`` crops portrait→landscape, the source band
+    can be cropped off; we re-stamp at the output dimensions instead).
+
+    Args:
+        im: source PIL.Image (any mode; converted to RGB internally).
+        text: caption text. Defaults to DEFAULT_WATERMARK_TEXT.
+        font_path: optional explicit font; otherwise the brand-aware fallback
+            chain in ``_load_watermark_font`` is used.
+        band_height_pct: band height as a fraction of image height (default 4%).
+        text_color: RGBA tuple for the caption (default white at ~90% alpha).
+        bg_color: RGBA tuple for the band fill (default black at ~63% alpha).
+
+    Returns:
+        A new RGB PIL.Image with the band overlaid. Input image is not mutated.
+    """
+    base = im.convert("RGB")
+    width, height = base.size
+    band_h = max(40, int(height * band_height_pct))
+
+    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    # Filled rectangle for the band background.
+    draw.rectangle((0, height - band_h, width, height), fill=bg_color)
+
+    # Load font with the fallback chain.
+    font_size = max(14, min(36, height // 60))
+    font = _load_watermark_font(font_path, font_size)
+
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    text_h = bbox[3] - bbox[1]
+    text_x = (width - text_w) // 2 - bbox[0]
+    text_y = height - band_h + (band_h - text_h) // 2 - bbox[1]
+    draw.text((text_x, text_y), text, font=font, fill=text_color)
+
+    # Composite the overlay over the base.
+    return Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
+
+
 def add_demo_watermark(
     image_path: Path,
     text: str = DEFAULT_WATERMARK_TEXT,
@@ -163,36 +216,36 @@ def add_demo_watermark(
       3. DejaVu Sans (Debian default)
       4. Pillow's ImageFont.load_default() (worst case — small bitmap font)
 
-    Re-saves as JPEG q=80 if path ends in ``.jpg``/``.jpeg``, else preserves
-    the source format. Returns ``image_path`` for chainability.
+    Re-saves as JPEG q=80 + ``optimize=True``, ``subsampling=2``,
+    ``progressive=False`` if path ends in ``.jpg``/``.jpeg`` (these knobs are
+    pinned for byte-determinism per RESEARCH §1.4); else preserves the source
+    format. Returns ``image_path`` for chainability.
+
+    Implementation note: thin wrapper around ``_apply_watermark_to_image`` —
+    open file → call core helper → save. Library code can reach the same
+    rendering on an in-memory PIL.Image without round-tripping through disk.
     """
     image_path = Path(image_path)
-    base = Image.open(str(image_path)).convert("RGB")
-    width, height = base.size
-    band_h = max(40, int(height * band_height_pct))
-
-    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(overlay)
-    # Filled rectangle for the band background.
-    draw.rectangle((0, height - band_h, width, height), fill=bg_color)
-
-    # Load font with the fallback chain.
-    font_size = max(14, min(36, height // 60))
-    font = _load_watermark_font(font_path, font_size)
-
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
-    text_x = (width - text_w) // 2 - bbox[0]
-    text_y = height - band_h + (band_h - text_h) // 2 - bbox[1]
-    draw.text((text_x, text_y), text, font=font, fill=text_color)
-
-    # Composite the overlay over the base.
-    combined = Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
+    with Image.open(str(image_path)) as opened:
+        combined = _apply_watermark_to_image(
+            opened,
+            text,
+            font_path=font_path,
+            band_height_pct=band_height_pct,
+            text_color=text_color,
+            bg_color=bg_color,
+        )
 
     suffix = image_path.suffix.lower()
     if suffix in (".jpg", ".jpeg"):
-        combined.save(str(image_path), format="JPEG", quality=80, optimize=True)
+        combined.save(
+            str(image_path),
+            format="JPEG",
+            quality=80,
+            optimize=True,
+            subsampling=2,
+            progressive=False,
+        )
     else:
         combined.save(str(image_path), optimize=True)
     return image_path
@@ -338,6 +391,132 @@ def generate_image(prompt: str, output_path: Path, size: str | None) -> int:
     return 0
 
 
+def parse_library_manifest(path: Path) -> dict[str, dict]:
+    """Parse the master library manifest at ``shared/sample-images/manifest.yml``.
+
+    Different shape from the per-template ``parse_manifest()``: the library
+    manifest's ``images:`` is a dict keyed by ID (e.g. ``portrait_maria``),
+    not a list of entries. Returns ``dict[id] -> entry`` for direct lookup.
+
+    Raises ValueError on malformed input. FileNotFoundError if the manifest
+    file is absent.
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"library manifest not found: {path}")
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: top-level YAML must be a mapping")
+    images = data.get("images")
+    if images is None:
+        raise ValueError(f"{path}: missing required key `images:`")
+    if not isinstance(images, dict):
+        raise ValueError(
+            f"{path}: invalid `images:` value (expected mapping keyed by ID, got "
+            f"{type(images).__name__})"
+        )
+    return dict(images)
+
+
+def regen_library(
+    manifest_path: Path,
+    *,
+    ids: list[str] | None = None,
+    force: bool = False,
+    max_attempts: int = 5,
+    dry_run: bool = False,
+) -> int:
+    """Regenerate library images from the master manifest.
+
+    Args:
+        manifest_path: Path to ``shared/sample-images/manifest.yml``.
+        ids: Optional subset of IDs to regenerate. None = all entries.
+        force: Skip the mtime/freshness check; always regenerate.
+        max_attempts: Per-image retry cap (D7).
+        dry_run: Print plan without invoking codex.
+
+    Returns:
+        0 if all targeted entries succeeded; 1 if any failed.
+    """
+    images = parse_library_manifest(manifest_path)
+    target_ids: list[str]
+    if ids is None:
+        target_ids = list(images.keys())
+    else:
+        unknown = [i for i in ids if i not in images]
+        if unknown:
+            sys.stderr.write(f"unknown library IDs: {unknown}\n")
+            return 1
+        target_ids = list(ids)
+
+    library_root = manifest_path.parent
+    if not dry_run:
+        status = codex_login_status()
+        if status != "ok":
+            sys.stderr.write(
+                f"codex auth precheck failed: {status}\n"
+                f"Run `codex login` first.\n"
+            )
+            return 1
+
+    fail_count = 0
+    write_count = 0
+    skip_count = 0
+
+    for img_id in target_ids:
+        entry = images[img_id]
+        if not isinstance(entry, dict):
+            sys.stderr.write(f"library[{img_id}]: not a mapping\n")
+            fail_count += 1
+            continue
+        prompt = entry.get("prompt")
+        rel_path = entry.get("path")
+        size = entry.get("size")
+        if not prompt or not rel_path:
+            sys.stderr.write(f"library[{img_id}]: missing prompt or path\n")
+            fail_count += 1
+            continue
+        out_path = (library_root / rel_path).resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if not force and not image_needs_regen(manifest_path, out_path):
+            print(f"[skip] {img_id} -> {rel_path} (exists, newer than manifest)")
+            skip_count += 1
+            continue
+
+        if dry_run:
+            print(f"[gen ] {img_id} -> {rel_path}")
+            print(f"  prompt: {prompt[:80]}...")
+            continue
+
+        attempts = 0
+        rc = -1
+        while attempts < max_attempts:
+            attempts += 1
+            print(f"[gen ] {img_id} -> {rel_path} (attempt {attempts}/{max_attempts})")
+            rc = generate_image(prompt, out_path, size)
+            if rc == 0 and out_path.exists():
+                break
+            print(f"  attempt {attempts} failed (rc={rc}, exists={out_path.exists()})")
+
+        if rc != 0 or not out_path.exists():
+            sys.stderr.write(
+                f"  FAIL: {img_id} hit {max_attempts}-attempt cap; "
+                f"manual fallback may be needed.\n"
+            )
+            fail_count += 1
+            continue
+        sz_kb = out_path.stat().st_size // 1024
+        print(f"  wrote {rel_path} ({sz_kb} KB, {attempts} attempt(s))")
+        write_count += 1
+
+    print(
+        f"\nLibrary regen summary: {write_count} written, {skip_count} skipped, "
+        f"{fail_count} failed (of {len(target_ids)} targeted)."
+    )
+    return 1 if fail_count else 0
+
+
 def _resolve_manifest_path(arg: Path) -> Path:
     """Accept either a templates/<slug>/ directory or the manifest file itself."""
     p = Path(arg)
@@ -408,7 +587,44 @@ def main(argv: list[str] | None = None) -> int:
             "the slot is logged and skipped. Default 5."
         ),
     )
+    parser.add_argument(
+        "--library",
+        type=Path,
+        default=None,
+        metavar="MANIFEST",
+        help=(
+            "Library mode (D6, issue #13): regenerate images from the master "
+            "library manifest at shared/sample-images/manifest.yml instead of "
+            "a per-template manifest. The library manifest's `images:` is "
+            "keyed by ID (dict), not a list."
+        ),
+    )
+    parser.add_argument(
+        "--single",
+        type=str,
+        default=None,
+        metavar="ID",
+        help="In library mode, regenerate only this ID.",
+    )
     args = parser.parse_args(argv)
+
+    # Library mode (issue #13).
+    if args.library is not None:
+        manifest_path = args.library
+        if not manifest_path.exists():
+            sys.stderr.write(f"library manifest not found: {manifest_path}\n")
+            return 1
+        try:
+            return regen_library(
+                manifest_path,
+                ids=[args.single] if args.single else None,
+                force=args.force,
+                max_attempts=args.max_attempts,
+                dry_run=args.dry_run,
+            )
+        except (ValueError, yaml.YAMLError) as exc:
+            sys.stderr.write(f"library manifest parse error: {exc}\n")
+            return 1
 
     if args.target is None:
         parser.print_help()

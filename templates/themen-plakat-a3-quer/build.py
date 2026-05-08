@@ -14,6 +14,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1] / "tools"))
 
+from sla_lib.builder import library  # noqa: E402
 from sla_lib.builder import (  # noqa: E402
     Brand,
     Document,
@@ -232,10 +233,17 @@ def build(out_path: str | Path = HERE / "template.sla") -> None:
     # previous visible area, dominant enough to read as the hero of
     # the layout. Body shrunk to h=70 (ends y=222) to make room.
     # Centered horizontally at x=120 (trim 420 - 180)/2 = 120.
-    hero_path = HERE / "samples" / "themen-hero.jpg"
+    # Themen-Hero — central library reference (#13). 180×60mm landscape
+    # frame (~3:1 aspect); source 1536×1024 (~1.5:1) — center-crop trims
+    # left/right. library.crop_for_frame re-stamps the watermark on the
+    # cropped output.
     hero_data, hero_ext = (None, None)
-    if hero_path.exists():
-        hero_data, hero_ext = pack_inline_image(hero_path.read_bytes(), "jpg")
+    hero_img = library.load("themen_klimaschutz_windrad", optional=True)
+    if hero_img is not None:
+        hero_bytes = library.crop_for_frame(
+            hero_img, target_w_mm=180, target_h_mm=60
+        )
+        hero_data, hero_ext = pack_inline_image(hero_bytes, "jpg")
     page.add(ImageFrame(
         x_mm=120, y_mm=225, w_mm=180, h_mm=60,
         inline_image_data=hero_data,

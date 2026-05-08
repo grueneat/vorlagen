@@ -1,49 +1,17 @@
 slug: kandidat-falzflyer-din-lang
-images:
-  - name: portrait-cover
-    output_path: samples/portrait-cover.jpg
-    prompt: |
-      Documentary photograph of a Central European woman in her mid-40s,
-      head-and-shoulders portrait, soft afternoon window light from camera left,
-      neutral grey-green out-of-focus background, 50mm lens, shallow depth of field,
-      visible pores and natural skin texture, warm color balance, slightly desaturated greens.
-      Documentary, unposed, gaze slightly past camera, half-smile.
-      No watermark. No text overlays. No logos or trademarks. No glamorization. No heavy retouching.
-    size: "1024x1536"
-    synthetic: true
-    note: "synthetic, demo-only — replace with real candidate photo"
-    model: gpt-image-2
-    quality: high
-  - name: themen-klimaschutz
-    output_path: samples/themen-klimaschutz.jpg
-    prompt: |
-      Documentary photograph, landscape orientation, of a rooftop solar installation
-      on a Niederösterreich farmhouse with vineyards in the background, golden-hour light,
-      24mm lens, natural color balance, slightly desaturated greens. Authentic and unposed.
-      No watermark. No text overlays. No logos or trademarks.
-    size: "1536x1024"
-    synthetic: true
-    note: "synthetic, demo-only — replace with real local photo"
-  - name: themen-soziales
-    output_path: samples/themen-soziales.jpg
-    prompt: |
-      Documentary photograph, landscape, of a Wiener Kaffeehaus interior with brass fittings,
-      two patrons in conversation at a wooden booth (faces not toward camera), late-afternoon
-      window light, 35mm lens, warm tones. Authentic and unposed.
-      No watermark. No text overlays. No logos or trademarks.
-    size: "1536x1024"
-    synthetic: true
-    note: "synthetic, demo-only"
-  - name: themen-bildung
-    output_path: samples/themen-bildung.jpg
-    prompt: |
-      Documentary photograph, landscape, of a small-town Austrian schoolyard with children
-      (faces obscured / motion blur), Niederösterreich Dorfstraße in the background,
-      overcast diffused daylight, 35mm lens, natural colors. Authentic, unposed.
-      No watermark. No text overlays. No logos or trademarks.
-    size: "1536x1024"
-    synthetic: true
-    note: "synthetic, demo-only"
+# Image bytes live in the central library at shared/sample-images/.
+# This block documents which library IDs the template build.py references.
+# The actual binding lives in templates/kandidat-falzflyer-din-lang/build.py
+# via library.load(<id>) (issue #13).
+uses_from_library:
+  - id: portrait_maria
+    anname: "P1 Kandidat-Portrait"
+  - id: themen_klimaschutz_solar
+    anname: "P4 Thema 1 — Photo"
+  - id: themen_soziales_kaffeehaus
+    anname: "P4 Thema 2 — Photo"
+  - id: themen_bildung_volksschule
+    anname: "P5 Thema 3 — Photo"
 qr_codes:
   - name: qr-mitmachen
     target_url: https://noe.gruene.at/mitmachen/
