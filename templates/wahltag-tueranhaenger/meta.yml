@@ -58,6 +58,11 @@ brand_overrides:
       font family but not listed in shared/ci.yml::fonts. The italic variant is
       acceptable here because it carries the candidate's role/title, where
       italic typography is a long-established journalism convention.
+  - id: brand:undeclared_alignment_drift
+    reason: >-
+      V1 layout work in #18 owns alignment encoding for this template.
+      Re-enable once V1 lands and a CONSTRAINTS list captures the
+      declared adjacencies (Issue #22 locked decision #9).
 ci_overrides:
   non_ci_styles:
     - "tueranhaenger/headline"

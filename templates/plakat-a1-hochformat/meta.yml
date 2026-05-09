@@ -24,6 +24,12 @@ brand_overrides:
       and Impressum linesp=20/fontsize=20 (1.0x). Round-trip diff (tools/sla_
       diff.py --strict) is the byte-stable contract; modifying linesp would
       break round-trip.
+  - id: brand:undeclared_alignment_drift
+    reason: >-
+      Per-template alignment encoding scheduled for the #22 follow-up.
+      Spine-safety is a no-op (single-page template) and the new rule
+      infrastructure ships globally in #22; CONSTRAINTS encoding for
+      this template is deferred (Issue #22 locked decision #12).
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
