@@ -112,16 +112,28 @@ class KandidatFalzflyerSmokeTests(unittest.TestCase):
 
         Allow a small tolerance since the test only checks main content frames
         (P1/P2/P3/P4/P5/P6 + slot type), not background polygons or fold lines.
+
+        V1 skip-prefixes extended (RESEARCH pitfall 7):
+          - Hintergrund: vollflächig polygons P3/P6 extend into bleed
+          - Wahlkreuz: hero image with fixed dims
+          - Top-Band: 31mm Dunkelgrün band, outer panels +3mm bleed
+          - Body-Backing: Hellgrün card on P2 (99mm panel-flush)
+          - Name-Card: P1 vollbleed Dunkelgrün polygon
+          - Trenner: 3mm Hellgrün strip P4/P5 (outer panels 105mm)
+          - Top-Title: text inside Top-Band (87mm content)
         """
         page = self.doc.find("PAGE")
         page_x = float(page.attrib["PAGEXPOS"])
+        skip_substrings = (
+            "Hintergrund", "Wahlkreuz",
+            "Top-Band", "Body-Backing", "Name-Card", "Trenner",
+        )
         for po in self.doc.findall("PAGEOBJECT"):
             an = po.attrib.get("ANNAME", "")
             # Skip non-content slots
             if not an.startswith(("P1 ", "P2 ", "P3 ", "P4 ", "P5 ", "P6 ")):
                 continue
-            # Skip background polygon and Wahlkreuz (which can extend more)
-            if "Hintergrund" in an or "Wahlkreuz" in an:
+            if any(s in an for s in skip_substrings):
                 continue
             xpos = float(po.attrib["XPOS"])
             w_pt = float(po.attrib["WIDTH"])
@@ -130,6 +142,56 @@ class KandidatFalzflyerSmokeTests(unittest.TestCase):
             # Frame width <= 88 mm (allowing 1 mm tolerance over 87 mm)
             self.assertLessEqual(w_mm, 88.5,
                                  f"{an} width {w_mm}mm > 88 mm panel safe width")
+
+    # ── V1 "Falz-Rhythm" assertions (issue #21) ─────────────────────────
+
+    def test_inject_map_anname_present(self):
+        """All 5 INJECT_MAP frame annames must exist in the doc."""
+        annames = {po.attrib.get("ANNAME", "")
+                   for po in self.doc.findall("PAGEOBJECT")}
+        for needed in (
+            "P1 Kandidat-Portrait",
+            "P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
+            "P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
+        ):
+            self.assertIn(needed, annames,
+                          f"INJECT_MAP frame missing: {needed}")
+
+    def test_four_top_band_polygons_present(self):
+        """V1 explicit Top-Band polygons (P1, P2, P4, P5)."""
+        annames = {po.attrib.get("ANNAME", "")
+                   for po in self.doc.findall("PAGEOBJECT")}
+        for needed in ("P1 Top-Band", "P2 Top-Band",
+                       "P4 Top-Band", "P5 Top-Band"):
+            self.assertIn(needed, annames,
+                          f"V1 Top-Band missing: {needed}")
+
+    def test_p3_p6_vollflaechig_pair_present(self):
+        """V1 grüne-Klammer pair: P3 Hintergrund + P6 Hintergrund."""
+        annames = {po.attrib.get("ANNAME", "")
+                   for po in self.doc.findall("PAGEOBJECT")}
+        self.assertIn("P3 Hintergrund", annames)
+        self.assertIn("P6 Hintergrund", annames)
+
+    def test_falz_layer_integrity(self):
+        """Falz LAYER (=3) must contain only the 4 fold lines (2 per page),
+        no spillover (RESEARCH pitfall 12 / V1 invariant)."""
+        falz_pageobjects = [
+            po for po in self.doc.findall("PAGEOBJECT")
+            if po.attrib.get("LAYER") == "3"
+        ]
+        self.assertEqual(
+            len(falz_pageobjects), 4,
+            f"LAYER=3 must contain exactly 4 fold lines; got "
+            f"{[p.attrib.get('ANNAME') for p in falz_pageobjects]}",
+        )
+        falz_annames = {p.attrib.get("ANNAME") for p in falz_pageobjects}
+        self.assertEqual(
+            falz_annames,
+            {"Falz x=99 (Front)", "Falz x=198 (Front)",
+             "Falz x=99 (Back)", "Falz x=198 (Back)"},
+            "Falz LAYER spillover: only the 4 fold lines may live here",
+        )
 
 
 class FalzflyerRoundTripSafetyTests(unittest.TestCase):

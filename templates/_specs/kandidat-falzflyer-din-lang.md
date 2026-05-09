@@ -1,675 +1,247 @@
-# Spec: Kandidat-Falzflyer DIN-lang
+# Spec: Kandidat-Falzflyer DIN-lang (V1 "Falz-Rhythm")
 
 ```yaml
 id: kandidat-falzflyer-din-lang
 title: Kandidat-Falzflyer DIN-lang
-format: A4 quer (297x210) Zickzackfalz auf 3 Panele DIN-lang (99x210)
+format: A4 quer (297×210 mm), 3-fach Zickzackfalz
 trim_mm: [297, 210]
 bleed_mm: 3
 pages: 2
-fold_type: zickzackfalz
-fold_positions_mm: [99, 198]
-cut_type: none
+fold_type: zickzack
+fold_positions_mm: [99, 198]   # vertikal, beide Seiten
+panels: 6                       # 3 vorne (P1/P2/P3), 3 hinten (P4/P5/P6)
+panel_w_mm: 99                  # 297 / 3
+panel_h_mm: 210                 # full trim height
 audience: [kandidat, bezirksgruppe, ortsgruppe]
 ```
 
 ## Audience und Layout-Philosophie
 
-**Kandidaten-Vorstellungs-Flyer** für Personalisierung im Kommunal-, Landtags- und
-Nationalratswahlkampf. Bezirksgruppen drucken den Flyer pro Kandidat:in, verteilen am
-Infostand und in der Tür-Kampagne. Lese-Distanz **Hand-Distanz** ~30–40 cm, aber durch
-Falz-Mechanik mit **gestaffelter Aufmerksamkeit**: Cover hooks → Teaser teases → Themen
-delivers → Closer (Wahlkreuz) acts.
+**Kandidaten-Visitenkarte für Bezirks- und Ortsgruppen-Wahlkampf.** 6 Panele auf
+DIN-A4-quer mit Zickzackfalz (Z-Falz, alternierende Faltrichtung an x=99 und x=198):
+P1/P2/P3 vorne, P4/P5/P6 hinten. Lese-Distanz im Stand bzw. von Hand zu Hand
+~30–60 cm; Inhalte müssen sich panelweise unabhängig lesen lassen, ohne dass die
+Falz-Sequenz ihre Reihenfolge fixiert.
 
-**Layout-Philosophie:** Multi-Panel-Narrativ mit Falz-Logik. Der Flyer ist ein A4 quer
-mit **Zickzackfalz** (Z-fold/accordion, 3 Panele à 99 mm) — geschlossen sieht man Panel 1
-(Cover), beim ersten Aufklappen Panel 2 (Teaser), beim vollen Aufklappen Panel 3 (Closer)
-+ alle Back-Panele (Themen). Der Wahlkreuz sitzt auf Panel 3 (Closer) — der letzte
-Aufmerksamkeits-Anker bevor der Flyer wieder zugefaltet wird.
+**Layout-Philosophie (V1 — "Falz-Rhythm"):** Universal-Top-Band über alle 6 Panele
+plus markenfarbige "grüne Klammer" P1↔P6 für die äußeren Hüllen. Inneres
+Themen-Raster auf P4/P5 mit halbierender Trenner-Polygone und Photo-zentrischer
+Erzählung.
 
-## Layout — Front (Page 1, flach 297×210 mm)
+- **Front (P1 Cover · P2 Mein Plan · P3 Wahltag):** Cover trägt Top-Band +
+  Logo + Portrait + voll-bleed Name-Card mit Slogan; P2 trägt Top-Band +
+  Top-Title "Mein Plan" + Headline + Hellgrün-Body-Backing-Card; P3 ist
+  vollflächig Dunkelgrün mit Wahlkreuz-Hero und Top-Title "Wahltag" (Gelb).
+- **Back (P4 Themen 1·2 · P5 Themen 3·4 · P6 Kontakt):** P4/P5 spiegeln sich
+  intra-panel: Eyebrow (Caps) → Headline → Photo (87×44 native 1.5:1) →
+  Trenner (3 mm Hellgrün) → zweites Thema desselben Musters; P6 ist
+  vollflächig Dunkelgrün mit Top-Title "Kontakt", 2-Spalten-Kontakt-Layout
+  symmetrisch um AXIS_P6_CENTER_X=247.5, zwei QR-Codes mit Caps-Captions
+  und Footer-Logo (38×34 white wordmark).
 
-```text
-   <-99mm->|<-99mm->|<-99mm->
-  +-------+-------+-------+   ↑
-  | L     | T-Hd  | WK    |   |
-  | (Logo)|       | (auf  |   |
-  | PORT  | T Body| Dunkel|   |
-  | (Foto)|       |  grün)|   |
-  | NAME  |       |       |   |
-  | SLOG  | logo  | "Wäh- |   | 210mm
-  |       | klein | le    |   |
-  |       |       | Grün  |   |
-  |       |       | am    |   |
-  |       |       | 23.5."|   |
-  |       |       |       |   |
-  +-------+-------+-------+   ↓
-   Panel 1  Panel 2  Panel 3
-   (Cover) (Teaser) (Closer)
-   = was beim Falten sichtbar ist (außen)
+V1 schließt die V1-Rollout-Sequenz aus #15: implementiert das volle
+ParaStyle-Migrationsmuster (`*-on-green` Variants), die Universal-Top-Band-
+Konvention aus #20, das INJECT_MAP-Idiom (post-#24) und die 22-CONSTRAINT-
+Liste (parallel zu #20). Schließt den **M-Basis-Konflikt**: die `brand:logo_size_3M`-
+Regel war bereits Trim-konsistent (`M = 0.06 * min(trim_w, trim_h)`); auf
+DIN-lang heißt das `min(297, 210) = 210 → 3M = 37.8 mm`. Die V0-Logos (20mm /
+16mm / 17mm) waren systematisch zu klein; V1 setzt P1+P6 auf 38mm Print-Soll
+und löscht das überflüssige P2-Klein-Logo, da das Top-Band das visuelle
+Branding übernimmt.
 
-Falten:
-  Panel 3 wird auf Panel 2 gefaltet (Falz bei x=198)
-  Dann beide auf Panel 1 (Falz bei x=99)
-  Geschlossen: nur Panel 1 sichtbar (= Cover)
+## Brand Compliance — M-Basis Resolution (Issue #21)
 
-Legende:
-  L    = Logo Grüne (cmyk)
-  PORT = Kandidat-Portrait (Codex demo image)
-  NAME = Kandidat-Name (groß)
-  SLOG = Slogan (1-2 Zeilen)
-  T-Hd = Teaser-Headline
-  T-Body = Teaser-Body
-  WK   = Wahlkreuz auf Dunkelgrün (D12)
+**Konflikt (vor #21):** Build-Code-Comment in `templates/kandidat-falzflyer-
+din-lang/build.py:195-199` referenzierte "kurze Kante=105 → 18.9 mm Logo-Soll"
+(panel-basiert), während die Quickguide-Konvention "Trim-kurze-Kante=210 →
+37.8 mm Soll" verlangt (trim-basiert). Die Brand-Regel
+`brand:logo_size_3M` (`tools/sla_lib/builder/brand_constraints.py:262`) war
+**bereits** trim-konsistent — der Konflikt lag nur im Build-Code-Kommentar +
+3 untermaßigen Logos.
+
+**Resolution (#21):**
+1. Build-Code-Header-Kommentar berichtigt (T01) — verweist jetzt auf
+   `M = 0.06 * min(trim_w, trim_h)` mit konkretem Beispiel
+   `min(297, 210)=210 → M=12.6 → 3M=37.8mm` und Cross-Reference zur
+   `brand_constraints.py` + `shared/brand/DESIGN-SYSTEM-BRIEF.md`.
+2. 3 Logo-Frames auf Soll resized (T02): P1 Logo 20×18 → 38×22, P6 Logo
+   17×15 → 38×34, P2 Logo (klein) gelöscht (Top-Band übernimmt).
+3. `meta.yml.brand_overrides`-Eintrag `brand:logo_size_3M` entfernt
+   (T01) — die Regel blockiert jetzt korrekt zu kleine Logos.
+4. Geometry-Test `test_m_basis_rule_all_v1_templates` validiert
+   parametrisch alle 5 V1-Templates gegen die Regel.
+
+**Keine Änderung an `tools/check_ci.py` oder `tools/sla_lib/builder/
+brand_constraints.py`** — die Regel war bereits korrekt. Issue-Beschreibung
+erwähnte fälschlich `check_ci.py`; RESEARCH locked decision #1 korrigiert
+dies (`check_ci.py` enthält keine Logo-/Alignment-Logik).
+
+## ParaStyle-Tabelle (V1 — 16 Styles)
+
+| Name | Font | Size | Linesp | Align | fcolor | Usage |
+|---|---|---|---|---|---|---|
+| `falzflyer/cand-name` | Vollkorn Black Italic | 24 | 27 | 1 | White | P1 Kandidat-Name auf Name-Card |
+| `falzflyer/slogan` | Gotham Narrow Bold | 14 | 17 | 1 | Black | (Reserved; align flipped) |
+| `falzflyer/slogan-on-green` *NEW* | Gotham Narrow Bold | 14 | 17 | 1 | Gelb | P1 Slogan auf Name-Card (Dunkelgrün) |
+| `falzflyer/teaser-headline` | Gotham Narrow Bold | 18 | 22 | 0 | Dunkelgrün | P2 Teaser-Headline (UNCHANGED) |
+| `falzflyer/teaser-body` | Gotham Narrow Book | 11 | 14 | 0 | White | P2 Teaser-Body auf Hellgrün-Backing |
+| `falzflyer/thema-headline` | Gotham Narrow Bold | 16 | 20 | 0 | Dunkelgrün | P4/P5 Thema-Headlines (UNCHANGED) |
+| `falzflyer/thema-body` | Gotham Narrow Book | 10 | 13 | 1 | Black | P4/P5 Thema-Bodies (V1: 9→10pt, 11→13 linesp) |
+| `falzflyer/themen-eyebrow` *NEW* | Gotham Narrow Bold | 9 | 12 | 0 | Dunkelgrün | "THEMA 0X" Caps + P6 QR-Captions (fcolor=White override) |
+| `falzflyer/top-title` *NEW* | Gotham Narrow Bold | 11 | 14 | 0 | White | P2/P4/P5/P6 Top-Title (P3 trägt fcolor=Gelb override) |
+| `falzflyer/quote-on-green` *NEW* | Vollkorn Black Italic | 18 | 20 | 1 | White | Pull-Quote (registriert; kein Frame in V1, deferred) |
+| `falzflyer/closer-headline` | Gotham Narrow Bold | 22 | 26 | 1 | White | P3 Closer-Headline auf Dunkelgrün |
+| `falzflyer/closer-datum` | Vollkorn Black Italic | 14 | 18 | 1 | Gelb | P3 Datum-Akzent |
+| `falzflyer/closer-url` | Gotham Narrow Bold | 11 | 14 | 1 | White | P3 URL |
+| `falzflyer/contact-headline` | Gotham Narrow Bold | 16 | 20 | 1 | White | P6 Kontakt-Headline auf Dunkelgrün |
+| `falzflyer/contact-body` | Gotham Narrow Book | 10 | 12 | 1 | White | P6 4 Kontakt-Cells (2-Spalten) |
+| `falzflyer/impressum` | Gotham Narrow Book | 6 | 8 | 1 | White | P6 Impressum auf Dunkelgrün |
+
+**V1 Migration summary:** 10 in-place mutations (9 align flips + 1 fcolor-only
+auf teaser-body), 4 NEW parallel styles (slogan-on-green, quote-on-green,
+top-title, themen-eyebrow), 2 KEPT unchanged (teaser-headline, thema-headline —
+beide bleiben align=0 für redaktionellen Charakter).
+
+## V1 Frame-Inventar (TARGET state)
+
+### Page 0 (Front) — P1 / P2 / P3
+
+| Anname | Type | x | y | w | h | Layer | Notes |
+|---|---|---|---|---|---|---|---|
+| `P1 Top-Band` | Polygon | -3 | -3 | 105 | 31 | 0 | Dunkelgrün, +3mm bleed left + +3mm overshoot right (outer) |
+| `P1 Logo Grüne (weiss)` | Image | 6 | 4 | 38 | 22 | 1 | gruene-weiss.png — 3M Trim-konform |
+| `P1 Kandidat-Portrait` | Image | 6 | 34 | 87 | 100 | 1 | INJECT_MAP → portrait_maria |
+| `P1 Name-Card` | Polygon | -3 | 134 | 105 | 79 | 0 | Dunkelgrün vollbleed bottom (134+79=213=210+3) |
+| `P1 Kandidat-Name` | Text | 6 | 142 | 87 | 18 | 2 | falzflyer/cand-name |
+| `P1 Slogan` | Text | 6 | 164 | 87 | 20 | 2 | falzflyer/slogan-on-green (Gelb on Dunkelgrün) |
+| `P3 Hintergrund` | Polygon | 198 | -3 | 102 | 216 | 0 | Dunkelgrün vollflächig (gruene-Klammer pair) |
+| `P2 Top-Band` | Polygon | 99 | -3 | 99 | 31 | 0 | Inner panel flush both folds |
+| `P2 Top-Title` | Text | 105 | 8 | 87 | 14 | 2 | "Mein Plan" — top-title style |
+| `P2 Teaser-Headline` | Text | 105 | 38 | 87 | 22 | 2 | falzflyer/teaser-headline (UNCHANGED) |
+| `P2 Body-Backing` | Polygon | 99 | 66 | 99 | 144 | 0 | Hellgrün card backing |
+| `P2 Teaser-Body` | Text | 113 | 72 | 73 | 130 | 2 | inset +8mm; teaser-body fcolor=White |
+| `P3 Top-Title` | Text | 204 | 8 | 87 | 14 | 2 | "Wahltag" + frame fcolor='Gelb' override |
+| `P3 Wahlkreuz` | Image | 222 | 44 | 50 | 50 | 1 | shared/assets/wahlkreuz.png |
+| `P3 Closer-Headline` | Text | 204 | 100 | 87 | 32 | 2 | falzflyer/closer-headline |
+| `P3 Datum-Akzent` | Text | 204 | 145 | 87 | 22 | 2 | falzflyer/closer-datum |
+| `P3 URL` | Text | 204 | 185 | 87 | 12 | 2 | falzflyer/closer-url |
+| `Falz x=99 (Front)` | FoldLine | 99 | 0..210 | — | — | 3 | Z-Falz vorne |
+| `Falz x=198 (Front)` | FoldLine | 198 | 0..210 | — | — | 3 | Z-Falz vorne |
+
+### Page 1 (Back) — P4 / P5 / P6
+
+| Anname | Type | x | y | w | h | Layer | Notes |
+|---|---|---|---|---|---|---|---|
+| `P4 Top-Band` | Polygon | -3 | -3 | 105 | 31 | 0 | Dunkelgrün outer |
+| `P4 Top-Title` | Text | 6 | 8 | 87 | 14 | 2 | "Themen 1·2" (middle-dot literal) |
+| `P4 Thema 1 — Eyebrow` | Text | 6 | 38 | 87 | 6 | 2 | "THEMA 01" themen-eyebrow |
+| `P4 Thema 1 — Headline` | Text | 6 | 46 | 87 | 14 | 2 | thema-headline (UNCHANGED) |
+| `P4 Thema 1 — Photo` | Image | 6 | 62 | 87 | 44 | 1 | INJECT_MAP → themen_klimaschutz_solar |
+| `P4 Thema 1·2 Trenner` | Polygon | -3 | 108 | 105 | 3 | 0 | Hellgrün strip (V1) |
+| `P4 Thema 1 — Body` | Text | 6 | 114 | 87 | 26 | 2 | thema-body (V1: align=1, 10pt) |
+| `P4 Thema 2 — Eyebrow` | Text | 6 | 144 | 87 | 6 | 2 | "THEMA 02" |
+| `P4 Thema 2 — Headline` | Text | 6 | 152 | 87 | 14 | 2 | thema-headline |
+| `P4 Thema 2 — Photo` | Image | 6 | 168 | 87 | 44 | 1 | INJECT_MAP → themen_soziales_kaffeehaus |
+| `P5 Top-Band` | Polygon | 99 | -3 | 99 | 31 | 0 | Dunkelgrün inner |
+| `P5 Top-Title` | Text | 105 | 8 | 87 | 14 | 2 | "Themen 3·4" |
+| `P5 Thema 3 — Eyebrow` | Text | 105 | 38 | 87 | 6 | 2 | "THEMA 03" |
+| `P5 Thema 3 — Headline` | Text | 105 | 46 | 87 | 14 | 2 | thema-headline |
+| `P5 Thema 3 — Photo` | Image | 105 | 62 | 87 | 44 | 1 | INJECT_MAP → themen_bildung_volksschule |
+| `P5 Thema 3·4 Trenner` | Polygon | 99 | 108 | 99 | 3 | 0 | Hellgrün strip |
+| `P5 Thema 3 — Body` | Text | 105 | 114 | 87 | 26 | 2 | thema-body |
+| `P5 Thema 4 — Eyebrow` | Text | 105 | 144 | 87 | 6 | 2 | "THEMA 04" |
+| `P5 Thema 4 — Headline` | Text | 105 | 152 | 87 | 14 | 2 | thema-headline |
+| `P5 Thema 4 — Photo` | Image | 105 | 168 | 87 | 44 | 1 | NEW V1 — INJECT_MAP → themen_wirtschaft_handwerk |
+| `P6 Hintergrund` | Polygon | 198 | -3 | 102 | 216 | 0 | Dunkelgrün vollflächig (grüne-Klammer pair) |
+| `P6 Top-Title` | Text | 204 | 8 | 87 | 14 | 2 | "Kontakt" top-title |
+| `P6 Kontakt-Headline` | Text | 204 | 38 | 87 | 14 | 2 | contact-headline |
+| `P6 Adresse` | Text | 204 | 62 | 41 | 20 | 2 | 2-col cell row 1 left |
+| `P6 Telefon` | Text | 250 | 62 | 41 | 20 | 2 | 2-col cell row 1 right |
+| `P6 Email` | Text | 204 | 90 | 41 | 20 | 2 | 2-col cell row 2 left |
+| `P6 Sprechtag` | Text | 250 | 90 | 41 | 20 | 2 | 2-col cell row 2 right |
+| `P6 QR-Code (mitmachen)` | Image | 218 | 128 | 24 | 24 | 1 | mirror around 247.5 |
+| `P6 QR-Caption (mitmachen)` | Text | 218 | 154 | 24 | 6 | 2 | "MITMACHEN" themen-eyebrow + fcolor=White override |
+| `P6 QR-Code (termine)` | Image | 254 | 128 | 24 | 24 | 1 | mirror partner |
+| `P6 QR-Caption (termine)` | Text | 254 | 154 | 24 | 6 | 2 | "TERMINE" |
+| `P6 Logo Grüne (weiss)` | Image | 228 | 168 | 38 | 34 | 1 | 3M Trim-konform |
+| `P6 Impressum` | Text | 204 | 200 | 87 | 8 | 2 | impressum (V1: h 60→8, fcolor=White) |
+| `Falz x=99 (Back)` | FoldLine | 99 | 0..210 | — | — | 3 | Z-Falz hinten |
+| `Falz x=198 (Back)` | FoldLine | 198 | 0..210 | — | — | 3 | Z-Falz hinten |
+
+## CONSTRAINTS (22 entries)
+
+Read by `structural_check`. All anname strings use REAL names (em-dash U+2014
+literal, case-sensitive). `AXIS_P6_CENTER_X = 247.5 mm`.
+
+- **Top-Band uniformity (3):** `top_bands_uniform_h` (4 polygons same h),
+  `p3_top_title_anchored` (inside P3 Hintergrund), `p6_top_title_anchored`.
+- **P3↔P6 grüne-Klammer (1):** `gruene_klammer_p3_p6` (same_size).
+- **P4 themen mirror (5):** `p4_eyebrow_x`, `p4_headline_x`, `p4_photo_x`,
+  `p4_photos_size`, `p4_t1_photo_anchored` (aligned_below gap=2.0).
+- **P5 themen mirror (5):** `p5_eyebrow_x`, `p5_headline_x`, `p5_photo_x`,
+  `p5_photos_size`, `p5_t3_photo_anchored`.
+- **Cross-panel (1):** `cross_panel_themen_photos_size`.
+- **P6 Kontakt 2-Spalten (4):** `p6_col_mirror_row1`, `p6_col_mirror_row2`,
+  `p6_qr_mirror`, `p6_qrs_size`.
+- **Logo Print-Soll (1):** `logos_print_soll_w_uniform`.
+- **Style consistency (2):** `thema_headline_style_consistent`,
+  `thema_body_style_consistent`.
+
+Total = 22. P6 baseline same_y + cells_uniform deferred to geometry test
+(`tools/sla_lib/tests/test_kandidat_falzflyer_geometry.py`) to maintain
+the 22-count constraint.
+
+## INJECT_MAP (5 photo bindings)
+
+```python
+INJECT_MAP: dict[str, str] = {
+    "P1 Kandidat-Portrait":  "portrait_maria",
+    "P4 Thema 1 — Photo":    "themen_klimaschutz_solar",
+    "P4 Thema 2 — Photo":    "themen_soziales_kaffeehaus",
+    "P5 Thema 3 — Photo":    "themen_bildung_volksschule",
+    "P5 Thema 4 — Photo":    "themen_wirtschaft_handwerk",
+}
 ```
 
-## Layout — Back (Page 2, flach 297×210 mm)
+`build_template()` setzt die Frames ohne inline-image-data; `build_preview()`
+liest die LIVE-Frame-Dimensionen (post-#24 idiom) und ruft
+`library.inject_into_frame(frame, img, target_w_mm=frame.w_mm,
+target_h_mm=frame.h_mm)` für jeden Match. `build_doc = build_template`
+Alias dient `structural_check` / `spec_check` / Smoke-Test.
 
-```text
-   <-99mm->|<-99mm->|<-99mm->
-  +-------+-------+-------+   ↑
-  |T1 Hd  |T3 Hd  |Kontakt|   |
-  |T1 Body|T3 Body| · · · |   |
-  |       |       |       |   |
-  |T2 Hd  |T4 Hd  | QR    |   |
-  |T2 Body|T4 Body|       |   | 210mm
-  |       |       | Imp.  |   |
-  |       |       |       |   |
-  |       |       |       |   |
-  +-------+-------+-------+   ↓
-   Panel 4  Panel 5  Panel 6
-   (Themen (Themen  (Kontakt
-    1+2)    3+4)     +Imp.)
-   = beim vollen Aufklappen sichtbar (innen)
+## Print Production
 
-Legende:
-  T1-T4 Hd/Body = vier Themen-Module mit Headline + Body
-  Kontakt = Adresse, Tel, Email
-  QR    = QR-Code zur Kandidaten-Webseite
-  Imp.  = Impressum
+- **Trim:** 297×210 mm A4-quer
+- **Bleed:** 3 mm umlaufend → SLA-Fläche 303×216
+- **Falz:** Zickzackfalz (Z-Falz), 2 vertikale Falten an x=99 und x=198 mm,
+  alternierende Faltrichtung. Falz-Layer "Falz" (`printable=False`)
+  trägt nur die 4 Hilfslinien.
+- **Safe-Area pro Panel:** x=6 .. 93 (innen 87 mm), y=6 .. 204 (innen 198 mm).
+  Top-Band-Texte y=8..28 sind im inneren der 31-mm-Top-Band-Polygons.
+- **Color profiles:** CMYK (cmyk_only=true). Spot-Color "Falz" nur auf
+  Falz-Layer (visible=true, printable=false) für Pre-Press.
+- **Min image DPI:** 300.
+
+## Verification
+
+```bash
+# Build clean SLA
+python3 templates/kandidat-falzflyer-din-lang/build.py
+
+# Structural check (CONSTRAINTS + brand rules)
+PYTHONPATH=tools python3 -m sla_lib.builder.structural_check kandidat-falzflyer-din-lang
+
+# Smoke test (15 V1 assertions)
+PYTHONPATH=tools python3 -m unittest templates._smoke.test_kandidat_falzflyer_din_lang
+
+# Geometry invariants (21 V1 invariants)
+PYTHONPATH=tools python3 -m unittest tools.sla_lib.tests.test_kandidat_falzflyer_geometry
+
+# Re-render preview artifacts
+bin/render-gallery kandidat-falzflyer-din-lang --skip-visual-diff
+
+# Verify SHA freshness
+bin/check-stale-previews
 ```
 
-## Reading-Order
-
-```text
-1. Geschlossen: nur Panel 1 sichtbar.
-   "Wer ist die Kandidatin? Wie heißt sie?"
-   Cover muss in 1 Sekunde Person + Botschaft transportieren.
-
-2. Erstes Aufklappen: Panel 2 erscheint neben Panel 1.
-   "Was vertritt sie?"
-   Teaser-Headline + 3-4-Satz-Teaser. Ein Aufruf zur Vertiefung.
-
-3. Volles Aufklappen: Panele 4-6 (innen) plus Panel 3 als Hängelasche sichtbar.
-   "Themen" (Panele 4-5) + "Kontakt" (Panel 6) + "Wahlaufruf" (Panel 3 als Closer).
-
-4. Zufalten: Wahlkreuz auf Panel 3 ist die letzte Botschaft.
-   Symbolische Reinforcement: nicht nur Person, nicht nur Themen, sondern Aufruf zur Wahl.
-```
-
-## Constraints
-
-- **Coordinate-Origin:** Trim-Top-Left (0, 0).
-- **Trim:** 297 × 210 mm. **Bleed 3 mm.**
-- **Falz-Linien:** vertikal bei **x = 99 mm** und **x = 198 mm** auf Falz-Layer.
-- **Per-Panel Inhalts-Bereich:** 99 mm Panel − 6 mm Safety (3 mm pro Falz-/Trim-Kante)
-  = **93 mm usable Width** pro Panel. Bei Panel 1 (linker Trim) und Panel 3 (rechter Trim)
-  ist die Safety zur Trim-Außenkante 3 mm + zur Falz-Innenkante 3 mm.
-- **Per-Panel-Headline ≥ 16 pt** (SCHEMA.md DIN-lang-Mindest).
-- **Per-Panel-Body ≥ 9 pt**.
-- **Wahlkreuz auf Panel 3:** 50 mm × 50 mm auf Dunkelgrün-Polygon (D12), padding 4 mm.
-- **Logo auf Panel 1 + Panel 2 + Panel 6** (Brand-Anker auf jeder „Aufmerksamkeits-Phase").
-
-## Slot-Tabelle — Front (Panele 1, 2, 3)
-
-### Panel 1 — Cover (x=0–99 mm)
-
-| anname                       | type             | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                          | example                                      |
-|------------------------------|------------------|------|------|------|------|-----------|------------------------------------|----------------------------------------------|
-| P1 Logo Grüne (cmyk)         | ImageFrame       |   6  |  10  |  35  |  10  | —         | shared/logos/gruene-cmyk.png       | (verwende shared/logos/gruene-cmyk.png)      |
-| P1 Kandidat-Portrait         | ImageFrame       |   6  |  28  |  87  | 105  | —         | optional / Codex demo (D11)        | (Codex DALL·E generiert)                     |
-| P1 Kandidat-Name             | TextFrame        |   6  | 138  |  87  |  16  | Dunkelgrün| falzflyer/cand-name                | Maria Beispiel                               |
-| P1 Slogan                    | TextFrame        |   6  | 156  |  87  |  40  | Black     | falzflyer/slogan                   | Mut zur Klima-Wende.\nFür Mödling.           |
-
-### Panel 2 — Teaser (x=99–198 mm)
-
-| anname                       | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                       | example                                              |
-|------------------------------|-----------|------|------|------|------|-----------|---------------------------------|------------------------------------------------------|
-| P2 Teaser-Headline           | TextFrame | 105  |  20  |  87  |  20  | Dunkelgrün| falzflyer/teaser-headline       | Was ich für Mödling will                             |
-| P2 Teaser-Body               | TextFrame | 105  |  44  |  87  | 130  | Black     | falzflyer/teaser-body           | Mödling hat einen Klimaplan — er muss umgesetzt werden. Ich bringe Erfahrung aus 10 Jahren Energiewende-Beratung mit und will sie für unsere Gemeinde einsetzen. |
-| P2 Logo (klein)              | ImageFrame| 105  | 188  |  25  |   8  | —         | shared/logos/gruene-cmyk.png    | (verwende shared/logos/gruene-cmyk.png)              |
-
-### Panel 3 — Closer (x=198–297 mm)
-
-| anname                       | type             | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                          | example                                      |
-|------------------------------|------------------|------|------|------|------|-----------|------------------------------------|----------------------------------------------|
-| P3 Hintergrund               | Polygon          | 198  |   0  |  99  | 210  | Dunkelgrün| —                                  | (Vollbild Closer-Panel)                      |
-| P3 Wahlkreuz                 | Block:WahlkreuzSymbol| 222| 30 |  50  |  50  | —         | —                                  | (Wahlkreuz auf Dunkelgrün-Polygon)           |
-| P3 Closer-Headline           | TextFrame        | 204  |  90  |  87  |  30  | White     | falzflyer/closer-headline          | Wähle Grün am 23. Mai                        |
-| P3 Datum-Akzent              | TextFrame        | 204  | 125  |  87  |  20  | Gelb      | falzflyer/closer-datum             | Sonntag, 23. Mai 2026                        |
-| P3 URL                       | TextFrame        | 204  | 175  |  87  |  10  | White     | falzflyer/closer-url               | gruene-moedling.at                           |
-
-### Falz-Linien (Front)
-
-| anname                       | type             | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                          | example                                      |
-|------------------------------|------------------|------|------|------|------|-----------|------------------------------------|----------------------------------------------|
-| Falz x=99 (Front)            | Block:FoldLine   |  99  |   0  |   0  | 210  | Falz      | —                                  | (FoldLine vertikal y=0..210, x=99)           |
-| Falz x=198 (Front)           | Block:FoldLine   | 198  |   0  |   0  | 210  | Falz      | —                                  | (FoldLine vertikal y=0..210, x=198)          |
-
-## Slot-Tabelle — Back (Panele 4, 5, 6)
-
-### Panel 4 — Themen 1+2 (x=0–99 mm)
-
-| anname                       | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                       | example                                              |
-|------------------------------|-----------|------|------|------|------|-----------|---------------------------------|------------------------------------------------------|
-| P4 Thema 1 — Headline        | TextFrame |   6  |  20  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Klimaplan umsetzen                                   |
-| P4 Thema 1 — Photo           | ImageFrame|   6  |  36  |  87  |  24  | —         | samples/themen-klimaschutz.jpg  | Demo themen-photo (synthetic, watermarked)           |
-| P4 Thema 1 — Body            | TextFrame |   6  |  62  |  87  |  32  | Black     | falzflyer/thema-body            | Solar auf jedes Gemeindedach. Heizungstausch fördern. Öffis verdoppeln. |
-| P4 Thema 2 — Headline        | TextFrame |   6  | 105  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Leistbares Wohnen                                    |
-| P4 Thema 2 — Photo           | ImageFrame|   6  | 121  |  87  |  24  | —         | samples/themen-soziales.jpg     | Demo themen-photo (synthetic, watermarked)           |
-| P4 Thema 2 — Body            | TextFrame |   6  | 147  |  87  |  32  | Black     | falzflyer/thema-body            | Gemeinde-Wohnbau ankurbeln. Mietpreis-Bremse für Neubauten. |
-
-### Panel 5 — Themen 3+4 (x=99–198 mm)
-
-| anname                       | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                       | example                                              |
-|------------------------------|-----------|------|------|------|------|-----------|---------------------------------|------------------------------------------------------|
-| P5 Thema 3 — Headline        | TextFrame | 105  |  20  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Bildung vor Ort                                      |
-| P5 Thema 3 — Photo           | ImageFrame| 105  |  36  |  87  |  24  | —         | samples/themen-bildung.jpg      | Demo themen-photo (synthetic, watermarked)           |
-| P5 Thema 3 — Body            | TextFrame | 105  |  62  |  87  |  32  | Black     | falzflyer/thema-body            | Volksschulen ausbauen. Nachmittagsbetreuung gratis. Schulwege sicher. |
-| P5 Thema 4 — Headline        | TextFrame | 105  | 105  |  87  |  14  | Dunkelgrün| falzflyer/thema-headline        | Lokale Wirtschaft                                    |
-| P5 Thema 4 — Body            | TextFrame | 105  | 120  |  87  |  60  | Black     | falzflyer/thema-body            | Regionale Lieferketten. Handwerks-Förderung. Klein­betriebe statt Konzern-Filialen. |
-
-### Panel 6 — Kontakt + Impressum (x=198–297 mm)
-
-| anname                       | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                       | example                                              |
-|------------------------------|-----------|------|------|------|------|-----------|---------------------------------|------------------------------------------------------|
-| P6 Kontakt-Headline          | TextFrame | 204  |  20  |  87  |  14  | Dunkelgrün| falzflyer/contact-headline      | Sprich mich an                                       |
-| P6 Kontakt-Adresse           | TextFrame | 204  |  35  |  87  |  20  | Black     | falzflyer/contact-body          | Hauptstraße 12\n2340 Mödling                         |
-| P6 Kontakt-Email-Tel         | TextFrame | 204  |  56  |  87  |  20  | Black     | falzflyer/contact-body          | maria.beispiel@gruene-moedling.at\n+43 660 1234567   |
-| P6 QR-Code (mitmachen)       | ImageFrame| 210  |  85  |  30  |  30  | —         | samples/qr-mitmachen.png        | Demo: https://noe.gruene.at/mitmachen/ — endusers replace |
-| P6 QR-Code (termine)         | ImageFrame| 246  |  85  |  30  |  30  | —         | samples/qr-termine.png          | Demo: https://noe.gruene.at/termine/ — endusers replace   |
-| P6 Logo Grüne                | ImageFrame| 204  | 130  |  35  |  10  | —         | shared/logos/gruene-cmyk.png    | (verwende shared/logos/gruene-cmyk.png)              |
-| P6 Impressum                 | TextFrame | 204  | 145  |  87  |  60  | Black     | Impressum                       | Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten. |
-
-### Falz-Linien (Back)
-
-| anname                       | type             | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                          | example                                      |
-|------------------------------|------------------|------|------|------|------|-----------|------------------------------------|----------------------------------------------|
-| Falz x=99 (Back)             | Block:FoldLine   |  99  |   0  |   0  | 210  | Falz      | —                                  | (FoldLine vertikal y=0..210, x=99)           |
-| Falz x=198 (Back)            | Block:FoldLine   | 198  |   0  |   0  | 210  | Falz      | —                                  | (FoldLine vertikal y=0..210, x=198)          |
-
-```yaml
-slots:
-  # Front Panel 1 — Cover
-  - anname: "P1 Logo Grüne"
-    type: ImageFrame
-    x_mm: 6
-    y_mm: 10
-    w_mm: 35
-    h_mm: 10
-    fcolor: ""
-    style_ref: "shared/logos/gruene-cmyk.png"
-    example: ""
-  - anname: "P1 Kandidat-Portrait"
-    type: ImageFrame
-    x_mm: 6
-    y_mm: 28
-    w_mm: 87
-    h_mm: 105
-    fcolor: ""
-    style_ref: "optional / Codex demo (D11)"
-    example: ""
-  - anname: "P1 Kandidat-Name"
-    type: TextFrame
-    x_mm: 6
-    y_mm: 138
-    w_mm: 87
-    h_mm: 16
-    fcolor: "Dunkelgrün"
-    style_ref: "falzflyer/cand-name"
-    example: "Maria Beispiel"
-  - anname: "P1 Slogan"
-    type: TextFrame
-    x_mm: 6
-    y_mm: 156
-    w_mm: 87
-    h_mm: 40
-    fcolor: "Black"
-    style_ref: "falzflyer/slogan"
-    example: "Mut zur Klima-Wende.\nFür Mödling."
-  # Front Panel 2 — Teaser
-  - anname: "P2 Teaser-Headline"
-    type: TextFrame
-    x_mm: 105
-    y_mm: 20
-    w_mm: 87
-    h_mm: 20
-    fcolor: "Dunkelgrün"
-    style_ref: "falzflyer/teaser-headline"
-    example: "Was ich für Mödling will"
-  - anname: "P2 Teaser-Body"
-    type: TextFrame
-    x_mm: 105
-    y_mm: 44
-    w_mm: 87
-    h_mm: 130
-    fcolor: "Black"
-    style_ref: "falzflyer/teaser-body"
-    example: "Mödling hat einen Klimaplan — er muss umgesetzt werden."
-  - anname: "P2 Logo (klein)"
-    type: ImageFrame
-    x_mm: 105
-    y_mm: 188
-    w_mm: 25
-    h_mm: 8
-    fcolor: ""
-    style_ref: "shared/logos/gruene-cmyk.png"
-    example: ""
-  # Front Panel 3 — Closer
-  - anname: "P3 Hintergrund"
-    type: Polygon
-    x_mm: 198
-    y_mm: 0
-    w_mm: 99
-    h_mm: 210
-    fcolor: "Dunkelgrün"
-    style_ref: ""
-    example: "Vollbild Closer-Panel"
-  - anname: "P3 Wahlkreuz"
-    type: "Block:WahlkreuzSymbol"
-    x_mm: 222
-    y_mm: 30
-    w_mm: 50
-    h_mm: 50
-    fcolor: ""
-    style_ref: ""
-    example: "Wahlkreuz auf Dunkelgrün-Polygon"
-  - anname: "P3 Closer-Headline"
-    type: TextFrame
-    x_mm: 204
-    y_mm: 90
-    w_mm: 87
-    h_mm: 30
-    fcolor: "White"
-    style_ref: "falzflyer/closer-headline"
-    example: "Wähle Grün am 23. Mai"
-  - anname: "P3 Datum-Akzent"
-    type: TextFrame
-    x_mm: 204
-    y_mm: 125
-    w_mm: 87
-    h_mm: 20
-    fcolor: "Gelb"
-    style_ref: "falzflyer/closer-datum"
-    example: "Sonntag, 23. Mai 2026"
-  - anname: "P3 URL"
-    type: TextFrame
-    x_mm: 204
-    y_mm: 175
-    w_mm: 87
-    h_mm: 10
-    fcolor: "White"
-    style_ref: "falzflyer/closer-url"
-    example: "gruene-moedling.at"
-  - anname: "Falz x=99 (Front)"
-    type: "Block:FoldLine"
-    x_mm: 99
-    y_mm: 0
-    w_mm: 0
-    h_mm: 210
-    fcolor: "Falz"
-    style_ref: ""
-    example: "FoldLine vertikal y=0..210, x=99"
-  - anname: "Falz x=198 (Front)"
-    type: "Block:FoldLine"
-    x_mm: 198
-    y_mm: 0
-    w_mm: 0
-    h_mm: 210
-    fcolor: "Falz"
-    style_ref: ""
-    example: "FoldLine vertikal y=0..210, x=198"
-  # Back Panel 4 — Themen 1+2
-  - anname: "P4 Thema 1 — Headline"
-    type: TextFrame
-    x_mm: 6
-    y_mm: 20
-    w_mm: 87
-    h_mm: 14
-    fcolor: "Dunkelgrün"
-    style_ref: "falzflyer/thema-headline"
-    example: "Klimaplan umsetzen"
-  - anname: "P4 Thema 1 — Photo"
-    type: ImageFrame
-    x_mm: 6
-    y_mm: 36
-    w_mm: 87
-    h_mm: 24
-    fcolor: ""
-    style_ref: "samples/themen-klimaschutz.jpg"
-    example: "Demo themen-photo (synthetic, watermarked)"
-  - anname: "P4 Thema 1 — Body"
-    type: TextFrame
-    x_mm: 6
-    y_mm: 62
-    w_mm: 87
-    h_mm: 32
-    fcolor: "Black"
-    style_ref: "falzflyer/thema-body"
-    example: "Solar auf jedes Gemeindedach. Heizungstausch fördern. Öffis verdoppeln."
-  - anname: "P4 Thema 2 — Headline"
-    type: TextFrame
-    x_mm: 6
-    y_mm: 105
-    w_mm: 87
-    h_mm: 14
-    fcolor: "Dunkelgrün"
-    style_ref: "falzflyer/thema-headline"
-    example: "Leistbares Wohnen"
-  - anname: "P4 Thema 2 — Photo"
-    type: ImageFrame
-    x_mm: 6
-    y_mm: 121
-    w_mm: 87
-    h_mm: 24
-    fcolor: ""
-    style_ref: "samples/themen-soziales.jpg"
-    example: "Demo themen-photo (synthetic, watermarked)"
-  - anname: "P4 Thema 2 — Body"
-    type: TextFrame
-    x_mm: 6
-    y_mm: 147
-    w_mm: 87
-    h_mm: 32
-    fcolor: "Black"
-    style_ref: "falzflyer/thema-body"
-    example: "Gemeinde-Wohnbau ankurbeln. Mietpreis-Bremse für Neubauten."
-  # Back Panel 5 — Themen 3+4
-  - anname: "P5 Thema 3 — Headline"
-    type: TextFrame
-    x_mm: 105
-    y_mm: 20
-    w_mm: 87
-    h_mm: 14
-    fcolor: "Dunkelgrün"
-    style_ref: "falzflyer/thema-headline"
-    example: "Bildung vor Ort"
-  - anname: "P5 Thema 3 — Photo"
-    type: ImageFrame
-    x_mm: 105
-    y_mm: 36
-    w_mm: 87
-    h_mm: 24
-    fcolor: ""
-    style_ref: "samples/themen-bildung.jpg"
-    example: "Demo themen-photo (synthetic, watermarked)"
-  - anname: "P5 Thema 3 — Body"
-    type: TextFrame
-    x_mm: 105
-    y_mm: 62
-    w_mm: 87
-    h_mm: 32
-    fcolor: "Black"
-    style_ref: "falzflyer/thema-body"
-    example: "Volksschulen ausbauen. Nachmittagsbetreuung gratis."
-  - anname: "P5 Thema 4 — Headline"
-    type: TextFrame
-    x_mm: 105
-    y_mm: 105
-    w_mm: 87
-    h_mm: 14
-    fcolor: "Dunkelgrün"
-    style_ref: "falzflyer/thema-headline"
-    example: "Lokale Wirtschaft"
-  - anname: "P5 Thema 4 — Body"
-    type: TextFrame
-    x_mm: 105
-    y_mm: 120
-    w_mm: 87
-    h_mm: 60
-    fcolor: "Black"
-    style_ref: "falzflyer/thema-body"
-    example: "Regionale Lieferketten. Handwerks-Förderung."
-  # Back Panel 6 — Kontakt
-  - anname: "P6 Kontakt-Headline"
-    type: TextFrame
-    x_mm: 204
-    y_mm: 20
-    w_mm: 87
-    h_mm: 14
-    fcolor: "Dunkelgrün"
-    style_ref: "falzflyer/contact-headline"
-    example: "Sprich mich an"
-  - anname: "P6 Kontakt-Adresse"
-    type: TextFrame
-    x_mm: 204
-    y_mm: 35
-    w_mm: 87
-    h_mm: 20
-    fcolor: "Black"
-    style_ref: "falzflyer/contact-body"
-    example: "Hauptstraße 12\n2340 Mödling"
-  - anname: "P6 Kontakt-Email-Tel"
-    type: TextFrame
-    x_mm: 204
-    y_mm: 56
-    w_mm: 87
-    h_mm: 20
-    fcolor: "Black"
-    style_ref: "falzflyer/contact-body"
-    example: "maria.beispiel@gruene-moedling.at\n+43 660 1234567"
-  - anname: "P6 QR-Code (mitmachen)"
-    type: ImageFrame
-    x_mm: 210
-    y_mm: 85
-    w_mm: 30
-    h_mm: 30
-    fcolor: ""
-    style_ref: "samples/qr-mitmachen.png"
-    example: "Demo: https://noe.gruene.at/mitmachen/ — endusers replace with Bezirks-/Listen-URL"
-  - anname: "P6 QR-Code (termine)"
-    type: ImageFrame
-    x_mm: 246
-    y_mm: 85
-    w_mm: 30
-    h_mm: 30
-    fcolor: ""
-    style_ref: "samples/qr-termine.png"
-    example: "Demo: https://noe.gruene.at/termine/ — endusers replace with Termine-URL"
-  - anname: "P6 Logo Grüne"
-    type: ImageFrame
-    x_mm: 204
-    y_mm: 130
-    w_mm: 35
-    h_mm: 10
-    fcolor: ""
-    style_ref: "shared/logos/gruene-cmyk.png"
-    example: ""
-  - anname: "P6 Impressum"
-    type: TextFrame
-    x_mm: 204
-    y_mm: 145
-    w_mm: 87
-    h_mm: 60
-    fcolor: "Black"
-    style_ref: "Impressum"
-    example: "Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten."
-  - anname: "Falz x=99 (Back)"
-    type: "Block:FoldLine"
-    x_mm: 99
-    y_mm: 0
-    w_mm: 0
-    h_mm: 210
-    fcolor: "Falz"
-    style_ref: ""
-    example: "FoldLine vertikal y=0..210, x=99"
-  - anname: "Falz x=198 (Back)"
-    type: "Block:FoldLine"
-    x_mm: 198
-    y_mm: 0
-    w_mm: 0
-    h_mm: 210
-    fcolor: "Falz"
-    style_ref: ""
-    example: "FoldLine vertikal y=0..210, x=198"
-```
-
-## EPS / Image-Embedding-Strategie
-
-```yaml
-eps_strategy:
-  asset_path: "shared/assets/wahlkreuz.png"
-  scale_type: 0
-  background_color: "Dunkelgrün"   # D12: Closer-Panel hat Dunkelgrün-Vollbild
-  background_padding_mm: 4.0
-  encoding: "qcompress"
-  helper: "pack_inline_image"
-```
-
-## Background-Color Contract für Wahlkreuz (D12)
-
-> **Der Wahlkreuz MUSS auf farbigem Brand-Hintergrund stehen — `Dunkelgrün`, `Hellgrün`,
-> oder `Magenta`. NIE auf Weiß. NIE auf Gelb.**
-
-**Diese Spec wählt `Dunkelgrün`** als Background. Begründung: das gesamte Panel 3 ist
-Dunkelgrün-Vollbild — der Wahlkreuz integriert sich visuell in das Closer-Panel statt
-es zu fragmentieren. Der weiße Kreis hebt sich klar vom Dunkelgrün ab.
-
-## Falz / Stanze
-
-**Falz:** Zickzackfalz an x=99 mm und x=198 mm. **Stanze:** keine.
-
-### Falz-Layer + Spot-Color
-
-```yaml
-layer_falz:
-  name: "Falz"
-  printable: false
-  flow: false
-  exportable: true
-
-color_falz:
-  name: "Falz"
-  cmyk: [100, 0, 0, 0]
-  spot: true
-  document_local: true
-```
-
-### Falz-Mechanik
-
-**Zickzackfalz** (Z-fold/accordion): die drei Panele falten sich akkordeonartig. Panel 1
-liegt unten, Panel 2 oben darauf, Panel 3 wieder unten. Geschlossen sieht man nur Panel 1
-(Cover). Beim ersten Aufklappen erscheinen Panel 2 und Panel 1 nebeneinander; beim vollen
-Aufklappen alle 3 Panele (= Front aufgeklappt) und auf der Rückseite Panele 4–6.
-
-**Druckerei-Anweisung:** Z-fold, Falz-Linien gestrichelt im PDF-Preview erkennbar (auf
-Falz-Layer mit Spot-Color), Falzweite je 99 mm.
-
-### Layer-Stack (bottom → top)
-
-1. `Hintergrund` — Polygon-Fills (Panel 3 Dunkelgrün-Vollbild)
-2. `Bilder` — Logos, Portrait, QR, Wahlkreuz-Image
-3. `Text` — alle TextFrames
-4. `Falz` — gestrichelte vertikale Linien
-
-## Brand-Hierarchy Contract
-
-| Schicht | Größe | Font | Farbe |
-|---|---|---|---|
-| Kandidat-Name (Cover) | **24 pt** | Vollkorn Black Italic | Dunkelgrün |
-| Slogan (Cover) | 14 pt | Gotham Narrow Bold | Black |
-| Teaser-Headline | 18 pt | Gotham Narrow Bold | Dunkelgrün |
-| Teaser-Body | 11 pt | Gotham Narrow Book | Black |
-| Closer-Headline | 22 pt | Gotham Narrow Bold | White |
-| Closer-Datum-Akzent | 14 pt | Vollkorn Black Italic | Gelb |
-| Closer-URL | 11 pt | Gotham Narrow Bold | White |
-| Thema-Headline | 16 pt | Gotham Narrow Bold | Dunkelgrün |
-| Thema-Body | 9 pt | Gotham Narrow Book | Black |
-| Kontakt-Headline | 16 pt | Gotham Narrow Bold | Dunkelgrün |
-| Kontakt-Body | 10 pt | Gotham Narrow Book | Black |
-| Impressum | 6 pt | Gotham Narrow Book | Black |
-
-**Begründung:**
-
-- Kandidat-Name 24 pt ist 8 pt über dem DIN-lang-Mindest (16 pt) — auf 87 mm Cover-Width
-  ist ein 12–14-Zeichen-Name in 24 pt Voll-Italic der visuelle Anker.
-- Closer-Headline 22 pt auf Dunkelgrün ist 6 pt über dem Mindest. Closer ist die
-  letzte Botschaft → groß genug für 1-Sekunden-Lesbarkeit.
-- Datum-Akzent 14 pt in Vollkorn-Italic-Gelb auf Dunkelgrün ist die zweite Anker-Hierarchie
-  unter dem Closer.
-- Thema-Body 9 pt × 87 mm Zeilenbreite → ~70 Zeichen/Zeile. Hart am Lesbarkeits-Limit, aber
-  bei Hand-Distanz machbar.
-
-**Whitespace-Rhythmus:**
-
-- Pro Panel 6 mm linke + 6 mm rechte Margin = 87 mm Inhaltsbreite (3 mm Trim-Safety + 3 mm
-  Falz-Safety beidseitig).
-- Auf Themen-Panele 4–5: 25 mm Spacing zwischen Thema 1 (Body endet ~95 mm) und Thema 2
-  (Headline beginnt 105 mm) — visuelle Trennung der Module.
-
-## Print-Hints
-
-```yaml
-print_hints:
-  bleed_mm: 3
-  fold_mm: [99, 198]
-  cut_layer: ""
-  min_dpi: 300
-  paper_recommendation: "Bilderdruck matt 130–170 g/m² (gut für Z-fold)"
-  print_method: "Offset (≥ 500) oder Digital (< 500). Maschinelle Falzung empfohlen."
-  cmyk_only: true
-  fold_type: "Zickzackfalz (Z-fold/accordion)"
-  alternative_fold: "Wickelfalz möglich, Spec-Variante (D3)"
-```
-
-**Druckerei-Hinweis:** Zickzackfalz ist österreichischer Druckerei-Standard für DIN-lang.
-Wickelfalz (= das innere Panel ist ~1 mm schmaler, damit es beim Wickeln passt) ist
-alternativ — die Spec liefert Z-fold als Default; eine Wickelfalz-Variante wäre eine
-spätere Spec-Erweiterung (D3).
-
-## Mediengesetz §24
-
-Impressum-Slot vorhanden auf Panel 6 (Kontakt-Panel). Default-Text aus
-`tools/sla_lib/builder/blocks.py::DEFAULT_IMPRESSUM`.
-
-## Messaging-Legality (NRWO §53)
-
-> Closer auf Panel 3 verwendet **„Wähle Grün am 23. Mai"** — Wahlempfehlung, kein
-> Anweisungstext. ✅
-> Endnutzer:innen MÜSSEN die Formulierung beibehalten oder durch eine andere
-> wahlempfehlungs-konforme Formulierung ersetzen.
-
-## Style-Hygiene
-
-`style_ref` referenziert Template-lokale Styles in `meta.yml.ci_overrides.non_ci_styles`:
-
-- `falzflyer/cand-name` (Vollkorn Black Italic 24 pt Dunkelgrün)
-- `falzflyer/slogan` (Gotham Narrow Bold 14 pt Black)
-- `falzflyer/teaser-headline` (Gotham Narrow Bold 18 pt Dunkelgrün)
-- `falzflyer/teaser-body` (Gotham Narrow Book 11 pt linesp 14 Black)
-- `falzflyer/closer-headline` (Gotham Narrow Bold 22 pt White)
-- `falzflyer/closer-datum` (Vollkorn Black Italic 14 pt Gelb)
-- `falzflyer/closer-url` (Gotham Narrow Bold 11 pt White)
-- `falzflyer/thema-headline` (Gotham Narrow Bold 16 pt Dunkelgrün)
-- `falzflyer/thema-body` (Gotham Narrow Book 9 pt linesp 11 Black)
-- `falzflyer/contact-headline` (Gotham Narrow Bold 16 pt Dunkelgrün)
-- `falzflyer/contact-body` (Gotham Narrow Book 10 pt linesp 12 Black)
-
-`Impressum` ist bestehender Style.
-
-## Codex-Demo-Image (D11)
-
-Cover (Panel 1) trägt einen Kandidat-Portrait-Slot. Demo-Bild via Codex DALL·E:
-
-```yaml
-# templates/kandidat-falzflyer-din-lang/samples/manifest.yml
-images:
-  - id: kandidat-portrait
-    prompt: "Documentary-style portrait photo of a 40s Austrian woman with short brown hair, wearing a green blazer, friendly direct gaze, soft natural light, neutral light-grey backdrop. Vertical 3-quarter portrait, head and shoulders. Natural skin tones. No text overlays. No watermarks."
-    output: kandidat-portrait.jpg
-    size: 768x1024
-```
-
-Wird einmal generiert via `tools/codex_image_gen.py`, JPG committed unter `samples/`,
-in der Gallery-Preview-SLA injiziert. Endnutzer:innen ersetzen das Bild mit dem
-echten Kandidaten-Portrait beim Anpassen.
+All exits 0 in V1 final state.
