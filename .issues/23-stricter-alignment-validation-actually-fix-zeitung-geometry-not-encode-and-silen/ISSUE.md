@@ -1,7 +1,7 @@
 ---
 id: '23'
 title: Stricter alignment validation + actually fix Zeitung geometry (not encode-and-silence)
-status: open
+status: done
 priority: high
 labels:
 - bug
