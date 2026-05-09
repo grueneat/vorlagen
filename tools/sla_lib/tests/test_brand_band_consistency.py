@@ -7,7 +7,7 @@ known band/margin spec into the rule.
 Coverage map (one method per ``<done>`` item in T01):
   - skip when template_id empty
   - skip when load_band_spec returns None
-  - skip when page is in excluded_pages
+  - skip frame with is_full_bleed=True (per-frame opt-in)
   - ERROR when TextFrame y_top < header_y_bot (page-7 drift class)
   - ERROR when ImageFrame y_bottom > footer_y_top (P4 Foto-Spread class)
   - ERROR when content frame x_min < outer margin (LEFT page)
@@ -52,7 +52,6 @@ ZEITUNG_LIKE_SPEC: dict = {
     "background_decoration": {
         "fills": ["Dunkelgrün", "Hellgrün", "Magenta", "Gelb", "White"],
     },
-    "excluded_pages": [1, 2, 10, 11, 14],
 }
 
 
@@ -64,15 +63,15 @@ def _find_rule(rid: str) -> BrandRule:
 
 
 def _facing_doc(template_id: str = "synth-band-test"):
-    """Facing-pages A4 doc with a dummy cover.
+    """Facing-pages A4 doc with a dummy unknown-side first page.
 
-    The cover is page index 0 (page_num=1) — by default it is in
-    ``excluded_pages`` for our synthetic spec, so test setups need to
-    add additional pages with explicit ``master`` to exercise body-pool
-    semantics.
+    The first page uses ``master="cover"`` (no ``links``/``rechts``),
+    which makes the rule treat it as unknown-side and skip it. Body-
+    pool tests add pages with explicit ``master="links"`` /
+    ``master="rechts"`` to exercise the rule.
     """
     d = Document(title="t", template_id=template_id, facing_pages=True)
-    d.add_page(size="A4", bleed_mm=3.0, master="cover")  # page 1 (excluded)
+    d.add_page(size="A4", bleed_mm=3.0, master="cover")  # unknown-side; skipped
     return d
 
 
@@ -118,14 +117,16 @@ class BandConsistencySkipTests(unittest.TestCase):
         with _patch_spec(None):
             self.assertEqual(rule.check(list(d.iter_all_primitives()), d), [])
 
-    def test_excluded_page_returns_zero(self):
+    def test_is_full_bleed_frame_is_skipped(self):
+        """Per-frame opt-in: is_full_bleed=True bypasses the rule."""
         d = _facing_doc()
-        # Add page 2 (page_num=2 — in excluded_pages [1,2,10,11,14]).
-        d.add_page(size="A4", bleed_mm=3.0, master="links")
-        # Add a frame that WOULD violate (y_top=10 in header band).
-        d.pages[1].add(TextFrame(
-            x_mm=30, y_mm=10, w_mm=50, h_mm=10, anname="HeaderFeature",
-            text="x"))
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 LEFT
+        # Frame WOULD violate (y_top=0 above header band, x_min=-3 past
+        # outer margin) but is_full_bleed=True opts out.
+        d.pages[1].add(ImageFrame(
+            x_mm=-3, y_mm=0, w_mm=216, h_mm=160,
+            image="cover.jpg", anname="CoverPhoto",
+            is_full_bleed=True))
         rule = _find_rule("brand:band_consistency")
         with _patch_spec(ZEITUNG_LIKE_SPEC):
             self.assertEqual(rule.check(list(d.iter_all_primitives()), d), [])
@@ -135,7 +136,7 @@ class BandConsistencySkipTests(unittest.TestCase):
         # master="something" doesn't match links|rechts — skip silently.
         d.add_page(size="A4", bleed_mm=3.0, master="weird")
         d.add_page(size="A4", bleed_mm=3.0, master="weird")
-        d.add_page(size="A4", bleed_mm=3.0, master="weird")  # page 4 (not excluded)
+        d.add_page(size="A4", bleed_mm=3.0, master="weird")  # body page
         d.pages[3].add(TextFrame(
             x_mm=30, y_mm=10, w_mm=50, h_mm=10,
             anname="WouldDriftIfChecked", text="x"))
@@ -150,7 +151,7 @@ class BandConsistencySkipTests(unittest.TestCase):
         d.masters[-1].master_name = "master-links"
         # Master pages are tracked separately; they have is_master=True
         # and won't appear in `doc.pages`. Verify the rule returns []
-        # for a doc with only excluded body pages + masters.
+        # for a doc with only the dummy unknown-side page + masters.
         rule = _find_rule("brand:band_consistency")
         with _patch_spec(ZEITUNG_LIKE_SPEC):
             self.assertEqual(rule.check(list(d.iter_all_primitives()), d), [])
@@ -158,7 +159,7 @@ class BandConsistencySkipTests(unittest.TestCase):
     def test_anchor_positioned_frames_are_skipped(self):
         d = _facing_doc()
         d.add_page(size="A4", bleed_mm=3.0, master="links")
-        d.add_page(size="A4", bleed_mm=3.0, master="rechts")  # page 3 (not excluded)
+        d.add_page(size="A4", bleed_mm=3.0, master="rechts")  # page 3 RIGHT body
         # Frame with explicit anchor — would otherwise drift into header band.
         # ``anchor`` non-None marks the frame as anchor-positioned (mirrors
         # _BleedCoverageRule's anchor skip).
@@ -215,7 +216,7 @@ class BandConsistencyHorizontalErrorTests(unittest.TestCase):
     def test_left_page_x_below_outer_margin_fires(self):
         """LEFT page: outer = left edge. x0=10 < outer_mm=20 → ERROR."""
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 - excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: is body LEFT but the body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 - LEFT body
         # Wait - page 3 has master="links" so SIDE_RX matches "links" → LEFT.
         # But page 3 master detection needs links in the master_name. Yes.
@@ -235,7 +236,7 @@ class BandConsistencyHorizontalErrorTests(unittest.TestCase):
     def test_left_page_x_max_exceeds_inner_boundary_fires(self):
         """LEFT page: inner = right edge. x_max=200 > 210-20=190 → ERROR."""
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 - excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: is body LEFT but the body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 - LEFT body
         # x_mm=140, w=60 → x_max=200 → past inner boundary (190).
         d.pages[2].add(TextFrame(
@@ -257,7 +258,7 @@ class BandConsistencyHorizontalErrorTests(unittest.TestCase):
         numbers traditionally sit in the outer-margin alley below body.
         """
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 - excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: is body LEFT but the body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 - LEFT body
         # Page-number frame: y=283.7, h=9.5 (entirely in footer band 283-297)
         # at x=8.5 (past LEFT outer margin 20mm). Allowed.
@@ -277,7 +278,7 @@ class BandConsistencyHorizontalErrorTests(unittest.TestCase):
         may extend past margins. Body-margin spec applies to free-zone
         content only."""
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 - excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: is body LEFT but the body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 - LEFT body
         d.pages[2].add(TextFrame(
             x_mm=8.5, y_mm=25.0, w_mm=12.8, h_mm=9.5,
@@ -297,7 +298,7 @@ class BandConsistencyDecorationTests(unittest.TestCase):
     def test_polygon_brand_fill_fullbleed_is_exempt(self):
         """Dunkelgrün polygon extending past bands is decoration → no ERROR."""
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 - excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: is body LEFT but the body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 - LEFT body
         # Full-bleed Dunkelgrün polygon: x=-3, w=216, y=-3, h=303.
         d.pages[2].add(Polygon(
@@ -313,7 +314,7 @@ class BandConsistencyDecorationTests(unittest.TestCase):
     def test_imageless_imageframe_brand_fill_is_exempt(self):
         """Image-less ImageFrame with brand fill is treated as decoration."""
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3
         # No image / src / inline_image_data → image-less.
         d.pages[2].add(ImageFrame(
@@ -329,7 +330,7 @@ class BandConsistencyDecorationTests(unittest.TestCase):
     def test_imageframe_with_image_is_NOT_decoration_even_if_brand_fill(self):
         """Image content + brand fill is NOT decoration — content frame."""
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3
         # Image content + Dunkelgrün fill is still a content frame.
         # Place to drift outside margins to confirm non-decoration path.
@@ -352,7 +353,7 @@ class BandConsistencyCleanTests(unittest.TestCase):
     def test_content_frame_inside_free_zone_no_violations(self):
         """Image at y=60-200 inside free zone (49-283) and 20-190 → clean."""
         d = _facing_doc()
-        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 (ignored: body content is added to page 3)
         d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 LEFT body
         d.pages[2].add(ImageFrame(
             x_mm=20, y_mm=60, w_mm=170, h_mm=140,

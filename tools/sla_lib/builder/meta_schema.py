@@ -108,10 +108,6 @@ _BAND_SPEC_SCHEMA: dict = {
                 "fills": {"type": "array", "items": {"type": "string"}},
             },
         },
-        "excluded_pages": {
-            "type": "array",
-            "items": {"type": "integer", "minimum": 1},
-        },
     },
 }
 

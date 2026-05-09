@@ -546,6 +546,14 @@ class _SpineSafetyRule(BrandRule):
                 # Exempt SpreadImage halves — intentional spine touch.
                 if SPREAD_HALF_RX.search(anname):
                     continue
+                # Issue #25: per-frame opt-in for intentional full-bleed
+                # feature treatments (back-cover photo, cover hero, etc.)
+                # The author has declared the bleed deliberate; skip the
+                # spine-safety heuristic to avoid false positives on
+                # alone-on-spread pages (last page in a 14-page booklet,
+                # cover, etc.).
+                if getattr(item, "is_full_bleed", False):
+                    continue
                 bbox = _frame_bbox_mm(item, page)
                 if bbox is None:
                     continue
@@ -1351,10 +1359,13 @@ class _BandConsistencyRule(BrandRule):
         fill, image-less ``ImageFrame`` with brand-color fill. These can
         extend full-bleed; they are decoration, not content.
 
-    Excluded feature pages: pages with hero treatments that legitimately
-    bleed past the bands (cover photos, edge-to-edge spreads, back covers)
-    are listed in ``meta.yml::body_block_margins.excluded_pages`` (1-indexed)
-    and exempt from the rule.
+    Intentional full-bleed feature frames (cover photos, edge-to-edge
+    spread halves, back-cover treatments) opt out per-frame via
+    ``is_full_bleed=True`` on the frame primitive. The rule still TESTS
+    every page; only individual frames marked as full-bleed are skipped.
+    The earlier ``excluded_pages`` per-page escape hatch (Issue #25 first
+    pass) was removed because it silenced the rule for whole pages even
+    when only one frame on the page legitimately bled.
 
     Severity = ERROR for both band intrusion AND margin drift (band
     intrusion breaks combinability; margin drift breaks visual consistency
@@ -1364,10 +1375,11 @@ class _BandConsistencyRule(BrandRule):
       - Templates without ``meta.yml::body_block_margins`` (opt-out via
         absent meta key — the rule is silently a no-op).
       - Master pages.
-      - Pages whose 1-indexed number is in ``excluded_pages``.
       - Pages whose ``master_name`` doesn't match ``links``/``rechts``
         (spine_safety covers unknown sides separately).
       - Background decoration frames (per ``_is_background_decoration``).
+      - Frames with ``is_full_bleed=True`` (per-frame opt-in for
+        intentional feature treatments).
       - Anchor-positioned frames (mirrors ``_BleedCoverageRule``'s anchor
         skip — inline icons / logos / wahlkreuz markers anchored to text
         runs are positioned relative to the run, not to the page).
@@ -1388,7 +1400,6 @@ class _BandConsistencyRule(BrandRule):
         if spec is None:
             return []   # opt-out via missing meta key
 
-        excluded = set(spec.get("excluded_pages", []))
         bands = spec["bands"]
         margins = spec["margins"]
         bg_fills = set(spec.get("background_decoration", {}).get(
@@ -1405,8 +1416,6 @@ class _BandConsistencyRule(BrandRule):
             if page.is_master:
                 continue
             page_num = page.own_page + 1   # 1-indexed for users
-            if page_num in excluded:
-                continue   # feature page
 
             # Determine page side
             m = SIDE_RX.search(page.master_name or "")
@@ -1430,6 +1439,12 @@ class _BandConsistencyRule(BrandRule):
             for item in page.items:
                 # Skip background decoration (exempt by design).
                 if _is_background_decoration(item, bg_fills):
+                    continue
+                # Skip frames explicitly marked full-bleed (per-frame
+                # opt-in for intentional feature treatments — cover hero,
+                # spread halves, back cover photo). Replaces the per-page
+                # excluded_pages escape hatch.
+                if getattr(item, "is_full_bleed", False):
                     continue
                 # Skip anchor-positioned frames (positioned relative to a
                 # text run, not the page — mirrors _BleedCoverageRule).
@@ -1469,9 +1484,9 @@ class _BandConsistencyRule(BrandRule):
                             f"[{header_y_top}, {header_y_bot}], "
                             f"free [{header_y_bot}, {footer_y_top}], "
                             f"footer [{footer_y_top}, {footer_y_bot}]. "
-                            f"Either confine to one band, OR list page "
-                            f"in excluded_pages, OR mark frame as "
-                            f"background_decoration."
+                            f"Either confine to one band, OR set "
+                            f"is_full_bleed=True on the frame, OR "
+                            f"mark it as background_decoration."
                         ),
                         targets=(anname or f"<unnamed p{page_num} y={y0:.1f}>",),
                     ))
@@ -1658,7 +1673,7 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
             "inside the bands and margins declared in "
             "meta.yml::body_block_margins. Background decoration "
             "(solid-fill polygons, image-less brand-color frames) "
-            "is exempt. Pages listed in excluded_pages are exempt. "
+            "is exempt. Frames with is_full_bleed=True opt out per-frame. "
             "Templates without body_block_margins are skipped."
         ),
     ),

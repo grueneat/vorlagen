@@ -16,7 +16,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: dc28f5fb9e8a2311da03619d0acbf231494cb637fb6e40c572da431b98e8364b
+previews_for_sla: ceaf197c406d051b4622dc6a319de4606757d13dc14176cb27e0f1b98d842830
 sla_diff_strict: false
 
 # Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
@@ -48,9 +48,10 @@ brand_overrides:
 # of every body-pool page. The free zone is intentionally flexible
 # (3-col grid / image-top / image-bottom / photo grid all OK) — only
 # the bands and margins are rigid, guaranteeing combinability when
-# Bezirksgruppen shuffle pages freely. excluded_pages enumerates the
-# feature pages exempt from the band rule (cover hero, P1 Hero, P9
-# Spread halves, back colophon — page numbers are 1-indexed).
+# Bezirksgruppen shuffle pages freely. Intentional full-bleed feature
+# frames (cover hero, P1 Hero, P9 Spread halves, back-cover photo) opt
+# out per-frame via ``is_full_bleed=True`` on the frame primitive — the
+# rule still tests every page; only individual feature frames skip.
 body_block_margins:
   bands:
     header: {y_top_mm: 20.0, y_bottom_mm: 49.0}
@@ -60,7 +61,6 @@ body_block_margins:
     right: {outer_mm: 20.0, inner_mm: 20.0}
   background_decoration:
     fills: [Dunkelgrün, Hellgrün, Magenta, Gelb, White]
-  excluded_pages: [1, 2, 10, 11, 14]
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"

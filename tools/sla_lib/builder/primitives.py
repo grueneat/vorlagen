@@ -466,6 +466,14 @@ class _Frame:
     ypos_pt: Optional[float] = None
     width_pt: Optional[float] = None
     height_pt: Optional[float] = None
+    # Per-frame opt-in for intentional full-bleed feature elements (cover
+    # photos, edge-to-edge spread halves, back-cover treatments). Frames
+    # with ``is_full_bleed=True`` are exempt from ``brand:band_consistency``
+    # band/margin checks. Issue #25 — replaces the per-page
+    # ``excluded_pages`` escape hatch with an explicit per-frame marker so
+    # the rule still TESTS every page; only individual feature frames opt
+    # out, and the opt-out is visible at the frame definition.
+    is_full_bleed: bool = False
 
     def _xy_pt(self, page) -> tuple[float, float]:
         """Return absolute XPOS/YPOS in scratch canvas space."""
