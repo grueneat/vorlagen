@@ -453,6 +453,141 @@ class _InsidePageRule(BrandRule):
 
 
 # ---------------------------------------------------------------------------
+# brand:spine_safety (Issue #22)
+# ---------------------------------------------------------------------------
+SPINE_SAFETY_INSET_MM = 3.0
+
+# Side detector for facing-pages templates. ``Page.is_left`` is hardcoded
+# False on doc pages (document.py:391-393), so we MUST detect side via
+# ``master_name``. Word-boundary regex avoids substring false matches on
+# future template names. Case-insensitive so "Links"/"Rechts"/"LINKS" all
+# work.
+SIDE_RX = re.compile(r"\b(links|rechts)\b", re.IGNORECASE)
+
+# SpreadImage halves intentionally touch the spine (each half is a
+# full-page-width frame at x=0 on its own page). The blocks.SpreadImage
+# emitter names them ``<base> · left`` / ``<base> · right`` (middle-dot
+# ' · '). NOTE: do NOT reuse this anname suffix for non-SpreadImage
+# frames — the rule will erroneously skip them.
+SPREAD_HALF_RX = re.compile(r" · (left|right)$")
+
+
+@dataclass(frozen=True)
+class _SpineSafetyRule(BrandRule):
+    """Spine-safety on facing-pages docs.
+
+    On a facing-pages document, a non-SpreadImage frame whose spine-side
+    edge is within ``inset_mm`` of the spine causes Scribus's bleed to
+    leak across the spine into the facing page. This rule warns so the
+    template author can either inset the frame or migrate to
+    ``SpreadImage`` for an intentional spread.
+
+    Side detection: ``master_name`` regex ``\\b(links|rechts)\\b`` (case
+    insensitive). ``Page.is_left`` is broken (hardcoded False at
+    ``document.py:391-393``) — DO NOT use it.
+
+    Scope:
+      - Single-page docs (``facing_pages=False``) → no-op (early return).
+      - Master pages → skipped.
+      - Frames with spread-half anname suffix (`` · left``/`` · right``)
+        → skipped (intentional spread).
+      - Pages with master_name not matching either side → ONE warning
+        per such page (so the bug surfaces, but doesn't silently skip).
+
+    Severity = warning (heuristic; the user may intentionally bleed
+    backgrounds across the spine via SpreadImage). Per-template opt-out
+    via ``meta.yml::brand_overrides[brand:spine_safety]``.
+    """
+
+    inset_mm: float = SPINE_SAFETY_INSET_MM
+    tolerance_mm: float = 0.5
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        # Early exit: spine-safety only matters on facing-pages docs.
+        if not getattr(doc, "facing_pages", False):
+            return []
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            # Skip the cover page (own_page == 0). In facing-pages mode
+            # Scribus's PageSet "Facing Pages" with FirstPage=1 places
+            # page 0 ALONE in the right column (verified at
+            # document.py:376-378). With no facing left page, a spine-
+            # touching frame on the cover doesn't leak anywhere.
+            if page.own_page == 0:
+                continue
+            m = SIDE_RX.search(page.master_name or "")
+            if not m:
+                loc = (page.label or page.master_name
+                       or f"page#{page.own_page}")
+                violations.append(Violation(
+                    severity="warning",
+                    rule_id=self.id,
+                    message=(
+                        f"page {loc!r} uses master_name "
+                        f"{page.master_name!r} which does not match "
+                        f"'links'/'rechts'; spine-safety could not be "
+                        f"evaluated"
+                    ),
+                    targets=(page.master_name or "",),
+                ))
+                continue
+            side = m.group(1).lower()
+            pw_mm = page.width_pt * PT_TO_MM
+            for item in page.items:
+                anname = getattr(item, "anname", "") or ""
+                # Exempt SpreadImage halves — intentional spine touch.
+                if SPREAD_HALF_RX.search(anname):
+                    continue
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                x0, _y0, x1, _y1 = bbox
+                if side == "links":
+                    # LEFT page: spine is on the right (x = pw_mm).
+                    gap = pw_mm - x1
+                    if gap < self.inset_mm - self.tolerance_mm:
+                        ident = anname or f"<unnamed {type(item).__name__}>"
+                        violations.append(Violation(
+                            severity="warning",
+                            rule_id=self.id,
+                            message=(
+                                f"frame {ident!r} on LEFT page "
+                                f"{page.master_name!r} has right edge "
+                                f"x={x1:.2f}mm within "
+                                f"{self.inset_mm:.1f}mm of spine "
+                                f"(page_w={pw_mm:.2f}mm); Scribus bleed "
+                                f"will leak across to the facing RIGHT "
+                                f"page. Use SpreadImage if intentional, "
+                                f"or inset the frame's right edge by "
+                                f">={self.inset_mm:.1f}mm."
+                            ),
+                            targets=(ident,),
+                        ))
+                else:  # "rechts"
+                    # RIGHT page: spine is on the left (x = 0).
+                    if x0 < self.inset_mm - self.tolerance_mm:
+                        ident = anname or f"<unnamed {type(item).__name__}>"
+                        violations.append(Violation(
+                            severity="warning",
+                            rule_id=self.id,
+                            message=(
+                                f"frame {ident!r} on RIGHT page "
+                                f"{page.master_name!r} has left edge "
+                                f"x={x0:.2f}mm within "
+                                f"{self.inset_mm:.1f}mm of spine; "
+                                f"Scribus bleed will leak across to the "
+                                f"facing LEFT page. Use SpreadImage if "
+                                f"intentional, or inset the frame's left "
+                                f"edge by >={self.inset_mm:.1f}mm."
+                            ),
+                            targets=(ident,),
+                        ))
+        return violations
+
+
+# ---------------------------------------------------------------------------
 # Module-level rule registry
 # ---------------------------------------------------------------------------
 def _make_rule(cls, **kwargs) -> BrandRule:
@@ -515,5 +650,16 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
         name="Frames inside page bounds",
         description="Every non-master frame's rotation-aware bbox sits "
                     "inside its own page's [-bleed, w+bleed] x [-bleed, h+bleed].",
+    ),
+    _make_rule(
+        _SpineSafetyRule,
+        id="brand:spine_safety",
+        name="Spine-safety on facing pages",
+        description=(
+            "On facing-pages docs, non-SpreadImage frames must inset "
+            "at least 3mm from the spine; otherwise Scribus extends the "
+            "bleed across the spine into the facing page."
+        ),
+        severity="warning",
     ),
 ]
