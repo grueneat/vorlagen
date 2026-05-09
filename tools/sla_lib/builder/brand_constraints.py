@@ -40,6 +40,7 @@ The nine rules:
 """
 from __future__ import annotations
 
+import itertools
 import re
 from dataclasses import dataclass
 from typing import Iterable
@@ -588,6 +589,124 @@ class _SpineSafetyRule(BrandRule):
 
 
 # ---------------------------------------------------------------------------
+# brand:undeclared_alignment_drift (Issue #22)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _UndeclaredDriftRule(BrandRule):
+    """Heuristic detector for undeclared visual adjacency.
+
+    For each page, iterates every pair of named primitives and flags
+    pairs that *appear* visually aligned/adjacent but are NOT declared
+    in the per-template ``CONSTRAINTS = [...]`` list.
+
+    Three suspicious-pair tests:
+      - **axis-x**: ``min_drift_mm < |a.x0 - b.x0| < axis_tolerance_mm``
+        → suggests ``same_x``.
+      - **axis-y**: same on y → suggests ``same_y``.
+      - **adjacency-y**: A above B (``a.y1 < b.y0``) with gap in
+        ``(min_drift_mm, adjacency_gap_mm)`` AND ``|a.x0 - b.x0|
+        < axis_tolerance_mm`` → suggests ``aligned_below``.
+
+    Defaults: ``axis_tolerance_mm=5.0``, ``adjacency_gap_mm=12.0``,
+    ``min_drift_mm=0.5``.
+
+    Skips:
+      - Master pages.
+      - Primitives without ``anname``.
+      - Rotated frames (rotation_deg != 0) — bbox math is misleading.
+      - Pairs already declared in ``constraints`` (via
+        ``Constraint.referenced_annames()``); pair key is
+        ``frozenset({a, b})`` for symmetry.
+
+    Severity = warning by default (heuristic; can false-positive).
+    Per-template opt-out via ``meta.yml::brand_overrides``.
+    """
+
+    axis_tolerance_mm: float = 5.0
+    adjacency_gap_mm: float = 12.0
+    min_drift_mm: float = 0.5
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        constraints = constraints or []
+        # Build declared-pair set from CONSTRAINTS list.
+        declared: set = set()
+        for c in constraints:
+            try:
+                names = c.referenced_annames()
+            except Exception:
+                # BrandRule entries (or anything without referenced_annames)
+                # don't contribute pairs — skip.
+                continue
+            names = [n for n in names if n]
+            if len(names) < 2:
+                continue
+            for a, b in itertools.combinations(names, 2):
+                if a != b:
+                    declared.add(frozenset((a, b)))
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            spatial = []
+            for item in page.items:
+                an = getattr(item, "anname", "") or ""
+                if not an:
+                    continue
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                spatial.append((an, item, bbox))
+            for i, (pa, p_item, p_bbox) in enumerate(spatial):
+                for qa, q_item, q_bbox in spatial[i + 1:]:
+                    if frozenset((pa, qa)) in declared:
+                        continue
+                    # Skip rotated frames — rotated bbox semantics make
+                    # axis/adjacency tests meaningless.
+                    if (float(getattr(p_item, "rotation_deg", 0) or 0) != 0
+                            or float(getattr(q_item, "rotation_deg", 0)
+                                     or 0) != 0):
+                        continue
+                    px0, py0, px1, py1 = p_bbox
+                    qx0, qy0, qx1, qy1 = q_bbox
+                    dx = abs(px0 - qx0)
+                    dy = abs(py0 - qy0)
+                    if self.min_drift_mm < dx < self.axis_tolerance_mm:
+                        violations.append(self._mk(
+                            pa, qa, "axis-x", dx, "same_x",
+                        ))
+                        continue
+                    if self.min_drift_mm < dy < self.axis_tolerance_mm:
+                        violations.append(self._mk(
+                            pa, qa, "axis-y", dy, "same_y",
+                        ))
+                        continue
+                    # Adjacency test: P above Q?
+                    if py1 < qy0:
+                        gap = qy0 - py1
+                        if (self.min_drift_mm < gap < self.adjacency_gap_mm
+                                and dx < self.axis_tolerance_mm):
+                            violations.append(self._mk(
+                                pa, qa, "adjacency-y", gap, "aligned_below",
+                                extra=f"P above Q (gap {gap:.2f}mm)",
+                            ))
+        return violations
+
+    def _mk(self, pa, qa, kind, drift, suggested, extra=""):
+        return Violation(
+            severity="warning",
+            rule_id=self.id,
+            message=(
+                f"frames {pa!r} and {qa!r} appear visually adjacent "
+                f"({kind} drift {drift:.2f}mm)"
+                f"{' ' + extra if extra else ''}. "
+                f"Either declare with {suggested}({pa!r}, {qa!r}, ...) "
+                f"in CONSTRAINTS, or fix the geometry."
+            ),
+            targets=(pa, qa),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Module-level rule registry
 # ---------------------------------------------------------------------------
 def _make_rule(cls, **kwargs) -> BrandRule:
@@ -659,6 +778,17 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
             "On facing-pages docs, non-SpreadImage frames must inset "
             "at least 3mm from the spine; otherwise Scribus extends the "
             "bleed across the spine into the facing page."
+        ),
+        severity="warning",
+    ),
+    _make_rule(
+        _UndeclaredDriftRule,
+        id="brand:undeclared_alignment_drift",
+        name="Undeclared alignment drift",
+        description=(
+            "Pairs of frames that appear visually aligned/adjacent but "
+            "are not declared in the template's CONSTRAINTS list. "
+            "Heuristic; warning-only by default."
         ),
         severity="warning",
     ),

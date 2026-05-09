@@ -47,9 +47,9 @@ def _find_rule(rid: str) -> BrandRule:
 # ---------------------------------------------------------------------------
 class RegistryTests(unittest.TestCase):
     def test_nine_rules_exact(self):
-        # Bumped 9 -> 10 by Issue #22 (spine_safety added in T04);
-        # T06 will renumber/rename this test once T05 also lands.
-        self.assertEqual(len(BRAND_CONSTRAINTS), 10)
+        # Bumped 9 -> 11 by Issue #22 (T04 spine_safety + T05
+        # undeclared_alignment_drift). T06 renames this test.
+        self.assertEqual(len(BRAND_CONSTRAINTS), 11)
 
     def test_ids_are_canonical(self):
         ids = [r.id for r in BRAND_CONSTRAINTS]
@@ -63,7 +63,8 @@ class RegistryTests(unittest.TestCase):
             "brand:bleed_3mm",
             "brand:wahlkreuz_colored_bg",
             "brand:inside_page",
-            "brand:spine_safety",  # Issue #22 (T04)
+            "brand:spine_safety",                # Issue #22 (T04)
+            "brand:undeclared_alignment_drift",  # Issue #22 (T05)
         }
         self.assertEqual(set(ids), expected)
 
