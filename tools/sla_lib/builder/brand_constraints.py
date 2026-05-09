@@ -14,7 +14,7 @@ Rule IDs are STABLE strings — changing them invalidates existing
 ``brand_overrides`` entries in template meta.yml files. Always treat
 them as a public surface.
 
-The fourteen rules (post-#23):
+The sixteen rules (post-#25):
 
   1. ``brand:color_palette``
   2. ``brand:font_family``
@@ -35,6 +35,11 @@ The fourteen rules (post-#23):
  14. ``brand:visual_adjacency_drift`` (Issue #23) — replaces
      brand:undeclared_alignment_drift from #22 with 4-axis checks
      (left/right/top/bottom) plus declaration-disagreement detection.
+ 15. ``brand:image_fills_frame`` (Issue #24) — INJECT_MAP target drift
+     and aspect-mismatch letterboxing.
+ 16. ``brand:band_consistency`` (Issue #25) — body-pool pages confine
+     content to header/free/footer bands and L/R margins per
+     meta.yml::body_block_margins (the unified body-pool model).
 """
 from __future__ import annotations
 
@@ -1293,6 +1298,202 @@ class _ImageFillsFrameRule(BrandRule):
 
 
 # ---------------------------------------------------------------------------
+# brand:band_consistency (Issue #25)
+# ---------------------------------------------------------------------------
+# Default brand-color fills considered background decoration. Frames whose
+# fill is in this set AND have no image content are exempt from the band
+# rule (they can extend full-bleed for visual decoration). Templates may
+# override the list via ``meta.yml::body_block_margins.background_decoration.fills``.
+_DEFAULT_BG_DECORATION_FILLS = (
+    "Dunkelgrün", "Hellgrün", "Magenta", "Gelb", "White",
+)
+
+
+def _is_background_decoration(item, bg_fills) -> bool:
+    """Solid-fill polygon OR image-less ImageFrame with brand-color fill.
+
+    Decoration frames extend full-bleed in any band/margin without firing
+    the band-consistency rule. Per Issue #25 §3.
+    """
+    fill = getattr(item, "fill", None)
+    if fill not in bg_fills:
+        return False
+    if isinstance(item, Polygon):
+        return True
+    if isinstance(item, ImageFrame):
+        has_image = bool(
+            item.image or item.src
+            or getattr(item, "inline_image_data", None)
+        )
+        return not has_image
+    return False
+
+
+@dataclass(frozen=True)
+class _BandConsistencyRule(BrandRule):
+    """Body-pool pages confine content to header/free/footer bands + L/R margins.
+
+    The model (Issue #25 §1, §3): every body-pool page in a multi-page
+    publication shares the same OUTER STRUCTURE — a header band at the
+    top (page #/breadcrumb), a free zone in the middle (where each page's
+    own content lives), a footer band at the bottom (page number/colophon),
+    and L/R outer/inner margins. The free zone is flexible (any internal
+    layout — 3-col text grid, image-top, image-bottom, photo grid). The
+    OUTER STRUCTURE is rigid and guarantees that any LEFT body page can be
+    paired with any RIGHT body page without breaking spread combinability.
+    Bezirksgruppen shuffle pages freely; this rule keeps spreads coherent.
+
+    Two frame classes:
+      - **Content frames** (subject to bands + margins): all ``TextFrame`` +
+        ``ImageFrame`` instances WITH image content (``image`` / ``src`` /
+        ``inline_image_data`` set).
+      - **Background decoration** (EXEMPT): ``Polygon`` with brand-color
+        fill, image-less ``ImageFrame`` with brand-color fill. These can
+        extend full-bleed; they are decoration, not content.
+
+    Excluded feature pages: pages with hero treatments that legitimately
+    bleed past the bands (cover photos, edge-to-edge spreads, back covers)
+    are listed in ``meta.yml::body_block_margins.excluded_pages`` (1-indexed)
+    and exempt from the rule.
+
+    Severity = ERROR for both band intrusion AND margin drift (band
+    intrusion breaks combinability; margin drift breaks visual consistency
+    — same severity simplifies the model). Tolerance = 0.5 mm default.
+
+    Skips:
+      - Templates without ``meta.yml::body_block_margins`` (opt-out via
+        absent meta key — the rule is silently a no-op).
+      - Master pages.
+      - Pages whose 1-indexed number is in ``excluded_pages``.
+      - Pages whose ``master_name`` doesn't match ``links``/``rechts``
+        (spine_safety covers unknown sides separately).
+      - Background decoration frames (per ``_is_background_decoration``).
+      - Anchor-positioned frames (mirrors ``_BleedCoverageRule``'s anchor
+        skip — inline icons / logos / wahlkreuz markers anchored to text
+        runs are positioned relative to the run, not to the page).
+      - Frames without spatial extent (``frame_bbox_mm`` returns ``None``).
+
+    Per-template skip via
+    ``meta.yml::brand_overrides[brand:band_consistency]``.
+    """
+
+    tolerance_mm: float = 0.5
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        from sla_lib.builder.meta_schema import load_band_spec
+        slug = getattr(doc, "template_id", "") or ""
+        if not slug:
+            return []
+        spec = load_band_spec(slug)
+        if spec is None:
+            return []   # opt-out via missing meta key
+
+        excluded = set(spec.get("excluded_pages", []))
+        bands = spec["bands"]
+        margins = spec["margins"]
+        bg_fills = set(spec.get("background_decoration", {}).get(
+            "fills", list(_DEFAULT_BG_DECORATION_FILLS)))
+
+        header_y_top = bands["header"]["y_top_mm"]
+        header_y_bot = bands["header"]["y_bottom_mm"]
+        footer_y_top = bands["footer"]["y_top_mm"]
+        footer_y_bot = bands["footer"]["y_bottom_mm"]
+        # free zone = (header_y_bot, footer_y_top)
+
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            page_num = page.own_page + 1   # 1-indexed for users
+            if page_num in excluded:
+                continue   # feature page
+
+            # Determine page side
+            m = SIDE_RX.search(page.master_name or "")
+            if not m:
+                continue   # spine_safety covers unknown sides
+            side = "left" if m.group(1).lower() == "links" else "right"
+            side_margins = margins[side]
+            outer_mm = side_margins["outer_mm"]
+            inner_mm = side_margins["inner_mm"]
+            pw_mm = page.width_pt * PT_TO_MM
+
+            if side == "left":
+                # LEFT page: outer = left edge, inner = right edge (spine).
+                allowed_x_min = outer_mm
+                allowed_x_max = pw_mm - inner_mm
+            else:
+                # RIGHT page: outer = right edge, inner = left edge (spine).
+                allowed_x_min = inner_mm
+                allowed_x_max = pw_mm - outer_mm
+
+            for item in page.items:
+                # Skip background decoration (exempt by design).
+                if _is_background_decoration(item, bg_fills):
+                    continue
+                # Skip anchor-positioned frames (positioned relative to a
+                # text run, not the page — mirrors _BleedCoverageRule).
+                if getattr(item, "is_anchor_positioned", False):
+                    continue
+                if getattr(item, "anchor", None) is not None:
+                    continue
+                # Skip frames with no spatial extent.
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                x0, y0, x1, y1 = bbox
+                anname = getattr(item, "anname", "") or ""
+                # Vertical bounds: frame must lie entirely within ONE of
+                # the three bands (header / free / footer). Frames that
+                # straddle a band boundary fail.
+                in_header = (
+                    y0 >= header_y_top - self.tolerance_mm
+                    and y1 <= header_y_bot + self.tolerance_mm
+                )
+                in_footer = (
+                    y0 >= footer_y_top - self.tolerance_mm
+                    and y1 <= footer_y_bot + self.tolerance_mm
+                )
+                in_free = (
+                    y0 >= header_y_bot - self.tolerance_mm
+                    and y1 <= footer_y_top + self.tolerance_mm
+                )
+                if not (in_header or in_footer or in_free):
+                    violations.append(Violation(
+                        severity="error",
+                        rule_id=self.id,
+                        message=(
+                            f"frame {anname!r} on page {page_num} "
+                            f"({side}) bbox y=[{y0:.1f}, {y1:.1f}] "
+                            f"crosses band boundary. Bands: header "
+                            f"[{header_y_top}, {header_y_bot}], "
+                            f"free [{header_y_bot}, {footer_y_top}], "
+                            f"footer [{footer_y_top}, {footer_y_bot}]. "
+                            f"Either confine to one band, OR list page "
+                            f"in excluded_pages, OR mark frame as "
+                            f"background_decoration."
+                        ),
+                        targets=(anname or f"<unnamed y={y0:.1f}>",),
+                    ))
+                # Horizontal bounds: must lie within the side's margins.
+                if (x0 < allowed_x_min - self.tolerance_mm
+                        or x1 > allowed_x_max + self.tolerance_mm):
+                    violations.append(Violation(
+                        severity="error",
+                        rule_id=self.id,
+                        message=(
+                            f"frame {anname!r} on page {page_num} "
+                            f"({side}) bbox x=[{x0:.1f}, {x1:.1f}] "
+                            f"exceeds margin spec [{allowed_x_min:.1f}, "
+                            f"{allowed_x_max:.1f}] (outer={outer_mm}mm, "
+                            f"inner={inner_mm}mm)."
+                        ),
+                        targets=(anname or f"<unnamed x={x0:.1f}>",),
+                    ))
+        return violations
+
+
+# ---------------------------------------------------------------------------
 # Module-level rule registry
 # ---------------------------------------------------------------------------
 def _make_rule(cls, **kwargs) -> BrandRule:
@@ -1439,5 +1640,19 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
         # _is_full_bleed. Registry severity is "error" so any violation
         # that escapes the bleed-carve still fails structural_check.
         severity="error",
+    ),
+    _make_rule(
+        _BandConsistencyRule,
+        id="brand:band_consistency",
+        name="Body-pool pages confine content to header/free/footer "
+             "bands and L/R margins (Issue #25)",
+        description=(
+            "Content frames (text + content-bearing image) must stay "
+            "inside the bands and margins declared in "
+            "meta.yml::body_block_margins. Background decoration "
+            "(solid-fill polygons, image-less brand-color frames) "
+            "is exempt. Pages listed in excluded_pages are exempt. "
+            "Templates without body_block_margins are skipped."
+        ),
     ),
 ]

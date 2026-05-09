@@ -43,6 +43,79 @@ _BRAND_OVERRIDE_SCHEMA: dict = {
 _SLA_DIFF_STRICT_SCHEMA: dict = {"type": "boolean"}
 
 
+# Issue #25: body_block_margins schema for the brand:band_consistency rule.
+# Pins the OUTER STRUCTURE (header/free/footer bands + L/R margins) of every
+# body-pool page. Templates without this field skip the band rule cleanly.
+_BAND_SPEC_SCHEMA: dict = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["bands", "margins"],
+    "properties": {
+        "bands": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["header", "footer"],
+            "properties": {
+                "header": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["y_top_mm", "y_bottom_mm"],
+                    "properties": {
+                        "y_top_mm": {"type": "number"},
+                        "y_bottom_mm": {"type": "number"},
+                    },
+                },
+                "footer": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["y_top_mm", "y_bottom_mm"],
+                    "properties": {
+                        "y_top_mm": {"type": "number"},
+                        "y_bottom_mm": {"type": "number"},
+                    },
+                },
+            },
+        },
+        "margins": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["left", "right"],
+            "properties": {
+                "left": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["outer_mm", "inner_mm"],
+                    "properties": {
+                        "outer_mm": {"type": "number"},
+                        "inner_mm": {"type": "number"},
+                    },
+                },
+                "right": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["outer_mm", "inner_mm"],
+                    "properties": {
+                        "outer_mm": {"type": "number"},
+                        "inner_mm": {"type": "number"},
+                    },
+                },
+            },
+        },
+        "background_decoration": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "fills": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "excluded_pages": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1},
+        },
+    },
+}
+
+
 def _meta_path(slug: str, root: Path | None = None) -> Path:
     if root is None:
         root = Path(__file__).resolve().parents[3]
@@ -69,6 +142,37 @@ def load_brand_overrides(slug: str, root: Path | None = None) -> set[str]:
     if overrides is None:
         return set()
     return _validate_and_collect_ids(overrides, p)
+
+
+def load_band_spec(slug: str, root: Path | None = None) -> dict | None:
+    """Return the parsed ``body_block_margins`` dict, or ``None`` if absent.
+
+    Reads ``templates/<slug>/meta.yml``. Returns ``None`` when the file is
+    absent OR has no ``body_block_margins`` field — the brand:band_consistency
+    rule then silently skips the template (opt-out semantics).
+
+    Raises ``ValueError`` on YAML parse error or schema violation. Issue #25.
+    """
+    p = _meta_path(slug, root)
+    if not p.exists():
+        return None
+    try:
+        data = yaml.safe_load(p.read_text(encoding="utf-8"))
+    except yaml.YAMLError as e:
+        raise ValueError(f"meta.yml at {p} is not valid YAML: {e}") from e
+    if not isinstance(data, dict):
+        return None
+    spec = data.get("body_block_margins")
+    if spec is None:
+        return None
+    try:
+        jsonschema.validate(instance=spec, schema=_BAND_SPEC_SCHEMA)
+    except jsonschema.ValidationError as e:
+        raise ValueError(
+            f"meta.yml at {p} body_block_margins malformed: {e.message} "
+            f"(at path {list(e.absolute_path)})"
+        ) from e
+    return spec
 
 
 def load_sla_diff_strict(slug: str, root: Path | None = None) -> bool:
