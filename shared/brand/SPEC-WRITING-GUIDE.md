@@ -247,6 +247,63 @@ ungültiges Pattern): `ValueError`-Raise mit klarem Pointer auf die Stelle.
   >1.0 mm. Skipping über `meta.yml::brand_overrides` (Rule-Level — keine
   Per-Frame-Allowlist). Issue #14.
 
+### Issue #22 — neue Brand-Regeln `brand:spine_safety` + `brand:undeclared_alignment_drift`
+
+- **`brand:spine_safety`** (warning) — Auf `facing_pages=True`-Dokumenten
+  warnt die Regel, wenn die Rücken-Seite eines Non-SpreadImage-Frames
+  innerhalb von 3 mm vom Buchrücken sitzt: Scribus erweitert den Bleed
+  über den Rücken hinweg in die gegenüberliegende Seite. SpreadImage-
+  Hälften (Anname-Pattern ` · (left|right)$`) sind exempt — sie berühren
+  den Rücken intentional. Cover-Seite (`own_page == 0`) wird übersprungen
+  (in Facing-Pages-Mode steht sie alleine). Side-Detection via
+  `master_name`-Regex `\b(links|rechts)\b` (case-insensitive). Issue #22.
+
+- **`brand:undeclared_alignment_drift`** (warning) — Heuristischer
+  Detektor für Paare visueller Frames die fast aligniert/anliegend
+  erscheinen, aber NICHT in der Per-Template-`CONSTRAINTS = […]`-Liste
+  deklariert sind. Drei Tests pro Pair: Achsen-Ausrichtung x/y (Drift
+  zwischen 0.5 mm und 5 mm), Vertikal-Adjacency (A oberhalb B mit Gap
+  zwischen 0.5 mm und 12 mm bei <5 mm x-Drift). Skipped: Master-Pages,
+  anonyme Frames, rotierte Frames. Per-Template opt-out via
+  `meta.yml::brand_overrides[brand:undeclared_alignment_drift]` — gilt
+  als Übergangsmaßnahme, bis das Template eine vollständige
+  CONSTRAINTS-Liste mit allen deklarierten Adjacencies trägt. Issue #22.
+
+## Auditing alignment
+
+`tools/audit_alignment.py` (CLI-Shim `bin/audit-alignment <slug>`)
+emittiert einen Per-Template-Markdown-/JSON-Report mit:
+
+- Page-by-Page-Primitive-Inventory (Anzahl + Side-Detection links/rechts).
+- Verdächtige undeklarierte Adjacencies (selbe Heuristik wie
+  `brand:undeclared_alignment_drift`) mit ready-to-paste Constraint-
+  Skeletons (`same_x("A", "B", name="p1_x_1")`,
+  `same_y(...)`, `aligned_below(...)`).
+- Spine-Safety-Kandidaten (Frames innerhalb 3 mm vom Rücken auf
+  Facing-Pages-Dokumenten).
+
+Workflow für das Encoding der CONSTRAINTS eines Templates:
+
+1. `bin/audit-alignment <slug> --md report.md` ausführen.
+2. Für jedes verdächtige Pair entscheiden: deklarieren (das vorgeschlagene
+   Skeleton in `CONSTRAINTS = [...]` einfügen) oder Geometrie korrigieren
+   (die Ausrichtung ist nicht intendiert — Frame so verschieben dass
+   der Drift > 5 mm wird).
+3. Re-run; iterieren bis Report sauber ist.
+
+`bin/audit-alignment --all` läuft über alle Templates. CI führt den Audit
+informational aus (Artifact `audit-alignment-report` immer hochgeladen,
+fail nie); Promotion auf fatal ist deferred bis genug Production-Templates
+encoded sind (locked decision #10 aus Issue #22).
+
+CLI-Optionen:
+- `--axis-tol-mm <float>` (default 5.0) — narrow für strengere
+  Achsen-Detektion.
+- `--adjacency-tol-mm <float>` (default 12.0) — narrow für strengere
+  Adjacency-Detektion.
+- `--json` / `--md FILE.md` — Ausgabe-Format.
+- `--all --output-dir DIR` — pro-Template `<slug>.md` in DIR.
+
 ### Worked Example aus Phase-4-Entdeckung (Türanhänger)
 
 Während Phase 4 von Issue #12 wurde entdeckt, dass der Türanhänger den HL/SL-
