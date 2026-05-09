@@ -312,7 +312,8 @@ def _add_styles(doc):
 
 
 def _add_front(doc, page0):
-    # Panel 3 (Closer) Dunkelgrün full-bleed background
+    # P3 vollflächig Dunkelgrün (V0 polygon — used by both P3 Top-Title
+    # placement and the gruene-Klammer cross-panel constraint with P6).
     page0.add(Polygon(
         x_mm=FOLD_X2_MM,
         y_mm=-BLEED_MM,
@@ -323,7 +324,11 @@ def _add_front(doc, page0):
         anname="P3 Hintergrund",
     ))
 
-    # ---- Panel 1 (Cover) — x=0..99 -----
+    # ---- Panel 1 (Cover) — x=0..99 — V1 "grüne Klammer" outer pair -----
+    # V1 P1 Top-Band — 31mm Dunkelgrün at the top, +3mm bleed extension
+    # left + +3mm overshoot right (RESEARCH correction #3).
+    page0.add(_top_band(0))
+
     # Logo Print-Soll (Trim-konsistent per Quickguide §"Logo-Größen"):
     #   M = 0.06 * min(trim_w, trim_h)
     #   For DIN-lang Zickzackfalz: min(297, 210) = 210 → M = 12.6 → 3M = 37.8 mm
@@ -343,36 +348,46 @@ def _add_front(doc, page0):
             anname="P1 Logo Grüne (weiss)",
         ))
 
-    # Kandidat-Portrait — central library reference (#13). Frame dims only;
-    # build_preview() injects the cropped image via INJECT_MAP at the LIVE
-    # frame dimensions (post-#24 idiom).
+    # Kandidat-Portrait — V1: y=28->34, h=105->100 (more breathing under
+    # Top-Band; gives Name-Card more room). Frame dims only — build_preview
+    # injects via INJECT_MAP at LIVE frame dims (post-#24 idiom).
     page0.add(ImageFrame(
-        x_mm=6, y_mm=28, w_mm=87, h_mm=105,
+        x_mm=6, y_mm=34, w_mm=87, h_mm=100,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P1 Kandidat-Portrait",
     ))
-    # Kandidat-Name
+
+    # NEW V1: P1 Name-Card — vollbleed bottom Dunkelgrün polygon.
+    # Extends to bottom bleed: 134 + 79 = 213 = 210 + 3mm.
+    page0.add(Polygon(
+        x_mm=-3, y_mm=134, w_mm=105, h_mm=79,
+        fill="Dunkelgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="P1 Name-Card",
+    ))
+
+    # Kandidat-Name (V1: cand-name align=1 fcolor=White on Name-Card)
     page0.add(TextFrame(
-        x_mm=6, y_mm=138, w_mm=87, h_mm=18,
+        x_mm=6, y_mm=142, w_mm=87, h_mm=18,
         layer=LAYER_TEXT,
         style="falzflyer/cand-name",
         runs=[Run(text="Maria Beispiel",
                   paragraph_style="falzflyer/cand-name")],
         anname="P1 Kandidat-Name",
     ))
-    # Slogan (2 lines)
+    # Slogan (V1: NEW slogan-on-green style — Gelb on Dunkelgrün, align=1)
     page0.add(TextFrame(
-        x_mm=6, y_mm=158, w_mm=87, h_mm=40,
+        x_mm=6, y_mm=164, w_mm=87, h_mm=20,
         layer=LAYER_TEXT,
-        style="falzflyer/slogan",
+        style="falzflyer/slogan-on-green",
         runs=[
             Run(text="Mut zur Klima-Wende.", separator="para",
-                paragraph_style="falzflyer/slogan"),
+                paragraph_style="falzflyer/slogan-on-green"),
             Run(text="Für Mödling.",
-                paragraph_style="falzflyer/slogan"),
+                paragraph_style="falzflyer/slogan-on-green"),
         ],
         anname="P1 Slogan",
     ))
@@ -574,16 +589,43 @@ def _add_back(doc, page1):
         anname="P5 Thema 4 — Body",
     ))
 
-    # ---- Panel 6 — Kontakt + Impressum (x=198..297) -----
+    # ---- Panel 6 — Kontakt + Impressum (x=198..297) — V1 vollflächig -----
+    # NEW V1: P6 Hintergrund — vollflächig Dunkelgrün polygon analog to P3
+    # (RESEARCH correction #3 / locked #5). Forms the grüne-Klammer pair
+    # (P3 Hintergrund <-> P6 Hintergrund — both 102×216 vollbleed).
+    page1.add(Polygon(
+        x_mm=FOLD_X2_MM,
+        y_mm=-BLEED_MM,
+        w_mm=PANEL_W_MM + BLEED_MM,
+        h_mm=TRIM_H_MM + 2 * BLEED_MM,
+        fill="Dunkelgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="P6 Hintergrund",
+    ))
+
+    # NEW V1: P6 Top-Title "Kontakt" — Caps Bold White 11pt
     page1.add(TextFrame(
-        x_mm=204, y_mm=20, w_mm=87, h_mm=14,
+        x_mm=204, y_mm=8, w_mm=87, h_mm=14,
+        layer=LAYER_TEXT, style="falzflyer/top-title",
+        runs=[Run(text="Kontakt", paragraph_style="falzflyer/top-title")],
+        anname="P6 Top-Title",
+    ))
+
+    # P6 Kontakt-Headline — V1: y 20->38, h=14, contact-headline (mutated:
+    # align=1, fcolor=White)
+    page1.add(TextFrame(
+        x_mm=204, y_mm=38, w_mm=87, h_mm=14,
         layer=LAYER_TEXT, style="falzflyer/contact-headline",
         runs=[Run(text="Sprich mich an",
                   paragraph_style="falzflyer/contact-headline")],
         anname="P6 Kontakt-Headline",
     ))
+
+    # V1: 4 Kontakt-Cells in 2-column layout symmetric around
+    # AXIS_P6_CENTER_X = 247.5. Cells use contact-body (V1 mutated:
+    # align=1, fcolor=White). Replaces V0's 2 stacked frames.
     page1.add(TextFrame(
-        x_mm=204, y_mm=36, w_mm=87, h_mm=20,
+        x_mm=204, y_mm=62, w_mm=41, h_mm=20,
         layer=LAYER_TEXT, style="falzflyer/contact-body",
         runs=[
             Run(text="Hauptstraße 12", separator="para",
@@ -591,21 +633,37 @@ def _add_back(doc, page1):
             Run(text="2340 Mödling",
                 paragraph_style="falzflyer/contact-body"),
         ],
-        anname="P6 Kontakt-Adresse",
+        anname="P6 Adresse",
     ))
     page1.add(TextFrame(
-        x_mm=204, y_mm=58, w_mm=87, h_mm=20,
+        x_mm=250, y_mm=62, w_mm=41, h_mm=20,
+        layer=LAYER_TEXT, style="falzflyer/contact-body",
+        runs=[Run(text="+43 660 1234567",
+                  paragraph_style="falzflyer/contact-body")],
+        anname="P6 Telefon",
+    ))
+    page1.add(TextFrame(
+        x_mm=204, y_mm=90, w_mm=41, h_mm=20,
+        layer=LAYER_TEXT, style="falzflyer/contact-body",
+        runs=[Run(text="maria.beispiel@gruene-moedling.at",
+                  paragraph_style="falzflyer/contact-body")],
+        anname="P6 Email",
+    ))
+    page1.add(TextFrame(
+        x_mm=250, y_mm=90, w_mm=41, h_mm=20,
         layer=LAYER_TEXT, style="falzflyer/contact-body",
         runs=[
-            Run(text="maria.beispiel@gruene-moedling.at", separator="para",
+            Run(text="Sprechtag", separator="para",
                 paragraph_style="falzflyer/contact-body"),
-            Run(text="+43 660 1234567",
+            Run(text="Mi 17–19 Uhr",
                 paragraph_style="falzflyer/contact-body"),
         ],
-        anname="P6 Kontakt-Email-Tel",
+        anname="P6 Sprechtag",
     ))
+
     # QR codes (Issue #11): two slots, qr-mitmachen + qr-termine. Conditional
-    # inject — empty slots in fresh checkouts.
+    # inject — empty slots in fresh checkouts. V1: w 30->24, x repositioned
+    # to mirror around AXIS_P6_CENTER_X=247.5.
     qr_mitmachen_path = HERE / "samples" / "qr-mitmachen.png"
     qr_termine_path = HERE / "samples" / "qr-termine.png"
     qr_m_data, qr_m_ext = (None, None)
@@ -619,21 +677,41 @@ def _add_back(doc, page1):
             qr_termine_path.read_bytes(), "png"
         )
     page1.add(ImageFrame(
-        x_mm=210, y_mm=85, w_mm=30, h_mm=30,
+        x_mm=218, y_mm=128, w_mm=24, h_mm=24,
         inline_image_data=qr_m_data,
         inline_image_ext=qr_m_ext,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P6 QR-Code (mitmachen)",
     ))
+    # NEW V1: QR caption "MITMACHEN" — themen-eyebrow with frame fcolor
+    # override (eyebrow style is Dunkelgrün; on P6 vollflächig need White).
+    page1.add(TextFrame(
+        x_mm=218, y_mm=154, w_mm=24, h_mm=6,
+        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
+        fcolor="White",
+        runs=[Run(text="MITMACHEN",
+                  paragraph_style="falzflyer/themen-eyebrow")],
+        anname="P6 QR-Caption (mitmachen)",
+    ))
     page1.add(ImageFrame(
-        x_mm=246, y_mm=85, w_mm=30, h_mm=30,
+        x_mm=254, y_mm=128, w_mm=24, h_mm=24,
         inline_image_data=qr_t_data,
         inline_image_ext=qr_t_ext,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P6 QR-Code (termine)",
     ))
+    # NEW V1: QR caption "TERMINE"
+    page1.add(TextFrame(
+        x_mm=254, y_mm=154, w_mm=24, h_mm=6,
+        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
+        fcolor="White",
+        runs=[Run(text="TERMINE",
+                  paragraph_style="falzflyer/themen-eyebrow")],
+        anname="P6 QR-Caption (termine)",
+    ))
+
     # P6 Logo Grüne (weiss). V1: 38×34 mm trim-konform 3M = 37.8 mm soll,
     # white wordmark on Dunkelgrün vollflächig P6, centered around
     # AXIS_P6_CENTER_X = 247.5 → x = 247.5 - 38/2 = 228.5 ≈ 228 mm.
@@ -647,9 +725,10 @@ def _add_back(doc, page1):
             layer=LAYER_BILDER,
             anname="P6 Logo Grüne (weiss)",
         ))
-    # Impressum
+
+    # Impressum (V1: h 60->8, y=200, impressum mutated align=1 fcolor=White)
     page1.add(TextFrame(
-        x_mm=204, y_mm=145, w_mm=87, h_mm=60,
+        x_mm=204, y_mm=200, w_mm=87, h_mm=8,
         layer=LAYER_TEXT, style="falzflyer/impressum",
         runs=[Run(
             text=("Medieninhaber: Die Grünen NÖ, "
