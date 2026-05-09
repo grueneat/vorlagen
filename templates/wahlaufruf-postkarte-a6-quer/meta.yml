@@ -16,31 +16,30 @@ build:
   output: template.sla
 
 # DSL-original — no round-trip diff. SHA pin for stale-check.
-previews_for_sla: 703b25071a4917f8696a5444ab06fc524eb2bb7aed48b284a43c98ae928b1996
-
-# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+previews_for_sla: 7f64b8ad585fb5dfb00b82a30a135ac0326bf8c6c99de4c3ed3d7cea7ba08a06
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
-      Shared with all templates: CI palette ratios drift from the Quickguide
-      0.9 factor; addressed once at brand-team review level.
-  - id: brand:logo_size_3M
-    reason: >-
-      Front logo (35mm) is intentionally larger than 3*M = 18.90mm to anchor
-      the Wahlkreuz hero on the Vollbild front. Back-side Bund-Dunkel logo
-      (18mm) is 0.9mm under 3*M — also intentional, the back is a content panel
-      not the hero.
-  - id: brand:undeclared_alignment_drift
-    reason: >-
-      V1 layout work in #17 owns alignment encoding for this template.
-      Re-enable once V1 lands and a CONSTRAINTS list captures the
-      declared adjacencies (Issue #22 locked decision #9).
+      V1 (#17) introduces wahlaufruf/cell-body-on-green at 9pt body with an
+      airy 11pt linesp (drift 2.9pt > 0.5pt tolerance) for readability over
+      the new Dunkelgrün back-half background. The pre-V1 cell-body /
+      cell-headline / headline styles are also kept as orphans (parallel
+      `*-on-green` migration pattern; #18-#21 reuse this) and remain
+      outside the 0.9 factor. Override retained until those orphans are
+      removed and the on-green palette adopts a tighter linesp. Originally
+      a shared brand-team-review note pre-V1.
 ci_overrides:
   non_ci_styles:
     - "wahlaufruf/headline"
     - "wahlaufruf/cell-headline"
     - "wahlaufruf/cell-body"
     - "wahlaufruf/impressum"
+    - "wahlaufruf/headline-emphasis"
+    - "wahlaufruf/headline-cta"
+    - "wahlaufruf/cell-headline-yellow"
+    - "wahlaufruf/cell-body-on-green"
+    - "wahlaufruf/qr-label"
+    - "wahlaufruf/qr-url"
   non_ci_colors: []
 
 slots:

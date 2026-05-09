@@ -150,7 +150,7 @@ This file logs Claude Design (or other vision-agent) sessions for traceability.
 
 | Date | Session | Output | Resulting issue |
 |---|---|---|---|
-| _empty_ | _start of history_ | — | — |
+| 2026-05-08 | Pattern B · `wahlaufruf-postkarte-a6-quer` (Source: `improvements/01-wahlaufruf-postkarte.md`) | 3 Layout-Varianten (Symbol-Tight / Datum-Banner / Asymmetric Hero) mit build.py-line-targeted Slot-Änderungen + SVG-Companion-Mocks unter `improvements/01-wahlaufruf-postkarte.html` | https://github.com/GrueneAT/vorlagen/issues/33 (V1 only; V2/V3 backlog) |
 
 When you (Claude Design) finish a session, append a row here in your output, so the user can paste it into the brief on the next commit.
 
