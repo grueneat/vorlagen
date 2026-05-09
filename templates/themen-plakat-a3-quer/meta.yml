@@ -15,11 +15,7 @@ build:
   output: template.sla
 
 # No round-trip diff — this is a DSL-original template (no original_sla key).
-previews_for_sla: b89e207447b5d61bfe8295a2bd0c36a05af70245071f690bb9efebb789c5f9c7
-
-# Issue #12 — brand_overrides: rules whose violation is INTENTIONAL design.
-# Each entry must have a `reason` explaining why the deviation is acceptable.
-# See shared/brand/SPEC-WRITING-GUIDE.md "Brand-Override-Konvention".
+previews_for_sla: f115997823d9b70b8bea38142a58c97bde927477aab6bcf7b6a4568451b31840
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
