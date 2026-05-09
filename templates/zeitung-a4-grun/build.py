@@ -633,7 +633,9 @@ def build_template():
     ))
 
     page2.add(TextFrame(
-        x_mm=19.29544444441234,
+        # Issue #25: x=19.30 -> 20.0 to match LEFT outer margin spec
+        # (drift was 0.7mm past 20mm; sub-mm round-trip artefact).
+        x_mm=20.0,
         y_mm=157.55891743173171,
         w_mm=169.998,
         h_mm=27.963304790490763,
@@ -790,10 +792,13 @@ def build_template():
     page3.add(ImageFrame(
         x_mm=135.33199999999982,
         y_mm=49.53117431300355,
-        # w 74.668 -> 71.668 in #22 T12: P3 Hero on page3 (LEFT) had
-        # right edge x=210 flush with the spine; inset preserves left
-        # axis at x=135.33 (column-3 grid) and leaves 3mm spine safety.
-        w_mm=71.66799999993626,
+        # Issue #25: w 71.668 -> 54.668. P3 Hero now matches the body-
+        # grid col-3 width (x=135.33-190.00 = 54.67) so the image stays
+        # inside the LEFT body block (allowed_x_max=190 per
+        # body_block_margins). Prior #22 T12 inset to w=71.668 (right
+        # edge x=207, 3mm spine safety) predates the band model and
+        # extended 17mm past the inner margin.
+        w_mm=54.66800000000017,
         h_mm=58.158088754618625,
         layer=0,
         clip_edit=True,
@@ -974,15 +979,18 @@ def build_template():
     # P4 Foto-Spread: SINGLE-PAGE bottom-band frame on page 4 (RIGHT).
     # Upstream gruene-zeitung-vorlage-original.sla has only ONE
     # ImageFrame at HEIGHT~306pt on OwnPage=4 — there is no page-3
-    # half in the source. Spine-safety addressed by LEFT-edge inset
-    # in #22 T12: x=0 -> x=3 (preserves right-edge at x=210).
-    # Issue #23 T07: extend RIGHT edge to outer bleed (x+w=213) while
-    # preserving the spine inset; w grows 207 -> 210.
+    # half in the source.
+    # Issue #25: shrink to body block (x=20-190, y=188.88-283) so the
+    # photo respects the band model (free zone y<=283, margins
+    # 20-190). Prior #22 T12 + #23 T07 made this full-bleed (x=3-213,
+    # y_bottom=297) which intruded into the footer band (y=297>283)
+    # and exceeded body margins (x=[3, 213] vs [20, 190]). Cropped to
+    # h_mm=94.118 (y_bottom=283) and w_mm=170 (x in [20, 190]).
     page4.add(ImageFrame(
-        x_mm=3.0,
+        x_mm=20.0,
         y_mm=188.8816330286011,
-        w_mm=210.0,
-        h_mm=108.11836697086034,
+        w_mm=170.0,
+        h_mm=94.11836697139891,
         layer=0,
         image='',
         line_width_pt=1,
@@ -1106,9 +1114,11 @@ def build_template():
 
     page6.add(TextFrame(
         x_mm=20.000000000000103,
-        y_mm=37.16145871721426,
+        # Issue #25: y=37.16 -> 49 (move body text out of header band
+        # y=20-49); h=127.47 -> 115.63 (preserve y_bottom=164.62).
+        y_mm=49.0,
         w_mm=54.66573888888888,
-        h_mm=127.46605504587183,
+        h_mm=115.62751376308609,
         layer=0,
         anname='Kopie von u2d5c (8)',
         clip_edit=True,
@@ -1131,9 +1141,11 @@ def build_template():
 
     page6.add(Polygon(
         x_mm=77.50000000006395,
-        y_mm=37.16145871721426,
+        # Issue #25: move with the body text it visually contains; y
+        # 37.16 -> 49, h 123.84 -> 111.99 (preserve y_bottom=160.99).
+        y_mm=49.0,
         w_mm=112.50012777777778,
-        h_mm=123.83837320388564,
+        h_mm=111.99983448609994,
         layer=0,
         anname='u6ad',
         clip_edit=True,
@@ -1247,7 +1259,10 @@ def build_template():
 
     page6.add(TextFrame(
         x_mm=86.25000000000003,
-        y_mm=43.000000000000966,
+        # Issue #25: y 43 -> 54.84 to keep the headline's relative
+        # offset inside the moved u6ad polygon (5.84mm below polygon
+        # top y=49). h unchanged.
+        y_mm=54.83854128278574,
         w_mm=94.99999999999993,
         h_mm=17.697238533726736,
         layer=0,
@@ -1422,9 +1437,11 @@ def build_template():
 
     page8.add(TextFrame(
         x_mm=20.000000000000103,
-        y_mm=37.16145871721426,
+        # Issue #25: y=37.16 -> 49 (out of header band); h=93.84 ->
+        # 82.00 (preserve y_bottom=131).
+        y_mm=49.0,
         w_mm=54.66573888888888,
-        h_mm=93.83854128278676,
+        h_mm=82.00000000000102,
         layer=0,
         anname='Kopie von u2d5c (11)',
         clip_edit=True,
@@ -1447,9 +1464,11 @@ def build_template():
 
     page8.add(Polygon(
         x_mm=135.3334435515306,
-        y_mm=37.16145871721426,
+        # Issue #25: move with the body it visually backs; y 37.16 ->
+        # 49, h 50.02 -> 38.18 (preserve y_bottom=87.18).
+        y_mm=49.0,
         w_mm=54.666684226303374,
-        h_mm=50.0178073399871,
+        h_mm=38.179348567200854,
         layer=0,
         anname='Kopie von u6ad',
         clip_edit=True,
@@ -1553,9 +1572,10 @@ def build_template():
 
     page8.add(TextFrame(
         x_mm=77.66676700569862,
-        y_mm=37.16145871721426,
+        # Issue #25: y 37.16 -> 49, h 93.84 -> 82 (preserve y_bottom=131).
+        y_mm=49.0,
         w_mm=54.66646598862249,
-        h_mm=93.83854128278676,
+        h_mm=82.00000000000102,
         layer=0,
         anname='Kopie von u2da1 (14)',
         clip_edit=True,
@@ -1687,7 +1707,9 @@ def build_template():
 
     page8.add(ImageFrame(
         x_mm=156.8342856646815,
-        y_mm=41.712683999157605,
+        # Issue #25: y 41.71 -> 49 to keep inline icon entirely in
+        # free zone (was crossing y=49 header-band boundary).
+        y_mm=49.0,
         w_mm=11.66500000000001,
         h_mm=9.798599999999995,
         layer=0,
@@ -2099,9 +2121,12 @@ def build_template():
 
     page11.add(TextFrame(
         x_mm=20.000000000000078,
+        # Issue #25: shrink h 35.28 -> 29.0 so the headline fits
+        # entirely inside the header band (y=20-49). Was crossing the
+        # header-band boundary by 6.3mm (y_bottom=55.3).
         y_mm=20.000000000001226,
         w_mm=169.998,
-        h_mm=35.27983486561883,
+        h_mm=29.0,
         layer=0,
         line_width_pt=1,
         default_linesp_mode=2,
@@ -2113,13 +2138,16 @@ def build_template():
     ))
 
     page11.add(ImageFrame(
-        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
-        # preserving the #22 T12 spine inset (x+w=207). w grows
-        # 207 -> 210 to keep right edge at x=207.
-        x_mm=-3,
+        # Issue #25: shrink to body block so P11 Bottom respects the
+        # footer band (y<=283) and L/R margins (20-190). Prior #22 T12
+        # + #23 T07 made this full-bleed (x=-3 to 207, y_bottom=297)
+        # which intruded 14mm into the footer band and 17mm past the
+        # LEFT outer margin. New extent: x=20-190, y=213.74-283 (h
+        # 83.26 -> 69.26, w 210 -> 170).
+        x_mm=20.0,
         y_mm=213.73855046194836,
-        w_mm=210.0,
-        h_mm=83.26144953805078,
+        w_mm=170.0,
+        h_mm=69.26144953805164,
         layer=0,
         image='',
         line_width_pt=1,
@@ -2146,9 +2174,11 @@ def build_template():
         frames=[
             TextFrame(
             x_mm=20.000000000000103,
-            y_mm=37.802770645436674,
+            # Issue #25: y 37.80 -> 49 (out of header band); h 99.04
+            # -> 87.84 (preserve y_bottom=136.84).
+            y_mm=49.0,
             w_mm=54.66573888888888,
-            h_mm=99.03669724770661,
+            h_mm=87.83946789314328,
             layer=0,
             anname='Kopie von u2d5c (17)',
             clip_edit=True,
@@ -2157,9 +2187,11 @@ def build_template():
             ),
             TextFrame(
             x_mm=77.66599999999997,
-            y_mm=37.802770645436674,
+            # Issue #25: y 37.80 -> 49, h 95.20 -> 84.00 (preserve
+            # y_bottom=133.00).
+            y_mm=49.0,
             w_mm=54.66573888888888,
-            h_mm=95.197229354565,
+            h_mm=84.00000000000167,
             layer=0,
             anname='Kopie von u2da1 (22)',
             clip_edit=True,
@@ -2167,9 +2199,11 @@ def build_template():
             ),
             TextFrame(
             x_mm=135.33200000000124,
-            y_mm=37.00000000000025,
+            # Issue #25: y 37.00 -> 49, h 94.48 -> 82.48 (preserve
+            # y_bottom=131.48).
+            y_mm=49.0,
             w_mm=54.66599999999988,
-            h_mm=94.47983486561873,
+            h_mm=82.47983486561898,
             layer=0,
             anname='Kopie von u2da1 (23)',
             clip_edit=True,

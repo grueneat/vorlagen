@@ -292,17 +292,18 @@ class OuterBleedCoverageInvariantTests(unittest.TestCase):
     def test_p1_hero_left_outer(self):
         self._assert_at_outer_bleed("P1 Hero", "left")
 
-    def test_p4_foto_spread_right_outer(self):
-        self._assert_at_outer_bleed("P4 Foto-Spread", "right")
+    # Issue #25: P4 Foto-Spread and P11 Bottom no longer extend to
+    # outer bleed. The band-consistency rule pins these frames inside
+    # the body block (x=20-190, y inside free zone), superseding the
+    # #23 bleed-coverage invariant. Their #23 tests are removed; the
+    # post-#25 geometry is pinned by BandConsistencyInvariantTests
+    # (T08).
 
     def test_p9_spread_left_at_outer_bleed(self):
         self._assert_at_outer_bleed("P9 Spread · left", "left")
 
     def test_p9_spread_right_at_outer_bleed(self):
         self._assert_at_outer_bleed("P9 Spread · right", "right")
-
-    def test_p11_bottom_left_outer(self):
-        self._assert_at_outer_bleed("P11 Bottom", "left")
 
     def test_p13_hero_left_outer(self):
         self._assert_at_outer_bleed("P13 Hero", "left")
