@@ -223,6 +223,147 @@ def _panel_de() -> list:
     ]
 
 
+def _panel_en() -> list:
+    """Panel B (EN, rotated 180°) — 12 V1 primitives, mirror+rotate of Panel A.
+
+    SLA math (per-frame):
+      Text/Image at Panel-A-LOCAL (x, y, w, h)  → SLA (x+w, 210-y, w, h, ROT=180)
+      Polygon    at Panel-A-LOCAL (x, y, w, h)  → SLA (x, 210-y-h, w, h, ROT=0)
+
+    Polygons stay rotation_deg=0 (rectangles need no visual rotation); only
+    Text/Image frames carry ROT=180 + bbox-corner SLA coords. The Hellgrün
+    Footer-Strip pair (Panel A 95..105 + Panel B 105..115) abuts the apex
+    forming a 20 mm Hellgrün band straddling the fold (RESEARCH §3).
+    """
+    logo_data, logo_ext = _logo_inline()
+    qr_data, qr_ext = _qr_inline()
+    return [
+        # 1. Hero-Band polygon (Panel A (-3, -3, 303, 42) → (-3, 171, 303, 42))
+        Polygon(
+            x_mm=-3, y_mm=171, w_mm=303, h_mm=42,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            rotation_deg=0,
+            anname="Hero-Band Panel B",
+        ),
+        # 2. Logo (Panel A (12, 6, 38, 30) → (50, 204, 38, 30, ROT=180))
+        ImageFrame(
+            x_mm=50, y_mm=204, w_mm=38, h_mm=30,
+            inline_image_data=logo_data,
+            inline_image_ext=logo_ext,
+            scale_type=0, ratio=1,
+            layer=LAYER_BILDER,
+            rotation_deg=180,
+            anname="Logo Grüne (panel B)",
+        ),
+        # 3. Headline (Panel A (55, 9, 230, 18) → (285, 201, 230, 18, ROT=180))
+        TextFrame(
+            x_mm=285, y_mm=201, w_mm=230, h_mm=18,
+            layer=LAYER_TEXT,
+            rotation_deg=180,
+            style="tent/headline",
+            runs=[Run(text="Climate. Concrete.",
+                      paragraph_style="tent/headline")],
+            anname="Headline Panel B",
+        ),
+        # 4. Pay-off (Panel A (55, 27, 230, 8) → (285, 183, 230, 8, ROT=180))
+        TextFrame(
+            x_mm=285, y_mm=183, w_mm=230, h_mm=8,
+            layer=LAYER_TEXT,
+            rotation_deg=180,
+            style="tent/payoff",
+            runs=[Run(text="Concrete. Local. Now.",
+                      paragraph_style="tent/payoff")],
+            anname="Pay-off Panel B",
+        ),
+        # 5. Photo-Backing polygon (Panel A (-3, 39, 303, 33) → (-3, 138, 303, 33))
+        Polygon(
+            x_mm=-3, y_mm=138, w_mm=303, h_mm=33,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            rotation_deg=0,
+            anname="Photo-Backing Panel B",
+        ),
+        # 6. Hintergrund-Mitmachen Panel B (Panel A (0, 39, 297, 33) → (297, 171, 297, 33, ROT=180))
+        # Populated by build_preview() via INJECT_MAP entry declared in T02.
+        ImageFrame(
+            x_mm=297, y_mm=171, w_mm=297, h_mm=33,
+            inline_image_data=None,
+            inline_image_ext=None,
+            scale_type=0, ratio=1,
+            layer=LAYER_BILDER,
+            rotation_deg=180,
+            anname="Hintergrund-Mitmachen Panel B",
+        ),
+        # 7. QR-Code (Panel A (12, 78, 17, 17) → (29, 132, 17, 17, ROT=180))
+        ImageFrame(
+            x_mm=29, y_mm=132, w_mm=17, h_mm=17,
+            inline_image_data=qr_data,
+            inline_image_ext=qr_ext,
+            scale_type=0, ratio=1,
+            layer=LAYER_BILDER,
+            rotation_deg=180,
+            anname="QR-Code (mitmachen, panel B)",
+        ),
+        # 8. Body / Bullets (Panel A (32, 78, 110, 16) → (142, 132, 110, 16, ROT=180))
+        TextFrame(
+            x_mm=142, y_mm=132, w_mm=110, h_mm=16,
+            layer=LAYER_TEXT,
+            rotation_deg=180,
+            style="tent/body",
+            runs=[Run(
+                text=("• Renewable energy for all\n"
+                      "• Affordable housing"),
+                paragraph_style="tent/body",
+            )],
+            anname="Body Panel B",
+        ),
+        # 9. Termine (Panel A (152, 78, 133, 16) → (285, 132, 133, 16, ROT=180))
+        TextFrame(
+            x_mm=285, y_mm=132, w_mm=133, h_mm=16,
+            layer=LAYER_TEXT,
+            rotation_deg=180,
+            style="tent/termine",
+            runs=[Run(
+                text=("• Jun 12 — Climate Stammtisch\n"
+                      "• Jun 26 — District meeting"),
+                paragraph_style="tent/termine",
+            )],
+            anname="Termine Panel B",
+        ),
+        # 10. Footer-Strip polygon (Panel A (-3, 95, 303, 10) → (-3, 105, 303, 10))
+        Polygon(
+            x_mm=-3, y_mm=105, w_mm=303, h_mm=10,
+            fill="Hellgrün",
+            layer=LAYER_HINTERGRUND,
+            rotation_deg=0,
+            anname="Footer-Strip Panel B",
+        ),
+        # 11. CTA-Footer (Panel A (12, 97, 200, 6) → (212, 113, 200, 6, ROT=180))
+        TextFrame(
+            x_mm=212, y_mm=113, w_mm=200, h_mm=6,
+            layer=LAYER_TEXT,
+            rotation_deg=180,
+            style="tent/cta-footer",
+            runs=[Run(text="noe.gruene.at/joinus",
+                      paragraph_style="tent/cta-footer")],
+            anname="CTA-Footer Panel B",
+        ),
+        # 12. Impressum Panel B (Panel A (215, 97, 80, 6) → (295, 113, 80, 6, ROT=180))
+        TextFrame(
+            x_mm=295, y_mm=113, w_mm=80, h_mm=6,
+            layer=LAYER_TEXT,
+            rotation_deg=180,
+            style="tent/impressum",
+            runs=[Run(
+                text="Medieninhaber: Die Grünen NÖ — gruene-noe.at",
+                paragraph_style="tent/impressum",
+            )],
+            anname="Impressum (Tent, panel B)",
+        ),
+    ]
+
+
 def build_template() -> Document:
     """Issue #12 D13: return constructed Document; persistence is the
     caller's job (CLI wrapper below or structural_check).
@@ -338,97 +479,9 @@ def build_template() -> Document:
     page.add(TableTentFold(page_size_mm=(TRIM_W_MM, TRIM_H_MM),
                           layer_idx=LAYER_FALZ))
 
-    # ---- PANEL B (y=105..210) — rotated 180° at emit time ----------------
-    # Strategy: place frames with rotation_deg=180. Pivot point in Scribus is
-    # the frame's bottom-left corner (or top-left depending on Scribus
-    # conventions). For TextFrame ROT=180, the rendered text appears upside-
-    # down from the frame's bbox-corner perspective. To flip it correctly we
-    # set rotation_deg=180 on each Panel-B frame.
-    # Headline Panel B — at y=174..198 (24mm) on flat sheet, rotates around
-    # (12+273/2, 174+24/2) = bbox center; for "looks normal when flipped",
-    # we set ROT=180 and adjust XPOS to compensate.
-    #
-    # Simpler: just place the text upright in the post-fold orientation. Since
-    # the spec says the YAML coords ARE the final post-rotation coords (D3
-    # contract, see infostand-tent-card-a5-quer.md), we use rotation_deg=180
-    # to flip the frames into the correct visual orientation when the sheet
-    # is folded.
-
-    # Headline Panel B — rotated 180°, positioned with bbox math:
-    # original (12, 174, 223, 24) → rotated 180 around bbox center makes
-    # the rendered headline read upright when sheet is folded.
-    # Frame XPOS/YPOS in Scribus track the rotated bbox top-left (which
-    # for ROT=180 lands at original bottom-right): so x = 12+223 = 235,
-    # y = 174+24 = 198.
-    page.add(TextFrame(
-        x_mm=235, y_mm=198, w_mm=223, h_mm=24,
-        layer=LAYER_TEXT,
-        style="tent/headline",
-        runs=[Run(text="Climate. Concrete.",
-                  paragraph_style="tent/headline")],
-        anname="Headline Panel B",
-        rotation_deg=180,
-    ))
-
-    # Body Panel B — iter-3: tightened to h=26 to match Panel A and free
-    # space for the CTA + events list. Pre-rot (12, 140, 223, 26) →
-    # rotated bbox: x=12+223=235, y=140+26=166.
-    page.add(TextFrame(
-        x_mm=235, y_mm=166, w_mm=223, h_mm=26,
-        layer=LAYER_TEXT,
-        style="tent/body",
-        runs=[Run(
-            text=("• Renewables: scale up\n"
-                  "• Public transport: double\n"
-                  "• Heat pump, not gas"),
-            paragraph_style="tent/body",
-        )],
-        anname="Body Panel B",
-        rotation_deg=180,
-    ))
-
-    # iter-3: EN CTA mirroring Panel A's Mitmachen at (62, 68, 60, 6).
-    # Pre-rot panel-B equivalent: (62, 210-68-6=136, 60, 6) →
-    # rotated (62+60, 136+6) = (122, 142).
-    page.add(TextFrame(
-        x_mm=122, y_mm=142, w_mm=60, h_mm=6,
-        layer=LAYER_TEXT,
-        style="tent/cta",
-        runs=[Run(text="Get involved — Talk to us!",
-                  paragraph_style="tent/cta")],
-        anname="CTA Panel B",
-        rotation_deg=180,
-    ))
-
-    # iter-3: EN events list mirroring Panel A's Termine at
-    # (125, 68, 160, 26). Pre-rot (125, 210-68-26=116, 160, 26) →
-    # rotated (125+160, 116+26) = (285, 142).
-    page.add(TextFrame(
-        x_mm=285, y_mm=142, w_mm=160, h_mm=26,
-        layer=LAYER_TEXT,
-        style="tent/termine",
-        runs=[Run(
-            text=("Upcoming dates\n"
-                  "• 12 June — Climate roundtable, GH zur Post (Mödling)\n"
-                  "• 26 June — District meeting, Lower Austria South"),
-            paragraph_style="tent/termine",
-        )],
-        anname="Termine Panel B",
-        rotation_deg=180,
-    ))
-
-    # Logo Panel B (rotated 180°). T03/T04 transition: still V0 frame
-    # geometry; T04 will replace this whole V0 Panel B block via _panel_en().
-    lc2_data, lc2_ext = _logo_inline()
-    if lc2_data is not None:
-        page.add(ImageFrame(
-            x_mm=48, y_mm=210, w_mm=36, h_mm=32,
-            inline_image_data=lc2_data, inline_image_ext=lc2_ext,
-            scale_type=0, ratio=1,
-            layer=LAYER_BILDER,
-            anname="Logo Grüne (panel B)",
-            rotation_deg=180,
-        ))
+    # ---- PANEL B (y=105..210) — V1 "Hero Band", EN 180° -------------------
+    for prim in _panel_en():
+        page.add(prim)
 
     return doc
 
