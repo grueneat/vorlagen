@@ -68,19 +68,35 @@ class ThemenPlakatA3QuerSmokeTests(unittest.TestCase):
             for po in self.doc.findall("PAGEOBJECT")
         }
         required = {
+            # Header / hero region
             "Headline These",
             "Sub-Headline",
-            "Beleg 1 — Headline",
+            "Themen-Hero",                # NEW load-bearing hero (V1)
+            "Hero-Foto-Card",             # NEW Hellgrün backing (V1)
+            # Three Beleg cards (V1 Evidence Cards layout)
+            "Beleg 1 — Card",
+            "Beleg 1 — Stat",
+            "Beleg 1 — Label",
             "Beleg 1 — Body",
-            "Beleg 2 — Headline",
+            "Beleg 2 — Card",
+            "Beleg 2 — Stat",
+            "Beleg 2 — Label",
             "Beleg 2 — Body",
-            "Beleg 3 — Headline",
+            "Beleg 3 — Card",
+            "Beleg 3 — Stat",
+            "Beleg 3 — Label",
             "Beleg 3 — Body",
+            # Bottom band
             "Quelle",
             "Impressum",
         }
         missing = required - annames
         self.assertFalse(missing, f"missing annames: {missing}")
+        # V1 deletes the old Beleg N — Headline annames; assert their absence
+        # to catch accidental legacy carry-over in build.py.
+        forbidden = {"Beleg 1 — Headline", "Beleg 2 — Headline", "Beleg 3 — Headline"}
+        leaked = forbidden & annames
+        self.assertFalse(leaked, f"V1 should have removed these annames: {leaked}")
 
     def test_no_frame_outside_trim_plus_bleed(self):
         # Trim 420x297, bleed 3 mm. Allowed area: -3..423 x -3..300 mm.
@@ -140,11 +156,16 @@ class ThemenPlakatA3QuerSmokeTests(unittest.TestCase):
             for s in self.doc.findall("STYLE")
         }
         for needed in (
+            # Existing baseline styles
             "themen-plakat/headline",
             "themen-plakat/beleg-headline",
             "themen-plakat/beleg-body",
             "themen-plakat/source",
             "themen-plakat/impressum",
+            # V1 NEW styles (#19)
+            "themen-plakat/stat-hero",
+            "themen-plakat/beleg-body-on-green",
+            "themen-plakat/beleg-headline-yellow",
         ):
             self.assertIn(needed, styles)
 
