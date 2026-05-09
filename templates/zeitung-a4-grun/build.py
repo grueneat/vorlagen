@@ -1387,7 +1387,12 @@ def build_template():
     ))
 
     page7.add(ImageFrame(
-        x_mm=134.65408460754324,
+        # x 134.654 -> 135.3 in #22 T13: aligns the portrait's left
+        # edge with the column-3 text axis (x=135.3) used by the
+        # body-grid above. 0.65mm drift would otherwise trip
+        # brand:undeclared_alignment_drift; explicit declaration via
+        # CONSTRAINTS in T14 (same_x with col-3 frame).
+        x_mm=135.3,
         y_mm=200.64722222222255,
         w_mm=51.345915392456746,
         h_mm=76.35277777723881,
@@ -1705,10 +1710,16 @@ def build_template():
     ))
 
     page9.add(ColumnTextStory(
+        # Text columns moved y 49.5 -> 130.14 in #22 T13: P9 Spread
+        # · left now occupies (0, 0, 210, 126.14) on page9 (LEFT, post
+        # T11 SpreadImage migration). Original y=49.5 placed text on
+        # top of the spread. New start y = spread_bottom (126.14) +
+        # 4mm gap = 130.14 (declared via aligned_below in T14
+        # CONSTRAINTS).
         frames=[
             TextFrame(
             x_mm=20.000000000000078,
-            y_mm=49.531174313003305,
+            y_mm=130.14,
             w_mm=54.66573888888888,
             h_mm=122.28167890069918,
             layer=0,
@@ -1719,7 +1730,7 @@ def build_template():
             ),
             TextFrame(
             x_mm=77.66599999999997,
-            y_mm=49.531174313003305,
+            y_mm=130.14,
             w_mm=54.66573888888888,
             h_mm=122.747733946571,
             layer=0,
@@ -1729,9 +1740,15 @@ def build_template():
             ),
             TextFrame(
             x_mm=135.33199999999982,
-            y_mm=49.24037614948349,
-            w_mm=54.66599999999988,
-            h_mm=229.29908256880705,
+            y_mm=130.14,
+            # h 229.30 -> 149.86 in #22 T13: original frame ended at
+            # y=278.54 (49.24+229.30); after y move to 130.14, the
+            # original h would push the bottom to y=359.44, far past
+            # page bottom (297) — inside_page error. Shrink to keep
+            # the bottom at y=280 (3mm above the PageNumber strip at
+            # y=283.7); column 3 holds less body content but stays
+            # visually balanced with columns 1+2 ending at y=252.
+            h_mm=149.86,
             layer=0,
             anname='Kopie von u2da1 (17)',
             clip_edit=True,
@@ -1916,7 +1933,13 @@ def build_template():
     ))
 
     page10.add(ImageFrame(
-        x_mm=143.41190825694295,
+        # x 143.412 -> 135.3 in #22 T13: aligns the portrait's left
+        # edge with the column-3 text axis (x=135.333) used by the
+        # body-grid above on the same page. 8.1mm drift was the
+        # user-named bug on print-page 11 (== own_page=10). Right
+        # edge becomes 135.3 + 66.59 = 201.89 (well clear of the page
+        # right edge at 210). Declared via same_x in T14 CONSTRAINTS.
+        x_mm=135.3,
         y_mm=202.57248624122553,
         w_mm=66.58809174299142,
         h_mm=94.42751375823458,
