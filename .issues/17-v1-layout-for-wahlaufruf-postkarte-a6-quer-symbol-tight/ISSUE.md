@@ -68,7 +68,7 @@ CONSTRAINTS = [
 
 `inside_page` runs globally via #14 — no per-template declaration needed.
 
-## Acceptance criteria
+## Acceptance Criteria
 
 - [ ] All build.py edits land in a single commit; commit msg references this issue id.
 - [ ] `python3 templates/wahlaufruf-postkarte-a6-quer/build.py` regenerates `template.sla` cleanly.
