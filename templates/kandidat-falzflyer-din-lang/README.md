@@ -1,96 +1,185 @@
-# Kandidat-Falzflyer DIN-lang
+# Kandidat-Falzflyer DIN-lang (V1 "Falz-Rhythm")
 
-3-fach gefalzter A4-quer-Kandidaten-Flyer (297 × 210 mm) für Personalisierung
-im Wahlkampf.
+A4 quer (297×210 mm), 3-fach Zickzackfalz, 6 Panele à 99×210 mm.
+Front: Cover (P1) — Mein Plan (P2) — Wahltag (P3).
+Back: Themen 1·2 (P4) — Themen 3·4 (P5) — Kontakt (P6).
 
-## Wann verwenden?
+Spec: `templates/_specs/kandidat-falzflyer-din-lang.md`.
 
-- Bezirks-/Kommunal-/Landtagswahlkampf, personalisiert auf eine Kandidatin /
-  einen Kandidaten.
-- Verteilung: Tür-Kampagne, Infostand, Postwurf, Veranstaltungs-Auslage.
-- Lese-Distanz Hand ~30–40 cm.
+## V1 deltas vs V0 (Issue #21)
 
-## Falz-Mechanik
+V1 "Falz-Rhythm" is the **fifth and final** template in the V1 rollout
+sequence (#15: #17→#18→#19→#20→#21). It absorbs every pattern from the
+preceding four V1s and adds the universal Top-Band system + grüne-Klammer
+mirror + P4/P5 themen sub-layout symmetry + P6 2-Spalten Kontakt.
 
-**Zickzackfalz (Z-fold/accordion)**: 6 Panele à 99 mm.
+### Layout deltas
 
+- **3 logo resizes** (T01–T02): P1 Logo 20×18 → 38×22, P6 Logo 17×15 →
+  38×34, P2 Logo (klein) deleted entirely. White wordmark
+  (`shared/logos/gruene-weiss.png`) replaces V0's `gruene-logo-bund-dunkel.png`.
+- **4 universal Top-Band polygons** (P1, P2, P4, P5): 31mm Dunkelgrün
+  band at top of each panel; outer panels (P1, P4) extend +3mm into bleed
+  left and +3mm overshoot right. Inner panels (P2, P5) flush both folds.
+  P3 + P6 are vollflächig Dunkelgrün (the polygon IS the band).
+- **P1 Name-Card** (NEW): vollbleed bottom Dunkelgrün polygon (134..213,
+  +3mm bleed) holding Kandidat-Name (White) + Slogan (Gelb).
+- **P2 Body-Backing** (NEW): Hellgrün card (99×144) under Teaser-Body;
+  body fcolor mutated Black→White for legibility on Hellgrün.
+- **P3 vollflächig** (V0 had this; V1 adds Top-Title "Wahltag" with
+  fcolor='Gelb' override + repositions Closer-Headline/Datum/URL for
+  rhythm consistency).
+- **P4/P5 themen restructure**: 4 Eyebrow Caps (`THEMA 0X`) + 4 Headlines
+  + 4 Photos (87×44 native 1.5:1 — fixes V0's 87×24 halb-leer Streifen)
+  + 2 Bodies (Thema 1, Thema 3 only — Thema 2/4 deleted, photo carries
+  the message). 3mm Hellgrün Trenner divides each panel.
+- **P5 Thema 4 photo** is NEW V1 (asset `themen_wirtschaft_handwerk` in
+  central library).
+- **P6 vollflächig Dunkelgrün**: Top-Title "Kontakt" + Headline + 4
+  Kontakt-Cells (Adresse / Telefon / Email / Sprechtag) in 2-Spalten
+  layout symmetric around `AXIS_P6_CENTER_X = 247.5` (= 198 + 99/2).
+  QRs resized 30→24mm and repositioned to mirror around the same axis.
+  Footer logo 38×34 + Impressum h 60→8 fcolor=White.
+
+### ParaStyle migration
+
+- **10 in-place mutations**: 9 align flips + 1 fcolor-only on `teaser-body`.
+- **4 NEW parallel styles**: `slogan-on-green`, `quote-on-green`,
+  `top-title`, `themen-eyebrow`.
+- **2 KEPT unchanged**: `teaser-headline`, `thema-headline` (both
+  align=0 for redaktionellen Charakter).
+
+Total: 12 V0 → 16 V1 falzflyer/* styles registered.
+
+### CONSTRAINTS
+
+22-entry V1 list (was 9 in V0): Top-Band uniformity (3), grüne-Klammer
+P3↔P6 (1), P4 themen mirror (5), P5 themen mirror (5), cross-panel
+photo size (1), P6 2-Spalten symmetry (4), logo Print-Soll (1), style
+consistency (2).
+
+### INJECT_MAP (post-#24 idiom)
+
+5 photo frames defined in `build_template()` without inline-image-data;
+`build_preview()` injects via `library.inject_into_frame(frame, img,
+target_w_mm=frame.w_mm, target_h_mm=frame.h_mm)` reading LIVE frame
+dimensions (no hardcoded targets).
+
+```python
+INJECT_MAP = {
+    "P1 Kandidat-Portrait":  "portrait_maria",
+    "P4 Thema 1 — Photo":    "themen_klimaschutz_solar",
+    "P4 Thema 2 — Photo":    "themen_soziales_kaffeehaus",
+    "P5 Thema 3 — Photo":    "themen_bildung_volksschule",
+    "P5 Thema 4 — Photo":    "themen_wirtschaft_handwerk",
+}
 ```
-GESCHLOSSEN:        Nur Panel 1 (Cover) sichtbar.
-ERSTES AUFKLAPPEN:  Panel 1 + Panel 2 nebeneinander.
-VOLLES AUFKLAPPEN:  Alle 3 Front-Panele + Back-Panele 4-6 sichtbar.
-ZUFALTEN:           Panel 3 (Closer mit Wahlkreuz) ist die letzte Botschaft.
-```
 
-Falz-Linien bei x=99 mm und x=198 mm auf einem eigenen **Falz-Layer** mit der
-Spot-Color „Falz" (CMYK 100/0/0/0). Druckerei sieht die Falz-Anweisung; im
-finalen Druck nicht sichtbar.
+## M-Basis decision rationale
 
-## Was anpassen?
+Per Quickguide §"Logo-Größen": `M = 0.06 * min(trim_w, trim_h)`. For
+DIN-lang Zickzackfalz: `min(297, 210) = 210 → M = 12.6 → 3M = 37.8 mm`.
 
-### Front
+The brand rule `brand:logo_size_3M` lives in
+`tools/sla_lib/builder/brand_constraints.py:262` and is **already**
+trim-konsistent — V0 had a misleading code-comment in `build.py:195-199`
+suggesting "kurze Kante=105 → 18.9 mm" (panel-based, NOT trim-based).
+V0 logos were 20mm / 16mm / 17mm (panel-based "tolerance"); all three
+violate the actual trim-based 3M rule.
 
-| Anname | Inhalt |
-|---|---|
-| `P1 Kandidat-Portrait` | Foto (vertikal, 87×105 mm) |
-| `P1 Kandidat-Name` | Vor- und Nachname |
-| `P1 Slogan` | 2 Zeilen Slogan |
-| `P2 Teaser-Headline` | „Was ich für [Region] will" o.ä. |
-| `P2 Teaser-Body` | 4–6 Sätze Vorstellung |
-| `P3 Closer-Headline` | „Wähle Grün am [Datum]" |
-| `P3 Datum-Akzent` | Volles Datum als Gelb-Akzent |
-| `P3 URL` | Persönliche oder Bezirks-URL |
+**No tool/library code change in #21:**
+- `tools/check_ci.py` was untouched (RESEARCH correction #1: it has
+  zero logo-/alignment-logic; ISSUE.md framing was wrong).
+- `tools/sla_lib/builder/brand_constraints.py` was untouched (RESEARCH
+  locked decision #1: rule already correct).
 
-### Back
+What changed: the misleading `build.py` header comment was rewritten
+(T01); `meta.yml.brand_overrides` entry `brand:logo_size_3M` was
+removed (T01); 3 logo frames were resized to soll (T02).
 
-| Anname | Inhalt |
-|---|---|
-| `P4 Thema 1 — Headline/Body` | Thema 1 (z.B. Klima) |
-| `P4 Thema 2 — Headline/Body` | Thema 2 (z.B. Wohnen) |
-| `P5 Thema 3 — Headline/Body` | Thema 3 (z.B. Bildung) |
-| `P5 Thema 4 — Headline/Body` | Thema 4 (z.B. Wirtschaft) |
-| `P6 Kontakt-Headline/Adresse/Email-Tel` | Kontakt-Modul |
-| `P6 QR-Code` | QR zur Kandidaten-Webseite |
-| `P6 Impressum` | Mediengesetz §24 |
+Cross-validated: parametric M-Basis-rule regression test
+(`test_m_basis_rule_all_v1_templates`) runs the rule against all 5 V1
+templates — 0 violations on each.
 
-Spec: [`templates/_specs/kandidat-falzflyer-din-lang.md`](../_specs/kandidat-falzflyer-din-lang.md).
+See: `shared/brand/DESIGN-SYSTEM-BRIEF.md` §"Logo Print-Soll".
 
-## Wahlkreuz auf Dunkelgrün-Closer
+## Visual rendering of P1 + P6 logos
 
-Panel 3 ist Vollbild-Dunkelgrün — der Wahlkreuz integriert sich visuell ins
-Closer-Panel. D12-Pflicht erfüllt: Wahlkreuz auf farbigem Brand-Hintergrund.
+The 3.5:1 white wordmark (`shared/logos/gruene-weiss.png`, 413×118 RGB)
+fits inside frames of differing aspect:
+- **P1**: 38×22 mm frame → wordmark auto-fits to width (10.86mm h), 5.6mm
+  padding above + below within the Top-Band y range.
+- **P6**: 38×34 mm frame → wordmark auto-fits to width (10.86mm h),
+  11.6mm padding above + below within the footer zone.
 
-**Wichtig bei Anpassung:** Panel 3 NIEMALS auf Weiß ändern (Wahlkreuz-Kreis
-verschwindet) und NIEMALS auf Gelb (Wahlkreuz-Kreuz verschwindet).
+Same treatment as #20 infostand-tent-card (`brand:image_fills_frame`
+fires WARNING for these letterbox padding scenarios — accepted as a
+brand-decision; it would require either tighter frames or a square-aspect
+wordmark variant to silence).
 
-## Demo-Bilder (synthetisch, KI-generiert)
+## Asset library bindings
 
-Die Galerie-Previews zeigen synthetische Demo-Bilder im Cover-Portrait
-(`samples/portrait-cover.jpg`), in den drei Themen-Fotos
-(`samples/themen-{klimaschutz,soziales,bildung}.jpg`), sowie zwei
-Demo-QR-Codes (`samples/qr-{mitmachen,termine}.png`).
+5 INJECT_MAP photo IDs (manifest at `shared/sample-images/manifest.yml`):
 
-Alle Bilder tragen das EU-AI-Act-konforme Caption-Watermark
-„**Symbolfoto — KI-generiert**" am unteren Bildrand und sind im
-Manifest mit `synthetic: true` markiert. **Vor Kampagnen-Einsatz
-durch echte Fotos ersetzen** — siehe `samples/manifest.yml` für die
-Slot-Liste.
+- `portrait_maria` (Codex AI-generated, watermark "Symbolfoto — KI-generiert")
+- `themen_klimaschutz_solar`
+- `themen_soziales_kaffeehaus`
+- `themen_bildung_volksschule`
+- `themen_wirtschaft_handwerk` (already in central library — no copy needed)
+
+All assets carry the `Symbolfoto — KI-generiert` watermark band; cropped
+variants get the band re-applied via `library.crop_for_frame()`
+(R-WATERMARK-CROP).
+
+Local QR samples (template-specific per RESEARCH locked #9):
+- `samples/qr-mitmachen.png` (P6 QR-Code mitmachen)
+- `samples/qr-termine.png` (P6 QR-Code termine)
 
 ## Build
 
 ```bash
+# Build template.sla (clean — no photos, structural_check / smoke fodder)
 python3 templates/kandidat-falzflyer-din-lang/build.py
-# → templates/kandidat-falzflyer-din-lang/template.sla
+
+# Regen template.sla + preview.pdf + page-NN.png + meta.yml SHA + site mirror
+bin/render-gallery kandidat-falzflyer-din-lang --skip-visual-diff
 ```
 
-## Druck-Empfehlung
+## Verification
 
-- **Trim:** 297 × 210 mm
-- **Bleed:** 3 mm allseitig
-- **Falz:** Zickzackfalz, je 99 mm (x=99 + x=198)
-- **Papier:** Bilderdruck matt 130–170 g/m²
-- **Druck:** Offset (≥ 500) oder Digital (< 500)
-- **Falzung:** maschinell empfohlen
+```bash
+# Structural check (22 CONSTRAINTS + 11 brand rules; 3 overrides)
+PYTHONPATH=tools python3 -m sla_lib.builder.structural_check kandidat-falzflyer-din-lang
 
-## Lizenz
+# Cross-template regression
+PYTHONPATH=tools python3 -m sla_lib.builder.structural_check --all
 
-Templates liegen unter der Creative-Commons-Lizenz wie der Rest des Repos.
+# Smoke test (15 V1 assertions)
+PYTHONPATH=tools python3 -m unittest templates._smoke.test_kandidat_falzflyer_din_lang
+
+# Geometry invariants (21 V1 invariants)
+PYTHONPATH=tools python3 -m unittest tools.sla_lib.tests.test_kandidat_falzflyer_geometry
+
+# All sla_lib tests (754 total)
+python3 -m unittest discover tools/sla_lib/tests
+
+# Verify SHA freshness
+bin/check-stale-previews
+```
+
+All exit 0 in V1 final state.
+
+## Open questions / deferred
+
+- **Pull-Quote frame**: `falzflyer/quote-on-green` style is registered
+  but no frame is emitted in V1 (RESEARCH pitfall 15 — deferred).
+- **`falzflyer/contact-label` Caps-row variants**: deferred per RESEARCH
+  pitfall 16; current V1 does not need a separate label style (4 cells
+  use `contact-body` directly).
+- **P6 Impressum on Dunkelgrün at 6pt**: readability check pending; if
+  print proof shows poor legibility, consider 7pt + linesp 9.
+- **brand_overrides cleanup remainders**: `image_text_overlap` was
+  RESTORED empirically (V1 P6 vollflächig design intentionally places
+  Impressum directly below P6 Logo footer; 38×2mm partial overlap is
+  intentional band-edge bleed). `line_spacing_0.9` and `band_consistency`
+  remain shared-template overrides per RESEARCH.
