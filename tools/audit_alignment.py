@@ -80,6 +80,7 @@ class PageAuditReport:
     declared_pairs: list = field(default_factory=list)        # list[(a, b)]
     suspicious_pairs: list = field(default_factory=list)      # list[SuspiciousPair]
     spine_warnings: list = field(default_factory=list)        # list[str]
+    image_extent_warnings: list = field(default_factory=list)  # Issue #24
 
 
 @dataclass
@@ -131,8 +132,19 @@ def _build_declared(constraints) -> set:
 
 def _audit_doc(doc, constraints, axis_tol_mm: float,
                adjacency_tol_mm: float,
-               slug: str = "<doc>") -> TemplateAuditReport:
-    """Library entry point: audit a built Document with its CONSTRAINTS list."""
+               slug: str = "<doc>",
+               *,
+               check_image_extent: bool = True) -> TemplateAuditReport:
+    """Library entry point: audit a built Document with its CONSTRAINTS list.
+
+    Args:
+        doc, constraints, axis_tol_mm, adjacency_tol_mm, slug: existing
+            #22/#23 surface — see file docstring.
+        check_image_extent: When True (default) runs the
+            ``brand:image_fills_frame`` rule (Issue #24) and distributes
+            its violations into per-page ``image_extent_warnings``.
+            Pass False to skip the check entirely.
+    """
     declared = _build_declared(constraints)
     rep = TemplateAuditReport(
         slug=slug,
@@ -182,6 +194,25 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
     for v in spine_violations:
         for t in v.targets:
             spine_by_target.setdefault(t, []).append(v.message)
+
+    # Issue #24: image-fills-frame check (catches INJECT_MAP target
+    # drift + aspect-mismatch letterboxing). Per-page distribution
+    # mirrors the spine_by_target pattern above. Lazy-import to avoid
+    # circular-import risk when audit_alignment is imported from rule
+    # code paths.
+    image_extent_by_target: dict = {}
+    if check_image_extent:
+        from sla_lib.builder.brand_constraints import _ImageFillsFrameRule
+        image_rule = _ImageFillsFrameRule(
+            id="brand:image_fills_frame", name="", description="",
+        )
+        for v in image_rule.check(
+            list(doc.iter_all_primitives()), doc, constraints=constraints,
+        ):
+            for t in v.targets:
+                image_extent_by_target.setdefault(t, []).append(
+                    f"[{v.severity.upper()}] {v.message}"
+                )
 
     for idx, page in enumerate(doc.pages):
         if page.is_master:
@@ -272,6 +303,24 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
         for an, _, _ in spatial:
             if an in spine_by_target:
                 page_rep.spine_warnings.extend(spine_by_target.pop(an))
+        # Issue #24: attach image-fills-frame warnings to this page
+        # when the frame's anname matches. Walk all page items (not
+        # just the spatial subset, which excludes anonymous frames) so
+        # rule-emitted "<unnamed y=...>" identifiers are also caught.
+        for it in page.items:
+            an = getattr(it, "anname", "") or ""
+            if an and an in image_extent_by_target:
+                page_rep.image_extent_warnings.extend(
+                    image_extent_by_target.pop(an)
+                )
+            else:
+                # Match anonymous frames by the rule's "<unnamed y=N>"
+                # identifier shape so they don't get lost.
+                anon_key = f"<unnamed y={getattr(it, 'y_mm', 0):.1f}>"
+                if anon_key in image_extent_by_target:
+                    page_rep.image_extent_warnings.extend(
+                        image_extent_by_target.pop(anon_key)
+                    )
         rep.pages.append(page_rep)
 
     # Any spine warnings whose target wasn't matched (e.g. unnamed frames
@@ -282,16 +331,35 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
         leftover.extend(tgts)
     if leftover and rep.pages:
         rep.pages[0].spine_warnings.extend(leftover)
+    # Same for image-extent leftovers (unmatched anname/anon-key — should
+    # be empty in practice, but defensive).
+    img_leftover = []
+    for tgts in image_extent_by_target.values():
+        img_leftover.extend(tgts)
+    if img_leftover and rep.pages:
+        rep.pages[0].image_extent_warnings.extend(img_leftover)
     return rep
 
 
 def audit_template(slug: str, root: Path = REPO_ROOT,
                    axis_tol_mm: float = DEFAULTS["axis_tol_mm"],
-                   adjacency_tol_mm: float = DEFAULTS["adjacency_tol_mm"]) \
+                   adjacency_tol_mm: float = DEFAULTS["adjacency_tol_mm"],
+                   *,
+                   check_image_extent: bool = True) \
                    -> TemplateAuditReport:
     try:
         mod = load_build_module(slug, root)
-        doc = mod.build_doc()
+        # Issue #24: prefer build_preview() when available so the
+        # image-fills-frame rule sees inline-injected state. The
+        # INJECT_MAP-drift class (#24's primary bug) is invisible
+        # without inline image bytes — build_doc() returns the clean
+        # end-user variant where named photo frames have empty
+        # inline_image_data. Falls back to build_doc() for templates
+        # without a preview variant.
+        if check_image_extent and hasattr(mod, "build_preview"):
+            doc = mod.build_preview()
+        else:
+            doc = mod.build_doc()
     except Exception as e:
         return TemplateAuditReport(
             slug=slug, facing_pages=False,
@@ -299,12 +367,15 @@ def audit_template(slug: str, root: Path = REPO_ROOT,
         )
     constraints = getattr(mod, "CONSTRAINTS", []) or []
     return _audit_doc(doc, constraints, axis_tol_mm, adjacency_tol_mm,
-                      slug=slug)
+                      slug=slug, check_image_extent=check_image_extent)
 
 
-def audit_all(root: Path = REPO_ROOT) -> list:
+def audit_all(root: Path = REPO_ROOT,
+              *, check_image_extent: bool = True) -> list:
     """Run audit_template across every discoverable slug."""
-    return [audit_template(slug, root) for slug in discover_template_slugs(root)]
+    return [audit_template(slug, root,
+                           check_image_extent=check_image_extent)
+            for slug in discover_template_slugs(root)]
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +439,13 @@ def report_to_markdown(rep: TemplateAuditReport) -> str:
             )
             for sw in pr.spine_warnings:
                 lines.append(f"  - {sw}")
+        if pr.image_extent_warnings:
+            lines.append(
+                f"### Image-fills-frame warnings "
+                f"({len(pr.image_extent_warnings)})"
+            )
+            for iw in pr.image_extent_warnings:
+                lines.append(f"- {iw}")
         lines.append("")
     return "\n".join(lines)
 
@@ -406,6 +484,7 @@ def report_to_json(rep: TemplateAuditReport) -> dict:
                     for sp in pr.suspicious_pairs
                 ],
                 "spine_warnings": pr.spine_warnings,
+                "image_extent_warnings": pr.image_extent_warnings,
             }
             for pr in rep.pages
         ],
@@ -413,13 +492,14 @@ def report_to_json(rep: TemplateAuditReport) -> dict:
 
 
 def _report_has_findings(rep: TemplateAuditReport) -> bool:
-    """True if the report has any tolerance-suspicion or suspicious-pair finding."""
+    """True if the report has any finding (suspicion / pair / spine / image)."""
     if rep.fatal_error:
         return True
     if rep.tolerance_suspicions:
         return True
     for pr in rep.pages:
-        if pr.suspicious_pairs or pr.spine_warnings:
+        if (pr.suspicious_pairs or pr.spine_warnings
+                or pr.image_extent_warnings):
             return True
     return False
 
@@ -450,8 +530,19 @@ def main(argv=None) -> int:
     ap.add_argument(
         "--strict", action="store_true",
         help=("Exit 1 on any finding (tolerance-suspicion, "
-              "suspicious-pair, spine-warning, or fatal_error). Used by "
-              "Phase 3b verification gate (Issue #23)."),
+              "suspicious-pair, spine-warning, image-extent-warning, or "
+              "fatal_error). Used by Phase 3b verification gate "
+              "(Issue #23) + image-fills-frame gate (Issue #24)."),
+    )
+    ap.add_argument(
+        "--check-image-extent", dest="check_image_extent",
+        action="store_true", default=True,
+        help=("Run brand:image_fills_frame check (Issue #24, default on)."),
+    )
+    ap.add_argument(
+        "--no-check-image-extent", dest="check_image_extent",
+        action="store_false",
+        help="Disable the brand:image_fills_frame check (Issue #24).",
     )
     ap.add_argument("--root", type=Path, default=REPO_ROOT)
     ns = ap.parse_args(argv)
@@ -460,7 +551,7 @@ def main(argv=None) -> int:
     if not ns.all and not ns.slug:
         ap.error("Pass either <slug> or --all")
     if ns.all:
-        reps = audit_all(ns.root)
+        reps = audit_all(ns.root, check_image_extent=ns.check_image_extent)
         if ns.output_dir:
             Path(ns.output_dir).mkdir(parents=True, exist_ok=True)
             for rep in reps:
@@ -482,6 +573,7 @@ def main(argv=None) -> int:
         ns.slug, ns.root,
         axis_tol_mm=ns.axis_tol_mm,
         adjacency_tol_mm=ns.adjacency_tol_mm,
+        check_image_extent=ns.check_image_extent,
     )
     if ns.json:
         print(json.dumps(report_to_json(rep), indent=2, ensure_ascii=False))

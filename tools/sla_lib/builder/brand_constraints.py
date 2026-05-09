@@ -1092,6 +1092,15 @@ class _ImageFillsFrameRule(BrandRule):
 
     tolerance_ratio_pct: float = 1.0   # 1% of longer frame side
     tolerance_mm: float = 0.5          # absolute floor
+    # On scale_type=0, the user can deliberately render an asset at a
+    # non-unity ``local_scale`` to inset it inside a larger frame
+    # (e.g. icons/logos in an oversized hit-area). The "image fills
+    # frame" expectation only applies when the user did NOT manually
+    # downscale via local_scale. Frames whose effective local_scale
+    # diverges from 1.0 by more than this fraction are exempted.
+    # ``inject_into_frame`` always leaves local_scale=(1.0, 1.0) so
+    # the INJECT_MAP-drift class is unaffected by this carve.
+    nonunity_local_scale_threshold: float = 0.05
 
     def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list = []
@@ -1109,6 +1118,16 @@ class _ImageFillsFrameRule(BrandRule):
                 )
                 if not has_image:
                     continue
+                # SKIP frames where the user explicitly downscaled via
+                # local_scale (e.g. icons in oversized hit-areas, logos
+                # at intentional inset). The "fills frame" expectation
+                # only applies when local_scale ~ 1.0, which is exactly
+                # what ``inject_into_frame`` produces.
+                if item.scale_type == 0:
+                    scx, scy = item.local_scale
+                    thr = self.nonunity_local_scale_threshold
+                    if (abs(scx - 1.0) > thr or abs(scy - 1.0) > thr):
+                        continue
                 aw_px, ah_px, dpi = self._resolve_asset(item, doc)
                 if aw_px is None:
                     violations.append(self._asset_warning(item))

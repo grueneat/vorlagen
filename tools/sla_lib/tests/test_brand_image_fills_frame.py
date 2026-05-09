@@ -180,6 +180,51 @@ class DiskImageResolutionTests(unittest.TestCase):
             self.assertEqual(viols, [], msg=f"got: {viols}")
 
 
+class NonUnityLocalScaleCarveTests(unittest.TestCase):
+    def test_intentional_local_scale_downscale_skipped(self):
+        """scale_type=0 with non-unity local_scale (icons/logos in
+        oversized hit-areas) -> rule SKIPS them.
+
+        Mirrors the unnamed inline icons in Zeitung pages 1/9/11/13/14
+        (carried verbatim from the original SLA at scale_type=0 with
+        local_scale ~0.04). User-set local_scale signals "render at
+        this size, not at frame extent" -- not a fill expectation.
+        """
+        # Asset is 1000mm at 300dpi (large). Frame is small, local_scale
+        # near 0 means user wants the asset rendered tiny inside the
+        # large frame. Rule should skip.
+        jpg = _make_jpeg_bytes(int(round(50 * 300 / 25.4)),
+                               int(round(50 * 300 / 25.4)),
+                               dpi=300)
+        data, _ext = pack_inline_image(jpg, "jpg")
+        d = _doc_a4_facing()
+        d.pages[0].add(ImageFrame(
+            x_mm=10, y_mm=10, w_mm=50, h_mm=50,
+            inline_image_data=data, inline_image_ext="jpg",
+            scale_type=0, local_scale=(0.05, 0.05),
+            anname="icon_in_hit_area",
+        ))
+        viols = _rule().check(list(d.iter_all_primitives()), d)
+        self.assertEqual(viols, [], msg=f"got: {viols}")
+
+    def test_unity_local_scale_still_checked(self):
+        """local_scale=(1.0, 1.0) (the inject_into_frame default) is
+        still subject to the fill check."""
+        jpg = _make_jpeg_bytes(int(round(95 * 300 / 25.4)),
+                               int(round(100 * 300 / 25.4)),
+                               dpi=300)
+        data, _ext = pack_inline_image(jpg, "jpg")
+        d = _doc_a4_facing()
+        d.pages[0].add(ImageFrame(
+            x_mm=50, y_mm=50, w_mm=100, h_mm=100,
+            inline_image_data=data, inline_image_ext="jpg",
+            scale_type=0, local_scale=(1.0, 1.0),
+            anname="inject_target",
+        ))
+        viols = _rule().check(list(d.iter_all_primitives()), d)
+        self.assertEqual(len(viols), 1, msg=f"got: {viols}")
+
+
 class ScaleTypeMatrixTests(unittest.TestCase):
     def test_scale_type_1_ratio_1_letterbox_inside_detected(self):
         """200x100px @ 300dpi (~16.93x8.47mm) on 50x50mm frame, st=1, r=1.
