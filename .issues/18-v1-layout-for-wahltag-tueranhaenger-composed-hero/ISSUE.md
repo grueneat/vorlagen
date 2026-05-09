@@ -80,7 +80,7 @@ CONSTRAINTS = [
 2. **HL/Sub-Gap formula** (`28×2 = 19.8 mm`) clashes with the 250-mm vertical format. V1 uses 50% of the formula gap (Sub-Top y=176 vs. formula-strict y=190). Document this as a *format-pragmatic* exception in the per-template `meta.yml::brand_overrides` with the rule id and reason.
 3. **Bullets-Card Hellgrün height (58 mm)** — high ink coverage. If Druck-Kosten-Sensibilität is a current concern, revisit the height down to 38 mm before merge.
 
-## Acceptance criteria
+## Acceptance Criteria
 
 - [ ] V1 deltas above are applied in `templates/wahltag-tueranhaenger/build.py` in one commit.
 - [ ] `python3 templates/wahltag-tueranhaenger/build.py` regenerates `template.sla` cleanly.
