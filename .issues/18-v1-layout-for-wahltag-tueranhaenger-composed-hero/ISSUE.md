@@ -1,7 +1,7 @@
 ---
 id: '18'
 title: V1 layout for wahltag-tueranhaenger (Composed Hero)
-status: open
+status: done
 priority: medium
 labels:
 - templates
