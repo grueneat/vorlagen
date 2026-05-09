@@ -28,8 +28,12 @@ from sla_lib.builder import (  # noqa: E402
     library,
     # Issue #12 — composites + constraints
     same_x,
+    same_size,
     same_style,
     distance_y,
+    aligned_below,
+    mirrored_x,
+    inside,
 )
 from sla_lib.builder.blocks import DoorHangerCutout  # noqa: E402
 
@@ -534,36 +538,65 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+# Issue #18 — V1 "Composed Hero" CONSTRAINTS list (read by structural_check).
 #
-# The Türanhänger has minor structural symmetry (front + back panels share
-# x=10 left margin / x=20 portrait alignment) and a clear hierarchy
-# (Headline -> Sub -> Bullet body) on the front panel. CONSTRAINTS below
-# capture the alignment + hierarchy invariants in pure metadata form.
+# Captures the alignment contracts of the Composed-Hero composition:
+# - FRONT: Brand-Bar → Hellgrün-Akzent (touching), Wahlkreuz centered & inside
+#   Hellgrün-Band, Headline → Sub stack with format-pragmatic gap, Bullets-Card
+#   full-bleed bottom enclosing Bullet-Liste.
+# - BACK : Brand-Bar mirror (height pair), Portrait inside Portrait-Card,
+#   Kandidat-Name → Kandidat-Position stack, Visitenkarten-Footer enclosing
+#   URL/Info, QR White-Backing enclosing QR.
+# Annames match build.py exactly (case-sensitive, German + parenthesized).
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # Front-panel left edge alignment: Headline / Sub / Bullets / Impressum
-    # all start at x=10mm.
-    same_x(
-        "Headline-Wahltag", "Sub-Headline", "Bullet-Liste", "Impressum",
-        name="front_panel_left_edge",
-    ),
-    # HL -> SL distance (top of HL at y=128, top of SL at y=160 — gap 32mm).
-    distance_y(
-        "Headline-Wahltag", "Sub-Headline", equals=32.0,
-        name="front_hl_to_sl_distance",
-    ),
-    # Style consistency check: the impressum on both pages uses the same style.
-    same_style(
-        "Impressum", "Impressum (back)",
-        name="impressum_style_consistent",
-    ),
-    # Back-panel: Kandidat-Name and Kandidat-Position share x for clean
-    # left-aligned candidate caption block.
-    same_x(
-        "Kandidat-Name", "Kandidat-Position",
-        name="back_kandidat_caption_left_edge",
-    ),
+    # FRONT — Hellgrün-Akzent below Brand-Bar (touching, gap 0)
+    aligned_below("Hellgrün-Akzent", "Brand-Bar (Vorderseite)",
+                  gap_mm=0.0, name="akzent_below_brandbar"),
+    # FRONT — Hellgrün-Band absolute y-pin via distance_y to Akzent
+    # (|14 - 63| = 49 mm; both polygons share full-bleed x, so x-equality is
+    # implied by their construction, not by aligned_below).
+    distance_y("Hellgrün-Akzent", "Hellgrün-Band (Wahlkreuz)",
+               equals=49.0, name="band_below_akzent_49mm"),
+    # FRONT — Wahlkreuz centered on panel (panel center x=52.5)
+    mirrored_x("Hellgrün-Band (Wahlkreuz)", "Wahlkreuz (Hero)",
+               axis_mm=52.5, name="wahlkreuz_panel_center"),
+    # FRONT — Wahlkreuz inside Hellgrün-Band
+    inside("Wahlkreuz (Hero)", "Hellgrün-Band (Wahlkreuz)",
+           name="wahlkreuz_in_band"),
+    # FRONT — Headline absolute y-pin via distance_y to Hellgrün-Band
+    # (text x=10, band x=-2 — no x-alignment, so use distance_y not aligned_below).
+    # |138 - 63| = 75 mm.
+    distance_y("Hellgrün-Band (Wahlkreuz)", "Headline-Wahltag",
+               equals=75.0, name="headline_below_band_75mm"),
+    # FRONT — HL→Sub distance (38mm pragmatic for 250mm format)
+    distance_y("Headline-Wahltag", "Sub-Headline",
+               equals=38.0, name="hl_to_sub_38mm_format_pragmatic"),
+    # FRONT — Bullets-Card and Hellgrün-Akzent share full-bleed x (both x=-2)
+    same_x("Bullets-Card", "Hellgrün-Akzent",
+           name="bullets_card_full_bleed_x"),
+    # FRONT — Bullet-Liste inside Bullets-Card
+    inside("Bullet-Liste", "Bullets-Card", name="bullets_in_card"),
+
+    # BACK — Brand-Bar mirror of front (same height)
+    same_size("Brand-Bar (Vorderseite)", "Brand-Bar (Rückseite)",
+              axis="h", name="brand_bar_h_pair"),
+    # BACK — Portrait inside Portrait-Card (5mm uniform inset)
+    inside("Kandidat-Portrait", "Portrait-Card",
+           name="portrait_in_card"),
+    # BACK — Kandidat-Name absolute y-pin via distance_y to Portrait
+    # (text x=10, portrait x=20 — no x-alignment, so distance_y not aligned_below).
+    # |184 - 75| = 109 mm.
+    distance_y("Kandidat-Portrait", "Kandidat-Name",
+               equals=109.0, name="name_below_portrait_109mm"),
+    # BACK — Kandidat-Position below Name (both at x=10, gap 2mm: 184+10+2=196)
+    aligned_below("Kandidat-Position", "Kandidat-Name",
+                  gap_mm=2.0, name="position_below_name"),
+    # BACK — Kontakt-URL on Visitenkarten-Footer
+    inside("Kontakt-URL", "Visitenkarten-Footer", name="url_in_footer"),
+    inside("Kontakt-Info", "Visitenkarten-Footer", name="info_in_footer"),
+    # BACK — QR backing fully contains QR
+    inside("QR-Code (back)", "QR White-Backing", name="qr_in_backing"),
 ]
 
 
