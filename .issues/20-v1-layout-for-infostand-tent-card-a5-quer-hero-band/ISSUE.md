@@ -1,7 +1,7 @@
 ---
 id: '20'
 title: V1 layout for infostand-tent-card-a5-quer (Hero Band)
-status: open
+status: done
 priority: medium
 labels:
 - templates
