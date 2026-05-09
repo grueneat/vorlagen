@@ -67,6 +67,9 @@ ci_overrides:
     - "themen-plakat/beleg-body"
     - "themen-plakat/source"
     - "themen-plakat/impressum"
+    - "themen-plakat/stat-hero"
+    - "themen-plakat/beleg-body-on-green"
+    - "themen-plakat/beleg-headline-yellow"
   non_ci_colors: []
 
 slots:

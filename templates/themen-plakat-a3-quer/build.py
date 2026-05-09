@@ -66,7 +66,7 @@ def build_doc() -> Document:
         name="themen-plakat/headline",
         font="Vollkorn Black Italic",
         fontsize=60,
-        linesp=64,
+        linesp=54,
         linesp_mode=0,
         align=0,
         fcolor="Dunkelgrün",
@@ -120,6 +120,47 @@ def build_doc() -> Document:
         linesp_mode=0,
         align=2,  # right
         fcolor="Black",
+        language="de",
+    ))
+
+    # V1 (#19) Evidence Cards — 3 NEW ParaStyles + headline linesp mutation
+    # (linesp 64→54 above keeps the headline 0.9-conformant for fontsize 60).
+    # stat-hero: large yellow Vollkorn Black Italic for the per-card statistic.
+    doc.add_para_style(ParaStyle(
+        name="themen-plakat/stat-hero",
+        font="Vollkorn Black Italic",
+        fontsize=56,
+        linesp=50.4,        # 0.9 × 56 = 50.4 — line_spacing_0.9 conformant
+        linesp_mode=0,
+        align=0,            # left flush — caps Label sits centred below
+        fcolor="Gelb",
+        language="de",
+    ))
+    # beleg-body-on-green: white body text laid on Hellgrün card.
+    # Per pitfalls §P15 we do NOT mutate the existing themen-plakat/beleg-body
+    # align (no consumer post-V1; mutation contradicts ISSUE.md own list).
+    doc.add_para_style(ParaStyle(
+        name="themen-plakat/beleg-body-on-green",
+        font="Gotham Narrow Book",
+        fontsize=13,
+        linesp=16.9,        # NOT 0.9-conformant (drift 5.2pt) — line_spacing_0.9 override stays per locked #7
+        linesp_mode=0,
+        align=1,            # centre per improvements.md §"Alignment-Spezifikation"
+        fcolor="White",
+        language="de",
+    ))
+    # beleg-headline-yellow: small caps Gelb label below stat-hero.
+    # CAPS achieved by uppercasing the run text in T03 (no smcp ParaStyle field).
+    # letter-spacing 0.04em @ 18pt → kern = 0.04 × 18 = 0.72 pt.
+    doc.add_para_style(ParaStyle(
+        name="themen-plakat/beleg-headline-yellow",
+        font="Gotham Narrow Bold",
+        fontsize=18,
+        linesp=16.2,        # 0.9 × 18 = 16.2 — line_spacing_0.9 conformant
+        linesp_mode=0,
+        align=1,            # centre — caption-style under stat-hero
+        fcolor="Gelb",
+        kern=0.72,
         language="de",
     ))
 
