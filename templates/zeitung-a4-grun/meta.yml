@@ -16,7 +16,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 52d16770de3ada0ef92bbdbc5ea86b1aabef7e255e28a9a3d0731d663dfe3b8b
+previews_for_sla: 1fa1d80f4ac55eaed6f03222ae7f3711d65045acc8d8fcac043350e7905eb693
 sla_diff_strict: false
 
 # Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
