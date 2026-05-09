@@ -345,8 +345,10 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
                         image_extent_by_target.pop(anon_key)
                     )
         # Issue #25: attach band-consistency warnings to this page.
-        # The rule emits both ``<unnamed y=N>`` (band intrusion) and
-        # ``<unnamed x=N>`` (margin drift) shapes so we check both.
+        # The rule emits ``<unnamed pN y=N>`` (band intrusion) and
+        # ``<unnamed pN x=N>`` (margin drift) shapes — page-tagged so
+        # frames with colliding y/x across pages don't mis-attribute.
+        page_num_1idx = (page.own_page or 0) + 1
         for it in page.items:
             an = getattr(it, "anname", "") or ""
             if an and an in band_by_target:
@@ -354,12 +356,18 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
                     band_by_target.pop(an)
                 )
                 continue
-            anon_y_key = f"<unnamed y={getattr(it, 'y_mm', 0):.1f}>"
+            anon_y_key = (
+                f"<unnamed p{page_num_1idx} y="
+                f"{getattr(it, 'y_mm', 0):.1f}>"
+            )
             if anon_y_key in band_by_target:
                 page_rep.band_consistency_warnings.extend(
                     band_by_target.pop(anon_y_key)
                 )
-            anon_x_key = f"<unnamed x={getattr(it, 'x_mm', 0):.1f}>"
+            anon_x_key = (
+                f"<unnamed p{page_num_1idx} x="
+                f"{getattr(it, 'x_mm', 0):.1f}>"
+            )
             if anon_x_key in band_by_target:
                 page_rep.band_consistency_warnings.extend(
                     band_by_target.pop(anon_x_key)

@@ -249,6 +249,46 @@ class BandConsistencyHorizontalErrorTests(unittest.TestCase):
                             for m in msgs),
                         f"expected margin-drift ERROR, got: {msgs}")
 
+    def test_footer_band_frame_outside_outer_margin_is_exempt(self):
+        """Page-number frame entirely in footer band at x=8.5 (LEFT outer
+        margin alley) is allowed — band content has its own placement.
+
+        Body-margin spec applies to body content, not band content. Page
+        numbers traditionally sit in the outer-margin alley below body.
+        """
+        d = _facing_doc()
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 - excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 - LEFT body
+        # Page-number frame: y=283.7, h=9.5 (entirely in footer band 283-297)
+        # at x=8.5 (past LEFT outer margin 20mm). Allowed.
+        d.pages[2].add(TextFrame(
+            x_mm=8.5, y_mm=283.7, w_mm=12.8, h_mm=9.5,
+            anname="page-num-left", text="3"))
+        rule = _find_rule("brand:band_consistency")
+        with _patch_spec(ZEITUNG_LIKE_SPEC):
+            vs = rule.check(list(d.iter_all_primitives()), d)
+        self.assertEqual(vs, [],
+                         f"page-number frame in footer band should be exempt "
+                         f"from horizontal margin check, got: "
+                         f"{[v.message for v in vs]}")
+
+    def test_header_band_frame_outside_outer_margin_is_exempt(self):
+        """Symmetrically, header-band-only frames (breadcrumb headers)
+        may extend past margins. Body-margin spec applies to free-zone
+        content only."""
+        d = _facing_doc()
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 2 - excluded
+        d.add_page(size="A4", bleed_mm=3.0, master="links")  # page 3 - LEFT body
+        d.pages[2].add(TextFrame(
+            x_mm=8.5, y_mm=25.0, w_mm=12.8, h_mm=9.5,
+            anname="header-page-num", text="3"))
+        rule = _find_rule("brand:band_consistency")
+        with _patch_spec(ZEITUNG_LIKE_SPEC):
+            vs = rule.check(list(d.iter_all_primitives()), d)
+        self.assertEqual(vs, [],
+                         f"header-band frame should be exempt from horizontal "
+                         f"margin check, got: {[v.message for v in vs]}")
+
 
 # ---------------------------------------------------------------------------
 # Background-decoration exemption

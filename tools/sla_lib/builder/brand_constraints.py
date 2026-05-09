@@ -1473,9 +1473,16 @@ class _BandConsistencyRule(BrandRule):
                             f"in excluded_pages, OR mark frame as "
                             f"background_decoration."
                         ),
-                        targets=(anname or f"<unnamed y={y0:.1f}>",),
+                        targets=(anname or f"<unnamed p{page_num} y={y0:.1f}>",),
                     ))
-                # Horizontal bounds: must lie within the side's margins.
+                # Horizontal bounds: applied ONLY to free-zone content.
+                # Header/footer band frames have their own band-specific
+                # design (page numbers traditionally sit in the outer-
+                # margin alley below body content; breadcrumbs may extend
+                # past body margins for design reasons). The body-margin
+                # spec applies to body content, not band content.
+                if not in_free:
+                    continue
                 if (x0 < allowed_x_min - self.tolerance_mm
                         or x1 > allowed_x_max + self.tolerance_mm):
                     violations.append(Violation(
@@ -1488,7 +1495,7 @@ class _BandConsistencyRule(BrandRule):
                             f"{allowed_x_max:.1f}] (outer={outer_mm}mm, "
                             f"inner={inner_mm}mm)."
                         ),
-                        targets=(anname or f"<unnamed x={x0:.1f}>",),
+                        targets=(anname or f"<unnamed p{page_num} x={x0:.1f}>",),
                     ))
         return violations
 
