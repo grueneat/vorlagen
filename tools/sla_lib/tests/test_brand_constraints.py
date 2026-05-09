@@ -25,8 +25,11 @@ from sla_lib.builder.brand_constraints import (  # noqa: E402
     _Bleed3mmRule,
     _WahlkreuzColoredBgRule,
     _InsidePageRule,                # Issue #14
-    _SpineSafetyRule,               # Issue #22 (T04)
-    _UndeclaredDriftRule,           # Issue #22 (T05)
+    _SpineSafetyRule,               # Issue #22
+    _BleedCoverageRule,             # Issue #23
+    _ImageTextOverlapRule,          # Issue #23
+    _CoverExtentMatchRule,          # Issue #23
+    _VisualAdjacencyDriftRule,      # Issue #23 (replaces #22 _UndeclaredDriftRule)
 )
 
 
@@ -48,10 +51,12 @@ def _find_rule(rid: str) -> BrandRule:
 # Registry
 # ---------------------------------------------------------------------------
 class RegistryTests(unittest.TestCase):
-    def test_eleven_rules_exact(self):
-        # 11 rules: 9 baseline (Issue #12) + #14 inside_page +
-        # #22 spine_safety + #22 undeclared_alignment_drift.
-        self.assertEqual(len(BRAND_CONSTRAINTS), 11)
+    def test_fourteen_rules_exact(self):
+        # 14 rules: 9 baseline (Issue #12) + #14 inside_page +
+        # #22 spine_safety + #23 (4 new: bleed_coverage,
+        # image_text_overlap, cover_extent_match, visual_adjacency_drift
+        # which replaces #22 undeclared_alignment_drift).
+        self.assertEqual(len(BRAND_CONSTRAINTS), 14)
 
     def test_ids_are_canonical(self):
         ids = [r.id for r in BRAND_CONSTRAINTS]
@@ -65,8 +70,11 @@ class RegistryTests(unittest.TestCase):
             "brand:bleed_3mm",
             "brand:wahlkreuz_colored_bg",
             "brand:inside_page",
-            "brand:spine_safety",                # Issue #22 (T04)
-            "brand:undeclared_alignment_drift",  # Issue #22 (T05)
+            "brand:spine_safety",                # Issue #22
+            "brand:bleed_coverage",              # Issue #23
+            "brand:image_text_overlap",          # Issue #23
+            "brand:cover_extent_match",          # Issue #23
+            "brand:visual_adjacency_drift",      # Issue #23 (replaces #22)
         }
         self.assertEqual(set(ids), expected)
 
