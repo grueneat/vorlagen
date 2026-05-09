@@ -2559,24 +2559,30 @@ def build_preview():
     doc = build_template()
     INJECT_MAP = {
         # anname → (library_id, target_w_mm, target_h_mm)
+        # Targets match the FRAME's actual w_mm post-#22 T12 spine inset
+        # (frames at right-edge=210 were inset to w=207; same on left).
+        # Misalignment between target_w_mm and frame.w_mm causes the
+        # cropped image to render larger than the frame and Scribus
+        # spills into the bleed (incl. across the spine).
         "Cover Hero": ("themen_klimaschutz_windrad", 210, 155.6),
-        "P1 Hero": ("themen_soziales_gemeindebau", 210, 130.2),
+        "P1 Hero": ("themen_soziales_gemeindebau", 207, 130.2),     # T12 inset
         "P2 Mid": ("themen_bildung_volksschule", 112.3, 58),
-        "P3 Hero": ("themen_wirtschaft_handwerk", 74.7, 58.2),
+        "P3 Hero": ("themen_wirtschaft_handwerk", 71.7, 58.2),       # T12 inset
         # P4 Foto-Spread stays SINGLE-PAGE (upstream has no page-3 half).
+        "P4 Foto-Spread": ("kontext_buergerversammlung", 207, 108.1),  # T12 inset
+        "P5 Hero": ("themen_verkehr_radweg", 112.3, 84.1),
+        "P7 Portrait": ("portrait_maria", 51.3, 76.4),
         # P9 Spread converted to SpreadImage in #22 T11; both halves
         # get the same source image (the SpreadImage right half uses
         # local_offset_mm=(-page_w_mm, 0) so the source image "scrolls"
         # left and the right half shows the right half of the picture —
-        # single source bytes, two halves).
-        "P4 Foto-Spread": ("kontext_buergerversammlung", 210, 108.1),
-        "P5 Hero": ("themen_verkehr_radweg", 112.3, 84.1),
-        "P7 Portrait": ("portrait_maria", 51.3, 76.4),
+        # single source bytes, two halves). Intentional shared PDF
+        # object across pages 9+10.
         "P9 Spread · left": ("themen_klimaschutz_solar", 210, 126.1),
         "P9 Spread · right": ("themen_klimaschutz_solar", 210, 126.1),
         "P10 Portrait": ("portrait_stefan", 66.6, 94.4),
-        "P11 Bottom": ("kontext_stammtisch_cafe", 210, 83.3),
-        "P13 Hero": ("kontext_infostand_szene", 210, 147.4),
+        "P11 Bottom": ("kontext_stammtisch_cafe", 207, 83.3),         # T12 inset
+        "P13 Hero": ("kontext_infostand_szene", 207, 147.4),          # T12 inset
     }
     for page in doc.pages:
         for frame in page.items:

@@ -16,14 +16,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: c0a3900920e100b0c75e98b2b8d136f08067250edd09f6510353a3893ebda96f
-
-# Issue #16 — this template intentionally diverges from gruene-zeitung-
-# vorlage-original.sla at two frames (build.py:1802 P9 Spread, build.py:2061
-# unnamed page-12 polygon — both authoring drift in the upstream Scribus
-# original). Strict round-trip diff is opted out here; the divergence is
-# documented in this template's README.md and gated by render_pipeline.py
-# honouring this flag.
+previews_for_sla: 4d948c67b2293b994282c13479a0edb85fec7fcb46e91050cbc32dcc49cf276a
 sla_diff_strict: false
 
 # Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
