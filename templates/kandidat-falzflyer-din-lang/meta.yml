@@ -24,14 +24,6 @@ brand_overrides:
       Shared with all templates: CI palette ratios drift; per-template panel
       styles use slightly looser line-heights (e.g. teaser-body 14/11=1.27x)
       to keep narrow 99mm panels readable. Brand-team review pending.
-  - id: brand:logo_size_3M
-    reason: >-
-      Falzflyer has 3 logos across 6 panels: P1 (cover) Logo at 20mm anchors
-      the brand on the cover (3*M = 37.80mm would dominate the candidate
-      portrait), P2 small logo at 16mm fits inside the teaser-body left
-      column, P6 back-cover logo at 17mm balances the closer Wahlkreuz hero.
-      All three are intentional smaller-than-3M choices for narrow-panel
-      composition.
   - id: brand:visual_adjacency_drift
     reason: >-
       V1 layout work in #21 owns alignment encoding for this template.

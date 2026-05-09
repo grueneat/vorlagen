@@ -191,12 +191,13 @@ def _add_front(doc, page0):
     ))
 
     # ---- Panel 1 (Cover) — x=0..99 -----
-    # Logo (Brand-Bund) top-left corner. iter-3: migrated from
-    # gruene-cmyk.png wordmark to gruene-logo-bund-dunkel.png.
-    # Frame 20×18 mm honors the new ~1.12:1 aspect within the
-    # available y=10..28 zone (portrait starts at y=28). On DIN-lang
-    # (kurze Kante=105) Quickguide Print target = 3×M = 18.9 mm —
-    # 20 mm sits at 106 %, well within tolerance.
+    # Logo Print-Soll (Trim-konsistent per Quickguide §"Logo-Größen"):
+    #   M = 0.06 * min(trim_w, trim_h)
+    #   For DIN-lang Zickzackfalz: min(297, 210) = 210 → M = 12.6 → 3M = 37.8 mm
+    # The brand rule `brand:logo_size_3M` lives in
+    # tools/sla_lib/builder/brand_constraints.py (already trim-konsistent);
+    # V1 logo dims are 38×22 (P1 cover) and 38×34 (P6 footer) — both match Soll.
+    # See shared/brand/DESIGN-SYSTEM-BRIEF.md §"Logo Print-Soll".
     logo_brand = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
     logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
     if logo_brand.exists():
