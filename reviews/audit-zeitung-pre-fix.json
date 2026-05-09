@@ -1,0 +1,723 @@
+{
+  "slug": "zeitung-a4-grun",
+  "facing_pages": true,
+  "fatal_error": null,
+  "tolerance_suspicions": [],
+  "pages": [
+    {
+      "page_idx": 0,
+      "page_label": "Neue Musterseite rechts",
+      "master_name": "Neue Musterseite rechts",
+      "side": "right",
+      "n_primitives": 9,
+      "declared_pairs": [
+        [
+          "u29b9",
+          "u1aa"
+        ],
+        [
+          "u14c",
+          "u165"
+        ],
+        [
+          "u1c1",
+          "u1d9"
+        ],
+        [
+          "u165",
+          "u1d9"
+        ]
+      ],
+      "suspicious_pairs": [
+        {
+          "a": "Cover Hero",
+          "b": "u14c",
+          "kind": "axis-x",
+          "delta_mm": 22.75000000000004,
+          "suggested": "same_x(\"Cover Hero\", \"u14c\", name=\"p1_x_1\")",
+          "geometric_alternative": "OR fix geometry: set Cover Hero.x_mm=8.38 and u14c.x_mm=8.38 to share the axis."
+        },
+        {
+          "a": "Cover Hero",
+          "b": "u165",
+          "kind": "axis-x",
+          "delta_mm": 22.75000000000004,
+          "suggested": "same_x(\"Cover Hero\", \"u165\", name=\"p1_x_2\")",
+          "geometric_alternative": "OR fix geometry: set Cover Hero.x_mm=8.38 and u165.x_mm=8.38 to share the axis."
+        },
+        {
+          "a": "u2989",
+          "b": "u14c",
+          "kind": "axis-x",
+          "delta_mm": 6.249999996013308,
+          "suggested": "same_x(\"u2989\", \"u14c\", name=\"p1_x_3\")",
+          "geometric_alternative": "OR fix geometry: set u2989.x_mm=22.87 and u14c.x_mm=22.87 to share the axis."
+        },
+        {
+          "a": "u2989",
+          "b": "u165",
+          "kind": "axis-x",
+          "delta_mm": 6.249999996013308,
+          "suggested": "same_x(\"u2989\", \"u165\", name=\"p1_x_4\")",
+          "geometric_alternative": "OR fix geometry: set u2989.x_mm=22.87 and u165.x_mm=22.87 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[ERROR] frame 'Cover Hero' (216.0x155.6mm) renders 210.0x155.6mm — 6.0x-0.1mm white margin. Either: update INJECT_MAP target to (216.000, 155.567); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    },
+    {
+      "page_idx": 1,
+      "page_label": "Neue Musterseite links",
+      "master_name": "Neue Musterseite links",
+      "side": "left",
+      "n_primitives": 5,
+      "declared_pairs": [],
+      "suspicious_pairs": [
+        {
+          "a": "P1 Hero",
+          "b": "Kopie von u2d45",
+          "kind": "axis-x",
+          "delta_mm": 11.51073047881968,
+          "suggested": "same_x(\"P1 Hero\", \"Kopie von u2d45\", name=\"p2_x_1\")",
+          "geometric_alternative": "OR fix geometry: set P1 Hero.x_mm=2.76 and Kopie von u2d45.x_mm=2.76 to share the axis."
+        },
+        {
+          "a": "P1 Hero",
+          "b": "Kopie von u2f23",
+          "kind": "axis-x",
+          "delta_mm": 23.000000000000078,
+          "suggested": "same_x(\"P1 Hero\", \"Kopie von u2f23\", name=\"p2_x_2\")",
+          "geometric_alternative": "OR fix geometry: set P1 Hero.x_mm=8.50 and Kopie von u2f23.x_mm=8.50 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45",
+          "b": "Kopie von u2f23",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45\", \"Kopie von u2f23\", name=\"p2_x_3\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45.x_mm=14.26 and Kopie von u2f23.x_mm=14.26 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[ERROR] frame 'P1 Hero' (210.0x130.2mm) renders 207.0x130.2mm — 3.0x-0.0mm white margin. Either: update INJECT_MAP target to (210.000, 130.207); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    },
+    {
+      "page_idx": 2,
+      "page_label": "Neue Musterseite rechts",
+      "master_name": "Neue Musterseite rechts",
+      "side": "right",
+      "n_primitives": 8,
+      "declared_pairs": [
+        [
+          "Kopie von u2d5c (2)",
+          "P2 Mid"
+        ]
+      ],
+      "suspicious_pairs": [],
+      "spine_warnings": [],
+      "image_extent_warnings": []
+    },
+    {
+      "page_idx": 3,
+      "page_label": "Neue Musterseite links",
+      "master_name": "Neue Musterseite links",
+      "side": "left",
+      "n_primitives": 9,
+      "declared_pairs": [],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d45 (3)",
+          "b": "Kopie von u2d5c (4)",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45 (3)\", \"Kopie von u2d5c (4)\", name=\"p4_x_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (3).x_mm=14.26 and Kopie von u2d5c (4).x_mm=14.26 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (3)",
+          "b": "Kopie von u2d5c (5)",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45 (3)\", \"Kopie von u2d5c (5)\", name=\"p4_x_2\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (3).x_mm=14.26 and Kopie von u2d5c (5).x_mm=14.26 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (4)",
+          "b": "Kopie von u2d5c (5)",
+          "kind": "adjacency-y",
+          "delta_mm": 18.46692107615661,
+          "suggested": "aligned_below(\"Kopie von u2d5c (5)\", \"Kopie von u2d5c (4)\", gap_mm=18.47, name=\"p4_below_3\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (5).y_mm=150.24 (touching Kopie von u2d5c (4).bottom)."
+        },
+        {
+          "a": "Kopie von u2da1 (2)",
+          "b": "u1529",
+          "kind": "adjacency-y",
+          "delta_mm": 24.75614516801869,
+          "suggested": "aligned_below(\"u1529\", \"Kopie von u2da1 (2)\", gap_mm=24.76, name=\"p4_below_4\")",
+          "geometric_alternative": "OR fix geometry: set u1529.y_mm=150.24 (touching Kopie von u2da1 (2).bottom)."
+        },
+        {
+          "a": "Kopie von u2da1 (2)",
+          "b": "u152b",
+          "kind": "axis-x",
+          "delta_mm": 8.733993399655986,
+          "suggested": "same_x(\"Kopie von u2da1 (2)\", \"u152b\", name=\"p4_x_5\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2da1 (2).x_mm=82.03 and u152b.x_mm=82.03 to share the axis."
+        },
+        {
+          "a": "Kopie von u2da1 (2)",
+          "b": "u1544",
+          "kind": "axis-x",
+          "delta_mm": 8.733993399655986,
+          "suggested": "same_x(\"Kopie von u2da1 (2)\", \"u1544\", name=\"p4_x_6\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2da1 (2).x_mm=82.03 and u1544.x_mm=82.03 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (5)",
+          "b": "u1529",
+          "kind": "axis-y",
+          "delta_mm": 6.288888891314684,
+          "suggested": "same_y(\"Kopie von u2d5c (5)\", \"u1529\", name=\"p4_y_7\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (5).y_mm=171.86 and u1529.y_mm=171.86 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (5)",
+          "b": "u1544",
+          "kind": "axis-y",
+          "delta_mm": 9.917310908314676,
+          "suggested": "same_y(\"Kopie von u2d5c (5)\", \"u1544\", name=\"p4_y_8\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (5).y_mm=173.67 and u1544.y_mm=173.67 to share the axis."
+        },
+        {
+          "a": "u1529",
+          "b": "u152b",
+          "kind": "axis-x",
+          "delta_mm": 8.599993399656,
+          "suggested": "same_x(\"u1529\", \"u152b\", name=\"p4_x_9\")",
+          "geometric_alternative": "OR fix geometry: set u1529.x_mm=82.10 and u152b.x_mm=82.10 to share the axis."
+        },
+        {
+          "a": "u1529",
+          "b": "u1544",
+          "kind": "axis-x",
+          "delta_mm": 8.599993399656,
+          "suggested": "same_x(\"u1529\", \"u1544\", name=\"p4_x_10\")",
+          "geometric_alternative": "OR fix geometry: set u1529.x_mm=82.10 and u1544.x_mm=82.10 to share the axis."
+        },
+        {
+          "a": "u152b",
+          "b": "u1544",
+          "kind": "axis-y",
+          "delta_mm": 19.333549688970805,
+          "suggested": "same_y(\"u152b\", \"u1544\", name=\"p4_y_11\")",
+          "geometric_alternative": "OR fix geometry: set u152b.y_mm=188.30 and u1544.y_mm=188.30 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": []
+    },
+    {
+      "page_idx": 4,
+      "page_label": "Neue Musterseite rechts",
+      "master_name": "Neue Musterseite rechts",
+      "side": "right",
+      "n_primitives": 5,
+      "declared_pairs": [],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d5c (6)",
+          "b": "P4 Foto-Spread",
+          "kind": "axis-x",
+          "delta_mm": 17.000000000000103,
+          "suggested": "same_x(\"Kopie von u2d5c (6)\", \"P4 Foto-Spread\", name=\"p5_x_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (6).x_mm=11.50 and P4 Foto-Spread.x_mm=11.50 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[ERROR] frame 'P4 Foto-Spread' (210.0x108.1mm) renders 207.0x108.1mm — 3.0x-0.0mm white margin. Either: update INJECT_MAP target to (210.000, 108.118); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    },
+    {
+      "page_idx": 5,
+      "page_label": "Neue Musterseite links",
+      "master_name": "Neue Musterseite links",
+      "side": "left",
+      "n_primitives": 5,
+      "declared_pairs": [
+        [
+          "Kopie von u2da1 (6)",
+          "P5 Hero"
+        ]
+      ],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d45 (4)",
+          "b": "Kopie von u2d5c (7)",
+          "kind": "axis-x",
+          "delta_mm": 11.586491743338728,
+          "suggested": "same_x(\"Kopie von u2d45 (4)\", \"Kopie von u2d5c (7)\", name=\"p6_x_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (4).x_mm=14.30 and Kopie von u2d5c (7).x_mm=14.30 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": []
+    },
+    {
+      "page_idx": 6,
+      "page_label": "Neue Musterseite rechts",
+      "master_name": "Neue Musterseite rechts",
+      "side": "right",
+      "n_primitives": 8,
+      "declared_pairs": [],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d5c (8)",
+          "b": "u6e8",
+          "kind": "axis-y",
+          "delta_mm": 5.838541282786707,
+          "suggested": "same_y(\"Kopie von u2d5c (8)\", \"u6e8\", name=\"p7_y_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (8).y_mm=40.08 and u6e8.y_mm=40.08 to share the axis."
+        },
+        {
+          "a": "u6ad",
+          "b": "u6d0",
+          "kind": "axis-x",
+          "delta_mm": 8.74999999993608,
+          "suggested": "same_x(\"u6ad\", \"u6d0\", name=\"p7_x_2\")",
+          "geometric_alternative": "OR fix geometry: set u6ad.x_mm=81.88 and u6d0.x_mm=81.88 to share the axis."
+        },
+        {
+          "a": "u6ad",
+          "b": "u6e8",
+          "kind": "axis-x",
+          "delta_mm": 8.74999999993608,
+          "suggested": "same_x(\"u6ad\", \"u6e8\", name=\"p7_x_3\")",
+          "geometric_alternative": "OR fix geometry: set u6ad.x_mm=81.88 and u6e8.x_mm=81.88 to share the axis."
+        },
+        {
+          "a": "Kopie von u2da1 (8)",
+          "b": "u6d0",
+          "kind": "axis-x",
+          "delta_mm": 8.583278224234178,
+          "suggested": "same_x(\"Kopie von u2da1 (8)\", \"u6d0\", name=\"p7_x_4\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2da1 (8).x_mm=81.96 and u6d0.x_mm=81.96 to share the axis."
+        },
+        {
+          "a": "Kopie von u2da1 (8)",
+          "b": "u6e8",
+          "kind": "axis-x",
+          "delta_mm": 8.583278224234178,
+          "suggested": "same_x(\"Kopie von u2da1 (8)\", \"u6e8\", name=\"p7_x_5\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2da1 (8).x_mm=81.96 and u6e8.x_mm=81.96 to share the axis."
+        },
+        {
+          "a": "u6d0",
+          "b": "u6e8",
+          "kind": "axis-y",
+          "delta_mm": 19.852512920116986,
+          "suggested": "same_y(\"u6d0\", \"u6e8\", name=\"p7_y_6\")",
+          "geometric_alternative": "OR fix geometry: set u6d0.y_mm=52.93 and u6e8.y_mm=52.93 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": []
+    },
+    {
+      "page_idx": 7,
+      "page_label": "Neue Musterseite links",
+      "master_name": "Neue Musterseite links",
+      "side": "left",
+      "n_primitives": 6,
+      "declared_pairs": [
+        [
+          "Kopie von u2d5c (9)",
+          "u918"
+        ],
+        [
+          "Kopie von u2da1 (11)",
+          "P7 Portrait"
+        ]
+      ],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d5c (9)",
+          "b": "Kopie von u2d45 (6)",
+          "kind": "axis-x",
+          "delta_mm": 11.586491743338728,
+          "suggested": "same_x(\"Kopie von u2d5c (9)\", \"Kopie von u2d45 (6)\", name=\"p8_x_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (9).x_mm=14.30 and Kopie von u2d45 (6).x_mm=14.30 to share the axis."
+        },
+        {
+          "a": "u918",
+          "b": "Kopie von u2d45 (6)",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"u918\", \"Kopie von u2d45 (6)\", name=\"p8_x_2\")",
+          "geometric_alternative": "OR fix geometry: set u918.x_mm=14.26 and Kopie von u2d45 (6).x_mm=14.26 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[WARNING] frame 'P7 Portrait' (54.7x82.0mm) renders 51.3x76.4mm — 3.4x5.6mm white margin. Either: update INJECT_MAP target to (54.700, 82.000); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    },
+    {
+      "page_idx": 8,
+      "page_label": "Neue Musterseite rechts",
+      "master_name": "Neue Musterseite rechts",
+      "side": "right",
+      "n_primitives": 8,
+      "declared_pairs": [
+        [
+          "Kopie von u6ad",
+          "Kopie von u2da1 (15)"
+        ]
+      ],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d5c (12)",
+          "b": "Kopie von u2da1 (12)",
+          "kind": "axis-y",
+          "delta_mm": 1.8642201834844627,
+          "suggested": "same_y(\"Kopie von u2d5c (12)\", \"Kopie von u2da1 (12)\", name=\"p9_y_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (12).y_mm=168.34 and Kopie von u2da1 (12).y_mm=168.34 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (12)",
+          "b": "Kopie von u2da1 (13)",
+          "kind": "axis-y",
+          "delta_mm": 1.595412841881,
+          "suggested": "same_y(\"Kopie von u2d5c (12)\", \"Kopie von u2da1 (13)\", name=\"p9_y_2\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (12).y_mm=168.20 and Kopie von u2da1 (13).y_mm=168.20 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": []
+    },
+    {
+      "page_idx": 9,
+      "page_label": "Neue Musterseite links",
+      "master_name": "Neue Musterseite links",
+      "side": "left",
+      "n_primitives": 8,
+      "declared_pairs": [],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d45 (7)",
+          "b": "Kopie von u2d5c (13)",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45 (7)\", \"Kopie von u2d5c (13)\", name=\"p10_x_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (7).x_mm=14.26 and Kopie von u2d5c (13).x_mm=14.26 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (7)",
+          "b": "Kopie von u1529",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45 (7)\", \"Kopie von u1529\", name=\"p10_x_2\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (7).x_mm=14.26 and Kopie von u1529.x_mm=14.26 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (7)",
+          "b": "Kopie von u152b",
+          "kind": "axis-x",
+          "delta_mm": 20.089262920836404,
+          "suggested": "same_x(\"Kopie von u2d45 (7)\", \"Kopie von u152b\", name=\"p10_x_3\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (7).x_mm=18.56 and Kopie von u152b.x_mm=18.56 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (7)",
+          "b": "Kopie von u1544",
+          "kind": "axis-x",
+          "delta_mm": 20.089262920836404,
+          "suggested": "same_x(\"Kopie von u2d45 (7)\", \"Kopie von u1544\", name=\"p10_x_4\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (7).x_mm=18.56 and Kopie von u1544.x_mm=18.56 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (7)",
+          "b": "P9 Spread · left",
+          "kind": "axis-x",
+          "delta_mm": 11.51073047881968,
+          "suggested": "same_x(\"Kopie von u2d45 (7)\", \"P9 Spread · left\", name=\"p10_x_5\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (7).x_mm=2.76 and P9 Spread · left.x_mm=2.76 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (13)",
+          "b": "Kopie von u1529",
+          "kind": "adjacency-y",
+          "delta_mm": 4.000000002425594,
+          "suggested": "aligned_below(\"Kopie von u1529\", \"Kopie von u2d5c (13)\", gap_mm=4.00, name=\"p10_below_6\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u1529.y_mm=171.00 (touching Kopie von u2d5c (13).bottom)."
+        },
+        {
+          "a": "Kopie von u2d5c (13)",
+          "b": "Kopie von u152b",
+          "kind": "axis-x",
+          "delta_mm": 8.599993399656004,
+          "suggested": "same_x(\"Kopie von u2d5c (13)\", \"Kopie von u152b\", name=\"p10_x_7\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (13).x_mm=24.30 and Kopie von u152b.x_mm=24.30 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (13)",
+          "b": "Kopie von u1544",
+          "kind": "axis-x",
+          "delta_mm": 8.599993399656004,
+          "suggested": "same_x(\"Kopie von u2d5c (13)\", \"Kopie von u1544\", name=\"p10_x_8\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (13).x_mm=24.30 and Kopie von u1544.x_mm=24.30 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (13)",
+          "b": "P9 Spread · left",
+          "kind": "axis-x",
+          "delta_mm": 23.000000000000078,
+          "suggested": "same_x(\"Kopie von u2d5c (13)\", \"P9 Spread · left\", name=\"p10_x_9\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (13).x_mm=8.50 and P9 Spread · left.x_mm=8.50 to share the axis."
+        },
+        {
+          "a": "Kopie von u1529",
+          "b": "Kopie von u152b",
+          "kind": "axis-x",
+          "delta_mm": 8.599993399656004,
+          "suggested": "same_x(\"Kopie von u1529\", \"Kopie von u152b\", name=\"p10_x_10\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u1529.x_mm=24.30 and Kopie von u152b.x_mm=24.30 to share the axis."
+        },
+        {
+          "a": "Kopie von u1529",
+          "b": "Kopie von u1544",
+          "kind": "axis-x",
+          "delta_mm": 8.599993399656004,
+          "suggested": "same_x(\"Kopie von u1529\", \"Kopie von u1544\", name=\"p10_x_11\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u1529.x_mm=24.30 and Kopie von u1544.x_mm=24.30 to share the axis."
+        },
+        {
+          "a": "Kopie von u1529",
+          "b": "P9 Spread · left",
+          "kind": "axis-x",
+          "delta_mm": 23.000000000000078,
+          "suggested": "same_x(\"Kopie von u1529\", \"P9 Spread · left\", name=\"p10_x_12\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u1529.x_mm=8.50 and P9 Spread · left.x_mm=8.50 to share the axis."
+        },
+        {
+          "a": "Kopie von u152b",
+          "b": "Kopie von u1544",
+          "kind": "axis-y",
+          "delta_mm": 19.333549688970805,
+          "suggested": "same_y(\"Kopie von u152b\", \"Kopie von u1544\", name=\"p10_y_13\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u152b.y_mm=188.30 and Kopie von u1544.y_mm=188.30 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[ERROR] frame 'P9 Spread · left' (213.0x126.1mm) renders 210.0x126.1mm — 3.0x0.1mm white margin. Either: update INJECT_MAP target to (213.000, 126.139); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    },
+    {
+      "page_idx": 10,
+      "page_label": "Neue Musterseite rechts",
+      "master_name": "Neue Musterseite rechts",
+      "side": "right",
+      "n_primitives": 6,
+      "declared_pairs": [
+        [
+          "Kopie von u2da1 (19)",
+          "P10 Portrait"
+        ]
+      ],
+      "suspicious_pairs": [
+        {
+          "a": "P9 Spread · right",
+          "b": "Kopie von u2d5c (14)",
+          "kind": "axis-x",
+          "delta_mm": 20.000000000000103,
+          "suggested": "same_x(\"P9 Spread · right\", \"Kopie von u2d5c (14)\", name=\"p11_x_1\")",
+          "geometric_alternative": "OR fix geometry: set P9 Spread · right.x_mm=10.00 and Kopie von u2d5c (14).x_mm=10.00 to share the axis."
+        },
+        {
+          "a": "P9 Spread · right",
+          "b": "Kopie von u2d5c (15)",
+          "kind": "axis-x",
+          "delta_mm": 20.000000000000103,
+          "suggested": "same_x(\"P9 Spread · right\", \"Kopie von u2d5c (15)\", name=\"p11_x_2\")",
+          "geometric_alternative": "OR fix geometry: set P9 Spread · right.x_mm=10.00 and Kopie von u2d5c (15).x_mm=10.00 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (14)",
+          "b": "Kopie von u2da1 (18)",
+          "kind": "axis-y",
+          "delta_mm": 1.165137614679594,
+          "suggested": "same_y(\"Kopie von u2d5c (14)\", \"Kopie von u2da1 (18)\", name=\"p11_y_3\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (14).y_mm=132.78 and Kopie von u2da1 (18).y_mm=132.78 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (14)",
+          "b": "Kopie von u2da1 (19)",
+          "kind": "axis-y",
+          "delta_mm": 1.3633119292987885,
+          "suggested": "same_y(\"Kopie von u2d5c (14)\", \"Kopie von u2da1 (19)\", name=\"p11_y_4\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (14).y_mm=132.68 and Kopie von u2da1 (19).y_mm=132.68 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[ERROR] frame 'P9 Spread · right' (213.0x126.1mm) renders 210.0x126.1mm — 3.0x0.1mm white margin. Either: update INJECT_MAP target to (213.000, 126.139); or library.compute_aspect_fill(...) for non-INJECT path.",
+        "[ERROR] frame 'P10 Portrait' (77.7x94.4mm) renders 66.6x94.4mm — 11.1x0.0mm white margin. Either: update INJECT_MAP target to (77.700, 94.428); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    },
+    {
+      "page_idx": 11,
+      "page_label": "Neue Musterseite links",
+      "master_name": "Neue Musterseite links",
+      "side": "left",
+      "n_primitives": 5,
+      "declared_pairs": [],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d45 (10)",
+          "b": "Kopie von u2d5c (16)",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45 (10)\", \"Kopie von u2d5c (16)\", name=\"p12_x_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (10).x_mm=14.26 and Kopie von u2d5c (16).x_mm=14.26 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (10)",
+          "b": "P11 Bottom",
+          "kind": "axis-x",
+          "delta_mm": 11.51073047881968,
+          "suggested": "same_x(\"Kopie von u2d45 (10)\", \"P11 Bottom\", name=\"p12_x_2\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (10).x_mm=2.76 and P11 Bottom.x_mm=2.76 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (16)",
+          "b": "P11 Bottom",
+          "kind": "axis-x",
+          "delta_mm": 23.000000000000078,
+          "suggested": "same_x(\"Kopie von u2d5c (16)\", \"P11 Bottom\", name=\"p12_x_3\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (16).x_mm=8.50 and P11 Bottom.x_mm=8.50 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[ERROR] frame 'P11 Bottom' (210.0x83.3mm) renders 207.0x83.3mm — 3.0x-0.1mm white margin. Either: update INJECT_MAP target to (210.000, 83.261); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    },
+    {
+      "page_idx": 12,
+      "page_label": "Neue Musterseite rechts",
+      "master_name": "Neue Musterseite rechts",
+      "side": "right",
+      "n_primitives": 7,
+      "declared_pairs": [],
+      "suspicious_pairs": [
+        {
+          "a": "Kopie von u2d5c (17)",
+          "b": "Kopie von u2da1 (23)",
+          "kind": "axis-y",
+          "delta_mm": 0.802770645436425,
+          "suggested": "same_y(\"Kopie von u2d5c (17)\", \"Kopie von u2da1 (23)\", name=\"p13_y_1\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (17).y_mm=37.40 and Kopie von u2da1 (23).y_mm=37.40 to share the axis."
+        },
+        {
+          "a": "Kopie von u2da1 (22)",
+          "b": "Kopie von u2da1 (23)",
+          "kind": "axis-y",
+          "delta_mm": 0.802770645436425,
+          "suggested": "same_y(\"Kopie von u2da1 (22)\", \"Kopie von u2da1 (23)\", name=\"p13_y_2\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2da1 (22).y_mm=37.40 and Kopie von u2da1 (23).y_mm=37.40 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (18)",
+          "b": "Kopie von u2da1 (24)",
+          "kind": "axis-y",
+          "delta_mm": 1.3596513772261574,
+          "suggested": "same_y(\"Kopie von u2d5c (18)\", \"Kopie von u2da1 (24)\", name=\"p13_y_3\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (18).y_mm=169.95 and Kopie von u2da1 (24).y_mm=169.95 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d5c (18)",
+          "b": "Kopie von u2da1 (25)",
+          "kind": "axis-y",
+          "delta_mm": 1.6284587188297621,
+          "suggested": "same_y(\"Kopie von u2d5c (18)\", \"Kopie von u2da1 (25)\", name=\"p13_y_4\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d5c (18).y_mm=169.81 and Kopie von u2da1 (25).y_mm=169.81 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": []
+    },
+    {
+      "page_idx": 13,
+      "page_label": "Neue Musterseite links",
+      "master_name": "Neue Musterseite links",
+      "side": "left",
+      "n_primitives": 8,
+      "declared_pairs": [
+        [
+          "Kopie von u14c",
+          "Kopie von u14c (2)"
+        ],
+        [
+          "Kopie von u14c (3)",
+          "Kopie von u14c (4)"
+        ],
+        [
+          "Kopie von u14c (5)",
+          "Kopie von u14c (6)"
+        ]
+      ],
+      "suspicious_pairs": [
+        {
+          "a": "P13 Hero",
+          "b": "Kopie von u2d45 (12)",
+          "kind": "axis-x",
+          "delta_mm": 11.51073047881968,
+          "suggested": "same_x(\"P13 Hero\", \"Kopie von u2d45 (12)\", name=\"p14_x_1\")",
+          "geometric_alternative": "OR fix geometry: set P13 Hero.x_mm=2.76 and Kopie von u2d45 (12).x_mm=2.76 to share the axis."
+        },
+        {
+          "a": "P13 Hero",
+          "b": "Kopie von u14c",
+          "kind": "axis-x",
+          "delta_mm": 23.000000000000078,
+          "suggested": "same_x(\"P13 Hero\", \"Kopie von u14c\", name=\"p14_x_2\")",
+          "geometric_alternative": "OR fix geometry: set P13 Hero.x_mm=8.50 and Kopie von u14c.x_mm=8.50 to share the axis."
+        },
+        {
+          "a": "P13 Hero",
+          "b": "Kopie von u14c (2)",
+          "kind": "axis-x",
+          "delta_mm": 23.000000000000078,
+          "suggested": "same_x(\"P13 Hero\", \"Kopie von u14c (2)\", name=\"p14_x_3\")",
+          "geometric_alternative": "OR fix geometry: set P13 Hero.x_mm=8.50 and Kopie von u14c (2).x_mm=8.50 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (12)",
+          "b": "Kopie von u14c",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45 (12)\", \"Kopie von u14c\", name=\"p14_x_4\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (12).x_mm=14.26 and Kopie von u14c.x_mm=14.26 to share the axis."
+        },
+        {
+          "a": "Kopie von u2d45 (12)",
+          "b": "Kopie von u14c (2)",
+          "kind": "axis-x",
+          "delta_mm": 11.489269521180399,
+          "suggested": "same_x(\"Kopie von u2d45 (12)\", \"Kopie von u14c (2)\", name=\"p14_x_5\")",
+          "geometric_alternative": "OR fix geometry: set Kopie von u2d45 (12).x_mm=14.26 and Kopie von u14c (2).x_mm=14.26 to share the axis."
+        }
+      ],
+      "spine_warnings": [],
+      "image_extent_warnings": [
+        "[ERROR] frame 'P13 Hero' (210.0x147.4mm) renders 207.0x147.4mm — 3.0x-0.0mm white margin. Either: update INJECT_MAP target to (210.000, 147.363); or library.compute_aspect_fill(...) for non-INJECT path."
+      ]
+    }
+  ]
+}
