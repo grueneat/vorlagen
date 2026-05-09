@@ -244,10 +244,16 @@ def build_template():
     ))
 
     page0.add(Polygon(
-        x_mm=216.41353924574386,
+        # u2950 trimmed in #22 (T10): the original (216.41, 155.57,
+        # 148.60, 220.49) rotated CCW90 produced a bbox of
+        # (-4.08, 155.57)→(216.41, 304.17), overshooting the right
+        # bleed by 3.41mm and the bottom bleed by 4.17mm. After the
+        # trim the rotated bbox is (-3.0, 155.57)→(213.0, 300.0),
+        # exactly fitting the A4 + 3mm bleed (full-bleed bottom band).
+        x_mm=213.0,
         y_mm=155.56697247706433,
-        w_mm=148.60236941896014,
-        h_mm=220.48928611111108,
+        w_mm=144.43302752293567,  # rotated height = 300 - y
+        h_mm=216.0,                # rotated width = 213 - (-3)
         layer=0,
         rotation_deg=90,
         anname='u2950',

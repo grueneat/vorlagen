@@ -37,11 +37,10 @@ def _load_zeitung_doc():
 
 
 class ZeitungInsidePageRegressionTests(unittest.TestCase):
-    def test_inside_page_finds_only_u2950_without_override(self):
-        """After #16: only the cover-polygon u2950 (~4.17 mm) remains.
-
-        Tracked in GH #39. If this count grows, a real new overflow has been
-        introduced — investigate before bumping the assertion.
+    def test_inside_page_zero_errors_after_u2950_trim(self):
+        """After #22 T10 the rotated cover-polygon u2950 was trimmed to
+        fit page+bleed; the rule reports zero errors WITHOUT the
+        override. T16 will remove the meta.yml override entirely.
         """
         doc = _load_zeitung_doc()
         rule = _InsidePageRule(
@@ -52,14 +51,13 @@ class ZeitungInsidePageRegressionTests(unittest.TestCase):
         violations = rule.check(list(doc.iter_all_primitives()), doc)
         errors = [v for v in violations if v.severity == "error"]
         self.assertEqual(
-            len(errors), 1,
+            len(errors), 0,
             msg=(
-                f"expected exactly 1 inside_page error after #16 "
-                f"(rotated u2950 cover polygon), got {len(errors)}: "
+                f"expected zero inside_page errors after #22 T10 "
+                f"u2950 trim, got {len(errors)}: "
                 f"{[v.message for v in errors]}"
             ),
         )
-        self.assertEqual(errors[0].targets, ("u2950",))
 
     def test_inside_page_passes_with_override(self):
         # Use the production structural_check pipeline (override IS active).
