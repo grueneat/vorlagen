@@ -1,7 +1,7 @@
 ---
 id: '19'
 title: V1 layout for themen-plakat-a3-quer (Evidence Cards)
-status: open
+status: done
 priority: medium
 labels:
 - templates

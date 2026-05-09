@@ -152,6 +152,7 @@ This file logs Claude Design (or other vision-agent) sessions for traceability.
 |---|---|---|---|
 | 2026-05-08 | Pattern B · `wahlaufruf-postkarte-a6-quer` (Source: `improvements/01-wahlaufruf-postkarte.md`) | 3 Layout-Varianten (Symbol-Tight / Datum-Banner / Asymmetric Hero) mit build.py-line-targeted Slot-Änderungen + SVG-Companion-Mocks unter `improvements/01-wahlaufruf-postkarte.html` | https://github.com/GrueneAT/vorlagen/issues/33 (V1 only; V2/V3 backlog) |
 | 2026-05-08 | Pattern B · `wahltag-tueranhaenger` (Source: `improvements/02-wahltag-tueranhaenger.md`) | 3 Layout-Varianten (Composed Hero / Vertical Stripe / Manifesto) mit build.py-line-targeted Slot-Änderungen + SVG-Companion-Mocks unter `improvements/02-wahltag-tueranhaenger.html` | https://github.com/GrueneAT/vorlagen/issues/34 (V1 only; V2/V3 backlog) |
+| 2026-05-09 | Pattern B · `themen-plakat-a3-quer` (Source: `improvements/03-themen-plakat.md`) | 3 Layout-Varianten (Evidence Cards / Hero Photo / Argument Stack) mit build.py-line-targeted Slot-Änderungen | https://github.com/GrueneAT/vorlagen/issues/35 (V1 only; V2/V3 backlog) |
 
 When you (Claude Design) finish a session, append a row here in your output, so the user can paste it into the brief on the next commit.
 
