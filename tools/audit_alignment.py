@@ -81,6 +81,7 @@ class PageAuditReport:
     suspicious_pairs: list = field(default_factory=list)      # list[SuspiciousPair]
     spine_warnings: list = field(default_factory=list)        # list[str]
     image_extent_warnings: list = field(default_factory=list)  # Issue #24
+    band_consistency_warnings: list = field(default_factory=list)  # Issue #25
 
 
 @dataclass
@@ -134,7 +135,8 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
                adjacency_tol_mm: float,
                slug: str = "<doc>",
                *,
-               check_image_extent: bool = True) -> TemplateAuditReport:
+               check_image_extent: bool = True,
+               check_brand_rules: bool = True) -> TemplateAuditReport:
     """Library entry point: audit a built Document with its CONSTRAINTS list.
 
     Args:
@@ -143,6 +145,10 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
         check_image_extent: When True (default) runs the
             ``brand:image_fills_frame`` rule (Issue #24) and distributes
             its violations into per-page ``image_extent_warnings``.
+            Pass False to skip the check entirely.
+        check_brand_rules: When True (default) runs the
+            ``brand:band_consistency`` rule (Issue #25) and distributes
+            its violations into per-page ``band_consistency_warnings``.
             Pass False to skip the check entirely.
     """
     declared = _build_declared(constraints)
@@ -211,6 +217,23 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
         ):
             for t in v.targets:
                 image_extent_by_target.setdefault(t, []).append(
+                    f"[{v.severity.upper()}] {v.message}"
+                )
+
+    # Issue #25: band consistency (replaces 3 originally-planned rules).
+    # Mirrors the spine_by_target / image_extent_by_target pattern above.
+    # Lazy-import to avoid circular-import risk.
+    band_by_target: dict = {}
+    if check_brand_rules:
+        from sla_lib.builder.brand_constraints import _BandConsistencyRule
+        band_rule = _BandConsistencyRule(
+            id="brand:band_consistency", name="", description="",
+        )
+        for v in band_rule.check(
+            list(doc.iter_all_primitives()), doc, constraints=constraints,
+        ):
+            for t in v.targets:
+                band_by_target.setdefault(t, []).append(
                     f"[{v.severity.upper()}] {v.message}"
                 )
 
@@ -321,6 +344,34 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
                     page_rep.image_extent_warnings.extend(
                         image_extent_by_target.pop(anon_key)
                     )
+        # Issue #25: attach band-consistency warnings to this page.
+        # The rule emits ``<unnamed pN y=N>`` (band intrusion) and
+        # ``<unnamed pN x=N>`` (margin drift) shapes — page-tagged so
+        # frames with colliding y/x across pages don't mis-attribute.
+        page_num_1idx = (page.own_page or 0) + 1
+        for it in page.items:
+            an = getattr(it, "anname", "") or ""
+            if an and an in band_by_target:
+                page_rep.band_consistency_warnings.extend(
+                    band_by_target.pop(an)
+                )
+                continue
+            anon_y_key = (
+                f"<unnamed p{page_num_1idx} y="
+                f"{getattr(it, 'y_mm', 0):.1f}>"
+            )
+            if anon_y_key in band_by_target:
+                page_rep.band_consistency_warnings.extend(
+                    band_by_target.pop(anon_y_key)
+                )
+            anon_x_key = (
+                f"<unnamed p{page_num_1idx} x="
+                f"{getattr(it, 'x_mm', 0):.1f}>"
+            )
+            if anon_x_key in band_by_target:
+                page_rep.band_consistency_warnings.extend(
+                    band_by_target.pop(anon_x_key)
+                )
         rep.pages.append(page_rep)
 
     # Any spine warnings whose target wasn't matched (e.g. unnamed frames
@@ -338,6 +389,12 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
         img_leftover.extend(tgts)
     if img_leftover and rep.pages:
         rep.pages[0].image_extent_warnings.extend(img_leftover)
+    # Issue #25: same defensive leftover handling for band-consistency.
+    band_leftover = []
+    for tgts in band_by_target.values():
+        band_leftover.extend(tgts)
+    if band_leftover and rep.pages:
+        rep.pages[0].band_consistency_warnings.extend(band_leftover)
     return rep
 
 
@@ -345,7 +402,8 @@ def audit_template(slug: str, root: Path = REPO_ROOT,
                    axis_tol_mm: float = DEFAULTS["axis_tol_mm"],
                    adjacency_tol_mm: float = DEFAULTS["adjacency_tol_mm"],
                    *,
-                   check_image_extent: bool = True) \
+                   check_image_extent: bool = True,
+                   check_brand_rules: bool = True) \
                    -> TemplateAuditReport:
     try:
         mod = load_build_module(slug, root)
@@ -367,14 +425,17 @@ def audit_template(slug: str, root: Path = REPO_ROOT,
         )
     constraints = getattr(mod, "CONSTRAINTS", []) or []
     return _audit_doc(doc, constraints, axis_tol_mm, adjacency_tol_mm,
-                      slug=slug, check_image_extent=check_image_extent)
+                      slug=slug, check_image_extent=check_image_extent,
+                      check_brand_rules=check_brand_rules)
 
 
 def audit_all(root: Path = REPO_ROOT,
-              *, check_image_extent: bool = True) -> list:
+              *, check_image_extent: bool = True,
+              check_brand_rules: bool = True) -> list:
     """Run audit_template across every discoverable slug."""
     return [audit_template(slug, root,
-                           check_image_extent=check_image_extent)
+                           check_image_extent=check_image_extent,
+                           check_brand_rules=check_brand_rules)
             for slug in discover_template_slugs(root)]
 
 
@@ -446,6 +507,13 @@ def report_to_markdown(rep: TemplateAuditReport) -> str:
             )
             for iw in pr.image_extent_warnings:
                 lines.append(f"- {iw}")
+        if pr.band_consistency_warnings:
+            lines.append(
+                f"### Band consistency "
+                f"({len(pr.band_consistency_warnings)})"
+            )
+            for bw in pr.band_consistency_warnings:
+                lines.append(f"  - {bw}")
         lines.append("")
     return "\n".join(lines)
 
@@ -485,6 +553,7 @@ def report_to_json(rep: TemplateAuditReport) -> dict:
                 ],
                 "spine_warnings": pr.spine_warnings,
                 "image_extent_warnings": pr.image_extent_warnings,
+                "band_consistency_warnings": pr.band_consistency_warnings,
             }
             for pr in rep.pages
         ],
@@ -492,14 +561,16 @@ def report_to_json(rep: TemplateAuditReport) -> dict:
 
 
 def _report_has_findings(rep: TemplateAuditReport) -> bool:
-    """True if the report has any finding (suspicion / pair / spine / image)."""
+    """True if the report has any finding (suspicion / pair / spine /
+    image / band)."""
     if rep.fatal_error:
         return True
     if rep.tolerance_suspicions:
         return True
     for pr in rep.pages:
         if (pr.suspicious_pairs or pr.spine_warnings
-                or pr.image_extent_warnings):
+                or pr.image_extent_warnings
+                or pr.band_consistency_warnings):
             return True
     return False
 
@@ -544,6 +615,16 @@ def main(argv=None) -> int:
         action="store_false",
         help="Disable the brand:image_fills_frame check (Issue #24).",
     )
+    ap.add_argument(
+        "--check-brand-rules", dest="check_brand_rules",
+        action="store_true", default=True,
+        help="Run brand:band_consistency check (Issue #25, default on).",
+    )
+    ap.add_argument(
+        "--no-check-brand-rules", dest="check_brand_rules",
+        action="store_false",
+        help="Disable the brand:band_consistency check (Issue #25).",
+    )
     ap.add_argument("--root", type=Path, default=REPO_ROOT)
     ns = ap.parse_args(argv)
     if ns.all and ns.slug:
@@ -551,7 +632,8 @@ def main(argv=None) -> int:
     if not ns.all and not ns.slug:
         ap.error("Pass either <slug> or --all")
     if ns.all:
-        reps = audit_all(ns.root, check_image_extent=ns.check_image_extent)
+        reps = audit_all(ns.root, check_image_extent=ns.check_image_extent,
+                         check_brand_rules=ns.check_brand_rules)
         if ns.output_dir:
             Path(ns.output_dir).mkdir(parents=True, exist_ok=True)
             for rep in reps:
@@ -574,6 +656,7 @@ def main(argv=None) -> int:
         axis_tol_mm=ns.axis_tol_mm,
         adjacency_tol_mm=ns.adjacency_tol_mm,
         check_image_extent=ns.check_image_extent,
+        check_brand_rules=ns.check_brand_rules,
     )
     if ns.json:
         print(json.dumps(report_to_json(rep), indent=2, ensure_ascii=False))

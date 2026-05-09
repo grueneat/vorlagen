@@ -250,5 +250,132 @@ class ImageExtentAuditTests(unittest.TestCase):
         self.assertEqual(len(out["pages"][0]["image_extent_warnings"]), 1)
 
 
+# ---------------------------------------------------------------------------
+# Issue #25: band-consistency audit channel
+# ---------------------------------------------------------------------------
+def _doc_with_band_drift():
+    """Facing-pages A4 doc with a band-consistency drift on a body page.
+
+    Page 1 = cover (excluded).
+    Page 2 = LEFT body (NOT excluded) with a TextFrame at y=37 — drifts
+    into the header band [20-49]. The patched ``load_band_spec`` gives
+    the rule the Zeitung-shaped spec.
+    """
+    from sla_lib.builder.primitives import TextFrame
+    d = Document(title="t", template_id="synth-band-audit", facing_pages=True)
+    d.add_page(size="A4", bleed_mm=3.0, master="cover")
+    d.add_page(size="A4", bleed_mm=3.0, master="links")
+    d.pages[1].add(TextFrame(
+        x_mm=30, y_mm=37, w_mm=50, h_mm=200,
+        anname="DriftBody", text="x"))
+    return d
+
+
+_BAND_AUDIT_SPEC: dict = {
+    "bands": {
+        "header": {"y_top_mm": 20.0, "y_bottom_mm": 49.0},
+        "footer": {"y_top_mm": 283.0, "y_bottom_mm": 297.0},
+    },
+    "margins": {
+        "left":  {"outer_mm": 20.0, "inner_mm": 20.0},
+        "right": {"outer_mm": 20.0, "inner_mm": 20.0},
+    },
+    # Cover (page 1) is excluded so the body-drift on page 2 surfaces.
+    "excluded_pages": [1],
+}
+
+
+class BandConsistencyAuditTests(unittest.TestCase):
+    def test_page_audit_report_has_band_consistency_warnings_field(self):
+        """Issue #25: PageAuditReport gains a band_consistency_warnings list."""
+        from audit_alignment import PageAuditReport
+        pr = PageAuditReport(
+            page_idx=0, page_label="x", master_name="links",
+            side="left", n_primitives=0,
+        )
+        self.assertTrue(hasattr(pr, "band_consistency_warnings"))
+        self.assertEqual(pr.band_consistency_warnings, [])
+
+    def test_audit_doc_emits_band_consistency_warning_on_drift(self):
+        """Synthetic doc with band drift -> at least 1 warning on page 2."""
+        from unittest.mock import patch
+        d = _doc_with_band_drift()
+        with patch("sla_lib.builder.meta_schema.load_band_spec",
+                   return_value=_BAND_AUDIT_SPEC):
+            rep = _audit_doc(
+                d, constraints=[],
+                axis_tol_mm=DEFAULTS["axis_tol_mm"],
+                adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+            )
+        # Find the body page (page 2 / index 1 in the audit report).
+        body_pages = [pr for pr in rep.pages
+                      if pr.master_name and "links" in pr.master_name]
+        self.assertEqual(len(body_pages), 1)
+        warns = body_pages[0].band_consistency_warnings
+        self.assertGreaterEqual(len(warns), 1, msg=f"got: {warns}")
+        self.assertIn("[ERROR]", warns[0])
+        self.assertIn("DriftBody", warns[0])
+
+    def test_report_has_findings_true_when_only_band_warnings_present(self):
+        """_report_has_findings returns True for non-empty band warnings."""
+        from unittest.mock import patch
+        from audit_alignment import _report_has_findings
+        d = _doc_with_band_drift()
+        with patch("sla_lib.builder.meta_schema.load_band_spec",
+                   return_value=_BAND_AUDIT_SPEC):
+            rep = _audit_doc(
+                d, constraints=[],
+                axis_tol_mm=DEFAULTS["axis_tol_mm"],
+                adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+            )
+        self.assertTrue(_report_has_findings(rep))
+
+    def test_audit_doc_skips_check_when_brand_rules_disabled(self):
+        """check_brand_rules=False -> no band_consistency_warnings."""
+        from unittest.mock import patch
+        d = _doc_with_band_drift()
+        with patch("sla_lib.builder.meta_schema.load_band_spec",
+                   return_value=_BAND_AUDIT_SPEC):
+            rep = _audit_doc(
+                d, constraints=[],
+                axis_tol_mm=DEFAULTS["axis_tol_mm"],
+                adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+                check_brand_rules=False,
+            )
+        for pr in rep.pages:
+            self.assertEqual(pr.band_consistency_warnings, [])
+
+    def test_markdown_emits_band_consistency_section(self):
+        """Markdown formatter renders a 'Band consistency' section per page."""
+        from unittest.mock import patch
+        d = _doc_with_band_drift()
+        with patch("sla_lib.builder.meta_schema.load_band_spec",
+                   return_value=_BAND_AUDIT_SPEC):
+            rep = _audit_doc(
+                d, constraints=[],
+                axis_tol_mm=DEFAULTS["axis_tol_mm"],
+                adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+            )
+        md = report_to_markdown(rep)
+        self.assertIn("Band consistency", md)
+        self.assertIn("DriftBody", md)
+
+    def test_json_includes_band_consistency_warnings_field(self):
+        """Per-page JSON dict contains band_consistency_warnings list."""
+        from unittest.mock import patch
+        d = _doc_with_band_drift()
+        with patch("sla_lib.builder.meta_schema.load_band_spec",
+                   return_value=_BAND_AUDIT_SPEC):
+            rep = _audit_doc(
+                d, constraints=[],
+                axis_tol_mm=DEFAULTS["axis_tol_mm"],
+                adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+            )
+        out = report_to_json(rep)
+        for pg in out["pages"]:
+            self.assertIn("band_consistency_warnings", pg)
+            self.assertIsInstance(pg["band_consistency_warnings"], list)
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

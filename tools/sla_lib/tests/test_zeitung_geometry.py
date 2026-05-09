@@ -220,14 +220,11 @@ class P7PortraitFlushWithU918Tests(unittest.TestCase):
 # Page 11: P10 Portrait right edge at outer bleed
 # ---------------------------------------------------------------------------
 class P10PortraitOuterBleedTests(unittest.TestCase):
-    def test_p10_portrait_right_at_outer_bleed(self):
-        """P10 Portrait right edge at page_w + bleed (213 on A4)."""
-        doc = _doc()
-        portrait, page = _frame_by_anname(doc, "P10 Portrait")
-        bbox = frame_bbox_mm(portrait, page)
-        expected_right = page.width_pt * PT_TO_MM + float(page.bleed_mm or 0)
-        self.assertAlmostEqual(bbox[2], expected_right, delta=0.5,
-                               msg=f"right edge {bbox[2]} != bleed {expected_right}")
+    # Issue #25 (revisit): P10 Portrait no longer extends to outer
+    # bleed. Per user feedback "Portrait should sit INSIDE the
+    # right-text-column, not extend past it" — the portrait now stops
+    # at x=190 (right text-column edge). The right-edge invariant is
+    # superseded by ``BandConsistencyInvariantTests.test_user_geometry_fixes_pinned``.
 
     def test_p10_portrait_left_preserves_column_axis(self):
         """P10 Portrait left edge stays at column-3 axis (~135.3)."""
@@ -289,23 +286,18 @@ class OuterBleedCoverageInvariantTests(unittest.TestCase):
     def test_cover_hero_both_outer_edges(self):
         self._assert_at_outer_bleed("Cover Hero", "both")
 
-    def test_p1_hero_left_outer(self):
-        self._assert_at_outer_bleed("P1 Hero", "left")
+    # Issue #25 (revisit): P1 Hero, P9 Spread halves, P4 Foto-Spread,
+    # P11 Bottom (x), P10 Portrait (x) no longer extend to outer
+    # bleed. Per user feedback, these images are confined to text-
+    # column width or symmetric bleed both sides, NOT one-sided
+    # outer-bleed. The post-#25 geometry is pinned by
+    # ``BandConsistencyInvariantTests.test_user_geometry_fixes_pinned``.
 
-    def test_p4_foto_spread_right_outer(self):
-        self._assert_at_outer_bleed("P4 Foto-Spread", "right")
-
-    def test_p9_spread_left_at_outer_bleed(self):
-        self._assert_at_outer_bleed("P9 Spread · left", "left")
-
-    def test_p9_spread_right_at_outer_bleed(self):
-        self._assert_at_outer_bleed("P9 Spread · right", "right")
-
-    def test_p11_bottom_left_outer(self):
-        self._assert_at_outer_bleed("P11 Bottom", "left")
-
-    def test_p13_hero_left_outer(self):
-        self._assert_at_outer_bleed("P13 Hero", "left")
+    def test_p13_hero_both_outer_edges(self):
+        # Issue #25: P13 Hero now bleeds symmetrically both sides
+        # (x=-3, w=216) per user-cited fix ("same margins on both
+        # sides as it is the last page").
+        self._assert_at_outer_bleed("P13 Hero", "both")
 
     def test_unnamed_dunkelgruen_page_11_left_outer(self):
         # own_page=11 → LEFT page (page 12 in print order).
@@ -423,6 +415,278 @@ class ImageContentExtentInvariantTests(unittest.TestCase):
 
     def test_p13_hero_fills_frame(self):
         self._assert_fills_frame("P13 Hero")
+
+
+# ---------------------------------------------------------------------------
+# Issue #25: band-consistency invariant pinning
+# ---------------------------------------------------------------------------
+class BandConsistencyInvariantTests(unittest.TestCase):
+    """Pins the band/margin invariants on the Zeitung doc.
+
+    These tests REPLACE the originally-planned three test classes for
+    image-within-text-block, margin consistency, and text-card consistency
+    (per RESEARCH.md §8). They lock the post-T06 geometry so future
+    regressions are caught.
+
+    Body-pool pages (1-indexed): 3, 4, 5, 6, 7, 8, 9, 12, 13.
+    Feature pages: 1, 2, 10, 11, 14 (cover, hero, spread halves, back).
+    Per-frame opt-out via ``is_full_bleed=True`` on individual frames
+    inside feature pages — no per-page exclusion.
+    Bands: header y=20-49, free y=49-283, footer y=283-297.
+    Margins: 20mm L/R (symmetric Zeitung).
+    """
+
+    BODY_POOL_PAGES_1IDX = [3, 4, 5, 6, 7, 8, 9, 12, 13]
+    HEADER_Y_TOP = 20.0
+    HEADER_Y_BOT = 49.0
+    FOOTER_Y_TOP = 283.0
+    FOOTER_Y_BOT = 297.0
+    LEFT_MARGIN = 20.0
+    RIGHT_MARGIN = 20.0
+    TOLERANCE = 0.5
+
+    def _content_frames(self, page):
+        """TextFrames + ImageFrames with image content (NOT decoration).
+
+        Mirrors the rule's per-frame skip set: background_decoration
+        (Polygons + image-less brand-fill frames) AND ``is_full_bleed``
+        (per-frame opt-in for intentional feature treatments).
+        """
+        from sla_lib.builder.primitives import TextFrame, ImageFrame
+        bg_fills = {"Dunkelgrün", "Hellgrün", "Magenta", "Gelb", "White"}
+        for item in page.items:
+            if getattr(item, "is_full_bleed", False):
+                continue   # per-frame opt-out
+            if isinstance(item, TextFrame):
+                yield item
+            elif isinstance(item, ImageFrame):
+                has_image = bool(
+                    item.image or item.src
+                    or getattr(item, "inline_image_data", None)
+                )
+                if not has_image and item.fill in bg_fills:
+                    continue   # decoration
+                yield item
+
+    def _bbox(self, item, page):
+        return frame_bbox_mm(item, page)
+
+    def test_no_body_content_in_header_band(self):
+        """No content frame's bbox crosses y=49 from above on body pages."""
+        doc = _doc()
+        for pn in self.BODY_POOL_PAGES_1IDX:
+            page = doc.pages[pn - 1]
+            for item in self._content_frames(page):
+                if getattr(item, "anchor", None) is not None:
+                    continue   # anchor-positioned skip
+                bbox = self._bbox(item, page)
+                if bbox is None:
+                    continue
+                y0, y1 = bbox[1], bbox[3]
+                # Frame must be entirely in header (y1<=49) OR entirely in
+                # free zone (y0>=49) OR entirely in footer (y0>=283).
+                if y0 < self.HEADER_Y_BOT - self.TOLERANCE \
+                        and y1 > self.HEADER_Y_BOT + self.TOLERANCE:
+                    name = getattr(item, "anname", "") or "<unnamed>"
+                    self.fail(
+                        f"page {pn}: frame {name!r} y=[{y0:.1f}, {y1:.1f}] "
+                        f"crosses header-band boundary y={self.HEADER_Y_BOT}"
+                    )
+
+    def test_no_body_content_in_footer_band(self):
+        """Mirror: no content frame straddles y=283 boundary from above."""
+        doc = _doc()
+        for pn in self.BODY_POOL_PAGES_1IDX:
+            page = doc.pages[pn - 1]
+            for item in self._content_frames(page):
+                if getattr(item, "anchor", None) is not None:
+                    continue
+                bbox = self._bbox(item, page)
+                if bbox is None:
+                    continue
+                y0, y1 = bbox[1], bbox[3]
+                if y0 < self.FOOTER_Y_TOP - self.TOLERANCE \
+                        and y1 > self.FOOTER_Y_TOP + self.TOLERANCE:
+                    name = getattr(item, "anname", "") or "<unnamed>"
+                    self.fail(
+                        f"page {pn}: frame {name!r} y=[{y0:.1f}, {y1:.1f}] "
+                        f"crosses footer-band boundary y={self.FOOTER_Y_TOP}"
+                    )
+
+    def test_body_content_within_left_and_right_margins(self):
+        """Free-zone content stays within x=[20, page_w-20] on every body page.
+
+        Header/footer band frames (page numbers in outer-margin alley)
+        are exempt — their horizontal placement is band-specific design
+        per the rule's free-zone-only carve-out.
+        """
+        doc = _doc()
+        for pn in self.BODY_POOL_PAGES_1IDX:
+            page = doc.pages[pn - 1]
+            pw_mm = page.width_pt * PT_TO_MM
+            for item in self._content_frames(page):
+                if getattr(item, "anchor", None) is not None:
+                    continue
+                bbox = self._bbox(item, page)
+                if bbox is None:
+                    continue
+                x0, y0, x1, y1 = bbox
+                # Apply margin check only to free-zone frames (the rule's
+                # carve-out for band-zone frames).
+                in_free = (y0 >= self.HEADER_Y_BOT - self.TOLERANCE
+                           and y1 <= self.FOOTER_Y_TOP + self.TOLERANCE)
+                if not in_free:
+                    continue
+                self.assertGreaterEqual(
+                    x0, self.LEFT_MARGIN - self.TOLERANCE,
+                    msg=f"page {pn}: frame "
+                        f"{getattr(item, 'anname', '')!r} x_min={x0:.1f} "
+                        f"< left margin {self.LEFT_MARGIN}",
+                )
+                self.assertLessEqual(
+                    x1, pw_mm - self.RIGHT_MARGIN + self.TOLERANCE,
+                    msg=f"page {pn}: frame "
+                        f"{getattr(item, 'anname', '')!r} x_max={x1:.1f} "
+                        f"> right margin {pw_mm - self.RIGHT_MARGIN}",
+                )
+
+    def test_specific_drift_fixes(self):
+        """Pin the specific T06 fixes."""
+        doc = _doc()
+        # Page 5: P4 Foto-Spread y_bottom <= 283.5
+        f, p = _frame_by_anname(doc, "P4 Foto-Spread")
+        bbox = frame_bbox_mm(f, p)
+        self.assertLessEqual(
+            bbox[3], self.FOOTER_Y_TOP + self.TOLERANCE,
+            msg=f"P4 Foto-Spread y_bottom={bbox[3]:.1f} should be <= 283",
+        )
+        # Page 5: P4 Foto-Spread x range fits body block
+        self.assertGreaterEqual(
+            bbox[0], self.LEFT_MARGIN - self.TOLERANCE,
+            msg=f"P4 Foto-Spread x_min={bbox[0]:.1f} should be >= 20",
+        )
+        # Page 4: P3 Hero w == col-3 width (54.67mm) within tolerance
+        f, p = _frame_by_anname(doc, "P3 Hero")
+        bbox = frame_bbox_mm(f, p)
+        self.assertLessEqual(
+            bbox[2], 190.0 + self.TOLERANCE,
+            msg=f"P3 Hero x_max={bbox[2]:.1f} should be <= 190 "
+                f"(body-block inner margin)",
+        )
+        # Page 12: P11 Bottom y_bottom <= 283 + tol
+        f, p = _frame_by_anname(doc, "P11 Bottom")
+        bbox = frame_bbox_mm(f, p)
+        self.assertLessEqual(
+            bbox[3], self.FOOTER_Y_TOP + self.TOLERANCE,
+            msg=f"P11 Bottom y_bottom={bbox[3]:.1f} should be <= 283",
+        )
+
+    def test_meta_yml_has_no_excluded_pages_field(self):
+        """Issue #25 (revisit): excluded_pages was removed in favour of
+        per-frame is_full_bleed. The schema no longer accepts the field;
+        the meta.yml must not declare it.
+        """
+        import yaml
+        from pathlib import Path
+        meta = Path(__file__).resolve().parents[3] / "templates" / \
+            "zeitung-a4-grun" / "meta.yml"
+        data = yaml.safe_load(meta.read_text(encoding="utf-8"))
+        spec = data.get("body_block_margins", {})
+        self.assertNotIn(
+            "excluded_pages", spec,
+            msg="excluded_pages must be removed; opt-out is now per-frame "
+                "via is_full_bleed=True on the primitive.",
+        )
+
+    def test_user_geometry_fixes_pinned(self):
+        """Pin the Issue #25 user-feedback geometry fixes so a future
+        edit doesn't silently regress them. Each assertion mirrors a
+        bullet from the user's chat-message ('Page 2 hero too wide /
+        Page 10/11 hero not matching content width / Page 11 portrait
+        not matching column / Page 12 image fills green background /
+        Page 14 symmetric margins')."""
+        doc = _doc()
+        # Page 2: P1 Hero shrunk to text-column width (x=20, w=170).
+        f, _ = _frame_by_anname(doc, "P1 Hero")
+        self.assertAlmostEqual(f.x_mm, 20.0, places=2,
+                               msg="P1 Hero x_mm must be 20.0")
+        self.assertAlmostEqual(f.w_mm, 170.0, places=2,
+                               msg="P1 Hero w_mm must be 170.0")
+        # Page 10/11: P9 Spread halves at x=20, w=170.
+        for nm in ("P9 Spread · left", "P9 Spread · right"):
+            fs = [it for p in doc.pages for it in p.items
+                  if getattr(it, "anname", "") == nm]
+            self.assertEqual(len(fs), 1, msg=f"{nm!r} must exist")
+            self.assertAlmostEqual(fs[0].x_mm, 20.0, places=2,
+                                   msg=f"{nm} x_mm must be 20.0")
+            self.assertAlmostEqual(fs[0].w_mm, 170.0, places=2,
+                                   msg=f"{nm} w_mm must be 170.0")
+        # Page 11: P10 Portrait shrunk to right column AND inside free.
+        f, p = _frame_by_anname(doc, "P10 Portrait")
+        self.assertAlmostEqual(f.x_mm, 135.3, places=2)
+        self.assertLessEqual(f.x_mm + f.w_mm, 190.0 + self.TOLERANCE,
+                             msg="P10 Portrait right edge must be <= 190")
+        bbox = frame_bbox_mm(f, p)
+        self.assertLessEqual(bbox[3], self.FOOTER_Y_TOP + self.TOLERANCE,
+                             msg="P10 Portrait y_bottom must be <= 283")
+        # Page 12: P11 Bottom stays at content width (x=20, w=170).
+        # Green Dunkelgrün polygon was extended downward to cover the
+        # full page so the image has no white borders on left/right.
+        f, _ = _frame_by_anname(doc, "P11 Bottom")
+        self.assertAlmostEqual(f.x_mm, 20.0, places=2,
+                               msg="P11 Bottom x_mm must be 20.0")
+        self.assertAlmostEqual(f.w_mm, 170.0, places=2,
+                               msg="P11 Bottom w_mm must be 170.0")
+        # Page 14: P13 Hero symmetric bleed both sides.
+        f, _ = _frame_by_anname(doc, "P13 Hero")
+        self.assertAlmostEqual(f.x_mm, -3.0, places=2,
+                               msg="P13 Hero x_mm must be -3.0")
+        self.assertAlmostEqual(f.w_mm, 216.0, places=2,
+                               msg="P13 Hero w_mm must be 216.0")
+
+    def test_background_decoration_full_bleed_OK(self):
+        """Pages 12 (page11 var) and 13 (page12 var) have full-bleed
+        Dunkelgrün decoration polygons / image-less ImageFrames; they
+        are exempt from the band rule. Verify each page has at least
+        one such full-bleed decoration AND the page passes
+        ``_BandConsistencyRule`` (zero ERRORs).
+        """
+        from sla_lib.builder.brand_constraints import _BandConsistencyRule
+        from sla_lib.builder.primitives import ImageFrame, Polygon
+        doc = _doc()
+        bg_fills = {"Dunkelgrün", "Hellgrün", "Magenta", "Gelb", "White"}
+        # page11 (var) = page 12 (1-idx); page12 (var) = page 13 (1-idx).
+        for own_page in (11, 12):
+            page = doc.pages[own_page]
+            decoration_count = 0
+            for item in page.items:
+                fill = getattr(item, "fill", None)
+                if fill not in bg_fills:
+                    continue
+                if isinstance(item, Polygon):
+                    decoration_count += 1
+                elif isinstance(item, ImageFrame):
+                    has_image = bool(
+                        item.image or item.src
+                        or getattr(item, "inline_image_data", None)
+                    )
+                    if not has_image:
+                        decoration_count += 1
+            self.assertGreaterEqual(
+                decoration_count, 1,
+                msg=f"page own_page={own_page} should have at least one "
+                    f"background-decoration frame",
+            )
+        # And the rule itself must report zero ERRORs on body-pool pages.
+        rule = _BandConsistencyRule(
+            id="brand:band_consistency", name="", description="",
+        )
+        violations = rule.check(list(doc.iter_all_primitives()), doc)
+        self.assertEqual(
+            violations, [],
+            msg=f"_BandConsistencyRule must pass post-T06; got "
+                f"{[v.message for v in violations]}",
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

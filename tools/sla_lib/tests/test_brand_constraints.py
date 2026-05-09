@@ -31,6 +31,7 @@ from sla_lib.builder.brand_constraints import (  # noqa: E402
     _CoverExtentMatchRule,          # Issue #23
     _VisualAdjacencyDriftRule,      # Issue #23 (replaces #22 _UndeclaredDriftRule)
     _ImageFillsFrameRule,           # Issue #24
+    _BandConsistencyRule,           # Issue #25
 )
 
 
@@ -52,13 +53,14 @@ def _find_rule(rid: str) -> BrandRule:
 # Registry
 # ---------------------------------------------------------------------------
 class RegistryTests(unittest.TestCase):
-    def test_fifteen_rules_exact(self):
-        # 15 rules: 9 baseline (Issue #12) + #14 inside_page +
+    def test_sixteen_rules_exact(self):
+        # 16 rules: 9 baseline (Issue #12) + #14 inside_page +
         # #22 spine_safety + #23 (4 new: bleed_coverage,
         # image_text_overlap, cover_extent_match, visual_adjacency_drift
         # which replaces #22 undeclared_alignment_drift) + #24
-        # image_fills_frame (the 15th, catches INJECT_MAP target drift).
-        self.assertEqual(len(BRAND_CONSTRAINTS), 15)
+        # image_fills_frame (catches INJECT_MAP target drift) +
+        # #25 band_consistency (the 16th, unified body-pool model).
+        self.assertEqual(len(BRAND_CONSTRAINTS), 16)
 
     def test_ids_are_canonical(self):
         ids = [r.id for r in BRAND_CONSTRAINTS]
@@ -78,6 +80,7 @@ class RegistryTests(unittest.TestCase):
             "brand:cover_extent_match",          # Issue #23
             "brand:visual_adjacency_drift",      # Issue #23 (replaces #22)
             "brand:image_fills_frame",           # Issue #24
+            "brand:band_consistency",            # Issue #25
         }
         self.assertEqual(set(ids), expected)
 

@@ -16,7 +16,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 52d16770de3ada0ef92bbdbc5ea86b1aabef7e255e28a9a3d0731d663dfe3b8b
+previews_for_sla: 984e6ee59b104941eb404aa3148e2455ade83443f8aa10b0146878e5f85c79c0
 sla_diff_strict: false
 
 # Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
@@ -42,6 +42,25 @@ brand_overrides:
       tightening text frames to match polygon edges exactly would change
       the visual layout. Out of scope for #23; revisit per follow-up
       audit.
+
+# Issue #25 — body_block_margins: pins the OUTER STRUCTURE (header band
+# y=20-49, free zone y=49-283, footer band y=283-297, L/R margins 20mm)
+# of every body-pool page. The free zone is intentionally flexible
+# (3-col grid / image-top / image-bottom / photo grid all OK) — only
+# the bands and margins are rigid, guaranteeing combinability when
+# Bezirksgruppen shuffle pages freely. Intentional full-bleed feature
+# frames (cover hero, P1 Hero, P9 Spread halves, back-cover photo) opt
+# out per-frame via ``is_full_bleed=True`` on the frame primitive — the
+# rule still tests every page; only individual feature frames skip.
+body_block_margins:
+  bands:
+    header: {y_top_mm: 20.0, y_bottom_mm: 49.0}
+    footer: {y_top_mm: 283.0, y_bottom_mm: 297.0}
+  margins:
+    left:  {outer_mm: 20.0, inner_mm: 20.0}
+    right: {outer_mm: 20.0, inner_mm: 20.0}
+  background_decoration:
+    fills: [Dunkelgrün, Hellgrün, Magenta, Gelb, White]
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
