@@ -142,6 +142,31 @@ def build_doc() -> Document:
         language="de",
     ))
 
+    # V1 (Issue #17): QR label + url styles. ISSUE.md prescribes
+    # "12pt Gotham Bold Dunkelgrün" and "11pt Gotham Bold Dunkelgrün"
+    # respectively; the white impressum strip behind these frames
+    # makes Dunkelgrün the readable choice. Plan T03 step 5 option (a).
+    doc.add_para_style(ParaStyle(
+        name="wahlaufruf/qr-label",
+        font="Gotham Narrow Bold",
+        fontsize=12,
+        linesp=11,
+        linesp_mode=0,
+        align=1,  # center
+        fcolor="Dunkelgrün",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="wahlaufruf/qr-url",
+        font="Gotham Narrow Bold",
+        fontsize=11,
+        linesp=10,
+        linesp_mode=0,
+        align=1,  # center
+        fcolor="Dunkelgrün",
+        language="de",
+    ))
+
     # Master + 2 pages
     doc.add_master(
         name="Normal",
@@ -240,90 +265,140 @@ def build_doc() -> Document:
         anname="headline_cta",
     ))
 
-    # ---- PAGE 2: Back (2x2 grid + Impressum) ---------------------------
-    # White background (no full-page poly needed; default is white)
-    # Logo (Brand-Bund) top-left. iter-3: migrated from gruene-cmyk.png
-    # wordmark to gruene-logo-bund-dunkel.png. Frame re-sized to 18×16 mm
-    # to honor the new ~1.12:1 aspect within the cramped y=6..22 corner
-    # (cells start at y=22). On A6 (kurze Kante=105) the Quickguide
-    # Print target is 3×M = 18.9 mm — 18 mm sits at 95%. ✓
-    logo_brand_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
-    if logo_brand_path.exists():
-        lc_data, lc_ext = pack_inline_image(logo_brand_path.read_bytes(), "png")
+    # ---- PAGE 2: Back (V1 split-half + 3 W-Fragen + QR + Impressum) ----
+    # V1 (Issue #17): two background polygons emitted FIRST so they sit
+    # below all content. Left half = Dunkelgrün (carries the W-Fragen);
+    # bottom strip = white (carries the small Impressum).
+    page1.add(Polygon(
+        x_mm=-3, y_mm=-3, w_mm=93, h_mm=111,
+        fill="Dunkelgrün",
+        layer=0,
+        anname="seitenhintergrund_back_left",
+    ))
+    page1.add(Polygon(
+        x_mm=0, y_mm=96, w_mm=148, h_mm=9,
+        fill="White",
+        layer=0,
+        anname="impressum_strip_bg",
+    ))
+
+    # V1 (Issue #17): back-side logo migrated from gruene-logo-bund-dunkel.png
+    # (Bund-Dunkel wordmark) to gruene-weiss.png so it stays legible on the
+    # new Dunkelgrün-half background. Anname renamed to lowercase snake_case
+    # `logo_back` (locked decision #4: case-INSENSITIVE \bLogo\b brand rule
+    # still matches; new annames added by V1 use snake_case). EXPLICIT
+    # local_scale=(0.130, 0.130) — default (1.0, 1.0) renders 5.5× scale.
+    if logo_weiss_path.exists():
+        lb_data, lb_ext = pack_inline_image(logo_weiss_path.read_bytes(), "png")
         page1.add(ImageFrame(
-            x_mm=6, y_mm=6, w_mm=18, h_mm=16,
-            inline_image_data=lc_data,
-            inline_image_ext=lc_ext,
+            x_mm=96, y_mm=8, w_mm=18.9, h_mm=5.7,
+            inline_image_data=lb_data,
+            inline_image_ext=lb_ext,
             scale_type=0, ratio=1,
+            local_scale=(0.130, 0.130),
             layer=1,
-            anname="Logo Grüne (Bund-Dunkel)",
+            anname="logo_back",
         ))
 
-    # 2x2 grid: 4 cells, each ~70 mm wide, ~39 mm tall, with 2 mm gutter.
-    # Cell 4 ("Wo informieren") is narrowed to 35 mm so a QR slot fits to its
-    # right (Issue #11 — demo back-side QR encoding the Bezirks-URL).
-    cells = [
-        (6, 22, "Was wir tun",
-         "Klimaschutz, leistbares Wohnen, Bildung — konkret in deiner Gemeinde."),
-        (78, 22, "Warum Grün",
-         "Mut zur Veränderung. Faktenbasiert. Generationen­gerecht."),
-        (6, 62, "Wann gewählt wird",
-         "Sonntag, 23. Mai 2026, 7–17 Uhr."),
-        (78, 62, "Wo informieren",
-         "gruene-noe.at"),
-    ]
-    # Issue #12 — construct-then-add convention: each cell's hd/bd frame
-    # assigned to a named local before page.add. AlignedRow with single
-    # child preserves byte-stable interleave order while documenting the
-    # row-alignment intent (cells in same row share y).
-    cell_idx = 1
-    for cx, cy, hd, body in cells:
-        if cx == 6:
-            cell_w = 68
-        elif cell_idx == 4:
-            # Cell 4 narrows to 35 mm to make room for QR slot at x=115.
-            cell_w = 35
-        else:
-            cell_w = 64
-        cell_hd = TextFrame(
-            x_mm=cx, y_mm=cy, w_mm=cell_w, h_mm=8,
-            layer=2,
-            style="wahlaufruf/cell-headline",
-            runs=[Run(text=hd, paragraph_style="wahlaufruf/cell-headline")],
-            anname=f"Cell {cell_idx} — Headline",
-        )
-        cell_bd = TextFrame(
-            x_mm=cx, y_mm=cy + 9, w_mm=cell_w, h_mm=30 if cell_idx <= 2 else 20,
-            layer=2,
-            style="wahlaufruf/cell-body",
-            runs=[Run(text=body, paragraph_style="wahlaufruf/cell-body")],
-            anname=f"Cell {cell_idx} — Body",
-        )
-        page1.add(AlignedRow(y_mm=cy, children=[cell_hd],
-                              name=f"cell{cell_idx}_hd_row"))
-        page1.add(AlignedRow(y_mm=cy + 9, children=[cell_bd],
-                              name=f"cell{cell_idx}_bd_row"))
-        cell_idx += 1
+    # V1 (Issue #17): 4-Cells loop replaced by 3 W-Frage stacks
+    # (Was/Warum/Wann). Each = headline (yellow) + body (white-on-green),
+    # gap=1mm, all left-aligned at x=6. Per-stack adjacency declared in
+    # CONSTRAINTS (T04) so `brand:undeclared_alignment_drift` reports clean.
+    page1.add(TextFrame(
+        x_mm=6, y_mm=12, w_mm=84, h_mm=8,
+        layer=2,
+        style="wahlaufruf/cell-headline-yellow",
+        runs=[Run(text="WAS?",
+                  paragraph_style="wahlaufruf/cell-headline-yellow")],
+        anname="frage_was_headline",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=21, w_mm=84, h_mm=20,
+        layer=2,
+        style="wahlaufruf/cell-body-on-green",
+        runs=[Run(
+            text=("Klimaschutz, leistbares Wohnen, Bildung — "
+                  "konkret in deiner Gemeinde."),
+            paragraph_style="wahlaufruf/cell-body-on-green",
+        )],
+        anname="frage_was_body",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=40, w_mm=84, h_mm=8,
+        layer=2,
+        style="wahlaufruf/cell-headline-yellow",
+        runs=[Run(text="WARUM?",
+                  paragraph_style="wahlaufruf/cell-headline-yellow")],
+        anname="frage_warum_headline",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=49, w_mm=84, h_mm=20,
+        layer=2,
+        style="wahlaufruf/cell-body-on-green",
+        runs=[Run(
+            text=("Mut zur Veränderung. Faktenbasiert. "
+                  "Generationen­gerecht."),
+            paragraph_style="wahlaufruf/cell-body-on-green",
+        )],
+        anname="frage_warum_body",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=68, w_mm=84, h_mm=8,
+        layer=2,
+        style="wahlaufruf/cell-headline-yellow",
+        runs=[Run(text="WANN?",
+                  paragraph_style="wahlaufruf/cell-headline-yellow")],
+        anname="frage_wann_headline",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=77, w_mm=84, h_mm=20,
+        layer=2,
+        style="wahlaufruf/cell-body-on-green",
+        runs=[Run(text="Sonntag, 26. Jänner 2026, 7–17 Uhr.",
+                  paragraph_style="wahlaufruf/cell-body-on-green")],
+        anname="frage_wann_body",
+    ))
 
-    # QR-back slot (Issue #11): 25x25 mm, bottom-right of back, conditional
-    # inject — only embedded when samples/qr-back.png is committed. Fresh
-    # checkouts (no demo content) leave the slot empty.
+    # V1 (Issue #17): QR stack — label above (y=24), code (y=31, 36×36),
+    # url below (y=71). y values 24/31/71 are LOCKED (locked decision #2,
+    # ship-blockers B2/B3). aligned_below verifies:
+    #   qr_label.bottom = 24+5 = 29 → +2mm gap = qr_code.y=31 ✓
+    #   qr_code.bottom = 31+36 = 67 → +4mm gap = qr_url.y=71 ✓
+    #   logo_back.bottom = 8+5.7 = 13.7 → +10.3mm gap = qr_label.y=24 ✓
+    page1.add(TextFrame(
+        x_mm=96, y_mm=24, w_mm=36, h_mm=5,
+        layer=2,
+        style="wahlaufruf/qr-label",
+        runs=[Run(text="WO INFORMIEREN",
+                  paragraph_style="wahlaufruf/qr-label")],
+        anname="qr_label",
+    ))
     qr_back_path = HERE / "samples" / "qr-back.png"
     qr_data, qr_ext = (None, None)
     if qr_back_path.exists():
         qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
     page1.add(ImageFrame(
-        x_mm=115, y_mm=62, w_mm=27, h_mm=27,
+        x_mm=96, y_mm=31, w_mm=36, h_mm=36,
         inline_image_data=qr_data,
         inline_image_ext=qr_ext,
         scale_type=0, ratio=1,
         layer=1,
-        anname="QR-Code (back)",
+        anname="qr_code",
+    ))
+    page1.add(TextFrame(
+        x_mm=96, y_mm=71, w_mm=36, h_mm=5,
+        layer=2,
+        style="wahlaufruf/qr-url",
+        runs=[Run(text="gruene-noe.at",
+                  paragraph_style="wahlaufruf/qr-url")],
+        anname="qr_url",
     ))
 
-    # Impressum bottom strip
+    # Impressum bottom strip — V1 (Issue #17): tightened to y=101.5 h=4
+    # to fit on the white impressum_strip_bg polygon (which spans y=96..105).
+    # Style fontsize 5 / linesp 4.5 set in T01.
     page1.add(TextFrame(
-        x_mm=6, y_mm=96, w_mm=136, h_mm=6,
+        x_mm=6, y_mm=101.5, w_mm=136, h_mm=4,
         layer=2,
         style="wahlaufruf/impressum",
         runs=[Run(

@@ -45,6 +45,8 @@ ci_overrides:
     - "wahlaufruf/headline-cta"
     - "wahlaufruf/cell-headline-yellow"
     - "wahlaufruf/cell-body-on-green"
+    - "wahlaufruf/qr-label"
+    - "wahlaufruf/qr-url"
   non_ci_colors: []
 
 slots:
