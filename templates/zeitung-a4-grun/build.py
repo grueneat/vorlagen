@@ -457,7 +457,11 @@ def build_template():
     page1.add(ImageFrame(
         x_mm=0,
         y_mm=0,
-        w_mm=209.9999999999361,
+        # w 210 -> 207 in #22 T12: P1 Hero on page1 (LEFT) had right
+        # edge x=210 flush with the spine; Scribus bleed leaked across
+        # to the facing RIGHT page (page2). Inset preserves left axis
+        # at x=0 and leaves 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=130.20731192714427,
         layer=0,
         clip_edit=True,
@@ -784,7 +788,10 @@ def build_template():
     page3.add(ImageFrame(
         x_mm=135.33199999999982,
         y_mm=49.53117431300355,
-        w_mm=74.66799999993626,
+        # w 74.668 -> 71.668 in #22 T12: P3 Hero on page3 (LEFT) had
+        # right edge x=210 flush with the spine; inset preserves left
+        # axis at x=135.33 (column-3 grid) and leaves 3mm spine safety.
+        w_mm=71.66799999993626,
         h_mm=58.158088754618625,
         layer=0,
         clip_edit=True,
@@ -963,16 +970,15 @@ def build_template():
 
 
     # P4 Foto-Spread: SINGLE-PAGE bottom-band frame on page 4 (RIGHT).
-    # Originally evaluated for SpreadImage migration (#22 T11) but the
-    # upstream gruene-zeitung-vorlage-original.sla has only ONE
-    # ImageFrame at HEIGHT~306pt on OwnPage=4 — there is no page-3 half
-    # in the source, and converting would overlap page-3 text columns.
-    # Spine-safety addressed by left-edge inset in T12 (x=3, w=207
-    # preserves right-edge alignment).
+    # Upstream gruene-zeitung-vorlage-original.sla has only ONE
+    # ImageFrame at HEIGHT~306pt on OwnPage=4 — there is no page-3
+    # half in the source. Spine-safety addressed by LEFT-edge inset
+    # in #22 T12: x=0 -> x=3, w=210 -> 207 (preserves right-edge
+    # alignment at x=210, 3mm spine safety on the left).
     page4.add(ImageFrame(
-        x_mm=0,
+        x_mm=3.0,
         y_mm=188.8816330286011,
-        w_mm=209.9999999999361,
+        w_mm=207.0,
         h_mm=108.11836697086034,
         layer=0,
         image='',
@@ -1970,7 +1976,11 @@ def build_template():
     page11.add(ImageFrame(
         x_mm=0,
         y_mm=-0.1807155930984082,
-        w_mm=210.7990642201835,
+        # Unnamed Dunkelgrün band on page11 (LEFT): w 210.799 -> 207
+        # in #22 T12 (right edge was 0.8mm past the bleed and 4.2mm
+        # over the spine). Inset preserves left axis at x=0 and leaves
+        # 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=213.91926605504602,
         layer=0,
         image='',
@@ -2068,7 +2078,10 @@ def build_template():
     page11.add(ImageFrame(
         x_mm=0,
         y_mm=213.73855046194836,
-        w_mm=209.99999999999994,
+        # w 210 -> 207 in #22 T12: P11 Bottom on page11 (LEFT) right
+        # edge x=210 was flush with spine; inset preserves left axis
+        # at x=0 and leaves 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=83.26144953805078,
         layer=0,
         image='',
@@ -2077,9 +2090,13 @@ def build_template():
     ))
 
     page12.add(ImageFrame(
-        x_mm=0.0,
+        # Unnamed Dunkelgrün full-bleed band on page12 (RIGHT post-T09):
+        # x 0 -> 3, w 210.799 -> 207 in #22 T12. Original left edge sat
+        # at the spine; inset preserves right edge at x=210 and leaves
+        # 3mm spine safety on the left.
+        x_mm=3.0,
         y_mm=-0.1807155930984082,
-        w_mm=210.7990642201835,
+        w_mm=207.0,
         h_mm=297.1807155930968,
         layer=0,
         image='',
@@ -2287,7 +2304,10 @@ def build_template():
     page13.add(ImageFrame(
         x_mm=0,
         y_mm=149.63672477387325,
-        w_mm=209.99999999999994,
+        # w 210 -> 207 in #22 T12: P13 Hero on page13 (LEFT) right
+        # edge x=210 was flush with spine; inset preserves left axis
+        # at x=0 and leaves 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=147.36327522612436,
         layer=0,
         image='',
@@ -2298,7 +2318,11 @@ def build_template():
     page13.add(ImageFrame(
         x_mm=0,
         y_mm=-0.18071559309872906,
-        w_mm=210.7990642201835,
+        # Unnamed Dunkelgrün band on page13 (LEFT): w 210.799 -> 207
+        # in #22 T12 (right edge was 0.8mm past the bleed and ~4mm
+        # over the spine). Inset preserves left axis at x=0 and 3mm
+        # spine safety on the right.
+        w_mm=207.0,
         h_mm=152.61377064220179,
         layer=0,
         image='',
