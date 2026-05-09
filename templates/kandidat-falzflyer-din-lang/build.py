@@ -26,13 +26,13 @@ from sla_lib.builder import (  # noqa: E402
     ParaStyle,
     pack_inline_image,
     library,
-    # Issue #12 — constraints
-    same_y,
-    same_x,
+    # Issue #12 + #21 — constraints
+    aligned_below,
+    inside,
+    mirrored_x,
     same_size,
     same_style,
-    equal_gap,
-    distance_y,
+    same_x,
 )
 from sla_lib.builder.blocks import FoldLine  # noqa: E402
 
@@ -939,61 +939,88 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+# Issue #21 — V1 "Falz-Rhythm" CONSTRAINTS list (read by structural_check).
 #
-# 6-panel layout (front P1/P2/P3, back P4/P5/P6) with 4 themen-modules
-# spread across P4+P5. CONSTRAINTS capture cross-panel alignment and
-# style consistency.
+# 22 entries — replaces V0's 9. Captures the full Falz-Rhythm design language:
+#   - Universal Top-Band (4 explicit polygons + 2 vollflächig-anchored)
+#   - P3↔P6 grüne-Klammer cross-panel pair
+#   - P4 + P5 themen sub-layout mirror (intra-panel)
+#   - Cross-panel themen photos uniform size
+#   - P6 Kontakt 2-Spalten symmetric around AXIS_P6_CENTER_X = 247.5
+#   - Logo Print-Soll consistency on P1 + P6
+#   - Style consistency across thema headlines/bodies
+#
+# All anname strings use REAL names (em-dash U+2014 literal, case-sensitive).
+# AXIS_P6_CENTER_X = 247.5 mm (P6 horizontal center: 198 + 99/2).
 # ---------------------------------------------------------------------------
+AXIS_P6_CENTER_X_MM = 247.5
+
 CONSTRAINTS = [
-    # All 4 themen-headlines share style.
+    # ── Top-Band uniformity (4 explicit polygons; P3+P6 vollflächig handled below) ──
+    same_size(
+        "P1 Top-Band", "P2 Top-Band", "P4 Top-Band", "P5 Top-Band",
+        axis="h", name="top_bands_uniform_h",
+    ),
+    inside("P3 Top-Title", "P3 Hintergrund", name="p3_top_title_anchored"),
+    inside("P6 Top-Title", "P6 Hintergrund", name="p6_top_title_anchored"),
+
+    # ── P3↔P6 grüne-Klammer (vollflächig pair) ──
+    same_size("P3 Hintergrund", "P6 Hintergrund", name="gruene_klammer_p3_p6"),
+
+    # ── P4 themen sub-layout mirror (Thema 1 vs 2 within panel) ──
+    same_x("P4 Thema 1 — Eyebrow", "P4 Thema 2 — Eyebrow",
+           name="p4_eyebrow_x"),
+    same_x("P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
+           name="p4_headline_x"),
+    same_x("P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
+           name="p4_photo_x"),
+    same_size("P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
+              name="p4_photos_size"),
+    aligned_below("P4 Thema 1 — Photo", "P4 Thema 1 — Headline", gap_mm=2.0,
+                  name="p4_t1_photo_anchored"),
+
+    # ── P5 themen sub-layout mirror (Thema 3 vs 4 within panel) ──
+    same_x("P5 Thema 3 — Eyebrow", "P5 Thema 4 — Eyebrow",
+           name="p5_eyebrow_x"),
+    same_x("P5 Thema 3 — Headline", "P5 Thema 4 — Headline",
+           name="p5_headline_x"),
+    same_x("P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
+           name="p5_photo_x"),
+    same_size("P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
+              name="p5_photos_size"),
+    aligned_below("P5 Thema 3 — Photo", "P5 Thema 3 — Headline", gap_mm=2.0,
+                  name="p5_t3_photo_anchored"),
+
+    # ── Cross-panel themen photo size match ──
+    same_size("P4 Thema 1 — Photo", "P5 Thema 3 — Photo",
+              name="cross_panel_themen_photos_size"),
+
+    # ── P6 Kontakt 2-Spalten symmetric around AXIS_P6_CENTER_X = 247.5 ──
+    # mirrored_x pairs cover row symmetry; same_y baselines + cells_uniform
+    # are deferred to the geometry test (T11 invariant 13/19) to keep this
+    # CONSTRAINTS list at exactly 22 (per RESEARCH locked count).
+    mirrored_x("P6 Adresse", "P6 Telefon",
+               axis_mm=AXIS_P6_CENTER_X_MM, name="p6_col_mirror_row1"),
+    mirrored_x("P6 Email", "P6 Sprechtag",
+               axis_mm=AXIS_P6_CENTER_X_MM, name="p6_col_mirror_row2"),
+    mirrored_x("P6 QR-Code (mitmachen)", "P6 QR-Code (termine)",
+               axis_mm=AXIS_P6_CENTER_X_MM, name="p6_qr_mirror"),
+    same_size("P6 QR-Code (mitmachen)", "P6 QR-Code (termine)",
+              name="p6_qrs_size"),
+
+    # ── Logo Print-Soll consistency on P1 + P6 ──
+    same_size("P1 Logo Grüne (weiss)", "P6 Logo Grüne (weiss)",
+              axis="w", name="logos_print_soll_w_uniform"),
+
+    # ── Style consistency ──
     same_style(
         "P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
         "P5 Thema 3 — Headline", "P5 Thema 4 — Headline",
         name="thema_headline_style_consistent",
     ),
-    # All 4 themen-bodies share style.
     same_style(
-        "P4 Thema 1 — Body", "P4 Thema 2 — Body",
-        "P5 Thema 3 — Body", "P5 Thema 4 — Body",
+        "P4 Thema 1 — Body", "P5 Thema 3 — Body",
         name="thema_body_style_consistent",
-    ),
-    # Top row themen-headlines (P4 T1 + P5 T3) share y=20.
-    same_y(
-        "P4 Thema 1 — Headline", "P5 Thema 3 — Headline",
-        name="thema_top_row_y",
-    ),
-    # Bottom row themen-headlines (P4 T2 + P5 T4) share y=105.
-    same_y(
-        "P4 Thema 2 — Headline", "P5 Thema 4 — Headline",
-        name="thema_bottom_row_y",
-    ),
-    # Themen-photos (P4 T1 + P4 T2) on Panel 4 share x=6.
-    same_x(
-        "P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
-        name="p4_themen_left_edge",
-    ),
-    # Themen-headlines (P4 T1 + P4 T2) on Panel 4 share x=6.
-    same_x(
-        "P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
-        name="p4_themen_hd_left_edge",
-    ),
-    # Same-panel HL -> body distance: distance_y(thema-1-hd, thema-1-body) ~= 42mm.
-    distance_y(
-        "P4 Thema 1 — Headline", "P4 Thema 1 — Body", equals=42.0,
-        name="thema1_hd_to_body",
-    ),
-    # Themen-photo size match across all 3 photos (P4 T1, P4 T2, P5 T3).
-    same_size(
-        "P4 Thema 1 — Photo", "P4 Thema 2 — Photo", "P5 Thema 3 — Photo",
-        axis="both",
-        name="thema_photos_uniform_size",
-    ),
-    # Same-panel themen vertical gap: top hd at y=20, bottom hd at y=105
-    # — distance 85mm captures the panel-half-height stride.
-    distance_y(
-        "P4 Thema 1 — Headline", "P4 Thema 2 — Headline", equals=85.0,
-        name="p4_thema_vertical_stride",
     ),
 ]
 
