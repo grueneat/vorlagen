@@ -10,8 +10,8 @@ sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 from sla_lib.builder import (  # noqa: E402
     Brand, Document, TextFrame, ImageFrame, Polygon, Run,
     ParaStyle, CharStyle, SoftShadow,
-    # Issue #12 — constraints
-    same_size,
+    # Issue #12 + #22 — constraints
+    same_size, same_x, same_y, aligned_below,
 )
 from sla_lib.builder import library, pack_inline_image  # noqa: E402  (issue #13)
 from sla_lib.builder.blocks import (  # noqa: E402
@@ -2612,25 +2612,121 @@ build_doc = build_template
 # every internal sub-frame.
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # Hero anchor presence (orphan-warning catches rename drift on
-    # build.py regenerations from the upstream original SLA).
+    # ----------------------------------------------------------------
+    # Hero/portrait/spread anchor presence (orphan-warning catches
+    # rename drift on build.py regenerations from the upstream original
+    # SLA). #12 baseline + #22 SpreadImage migration.
+    # ----------------------------------------------------------------
     same_size("Cover Hero", name="cover_hero_anchor"),
     same_size("P1 Hero", name="p1_hero_anchor"),
     same_size("P3 Hero", name="p3_hero_anchor"),
     same_size("P5 Hero", name="p5_hero_anchor"),
     same_size("P13 Hero", name="p13_hero_anchor"),
-    # Portrait slot witness.
     same_size("P7 Portrait", name="p7_portrait_anchor"),
     same_size("P10 Portrait", name="p10_portrait_anchor"),
-    # P4 Foto-Spread stays single-page (upstream has no page-3 half).
     same_size("P4 Foto-Spread", name="p4_fotospread_anchor"),
-    # P9 Spread was converted to SpreadImage in #22 T11 (' · left' +
-    # ' · right' halves on facing pages 9+10). Witness shared width.
     same_size(
         "P9 Spread · left", "P9 Spread · right",
         axis="w", name="p9_spread_halves_share_width",
     ),
-    # T14 will append per-page declared adjacencies.
+
+    # ----------------------------------------------------------------
+    # #22 T14 — declared adjacencies.
+    # Surfaced by `bin/audit-alignment zeitung-a4-grun` after T09-T13
+    # geometry fixes. Each entry encodes a real intentional relationship
+    # the magazine layout author chose; declaring them keeps
+    # brand:undeclared_alignment_drift silent and gives the downstream
+    # editor a witness if a renamed/moved frame breaks the relationship.
+    # ----------------------------------------------------------------
+
+    # --- Page 1 (cover, RIGHT) ---
+    # Cover composition: vertical stack of journal-style metadata blocks
+    # (issue number / date / contact / publisher).
+    aligned_below("u1aa", "u29b9", gap_mm=2.56, name="p1_meta_below_title"),
+    aligned_below("u165", "u14c", gap_mm=2.80, name="p1_meta_below_label"),
+    aligned_below("u1d9", "u1c1", gap_mm=1.40, name="p1_meta_below_url"),
+    # u165 / u1d9 baseline drift = 0.7mm (just above the 0.5mm
+    # default tolerance) — accept the original layout's near-miss.
+    same_y("u165", "u1d9", tolerance_mm=1.0,
+           name="p1_meta_two_col_baseline"),
+
+    # --- Page 3 (RIGHT) ---
+    # Page-3 mid image (P2 Mid) sits 2.6mm below the column-2 text.
+    aligned_below("P2 Mid", "Kopie von u2d5c (2)", gap_mm=2.60,
+                  name="p3_p2mid_below_col2"),
+
+    # --- Page 4 (LEFT) ---
+    # Two grouped polygons share a baseline on page 4 (decorative band).
+    # Original drift is 3.6mm — the band is approximate, not strictly
+    # shared baseline; declare with widened tolerance.
+    same_y("u1529", "u1544", tolerance_mm=4.0,
+           name="p4_band_baseline"),
+
+    # --- Page 6 (LEFT) ---
+    # P5 Hero sits 2.56mm below the column-2 text frame.
+    aligned_below("P5 Hero", "Kopie von u2da1 (6)", gap_mm=2.56,
+                  name="p6_p5hero_below_col2"),
+
+    # --- Page 8 (LEFT) ---
+    # Page-8 portrait sits inside u918 Dunkelgrün band; declared
+    # adjacencies with the col-2 text above + col-3 text axis.
+    aligned_below("u918", "Kopie von u2d5c (9)", gap_mm=4.00,
+                  name="p8_band_below_col2"),
+    aligned_below("P7 Portrait", "Kopie von u2da1 (11)", gap_mm=10.17,
+                  name="p8_portrait_below_col3_caption"),
+
+    # --- Page 9 (RIGHT) ---
+    # The user-named bug page (now own_page=9 LEFT post-T09; print page 10).
+    # P9 Spread · left occupies y=0..126.14; text columns moved to
+    # y=130.14 (4mm gap). Audit shows residual 1.6/1.86mm vertical
+    # drifts within the column trio — declared as same_y witnesses.
+    aligned_below("Kopie von u2da1 (15)", "Kopie von u6ad", gap_mm=4.29,
+                  name="p9_col2_below_caption"),
+    # Drift 1.86 / 1.6mm — column-trio top edges are loosely aligned;
+    # widened tolerance accepts the original layout.
+    same_y("Kopie von u2d5c (12)", "Kopie von u2da1 (12)",
+           tolerance_mm=2.0, name="p9_col1_col2_baseline"),
+    same_y("Kopie von u2d5c (12)", "Kopie von u2da1 (13)",
+           tolerance_mm=2.0, name="p9_col1_col2_topline"),
+
+    # --- Page 10 (LEFT) ---
+    # Decorative band on page 10 mirrors the page-4 pattern (3.6mm drift).
+    same_y("Kopie von u1529", "Kopie von u1544", tolerance_mm=4.0,
+           name="p10_band_baseline"),
+
+    # --- Page 11 (RIGHT) ---
+    # P10 Portrait fixed in T13 (x_mm=135.3); audit shows the column-3
+    # text frame pair shares a baseline and the portrait sits below it.
+    # Drift 1.17 / 1.36mm — column-trio top edges loosely aligned.
+    same_y("Kopie von u2d5c (14)", "Kopie von u2da1 (18)",
+           tolerance_mm=1.5, name="p11_col_topline_a"),
+    same_y("Kopie von u2d5c (14)", "Kopie von u2da1 (19)",
+           tolerance_mm=1.5, name="p11_col_topline_b"),
+    aligned_below("P10 Portrait", "Kopie von u2da1 (19)", gap_mm=11.57,
+                  name="p11_portrait_below_col3"),
+
+    # --- Page 13 (RIGHT) ---
+    # 3-column body grid; audit shows multiple sub-1.7mm same_y drifts
+    # — all declared as the column-grid baseline witnesses.
+    # Drift 0.8 / 0.8 / 1.36 / 1.63mm — body grid top edges loosely
+    # aligned. Tolerance 2.0 covers all four pairs.
+    same_y("Kopie von u2d5c (17)", "Kopie von u2da1 (23)",
+           tolerance_mm=1.0, name="p13_col1_col3_baseline_a"),
+    same_y("Kopie von u2da1 (22)", "Kopie von u2da1 (23)",
+           tolerance_mm=1.0, name="p13_col2_col3_baseline"),
+    same_y("Kopie von u2d5c (18)", "Kopie von u2da1 (24)",
+           tolerance_mm=2.0, name="p13_col1_col3_baseline_b"),
+    same_y("Kopie von u2d5c (18)", "Kopie von u2da1 (25)",
+           tolerance_mm=2.0, name="p13_col1_col3_baseline_c"),
+
+    # --- Page 14 (LEFT) ---
+    # Three grouped decoration polygons stacked with 4.95mm gap.
+    aligned_below("Kopie von u14c (2)", "Kopie von u14c", gap_mm=4.95,
+                  name="p14_decor_pair_1"),
+    aligned_below("Kopie von u14c (4)", "Kopie von u14c (3)", gap_mm=4.95,
+                  name="p14_decor_pair_2"),
+    aligned_below("Kopie von u14c (6)", "Kopie von u14c (5)", gap_mm=4.95,
+                  name="p14_decor_pair_3"),
 ]
 
 
