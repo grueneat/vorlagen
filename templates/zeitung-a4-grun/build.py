@@ -1238,9 +1238,12 @@ def build_template():
 
     page6.add(TextFrame(
         x_mm=86.25000000000003,
-        y_mm=62.85251292011795,
+        # Issue #25: y 62.85 -> 74.69 to follow the +11.84mm offset of
+        # u6e8 (headline above) so the headline-to-body gap inside the
+        # u6ad green polygon is preserved. h shrunk to keep y_bottom=157.
+        y_mm=74.69105420290369,
         w_mm=94.99999999999993,
-        h_mm=94.14748707988173,
+        h_mm=82.30894579709599,
         layer=0,
         anname='u6d0',
         clip_edit=True,
