@@ -316,6 +316,48 @@ class _SameStyleConstraint(Constraint):
 
 
 @dataclass(frozen=True)
+class _AlignedBelowConstraint(Constraint):
+    """`below` hangs from `above`: same x_mm, below.y_mm == above.y_mm + above.h_mm + gap_mm.
+
+    Issue #14. Targets order is ``(below, above)`` — first arg is the
+    frame hanging beneath. Rotated frames (either side) are skipped with
+    a single ``severity="warning"`` Violation, since raw bbox math no
+    longer applies. Missing annames yield the framework's standard
+    ``_missing_violation``.
+    """
+
+    gap_mm: float = 0.0
+    tolerance_mm: float = 0.5
+
+    def check(self, primitives_by_anname: dict) -> list:
+        resolved, missing = _resolve(self.targets, primitives_by_anname)
+        if missing:
+            return [_missing_violation(self.id, self.targets, missing)]
+        below, above = resolved
+        if any(float(getattr(f, "rotation_deg", 0) or 0) != 0 for f in resolved):
+            return [Violation(
+                severity="warning",
+                rule_id=self.id,
+                message="rotated frame — aligned_below skipped",
+                targets=self.targets,
+            )]
+        expected_y = above.y_mm + above.h_mm + self.gap_mm
+        bad: list = []
+        if abs(below.y_mm - expected_y) > self.tolerance_mm:
+            bad.append(("y", below.y_mm, expected_y))
+        if abs(below.x_mm - above.x_mm) > self.tolerance_mm:
+            bad.append(("x", below.x_mm, above.x_mm))
+        if not bad:
+            return []
+        return [Violation(
+            severity="error",
+            rule_id=self.id,
+            message=f"aligned_below drift > {self.tolerance_mm}mm: {bad}",
+            targets=self.targets,
+        )]
+
+
+@dataclass(frozen=True)
 class _DistanceConstraint(Constraint):
     axis: str = "y"
     equals: float = 0.0
@@ -459,4 +501,19 @@ def distance_x(a, b, equals: float, tolerance_mm: float = 0.5, name: str = "") -
     return _DistanceConstraint(
         id=_autoname("distance_x", t, name), targets=t, name=name,
         axis="x", equals=equals, tolerance_mm=tolerance_mm,
+    )
+
+
+def aligned_below(below, above, gap_mm: float, tolerance_mm: float = 0.5,
+                  name: str = "") -> Constraint:
+    """`below` hangs from `above`: same x, below.y == above.y + above.h + gap.
+
+    Argument order: ``below`` first (the frame hanging beneath), then
+    ``above`` (the anchor). Mirrors how an editor reads the layout
+    ("the image hangs below the headline"). Issue #14.
+    """
+    t = _norm((below, above))
+    return _AlignedBelowConstraint(
+        id=_autoname("aligned_below", t, name), targets=t, name=name,
+        gap_mm=gap_mm, tolerance_mm=tolerance_mm,
     )

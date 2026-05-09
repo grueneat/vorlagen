@@ -321,5 +321,78 @@ class ReferencedAnnamesTests(unittest.TestCase):
             same_y(f, "Other")
 
 
+# ---------------------------------------------------------------------------
+# aligned_below (Issue #14)
+# ---------------------------------------------------------------------------
+from sla_lib.builder.constraints import (  # noqa: E402
+    aligned_below, _AlignedBelowConstraint,
+)
+
+
+class AlignedBelowTests(unittest.TestCase):
+    def _pair(self, below_kwargs=None, above_kwargs=None):
+        above_defaults = {"x_mm": 20, "y_mm": 10, "w_mm": 80, "h_mm": 30}
+        above_defaults.update(above_kwargs or {})
+        above = TextFrame(anname="above", **above_defaults)
+        below_defaults = {"x_mm": 20, "y_mm": 45, "w_mm": 80, "h_mm": 60}
+        below_defaults.update(below_kwargs or {})
+        below = ImageFrame(anname="below", **below_defaults)
+        return below, above, {"above": above, "below": below}
+
+    def test_pass_when_aligned(self):
+        below, above, by = self._pair()
+        # gap = 5 mm: above.y(10) + above.h(30) + 5 = 45 = below.y; below.x == above.x.
+        c = aligned_below(below, above, gap_mm=5)
+        self.assertEqual(c.check(by), [])
+
+    def test_x_drift_errors(self):
+        below, above, by = self._pair(below_kwargs={"x_mm": 22})  # 2 mm drift
+        c = aligned_below(below, above, gap_mm=5)
+        vs = c.check(by)
+        self.assertEqual(len(vs), 1)
+        self.assertEqual(vs[0].severity, "error")
+        self.assertIn("x", vs[0].message)
+
+    def test_y_drift_errors(self):
+        below, above, by = self._pair(below_kwargs={"y_mm": 50})  # gap=10, expected 5
+        c = aligned_below(below, above, gap_mm=5)
+        vs = c.check(by)
+        self.assertEqual(len(vs), 1)
+        self.assertEqual(vs[0].severity, "error")
+        self.assertIn("y", vs[0].message)
+
+    def test_within_tolerance_passes(self):
+        below, above, by = self._pair(below_kwargs={"x_mm": 20.4, "y_mm": 45.4})
+        c = aligned_below(below, above, gap_mm=5, tolerance_mm=0.5)
+        self.assertEqual(c.check(by), [])
+
+    def test_missing_anname_warns(self):
+        _, above, _ = self._pair()
+        by_only_above = {"above": above}  # 'below' missing
+        c = aligned_below("below", "above", gap_mm=5)
+        vs = c.check(by_only_above)
+        self.assertEqual(len(vs), 1)
+        self.assertEqual(vs[0].severity, "warning")
+
+    def test_rotated_frame_warn_skip(self):
+        below, above, by = self._pair(above_kwargs={"rotation_deg": 90})
+        c = aligned_below(below, above, gap_mm=5)
+        vs = c.check(by)
+        self.assertEqual(len(vs), 1)
+        self.assertEqual(vs[0].severity, "warning")
+        self.assertIn("rotated", vs[0].message)
+
+    def test_string_form_accepts_annames(self):
+        _, _, by = self._pair()
+        c = aligned_below("below", "above", gap_mm=5)
+        self.assertEqual(c.check(by), [])
+
+    def test_factory_id_uses_autoname(self):
+        below, above, _ = self._pair()
+        c = aligned_below(below, above, gap_mm=5)
+        self.assertTrue(c.id.startswith("aligned_below"))
+        self.assertEqual(c.targets, ("below", "above"))
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

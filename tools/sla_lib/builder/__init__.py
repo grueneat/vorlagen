@@ -82,6 +82,7 @@ from .constraints import (
     same_style,
     distance_y,
     distance_x,
+    aligned_below,
     Constraint,
     Violation,
 )
@@ -125,6 +126,7 @@ __all__ = [
     "same_style",
     "distance_y",
     "distance_x",
+    "aligned_below",
     "Constraint",
     "Violation",
     "BRAND_CONSTRAINTS",
