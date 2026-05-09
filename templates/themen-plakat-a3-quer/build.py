@@ -24,9 +24,12 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
-    # Issue #12 — composites + free-form constraints
-    AlignedRow,
+    # Issue #12 — composites + free-form constraints (V1 #19 uses subset)
+    same_x,
     same_y,
+    same_size,
+    inside,
+    mirrored_x,
     same_style,
     distance_y,
 )
@@ -198,14 +201,10 @@ def build_template() -> Document:
     ))
 
     # Logo (top-left, Brand-Bund) — embedded inline so the SLA stays
-    # self-contained. iter-3: migrated from gruene-cmyk.png (3.5:1 wordmark)
-    # to gruene-logo-bund-dunkel.png (~1.12:1 brushstroke G + DIE-GRÜNEN
-    # tag). Frame re-sized to honor the new aspect (32×28 mm ≈ 1.14:1).
-    # On A3-quer (kurze Kante=297) the Quickguide Print target is
-    # 3×M = 53.5 mm wide; 32 mm sits at 60% of target — modest but
-    # corner-anchored so as not to dominate the headline. scale_type=0,
-    # ratio=1 → Scribus aspect-preserving auto-fit fills the frame.
-    # h=28 keeps the logo bottom edge (y=38) clear of the headline at y=40.
+    # self-contained. V1 (#19) sizes the logo to the Quickguide 3*M
+    # target on A3 quer: M = 0.06 * kurze_kante = 0.06 * 297 = 17.82,
+    # 3M = 53.46 mm. h=48 keeps the same ~1.12:1 aspect (gruene-logo-bund-dunkel.png).
+    # scale_type=0, ratio=1 → Scribus aspect-preserving auto-fit.
     logo_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
     if not logo_path.exists():
         raise FileNotFoundError(
@@ -215,7 +214,7 @@ def build_template() -> Document:
     logo_bytes = logo_path.read_bytes()
     data, ext = pack_inline_image(logo_bytes, "png")
     page.add(ImageFrame(
-        x_mm=15, y_mm=10, w_mm=32, h_mm=28,
+        x_mm=15, y_mm=10, w_mm=53.46, h_mm=48,
         inline_image_data=data,
         inline_image_ext=ext,
         scale_type=0,
@@ -231,9 +230,10 @@ def build_template() -> Document:
     # their annames live on as string labels). This convention is
     # documented in shared/brand/SPEC-WRITING-GUIDE.md "Construct-then-add".
 
-    # Headline — These (60 pt Vollkorn Black Italic Dunkelgrün)
+    # Headline — These (60pt Vollkorn Black Italic Dunkelgrün) — V1 (#19)
+    # right-half 60/40 column placement at x=235.
     headline = TextFrame(
-        x_mm=15, y_mm=40, w_mm=390, h_mm=50,
+        x_mm=235, y_mm=70, w_mm=170, h_mm=100,
         layer=2,
         style="themen-plakat/headline",
         runs=[Run(
@@ -244,9 +244,9 @@ def build_template() -> Document:
     )
     page.add(headline)
 
-    # Sub-Headline (18 pt Gotham Book Dunkelgrün)
+    # Sub-Headline (18pt Gotham Book Dunkelgrün) — V1 (#19) right-half column.
     subheadline = TextFrame(
-        x_mm=15, y_mm=92, w_mm=390, h_mm=16,
+        x_mm=235, y_mm=172, w_mm=170, h_mm=14,
         layer=2,
         style="themen-plakat/sub",
         runs=[Run(
@@ -257,92 +257,97 @@ def build_template() -> Document:
     )
     page.add(subheadline)
 
-    # Three evidence columns. The original byte-stable order interleaves
-    # headline-i then body-i per iteration; we preserve that emit order
-    # by using a per-iteration AlignedRow over the [hd_i, bd_i] pair
-    # (each row has just one column so no horizontal alignment effect
-    # — the composite acts as a structural marker tying hd-i to bd-i and
-    # documenting "these two share alignment intent" as a layout signal
-    # readable by structural_check). Cross-row constraints (every
-    # headline shares y, every body shares y) live in the module-level
-    # CONSTRAINTS list using anname strings.
-    belege = [
-        ("12 700 grüne Jobs",
-         "In Niederösterreich arbeiten 12 700 Menschen direkt in der "
-         "Erneuerbaren-Energie-Branche — mehr als in der konventionellen "
-         "Energiewirtschaft.",
-         "Beleg 1"),
-        ("1.2 Mrd. € Umsatz",
-         "Die Solar- und Wind-Branche macht in NÖ 1.2 Mrd. € Jahresumsatz "
-         "aus — Tendenz steigend. Jeder Euro fließt in die regionale "
-         "Wertschöpfung zurück.",
-         "Beleg 2"),
-        ("36 % weniger CO₂",
-         "Seit 2010 hat NÖ den industriellen CO₂-Ausstoß um 36 % reduziert — "
-         "bei gleichzeitig wachsender Industrie-Produktion.",
-         "Beleg 3"),
-    ]
-    for i, (hd, body, label) in enumerate(belege):
-        col_x = MARGIN_X_MM + i * (COL_W_MM + GUTTER_MM)
-        beleg_hd = TextFrame(
-            x_mm=col_x, y_mm=130, w_mm=COL_W_MM, h_mm=20,
-            layer=2,
-            style="themen-plakat/beleg-headline",
-            runs=[Run(text=hd, paragraph_style="themen-plakat/beleg-headline")],
-            anname=f"{label} — Headline",
-        )
-        beleg_bd = TextFrame(
-            x_mm=col_x, y_mm=152, w_mm=COL_W_MM, h_mm=70,
-            layer=2,
-            style="themen-plakat/beleg-body",
-            runs=[Run(text=body, paragraph_style="themen-plakat/beleg-body")],
-            anname=f"{label} — Body",
-        )
-        # AlignedRow with single child = identity emit; preserves
-        # by-construction the per-row y discipline. We add hd, then bd,
-        # mirroring the pre-#12 emit order.
-        page.add(AlignedRow(y_mm=130, children=[beleg_hd], name=f"{label}_hd_row"))
-        page.add(AlignedRow(y_mm=152, children=[beleg_bd], name=f"{label}_bd_row"))
+    # V1 (#19) Hero-Foto-Card — Hellgrün backing for the hero photo.
+    # layer=1 (above background layer=0, below text layer=2). Provides
+    # visual weight behind the 60/40-split photo + frames `Themen-Hero`
+    # for the inside(Hero, Hero-Foto-Card) constraint witness.
+    page.add(Polygon(
+        x_mm=15, y_mm=70, w_mm=200, h_mm=120,
+        fill="Hellgrün",
+        layer=1,
+        anname="Hero-Foto-Card",
+    ))
 
-    # Themen-hero photo slot (Issue #11, iter-3 enlargement option a):
-    # the source JPG is 1536×1024 (≈1.5:1). The previous frame at
-    # 290×18 mm let scale_type=0 + ratio=1 fit the photo aspect-preserving
-    # in the height-bound dimension, rendering only ~27×18 mm of visible
-    # photo — too small for an A3-quer Plakat. iter-3 frame: 180×60 mm
-    # (3:1 frame). With the photo's native 1.5:1 aspect and ratio=1 fit,
-    # the photo renders height-bound at w=60×1.5=90, h=60 — ~5× the
-    # previous visible area, dominant enough to read as the hero of
-    # the layout. Body shrunk to h=70 (ends y=222) to make room.
-    # Centered horizontally at x=120 (trim 420 - 180)/2 = 120.
-    # Themen-Hero — central library reference (#13). 180×60mm landscape
-    # frame (~3:1 aspect); source 1536×1024 (~1.5:1) — center-crop trims
-    # left/right. library.crop_for_frame re-stamps the watermark on the
-    # cropped output.
-    hero_data, hero_ext = (None, None)
-    hero_img = library.load("themen_klimaschutz_windrad", optional=True)
-    if hero_img is not None:
-        hero_bytes = library.crop_for_frame(
-            hero_img, target_w_mm=180, target_h_mm=60
-        )
-        hero_data, hero_ext = pack_inline_image(hero_bytes, "jpg")
+    # Themen-Hero — central library reference (#13). 194×114mm landscape
+    # frame (~1.7:1). Source 1536×1024 (~1.5:1) → centre-crop trims height
+    # per crop_focus=[0.65, 0.50] manifest entry. Image bytes injected by
+    # build_preview()::INJECT_MAP loop using the post-#24 idiom that reads
+    # frame.w_mm / frame.h_mm LIVE — no literal target drift. Sits inside
+    # Hero-Foto-Card with 3mm gap top/left/right, 3mm bottom.
     page.add(ImageFrame(
-        x_mm=120, y_mm=225, w_mm=180, h_mm=60,
-        inline_image_data=hero_data,
-        inline_image_ext=hero_ext,
+        x_mm=18, y_mm=73, w_mm=194, h_mm=114,
         scale_type=0, ratio=1,
         layer=1,
         anname="Themen-Hero",
     ))
 
-    # QR-Quelle slot (Issue #11): small corner QR encoding the Themen-URL.
-    # Placed top-right corner, balancing the top-left logo. 25x25 mm at QR
-    # version 4 = 0.76 mm/module — well above D1's 0.5 mm minimum.
+    # V1 (#19) Evidence Cards — three Hellgrün backing cards each carrying
+    # stat-hero number + caps Gelb label + white body text on green. Card
+    # x = MARGIN_X + i × (COL_W + GUTTER); inner Stat/Label/Body inset by 5mm.
+    v1_belege = [
+        ("12 700",    "Grüne Jobs in NÖ",
+         "In Niederösterreich arbeiten 12 700 Menschen direkt in der "
+         "Erneuerbaren-Energie-Branche — mehr als in der konventionellen "
+         "Energiewirtschaft.",
+         "Beleg 1"),
+        ("1.2 Mrd. €", "Umsatz Solar + Wind",
+         "Die Solar- und Wind-Branche macht in NÖ 1.2 Mrd. € Jahresumsatz "
+         "aus — Tendenz steigend. Jeder Euro fließt in die regionale "
+         "Wertschöpfung zurück.",
+         "Beleg 2"),
+        ("36 %",       "weniger CO₂ seit 2010",
+         "Seit 2010 hat NÖ den industriellen CO₂-Ausstoß um 36 % reduziert — "
+         "bei gleichzeitig wachsender Industrie-Produktion.",
+         "Beleg 3"),
+    ]
+    for i, (stat, label, body, anname_prefix) in enumerate(v1_belege):
+        col_x = MARGIN_X_MM + i * (COL_W_MM + GUTTER_MM)
+        inner_x = col_x + 5.0
+
+        # Card backing (Hellgrün polygon, layer=1)
+        page.add(Polygon(
+            x_mm=col_x, y_mm=210, w_mm=COL_W_MM, h_mm=72,
+            fill="Hellgrün",
+            layer=1,
+            anname=f"{anname_prefix} — Card",
+        ))
+        # Stat-hero (Vollkorn Black Italic 56pt Gelb, left-flush at inner_x)
+        page.add(TextFrame(
+            x_mm=inner_x, y_mm=215, w_mm=114.0, h_mm=24,
+            layer=2,
+            style="themen-plakat/stat-hero",
+            runs=[Run(text=stat, paragraph_style="themen-plakat/stat-hero")],
+            anname=f"{anname_prefix} — Stat",
+        ))
+        # Label (CAPS Gotham Narrow Bold 18pt Gelb, centred, kern=0.72)
+        # CAPS via literal upper(); ParaStyle has no caps field.
+        page.add(TextFrame(
+            x_mm=inner_x, y_mm=242, w_mm=114.0, h_mm=8,
+            layer=2,
+            style="themen-plakat/beleg-headline-yellow",
+            runs=[Run(text=label.upper(),
+                      paragraph_style="themen-plakat/beleg-headline-yellow")],
+            anname=f"{anname_prefix} — Label",
+        ))
+        # Body (Gotham Narrow Book 13pt White centred on green)
+        page.add(TextFrame(
+            x_mm=inner_x, y_mm=252, w_mm=114.0, h_mm=26,
+            layer=2,
+            style="themen-plakat/beleg-body-on-green",
+            runs=[Run(text=body,
+                      paragraph_style="themen-plakat/beleg-body-on-green")],
+            anname=f"{anname_prefix} — Body",
+        ))
+
+    # QR-Quelle slot — V1 (#19) enlarged to 35×35 mm to balance the larger
+    # 53.46 mm Logo. Placed top-right corner. 35 mm at QR version 4 still
+    # well above D1's 0.5 mm/module minimum.
     qr_path = HERE / "samples" / "qr-quelle.png"
     qr_data, qr_ext = (None, None)
     if qr_path.exists():
         qr_data, qr_ext = pack_inline_image(qr_path.read_bytes(), "png")
     page.add(ImageFrame(
-        x_mm=380, y_mm=8, w_mm=25, h_mm=25,
+        x_mm=370, y_mm=8, w_mm=35, h_mm=35,
         inline_image_data=qr_data,
         inline_image_ext=qr_ext,
         scale_type=0, ratio=1,
@@ -350,12 +355,10 @@ def build_template() -> Document:
         anname="QR-Code (quelle)",
     ))
 
-    # Quelle (bottom-left). iter-3: relocated to bottom-left corner only
-    # (w=80 instead of 280) so the enlarged hero photo can sit centered
-    # without overlapping the source citation. y=287 sits below the hero's
-    # bottom edge (y=225+60=285) with 2 mm clearance.
+    # Quelle (bottom-left). V1 (#19) widened to w=200 to accommodate fuller
+    # source citation now that the hero photo no longer dominates the bottom band.
     page.add(TextFrame(
-        x_mm=15, y_mm=287, w_mm=80, h_mm=8,
+        x_mm=15, y_mm=287, w_mm=200, h_mm=8,
         layer=2,
         style="themen-plakat/source",
         runs=[Run(
