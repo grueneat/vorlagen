@@ -200,14 +200,14 @@ def _add_front(doc, page0):
     # See shared/brand/DESIGN-SYSTEM-BRIEF.md §"Logo Print-Soll".
     logo_brand = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
     logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
-    if logo_brand.exists():
-        lc_data, lc_ext = pack_inline_image(logo_brand.read_bytes(), "png")
+    if logo_weiss.exists():
+        lc_data, lc_ext = pack_inline_image(logo_weiss.read_bytes(), "png")
         page0.add(ImageFrame(
-            x_mm=6, y_mm=10, w_mm=20, h_mm=18,
+            x_mm=6, y_mm=4, w_mm=38, h_mm=22,
             inline_image_data=lc_data, inline_image_ext=lc_ext,
             scale_type=0, ratio=1,
             layer=LAYER_BILDER,
-            anname="P1 Logo Grüne",
+            anname="P1 Logo Grüne (weiss)",
         ))
 
     # Kandidat-Portrait — central library reference (#13). When the library
@@ -276,18 +276,10 @@ def _add_front(doc, page0):
         anname="P2 Teaser-Body",
     ))
 
-    # P2 small logo at bottom of panel. iter-3: bund-dunkel at 16×14 mm
-    # honors the new ~1.12:1 aspect; bottom-anchored within y=188..205
-    # (panel bottom at y=210, leaving 5 mm clearance).
-    if logo_brand.exists():
-        lc2_data, lc2_ext = pack_inline_image(logo_brand.read_bytes(), "png")
-        page0.add(ImageFrame(
-            x_mm=105, y_mm=188, w_mm=16, h_mm=14,
-            inline_image_data=lc2_data, inline_image_ext=lc2_ext,
-            scale_type=0, ratio=1,
-            layer=LAYER_BILDER,
-            anname="P2 Logo (klein)",
-        ))
+    # P2 V0 had a small logo at the panel bottom (bund-dunkel 16×14 mm). V1
+    # deletes it: the universal Top-Band system on P2 (added in T05+T07)
+    # carries the brand identity; a second small logo competes with the
+    # Body-Backing card and is redundant.
 
     # ---- Panel 3 (Closer) — x=198..297, on Dunkelgrün --------
     # Wahlkreuz hero (Dunkelgrün bg already provides D12 contract)
@@ -536,18 +528,18 @@ def _add_back(doc, page1):
         layer=LAYER_BILDER,
         anname="P6 QR-Code (termine)",
     ))
-    # P6 Logo Grüne (Brand-Bund). iter-3: bund-dunkel at 17×15 mm honors
-    # the new ~1.13:1 aspect and fits the y=130..145 corner above
-    # Impressum (which starts at y=145).
-    logo_brand_p6 = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
-    if logo_brand_p6.exists():
-        lc6_data, lc6_ext = pack_inline_image(logo_brand_p6.read_bytes(), "png")
+    # P6 Logo Grüne (weiss). V1: 38×34 mm trim-konform 3M = 37.8 mm soll,
+    # white wordmark on Dunkelgrün vollflächig P6, centered around
+    # AXIS_P6_CENTER_X = 247.5 → x = 247.5 - 38/2 = 228.5 ≈ 228 mm.
+    logo_weiss_p6 = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
+    if logo_weiss_p6.exists():
+        lc6_data, lc6_ext = pack_inline_image(logo_weiss_p6.read_bytes(), "png")
         page1.add(ImageFrame(
-            x_mm=204, y_mm=130, w_mm=17, h_mm=15,
+            x_mm=228, y_mm=168, w_mm=38, h_mm=34,
             inline_image_data=lc6_data, inline_image_ext=lc6_ext,
             scale_type=0, ratio=1,
             layer=LAYER_BILDER,
-            anname="P6 Logo Grüne",
+            anname="P6 Logo Grüne (weiss)",
         ))
     # Impressum
     page1.add(TextFrame(
