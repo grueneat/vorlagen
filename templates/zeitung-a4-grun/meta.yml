@@ -42,6 +42,25 @@ brand_overrides:
       tightening text frames to match polygon edges exactly would change
       the visual layout. Out of scope for #23; revisit per follow-up
       audit.
+
+# Issue #25 — body_block_margins: pins the OUTER STRUCTURE (header band
+# y=20-49, free zone y=49-283, footer band y=283-297, L/R margins 20mm)
+# of every body-pool page. The free zone is intentionally flexible
+# (3-col grid / image-top / image-bottom / photo grid all OK) — only
+# the bands and margins are rigid, guaranteeing combinability when
+# Bezirksgruppen shuffle pages freely. excluded_pages enumerates the
+# feature pages exempt from the band rule (cover hero, P1 Hero, P9
+# Spread halves, back colophon — page numbers are 1-indexed).
+body_block_margins:
+  bands:
+    header: {y_top_mm: 20.0, y_bottom_mm: 49.0}
+    footer: {y_top_mm: 283.0, y_bottom_mm: 297.0}
+  margins:
+    left:  {outer_mm: 20.0, inner_mm: 20.0}
+    right: {outer_mm: 20.0, inner_mm: 20.0}
+  background_decoration:
+    fills: [Dunkelgrün, Hellgrün, Magenta, Gelb, White]
+  excluded_pages: [1, 2, 10, 11, 14]
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
