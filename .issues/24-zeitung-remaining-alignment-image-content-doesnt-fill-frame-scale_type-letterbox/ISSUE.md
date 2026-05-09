@@ -2,7 +2,7 @@
 id: '24'
 title: 'Zeitung remaining alignment: image content doesn''t fill frame (scale_type
   letterboxing) + page-by-page Codex audit'
-status: open
+status: done
 priority: high
 labels:
 - bug
