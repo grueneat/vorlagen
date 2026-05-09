@@ -24,7 +24,9 @@ from sla_lib.builder.brand_constraints import (  # noqa: E402
     _TextOnGreenRule,
     _Bleed3mmRule,
     _WahlkreuzColoredBgRule,
-    _InsidePageRule,  # Issue #14
+    _InsidePageRule,                # Issue #14
+    _SpineSafetyRule,               # Issue #22 (T04)
+    _UndeclaredDriftRule,           # Issue #22 (T05)
 )
 
 
@@ -46,9 +48,9 @@ def _find_rule(rid: str) -> BrandRule:
 # Registry
 # ---------------------------------------------------------------------------
 class RegistryTests(unittest.TestCase):
-    def test_nine_rules_exact(self):
-        # Bumped 9 -> 11 by Issue #22 (T04 spine_safety + T05
-        # undeclared_alignment_drift). T06 renames this test.
+    def test_eleven_rules_exact(self):
+        # 11 rules: 9 baseline (Issue #12) + #14 inside_page +
+        # #22 spine_safety + #22 undeclared_alignment_drift.
         self.assertEqual(len(BRAND_CONSTRAINTS), 11)
 
     def test_ids_are_canonical(self):
