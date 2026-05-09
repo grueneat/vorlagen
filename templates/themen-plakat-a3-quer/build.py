@@ -386,7 +386,14 @@ def build_template() -> Document:
     return doc
 
 
-INJECT_MAP: dict[str, str] = {}   # T04 fills with {"Themen-Hero": "themen_klimaschutz_windrad"}
+# Post-#24 INJECT_MAP idiom (#19 RESEARCH §1, locked decision #1):
+# value = bare lib_id (manifest key). Loop reads target_w_mm / target_h_mm
+# LIVE from each frame, eliminating the literal-target drift that produced
+# the half-empty hero in iter-3 (`crop_for_frame(target_w_mm=180, h=60)`
+# vs frame at w=194, h=114 → photo rendered at 90×60 inside 194×114 frame).
+INJECT_MAP: dict[str, str] = {
+    "Themen-Hero": "themen_klimaschutz_windrad",
+}
 
 
 def build_preview() -> Document:
