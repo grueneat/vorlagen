@@ -1,7 +1,7 @@
 ---
 id: '17'
 title: V1 layout for wahlaufruf-postkarte-a6-quer (Symbol-Tight)
-status: open
+status: done
 priority: medium
 labels:
 - templates
