@@ -15,44 +15,37 @@ build:
   script: build.py
   output: template.sla
 
-previews_for_sla: cb9a98c5bb8e90c749f20c2e2c425a941e27aa3fc68c2bffc5c9a4585074a45a
-
-# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+previews_for_sla: e0a779de42096f2a63f2c2f17407203ef2a27f43d38478af111a2fb72e7d920c
+# Issue #20 — brand_overrides cleanup post-V1 (REMOVE 3, KEEP 3, locked decision #10).
+# Empirical verification: each candidate removal validated via structural_check
+# (V1 logo at 38mm computes 38/12.6=3.02M ✓; V1 text fully inside polygons;
+# inject_into_frame fills exactly via LIVE frame dims). Reasons updated 2026-05-09.
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
-      Shared with all templates: CI palette ratios drift from Quickguide
-      0.9 factor — addressed at brand-team review level.
-  - id: brand:logo_size_3M
-    reason: >-
-      Both panel logos at 36mm sit 1.8mm under 3*M = 37.80mm — narrow
-      tolerance, intentional sizing chosen so the logo doesn't dominate the
-      reduced height of each tent-card panel (panel height 105mm). Mirroring
-      the same width on both panels is the dominant design constraint.
+      Body 1.3× and Termine 1.3× and CTA-Footer 1.27× linesp ratios are
+      intentional Quickguide-body convention; tent/headline at 26/23.4=0.9
+      IS conformant (verified 2026-05-09).
   - id: brand:visual_adjacency_drift
     reason: >-
-      V1 layout work in #20 owns alignment encoding for this template.
-      Re-enable once V1 lands and a CONSTRAINTS list captures the
-      declared adjacencies (Issue #22 locked decision #9). Issue #23
-      renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.
-  - id: brand:image_text_overlap
-    reason: >-
-      Scheduled for follow-up audit per #23 — caption-on-photo / decorative
-      overlaps audited at time of #23, not yet reviewed for fix-vs-override
-      classification.
-  - id: brand:image_fills_frame
-    reason: >-
-      Scheduled for follow-up audit per #24 — image-fills-frame check
-      added in #24 surfaces letterbox/INJECT_MAP-drift class globally;
-      per-template review for fix-vs-override classification deferred
-      to follow-up issue (#25). Zeitung is the only template with
-      verified clean image-content extents post-#24.
+      V1 CONSTRAINTS captures Panel-A and cross-panel adjacencies.
+      Combinatorial intra-Panel-B warnings on rotated text/polygon pairs
+      cannot be silenced without 20+ pairwise declarations; deferred to
+      constraint-engine rotation-awareness work (verified 2026-05-09).
   - id: brand:band_consistency
     reason: >-
-      Scheduled for follow-up audit per #25 — band-consistency check
-      added in #25 needs per-template body_block_margins spec authoring;
-      deferred to follow-up issue. Zeitung is the only template with
-      verified body-pool band model post-#25.
+      Tent-card has no body-pool model; rule no-ops by design
+      (verified 2026-05-09).
+  - id: brand:image_fills_frame
+    reason: >-
+      Logo asset gruene-weiss.png (3.5:1 wordmark) is intentionally
+      letterboxed in the 38×30 mm V1 logo frame (1.27:1) — wordmark
+      renders 38×10.86 mm centered with vertical breathing room (see
+      README.md "Logo aspect note"). Photo INJECT_MAP fills exactly via
+      LIVE frame dims (post-#24); only the wordmark Logo letterboxes
+      by design. Restoring rule would require commissioning a
+      bund-weiss.png 1:1 asset OR resizing logo frame to 38×11 mm; both
+      deferred (verified empirically 2026-05-09).
 ci_overrides:
   non_ci_styles:
     - "tent/headline"
@@ -67,30 +60,106 @@ ci_overrides:
     - "Falz"
 
 slots:
+  hero_band_a:
+    type: shape
+    description: Hero-Band Panel A (Dunkelgrün full-bleed top, -3..42)
+    anname: "Hero-Band Panel A"
+  logo_panel_a:
+    type: image
+    description: Logo Grüne Panel A (gruene-weiss.png, 38×30 mm in Hero-Band)
+    anname: "Logo Grüne (panel A)"
   headline_panel_a:
     type: text
-    description: Headline Panel A (DE) — 36pt Vollkorn Italic Dunkelgrün
+    description: Headline Panel A — 26pt Vollkorn Italic White-on-Dunkelgrün
     anname: "Headline Panel A"
-  body_panel_a:
+  payoff_a:
     type: text
-    description: 3-Bullet Body Panel A — 14pt Gotham Book
+    description: Pay-off Panel A — 16pt Vollkorn Italic Gelb (Hero-Band sub)
+    anname: "Pay-off Panel A"
+  photo_backing_a:
+    type: shape
+    description: Photo-Backing Panel A (Dunkelgrün safety bg under photo)
+    anname: "Photo-Backing Panel A"
+  photo_a:
+    type: image
+    description: Hintergrund-Mitmachen photo (full-bleed 297×33 — INJECT_MAP)
+    anname: "Hintergrund-Mitmachen"
+  qr_a:
+    type: image
+    description: QR-Code Panel A (D1-conformant 17×17 mm in white zone)
+    anname: "QR-Code (mitmachen, panel A)"
+  bullets_a:
+    type: text
+    description: Body Panel A — 12pt Gotham Book, 2 short bullets
     anname: "Body Panel A"
+  termine_a:
+    type: text
+    description: Termine Panel A — 9pt Gotham Book, 2 lines
+    anname: "Termine Panel A"
+  footer_strip_a:
+    type: shape
+    description: Footer-Strip Panel A (Hellgrün full-bleed at apex)
+    anname: "Footer-Strip Panel A"
+  cta_footer_a:
+    type: text
+    description: CTA-Footer Panel A — 11pt Gotham Bold White URL
+    anname: "CTA-Footer Panel A"
+  impressum_a:
+    type: text
+    description: Impressum Panel A — 6pt Gotham Book White right-aligned
+    anname: "Impressum (Tent)"
   falzlinie:
     type: shape
     description: Mittelfalz horizontal y=105 (Falz-Layer Spot-Color)
     anname: "Mittelfalz (horizontal)"
+  hero_band_b:
+    type: shape
+    description: Hero-Band Panel B (Dunkelgrün full-bleed apex side, mirror of A)
+    anname: "Hero-Band Panel B"
+  logo_panel_b:
+    type: image
+    description: Logo Grüne Panel B (gruene-weiss.png, rotated 180°)
+    anname: "Logo Grüne (panel B)"
   headline_panel_b:
     type: text
-    description: Headline Panel B (EN) — 36pt Vollkorn Italic Dunkelgrün, rotated 180°
+    description: Headline Panel B (EN) — 26pt rotated 180°
     anname: "Headline Panel B"
-  body_panel_b:
+  payoff_b:
     type: text
-    description: 3-Bullet Body Panel B — 14pt, rotated 180°
+    description: Pay-off Panel B (EN) — 16pt Gelb rotated 180°
+    anname: "Pay-off Panel B"
+  photo_backing_b:
+    type: shape
+    description: Photo-Backing Panel B (mirror of Panel A backing)
+    anname: "Photo-Backing Panel B"
+  photo_b:
+    type: image
+    description: Hintergrund-Mitmachen Panel B (rotated 180° INJECT_MAP)
+    anname: "Hintergrund-Mitmachen Panel B"
+  qr_b:
+    type: image
+    description: QR-Code Panel B (rotated 180°, mirror of Panel A QR)
+    anname: "QR-Code (mitmachen, panel B)"
+  bullets_b:
+    type: text
+    description: Body Panel B (EN) — 12pt rotated 180°
     anname: "Body Panel B"
-  impressum:
+  termine_b:
     type: text
-    description: Mediengesetz §24 Impressum (auf Panel A, knapp über Falz)
-    anname: "Impressum (Tent)"
+    description: Termine Panel B (EN) — 9pt rotated 180°
+    anname: "Termine Panel B"
+  footer_strip_b:
+    type: shape
+    description: Footer-Strip Panel B (Hellgrün, abuts Panel A Footer-Strip at apex)
+    anname: "Footer-Strip Panel B"
+  cta_footer_b:
+    type: text
+    description: CTA-Footer Panel B (EN) — 11pt rotated 180°
+    anname: "CTA-Footer Panel B"
+  impressum_b:
+    type: text
+    description: Impressum Panel B — 6pt White rotated 180°
+    anname: "Impressum (Tent, panel B)"
 
 example_pages:
   - { num: 1, label: "Flach (vor dem Falzen) — Panel A oben, Panel B unten 180°" }
