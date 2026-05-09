@@ -351,60 +351,60 @@ def build_doc() -> Document:
     ))
 
     # ---- PAGE 2: Back --------------------------------------------------
-    # Same brand bar at top (so the hole-edge prints clean on both sides)
+    # V1 (#18): Brand-Bar mirrors front (14 mm visible, 16 incl. bleed).
     page1.add(Polygon(
         x_mm=-BLEED_MM,
         y_mm=-BLEED_MM,
         w_mm=TRIM_W_MM + 2 * BLEED_MM,
-        h_mm=20 + BLEED_MM,
+        h_mm=14 + BLEED_MM,
         fill="Dunkelgrün",
         layer=LAYER_HINTERGRUND,
         anname="Brand-Bar (Rückseite)",
     ))
 
-    # Logo (white) on Dunkelgrün Brand-Bar (back, top) — matches front pattern.
+    # Logo (white) on Dunkelgrün Brand-Bar (back, top) — V1 (#18): mirrors front
+    # logo geometry (18.9×5.7 mm, local_scale 0.130).
     if logo_weiss.exists():
         lw_data2, lw_ext2 = pack_inline_image(logo_weiss.read_bytes(), "png")
         page1.add(ImageFrame(
-            x_mm=10, y_mm=8, w_mm=35, h_mm=10,
+            x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
             inline_image_data=lw_data2, inline_image_ext=lw_ext2,
             scale_type=0, ratio=1,
-            local_scale=(0.240, 0.240),
+            local_scale=(0.130, 0.130),
             layer=LAYER_BILDER,
             anname="Logo Grüne (weiss, back-band)",
         ))
 
-    # iter-3: Brand-Bund logo on the white area below the Brand-Bar.
-    # Reinforces brand recognition on the contact side of the door-hanger.
-    # On A6-format-equivalent (kurze Kante=105) Quickguide Print target
-    # is 3×M = 18.9 mm — 18×16 mm sits at 95 % of target with the new
-    # ~1.12:1 aspect. Positioned at x=68..86, y=24..40 (right of band's
-    # white-logo, occupying the thin slot above the portrait at y=75).
-    logo_brand_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
-    if logo_brand_path.exists():
-        lb_data, lb_ext = pack_inline_image(logo_brand_path.read_bytes(), "png")
-        page1.add(ImageFrame(
-            x_mm=68, y_mm=24, w_mm=18, h_mm=16,
-            inline_image_data=lb_data, inline_image_ext=lb_ext,
-            scale_type=0, ratio=1,
-            layer=LAYER_BILDER,
-            anname="Logo Grüne (Bund-Dunkel, back)",
-        ))
+    # V1 (#18): the iter-3 second back-logo (kurze-Kante 3×M Bund-dark) was
+    # removed — see #18 RESEARCH for the double-logo elimination rationale.
+    # The shared logo asset stays on disk; four other templates still use it.
+
+    # V1 (#18): Portrait-Card — Hellgrün backing for Kandidat-Portrait
+    # (15..90 × 70..170). Portrait sits with 5 mm uniform inset on left/top/right.
+    page1.add(Polygon(
+        x_mm=15,
+        y_mm=70,
+        w_mm=75,
+        h_mm=100,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Portrait-Card",
+    ))
 
     # Kandidat-Portrait — central library reference (#13). The
     # Bürgermeisterkandidat archetype (male for diversity per CONTEXT D2)
-    # lives at portrait_stefan in the central library. Frame 65×85mm portrait
-    # ratio (~0.76:1); source 1024×1536 (~0.67:1) — minor center-crop.
-    # library.crop_for_frame re-stamps the watermark on the cropped output.
+    # lives at portrait_stefan in the central library. V1 (#18): h 85→90 so
+    # portrait nests into Portrait-Card with 5 mm bottom inset (75..165 vs
+    # card 70..170).
     portrait_data, portrait_ext = (None, None)
     portrait_img = library.load("portrait_stefan", optional=True)
     if portrait_img is not None:
         portrait_bytes = library.crop_for_frame(
-            portrait_img, target_w_mm=65, target_h_mm=85
+            portrait_img, target_w_mm=65, target_h_mm=90
         )
         portrait_data, portrait_ext = pack_inline_image(portrait_bytes, "jpg")
     page1.add(ImageFrame(
-        x_mm=20, y_mm=75, w_mm=65, h_mm=85,
+        x_mm=20, y_mm=75, w_mm=65, h_mm=90,
         inline_image_data=portrait_data,
         inline_image_ext=portrait_ext,
         scale_type=0, ratio=1,
@@ -412,58 +412,73 @@ def build_doc() -> Document:
         anname="Kandidat-Portrait",
     ))
 
-    # Kandidat-Name — iter-3 changed to male persona to match the
-    # Bürgermeisterkandidat portrait (CONTEXT.md D2 diversity guidance).
+    # Kandidat-Name — V1 (#18): y 168→184; switched to
+    # tueranhaenger/cand-name-on-green (18 pt White) for Visitenkarten-Footer.
     page1.add(TextFrame(
-        x_mm=10, y_mm=168, w_mm=85, h_mm=10,
+        x_mm=10, y_mm=184, w_mm=85, h_mm=10,
         layer=LAYER_TEXT,
-        style="tueranhaenger/cand-name",
+        style="tueranhaenger/cand-name-on-green",
         runs=[Run(text="Stefan Beispiel",
-                  paragraph_style="tueranhaenger/cand-name")],
+                  paragraph_style="tueranhaenger/cand-name-on-green")],
         anname="Kandidat-Name",
     ))
 
-    # Kandidat-Position
+    # Kandidat-Position — V1 (#18): y 178→196; tueranhaenger/cand-pos-on-green.
+    # NOTE: ISSUE.md prescribed "opacity 85%" — DSL has no TextFrame opacity
+    # field, so V1 uses solid white (RESEARCH.md locked decision #6).
     page1.add(TextFrame(
-        x_mm=10, y_mm=178, w_mm=85, h_mm=8,
+        x_mm=10, y_mm=196, w_mm=85, h_mm=8,
         layer=LAYER_TEXT,
-        style="tueranhaenger/cand-pos",
+        style="tueranhaenger/cand-pos-on-green",
         runs=[Run(text="Bürgermeisterkandidat Mödling",
-                  paragraph_style="tueranhaenger/cand-pos")],
+                  paragraph_style="tueranhaenger/cand-pos-on-green")],
         anname="Kandidat-Position",
     ))
 
-    # Kontakt-URL — narrows to 50 mm so QR fits to its right (Issue #11).
+    # V1 (#18): Visitenkarten-Footer — Dunkelgrün full-bleed bottom 72 mm
+    # (-2..107 × 178..250). Encloses Kandidat-Name/Position, Kontakt-URL/Info,
+    # Impressum (back) — visually unifies the contact "card".
+    page1.add(Polygon(
+        x_mm=-BLEED_MM,
+        y_mm=178,
+        w_mm=TRIM_W_MM + 2 * BLEED_MM,
+        h_mm=72,
+        fill="Dunkelgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Visitenkarten-Footer",
+    ))
+
+    # Kontakt-URL — V1 (#18): y 200→210; Vollkorn Black Italic Gelb on
+    # Dunkelgrün via tueranhaenger/url-on-green.
     page1.add(TextFrame(
-        x_mm=10, y_mm=200, w_mm=50, h_mm=8,
+        x_mm=10, y_mm=210, w_mm=50, h_mm=8,
         layer=LAYER_TEXT,
-        style="tueranhaenger/url",
+        style="tueranhaenger/url-on-green",
         runs=[Run(text="gruene-moedling.at",
-                  paragraph_style="tueranhaenger/url")],
+                  paragraph_style="tueranhaenger/url-on-green")],
         anname="Kontakt-URL",
     ))
 
-    # Kontakt-Info — same narrowing.
+    # Kontakt-Info — V1 (#18): y 210→218; white-on-Dunkelgrün via
+    # tueranhaenger/body-on-green.
     page1.add(TextFrame(
-        x_mm=10, y_mm=210, w_mm=50, h_mm=20,
+        x_mm=10, y_mm=218, w_mm=50, h_mm=20,
         layer=LAYER_TEXT,
-        style="tueranhaenger/body",
+        style="tueranhaenger/body-on-green",
         runs=[Run(text=("stefan.beispiel@gruene-moedling.at\n"
                         "+43 660 1234567"),
-                  paragraph_style="tueranhaenger/body")],
+                  paragraph_style="tueranhaenger/body-on-green")],
         anname="Kontakt-Info",
     ))
 
-    # QR-back slot (Issue #11): 30x30 mm on right side of contact area.
-    # URL encodes the lokale Listen-URL (~31 chars => version 4 = 33 modules,
-    # 30 mm / 33 ≈ 0.91 mm/module — comfortably above D1's 0.5 mm minimum).
-    # Conditional inject — only when samples/qr-back.png is committed.
+    # QR-back slot (Issue #11) — V1 (#18): x 65→70, y 200→210, w 30→26, h 30→26.
+    # 26 mm / 33 modules ≈ 0.79 mm/module — still above D1's 0.5 mm minimum.
     qr_back_path = HERE / "samples" / "qr-back.png"
     qr_data, qr_ext = (None, None)
     if qr_back_path.exists():
         qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
     page1.add(ImageFrame(
-        x_mm=65, y_mm=200, w_mm=30, h_mm=30,
+        x_mm=70, y_mm=210, w_mm=26, h_mm=26,
         inline_image_data=qr_data,
         inline_image_ext=qr_ext,
         scale_type=0, ratio=1,
@@ -471,15 +486,30 @@ def build_doc() -> Document:
         anname="QR-Code (back)",
     ))
 
-    # Impressum (back)
+    # V1 (#18): QR White-Backing — White polygon (68..98 × 208..238) provides
+    # contrast for the QR on Dunkelgrün Visitenkarten-Footer. White is NOT in
+    # FILLED_POLYGON_FILLS so this is excluded from brand:image_text_overlap
+    # detection. On LAYER_HINTERGRUND so it paints behind the QR (which is
+    # on LAYER_BILDER) regardless of code order.
+    page1.add(Polygon(
+        x_mm=68,
+        y_mm=208,
+        w_mm=30,
+        h_mm=30,
+        fill="White",
+        layer=LAYER_HINTERGRUND,
+        anname="QR White-Backing",
+    ))
+
+    # Impressum (back) — V1 (#18): y 240→242; tueranhaenger/impressum-on-green.
     page1.add(TextFrame(
-        x_mm=10, y_mm=240, w_mm=85, h_mm=6,
+        x_mm=10, y_mm=242, w_mm=85, h_mm=6,
         layer=LAYER_TEXT,
-        style="tueranhaenger/impressum",
+        style="tueranhaenger/impressum-on-green",
         runs=[Run(
             text=("Medieninhaber: Die Grünen NÖ, "
                   "Daniel-Gran-Straße 48, 3100 St. Pölten."),
-            paragraph_style="tueranhaenger/impressum",
+            paragraph_style="tueranhaenger/impressum-on-green",
         )],
         anname="Impressum (back)",
     ))
