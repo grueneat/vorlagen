@@ -88,11 +88,57 @@ def build_doc() -> Document:
     doc.add_para_style(ParaStyle(
         name="wahlaufruf/impressum",
         font="Gotham Narrow Book",
-        fontsize=6,
-        linesp=7,
+        fontsize=5,
+        linesp=4.5,
         linesp_mode=0,
         align=0,
         fcolor="Black",
+        language="de",
+    ))
+
+    # V1 (Issue #17): 4 new ParaStyles for the Symbol-Tight layout. Existing
+    # wahlaufruf/cell-body (Black) is left UNCHANGED — locked decision #5
+    # introduces the parallel `*-on-green` migration pattern that #18-#21 reuse
+    # rather than mutating the original style in-place.
+    doc.add_para_style(ParaStyle(
+        name="wahlaufruf/headline-emphasis",
+        font="Vollkorn Black Italic",
+        fontsize=26,
+        linesp=23,
+        linesp_mode=0,
+        align=1,  # center
+        fcolor="Gelb",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="wahlaufruf/headline-cta",
+        font="Gotham Narrow Bold",
+        fontsize=14,
+        linesp=13,
+        linesp_mode=0,
+        align=1,  # center
+        fcolor="White",
+        language="de",
+        kern=2.1,  # 0.15em letter-spacing → 14pt × 0.15 = 2.1pt per-glyph expansion
+    ))
+    doc.add_para_style(ParaStyle(
+        name="wahlaufruf/cell-headline-yellow",
+        font="Vollkorn Black Italic",
+        fontsize=18,
+        linesp=16,
+        linesp_mode=0,
+        align=0,  # left
+        fcolor="Gelb",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="wahlaufruf/cell-body-on-green",
+        font="Gotham Narrow Book",
+        fontsize=9,
+        linesp=11,
+        linesp_mode=0,
+        align=0,  # left
+        fcolor="White",
         language="de",
     ))
 

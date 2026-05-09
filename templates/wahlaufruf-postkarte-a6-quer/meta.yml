@@ -41,6 +41,10 @@ ci_overrides:
     - "wahlaufruf/cell-headline"
     - "wahlaufruf/cell-body"
     - "wahlaufruf/impressum"
+    - "wahlaufruf/headline-emphasis"
+    - "wahlaufruf/headline-cta"
+    - "wahlaufruf/cell-headline-yellow"
+    - "wahlaufruf/cell-body-on-green"
   non_ci_colors: []
 
 slots:
