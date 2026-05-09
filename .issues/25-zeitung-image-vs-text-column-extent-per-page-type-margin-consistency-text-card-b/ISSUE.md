@@ -2,7 +2,7 @@
 id: '25'
 title: Zeitung image-vs-text-column extent + per-page-type margin consistency + text-card
   border variation
-status: open
+status: done
 priority: high
 labels:
 - bug
