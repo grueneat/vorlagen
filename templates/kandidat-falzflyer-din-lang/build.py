@@ -529,24 +529,56 @@ def _add_back(doc, page1):
     # Theme 4 (Lokale Wirtschaft) stays text-only in V0; T08 makes it a
     # photo slot for V1.
 
-    # ---- Panel 4 — Themen 1+2 (x=0..99) -----
+    # ---- Panel 4 — Themen 1+2 (x=0..99) — V1 -----
+    # NEW V1: P4 Top-Band — outer panel, +3mm bleed extension left.
+    page1.add(_top_band(3))
+
+    # NEW V1: P4 Top-Title "Themen 1·2" (middle-dot U+00B7 literal)
     page1.add(TextFrame(
-        x_mm=6, y_mm=20, w_mm=87, h_mm=14,
+        x_mm=6, y_mm=8, w_mm=87, h_mm=14,
+        layer=LAYER_TEXT, style="falzflyer/top-title",
+        runs=[Run(text="Themen 1·2",
+                  paragraph_style="falzflyer/top-title")],
+        anname="P4 Top-Title",
+    ))
+
+    # NEW V1: P4 Thema 1 Eyebrow + Headline + Photo (h 24->44 = 1.5:1
+    # native aspect; closes today's halb-leer Streifen).
+    page1.add(TextFrame(
+        x_mm=6, y_mm=38, w_mm=87, h_mm=6,
+        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
+        runs=[Run(text="THEMA 01",
+                  paragraph_style="falzflyer/themen-eyebrow")],
+        anname="P4 Thema 1 — Eyebrow",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=46, w_mm=87, h_mm=14,
         layer=LAYER_TEXT, style="falzflyer/thema-headline",
         runs=[Run(text="Klimaplan umsetzen",
                   paragraph_style="falzflyer/thema-headline")],
         anname="P4 Thema 1 — Headline",
     ))
     page1.add(ImageFrame(
-        x_mm=6, y_mm=36, w_mm=87, h_mm=24,
+        x_mm=6, y_mm=62, w_mm=87, h_mm=44,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 1 — Photo",
     ))
+
+    # NEW V1: Thema 1·2 Trenner — 3mm Hellgrün strip dividing the two
+    # themen sub-layouts.
+    page1.add(Polygon(
+        x_mm=-3, y_mm=108, w_mm=105, h_mm=3,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="P4 Thema 1·2 Trenner",
+    ))
+
+    # P4 Thema 1 Body — V1 mutated style (align=1, 10pt, 13 linesp)
     page1.add(TextFrame(
-        x_mm=6, y_mm=62, w_mm=87, h_mm=32,
+        x_mm=6, y_mm=114, w_mm=87, h_mm=26,
         layer=LAYER_TEXT, style="falzflyer/thema-body",
         runs=[Run(
             text=("Solar auf jedes Gemeindedach. "
@@ -556,50 +588,80 @@ def _add_back(doc, page1):
         )],
         anname="P4 Thema 1 — Body",
     ))
+
+    # NEW V1: P4 Thema 2 Eyebrow + Headline + Photo (NO Body — V1 deletes
+    # Thema 2 Body per ISSUE.md L37; tiefe via QR/headline carries the message)
     page1.add(TextFrame(
-        x_mm=6, y_mm=105, w_mm=87, h_mm=14,
+        x_mm=6, y_mm=144, w_mm=87, h_mm=6,
+        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
+        runs=[Run(text="THEMA 02",
+                  paragraph_style="falzflyer/themen-eyebrow")],
+        anname="P4 Thema 2 — Eyebrow",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=152, w_mm=87, h_mm=14,
         layer=LAYER_TEXT, style="falzflyer/thema-headline",
         runs=[Run(text="Leistbares Wohnen",
                   paragraph_style="falzflyer/thema-headline")],
         anname="P4 Thema 2 — Headline",
     ))
     page1.add(ImageFrame(
-        x_mm=6, y_mm=121, w_mm=87, h_mm=24,
+        x_mm=6, y_mm=168, w_mm=87, h_mm=44,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 2 — Photo",
     ))
+
+    # ---- Panel 5 — Themen 3+4 (x=99..198) — V1 mirrors P4 -----
+    # NEW V1: P5 Top-Band — inner panel, flush both folds.
+    page1.add(_top_band(4))
+
+    # NEW V1: P5 Top-Title "Themen 3·4" (middle-dot U+00B7 literal)
     page1.add(TextFrame(
-        x_mm=6, y_mm=147, w_mm=87, h_mm=32,
-        layer=LAYER_TEXT, style="falzflyer/thema-body",
-        runs=[Run(
-            text=("Gemeinde-Wohnbau ankurbeln. "
-                  "Mietpreis-Bremse für Neubauten."),
-            paragraph_style="falzflyer/thema-body",
-        )],
-        anname="P4 Thema 2 — Body",
+        x_mm=105, y_mm=8, w_mm=87, h_mm=14,
+        layer=LAYER_TEXT, style="falzflyer/top-title",
+        runs=[Run(text="Themen 3·4",
+                  paragraph_style="falzflyer/top-title")],
+        anname="P5 Top-Title",
     ))
 
-    # ---- Panel 5 — Themen 3+4 (x=99..198) -----
+    # P5 Thema 3 Eyebrow + Headline + Photo (h=44 V1)
     page1.add(TextFrame(
-        x_mm=105, y_mm=20, w_mm=87, h_mm=14,
+        x_mm=105, y_mm=38, w_mm=87, h_mm=6,
+        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
+        runs=[Run(text="THEMA 03",
+                  paragraph_style="falzflyer/themen-eyebrow")],
+        anname="P5 Thema 3 — Eyebrow",
+    ))
+    page1.add(TextFrame(
+        x_mm=105, y_mm=46, w_mm=87, h_mm=14,
         layer=LAYER_TEXT, style="falzflyer/thema-headline",
         runs=[Run(text="Bildung vor Ort",
                   paragraph_style="falzflyer/thema-headline")],
         anname="P5 Thema 3 — Headline",
     ))
     page1.add(ImageFrame(
-        x_mm=105, y_mm=36, w_mm=87, h_mm=24,
+        x_mm=105, y_mm=62, w_mm=87, h_mm=44,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P5 Thema 3 — Photo",
     ))
+
+    # NEW V1: Thema 3·4 Trenner — 3mm Hellgrün strip.
+    page1.add(Polygon(
+        x_mm=99, y_mm=108, w_mm=99, h_mm=3,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="P5 Thema 3·4 Trenner",
+    ))
+
+    # P5 Thema 3 Body — V1 mutated style
     page1.add(TextFrame(
-        x_mm=105, y_mm=62, w_mm=87, h_mm=32,
+        x_mm=105, y_mm=114, w_mm=87, h_mm=26,
         layer=LAYER_TEXT, style="falzflyer/thema-body",
         runs=[Run(
             text=("Volksschulen ausbauen. "
@@ -609,23 +671,30 @@ def _add_back(doc, page1):
         )],
         anname="P5 Thema 3 — Body",
     ))
+
+    # P5 Thema 4 Eyebrow + Headline + NEW Photo (V1: photo replaces V0
+    # body-only layout — asset themen_wirtschaft_handwerk in central library)
     page1.add(TextFrame(
-        x_mm=105, y_mm=105, w_mm=87, h_mm=14,
+        x_mm=105, y_mm=144, w_mm=87, h_mm=6,
+        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
+        runs=[Run(text="THEMA 04",
+                  paragraph_style="falzflyer/themen-eyebrow")],
+        anname="P5 Thema 4 — Eyebrow",
+    ))
+    page1.add(TextFrame(
+        x_mm=105, y_mm=152, w_mm=87, h_mm=14,
         layer=LAYER_TEXT, style="falzflyer/thema-headline",
         runs=[Run(text="Lokale Wirtschaft",
                   paragraph_style="falzflyer/thema-headline")],
         anname="P5 Thema 4 — Headline",
     ))
-    page1.add(TextFrame(
-        x_mm=105, y_mm=121, w_mm=87, h_mm=58,
-        layer=LAYER_TEXT, style="falzflyer/thema-body",
-        runs=[Run(
-            text=("Regionale Lieferketten. "
-                  "Handwerks-Förderung. "
-                  "Kleinbetriebe statt Konzern-Filialen."),
-            paragraph_style="falzflyer/thema-body",
-        )],
-        anname="P5 Thema 4 — Body",
+    page1.add(ImageFrame(
+        x_mm=105, y_mm=168, w_mm=87, h_mm=44,
+        inline_image_data=None,
+        inline_image_ext=None,
+        scale_type=0, ratio=1,
+        layer=LAYER_BILDER,
+        anname="P5 Thema 4 — Photo",
     ))
 
     # ---- Panel 6 — Kontakt + Impressum (x=198..297) — V1 vollflächig -----
