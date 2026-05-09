@@ -1,7 +1,7 @@
 ---
 id: '14'
 title: 'Constraint DSL: page-bounds, aligned_below, SpreadImage utility'
-status: open
+status: done
 priority: high
 labels:
 - dsl
