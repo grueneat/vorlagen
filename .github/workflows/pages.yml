@@ -154,6 +154,22 @@ jobs:
           set -euo pipefail
           PYTHONPATH=tools python3 -m sla_lib.builder.structural_check --all
 
+      - name: Run alignment audit (Issue #22, informational)
+        # Heuristic alignment audit. Always informational — `|| true` keeps
+        # the step from failing CI on warnings. Promotion to fatal is
+        # deferred per Issue #22 locked decision #10 until enough
+        # production templates are encoded.
+        run: |
+          mkdir -p build/audit
+          PYTHONPATH=tools python3 tools/audit_alignment.py --all \
+            --output-dir build/audit/ || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: audit-alignment-report
+          path: build/audit/
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
