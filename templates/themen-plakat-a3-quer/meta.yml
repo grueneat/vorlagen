@@ -15,11 +15,7 @@ build:
   output: template.sla
 
 # No round-trip diff — this is a DSL-original template (no original_sla key).
-previews_for_sla: b89e207447b5d61bfe8295a2bd0c36a05af70245071f690bb9efebb789c5f9c7
-
-# Issue #12 — brand_overrides: rules whose violation is INTENTIONAL design.
-# Each entry must have a `reason` explaining why the deviation is acceptable.
-# See shared/brand/SPEC-WRITING-GUIDE.md "Brand-Override-Konvention".
+previews_for_sla: f115997823d9b70b8bea38142a58c97bde927477aab6bcf7b6a4568451b31840
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
@@ -27,38 +23,21 @@ brand_overrides:
       from the Quickguide 0.9 factor (e.g. ci/body-12 has 13/12 = 1.083). This
       is real palette-versus-rule drift across all templates and warrants a
       separate brand-team review (out of scope for #12). Per-template overrides
-      apply uniformly.
+      apply uniformly. V1 (#19) themen-plakat/beleg-body-on-green at 13/16.9
+      preserves the existing drift class — visual breathing chosen over
+      0.9-conformance per RESEARCH.md §18 Q3.
   - id: brand:hl_sl_distance_x2
     reason: >-
-      Sub-Headline at y=92 sits ~2mm below the 50mm-tall headline frame; the
-      Quickguide 2*baseline (10.8mm) target assumes a body-12 baseline,
-      whereas this Plakat uses a 60pt headline -> 18pt sub pair where the
-      visual rhythm is set by the larger fontsize. Tight HL/SL gap is the
-      Plakat's intentional poster-style hierarchy.
-  - id: brand:logo_size_3M
-    reason: >-
-      Logo at 32mm sits at ~60% of the Quickguide 3*M = 53.46mm target on A3
-      quer (kurze_kante=297mm). The corner-anchored placement intentionally
-      avoids competing with the wide thesis headline; doubling the logo width
-      would push it into the headline's typographic field.
-  - id: brand:visual_adjacency_drift
-    reason: >-
-      V1 layout work in #19 owns alignment encoding for this template.
-      Re-enable once V1 lands and a CONSTRAINTS list captures the
-      declared adjacencies (Issue #22 locked decision #9). Issue #23
-      renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.
-  - id: brand:image_text_overlap
-    reason: >-
-      Scheduled for follow-up audit per #23 — caption-on-photo / decorative
-      overlaps audited at time of #23, not yet reviewed for fix-vs-override
-      classification.
-  - id: brand:image_fills_frame
-    reason: >-
-      Scheduled for follow-up audit per #24 — image-fills-frame check
-      added in #24 surfaces letterbox/INJECT_MAP-drift class globally;
-      per-template review for fix-vs-override classification deferred
-      to follow-up issue (#25). Zeitung is the only template with
-      verified clean image-content extents post-#24.
+      V1 (#19) Evidence-Cards 60/40 columnar split places Sub-Headline at
+      y=172, 2mm below the 100mm-tall Headline These at y=70 — same right-half
+      column x=235. Vertical gap is intentionally tight in this layout because
+      the visual rhythm is set by the column-split (left-half hero + Hellgrün
+      backing carries the layout weight), not the HL/SL distance formula.
+      Per improvements/03-themen-plakat.md "Brand-Rule-Konformität" §4 △.
+  # brand:logo_size_3M REMOVED — V1 logo w=53.46 = exact 3M conformant.
+  # brand:visual_adjacency_drift REMOVED — V1 CONSTRAINTS captures adjacencies (#22 locked #9).
+  # brand:image_text_overlap REMOVED — V1 text fully inside Hellgrün cards (rule carve).
+  # brand:image_fills_frame REMOVED — V1 INJECT_MAP pre-crop fills exactly (#24).
 ci_overrides:
   non_ci_styles:
     - "themen-plakat/headline"
@@ -67,6 +46,9 @@ ci_overrides:
     - "themen-plakat/beleg-body"
     - "themen-plakat/source"
     - "themen-plakat/impressum"
+    - "themen-plakat/stat-hero"
+    - "themen-plakat/beleg-body-on-green"
+    - "themen-plakat/beleg-headline-yellow"
   non_ci_colors: []
 
 slots:
