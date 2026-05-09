@@ -206,29 +206,42 @@ def build_doc() -> Document:
                          margins_mm=(8.0, 10.0, 8.0, 10.0), master="Normal")
 
     # ---- PAGE 1: Front -------------------------------------------------
-    # Brand-Bar Dunkelgrün top zone (over the hole-area's top, lets white logo show)
+    # V1 (#18): Brand-Bar shrunk 20→14 mm visible (16 incl. bleed) so the
+    # Hellgrün-Akzent strip can sit directly below it.
     page0.add(Polygon(
         x_mm=-BLEED_MM,
         y_mm=-BLEED_MM,
         w_mm=TRIM_W_MM + 2 * BLEED_MM,
-        h_mm=20 + BLEED_MM,
+        h_mm=14 + BLEED_MM,
         fill="Dunkelgrün",
         layer=LAYER_HINTERGRUND,
         anname="Brand-Bar (Vorderseite)",
     ))
 
-    # Logo (white) on Brand-Bar — 35x10mm at 413x118px source → scale 0.24
+    # Logo (white) on Brand-Bar — V1 (#18): 18.9×5.7 mm = 3×M Quickguide-konform.
     logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
     if logo_weiss.exists():
         lw_data, lw_ext = pack_inline_image(logo_weiss.read_bytes(), "png")
         page0.add(ImageFrame(
-            x_mm=10, y_mm=8, w_mm=35, h_mm=10,
+            x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
             inline_image_data=lw_data, inline_image_ext=lw_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.240, 0.240),
+            local_scale=(0.130, 0.130),
             layer=LAYER_BILDER,
             anname="Logo Grüne (weiss, top)",
         ))
+
+    # V1 (#18): Hellgrün-Akzent — 4 mm strip directly under Brand-Bar (touches
+    # at y=14). Reinforces brand stripe across the hole's top approach.
+    page0.add(Polygon(
+        x_mm=-BLEED_MM,
+        y_mm=14,
+        w_mm=TRIM_W_MM + 2 * BLEED_MM,
+        h_mm=4,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Hellgrün-Akzent",
+    ))
 
     # Wahlkreuz hero on Hellgrün band (D12: not white, not yellow)
     wahlkreuz_path = HERE.parents[1] / "shared" / "assets" / "wahlkreuz.png"
@@ -239,19 +252,21 @@ def build_doc() -> Document:
     wahlkreuz_bytes = wahlkreuz_path.read_bytes()
     wk_data, wk_ext = pack_inline_image(wahlkreuz_bytes, "png")
 
-    # Hellgrün band behind the Wahlkreuz (full-width, sits below the hole)
+    # Hellgrün band behind the Wahlkreuz — V1 (#18): y 65→63, h 60→64
+    # (hosts the now larger 55×55 Wahlkreuz hero).
     page0.add(Polygon(
         x_mm=-BLEED_MM,
-        y_mm=65,
+        y_mm=63,
         w_mm=TRIM_W_MM + 2 * BLEED_MM,
-        h_mm=60,
+        h_mm=64,
         fill="Hellgrün",
         layer=LAYER_HINTERGRUND,
         anname="Hellgrün-Band (Wahlkreuz)",
     ))
 
+    # V1 (#18): Wahlkreuz centered on panel x=52.5 (25..80 × 70..125)
     page0.add(ImageFrame(
-        x_mm=27.5, y_mm=70, w_mm=50, h_mm=50,
+        x_mm=25, y_mm=70, w_mm=55, h_mm=55,
         inline_image_data=wk_data,
         inline_image_ext=wk_ext,
         scale_type=0,
@@ -260,10 +275,10 @@ def build_doc() -> Document:
         anname="Wahlkreuz (Hero)",
     ))
 
-    # Headline — "Heute ist\nWahltag." on 2 lines (28pt Vollkorn Italic, 30pt
-    # linesp → ~12 mm between baselines; needs h>=22 mm + ascender room ≈ 26 mm)
+    # Headline — "Heute ist\nWahltag." on 2 lines (28pt Vollkorn Italic,
+    # V1 (#18): linesp 30→25.2 (Quickguide-konform 0.9×); y 128→138, h 28→32.
     page0.add(TextFrame(
-        x_mm=10, y_mm=128, w_mm=85, h_mm=28,
+        x_mm=10, y_mm=138, w_mm=85, h_mm=32,
         layer=LAYER_TEXT,
         style="tueranhaenger/headline",
         runs=[
@@ -275,9 +290,9 @@ def build_doc() -> Document:
         anname="Headline-Wahltag",
     ))
 
-    # Sub-Headline — Wähle Grün.
+    # Sub-Headline — Wähle Grün. V1 (#18): y 160→176.
     page0.add(TextFrame(
-        x_mm=10, y_mm=160, w_mm=85, h_mm=12,
+        x_mm=10, y_mm=176, w_mm=85, h_mm=12,
         layer=LAYER_TEXT,
         style="tueranhaenger/sub",
         runs=[Run(text="Wähle Grün.",
@@ -285,29 +300,44 @@ def build_doc() -> Document:
         anname="Sub-Headline",
     ))
 
-    # Bullet list
+    # V1 (#18): Bullets-Card — full-bleed Hellgrün backing (-2..107 × 192..250)
+    # behind the bullet list and impressum at the bottom of the front panel.
+    page0.add(Polygon(
+        x_mm=-BLEED_MM,
+        y_mm=192,
+        w_mm=TRIM_W_MM + 2 * BLEED_MM,
+        h_mm=58,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Bullets-Card",
+    ))
+
+    # Bullet list — V1 (#18): y 175→200, h 60→40, white-on-green via
+    # tueranhaenger/body-on-green ParaStyle.
     page0.add(TextFrame(
-        x_mm=10, y_mm=175, w_mm=85, h_mm=60,
+        x_mm=10, y_mm=200, w_mm=85, h_mm=40,
         layer=LAYER_TEXT,
-        style="tueranhaenger/body",
+        style="tueranhaenger/body-on-green",
         runs=[Run(
             text=("• Klima · Soziales · Bildung\n"
                   "• Vor Ort · Ehrlich · Faktenbasiert\n"
                   "• Mehr auf gruene-noe.at"),
-            paragraph_style="tueranhaenger/body",
+            paragraph_style="tueranhaenger/body-on-green",
         )],
         anname="Bullet-Liste",
     ))
 
-    # Impressum (Vorderseite)
+    # Impressum (Vorderseite) — V1 (#18): white-on-green via
+    # tueranhaenger/impressum-on-green. Known WCAG concern (~1.7:1) — surfaced
+    # in the spec as future-iteration follow-up; geometry stays for V1.
     page0.add(TextFrame(
         x_mm=10, y_mm=240, w_mm=85, h_mm=6,
         layer=LAYER_TEXT,
-        style="tueranhaenger/impressum",
+        style="tueranhaenger/impressum-on-green",
         runs=[Run(
             text=("Medieninhaber: Die Grünen NÖ, "
                   "Daniel-Gran-Straße 48, 3100 St. Pölten."),
-            paragraph_style="tueranhaenger/impressum",
+            paragraph_style="tueranhaenger/impressum-on-green",
         )],
         anname="Impressum",
     ))
