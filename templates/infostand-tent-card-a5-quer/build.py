@@ -64,6 +64,165 @@ INJECT_MAP: dict[str, str] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# V1 "Hero Band" — asset paths used by both panels.
+# ---------------------------------------------------------------------------
+LOGO_GRUENE_WEISS = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
+QR_MITMACHEN = HERE / "samples" / "qr-mitmachen.png"
+
+
+def _logo_inline() -> tuple[str | None, str | None]:
+    """Read shared/logos/gruene-weiss.png as (data, ext) for ImageFrame."""
+    if not LOGO_GRUENE_WEISS.exists():
+        return (None, None)
+    return pack_inline_image(LOGO_GRUENE_WEISS.read_bytes(), "png")
+
+
+def _qr_inline() -> tuple[str | None, str | None]:
+    """Read samples/qr-mitmachen.png as (data, ext) for ImageFrame."""
+    if not QR_MITMACHEN.exists():
+        return (None, None)
+    return pack_inline_image(QR_MITMACHEN.read_bytes(), "png")
+
+
+def _panel_de() -> list:
+    """Panel A (DE, upright) — 12 V1 primitives in flat-sheet absolute coords.
+
+    Layout zones (y axis):
+      0..42   Hero-Band Dunkelgrün polygon (full bleed) — apex side
+      6..36   Logo (left) + Headline (right) + Pay-off (right) inside hero-band
+     39..72   Photo-Backing Dunkelgrün polygon + Photo (full-bleed 297×33)
+     78..94   White zone — QR-Code (left) + Bullets + Termine
+     95..105  Footer-Strip Hellgrün polygon — CTA-Footer + Impressum (right)
+    """
+    logo_data, logo_ext = _logo_inline()
+    qr_data, qr_ext = _qr_inline()
+    return [
+        # 1. Hero-Band polygon (full bleed top of Panel A, apex side)
+        Polygon(
+            x_mm=-3, y_mm=-3, w_mm=303, h_mm=42,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            rotation_deg=0,
+            anname="Hero-Band Panel A",
+        ),
+        # 2. Logo (white wordmark on Dunkelgrün)
+        ImageFrame(
+            x_mm=12, y_mm=6, w_mm=38, h_mm=30,
+            inline_image_data=logo_data,
+            inline_image_ext=logo_ext,
+            scale_type=0, ratio=1,
+            layer=LAYER_BILDER,
+            rotation_deg=0,
+            anname="Logo Grüne (panel A)",
+        ),
+        # 3. Headline (white-on-Dunkelgrün, 26pt Vollkorn Italic)
+        TextFrame(
+            x_mm=55, y_mm=9, w_mm=230, h_mm=18,
+            layer=LAYER_TEXT,
+            rotation_deg=0,
+            style="tent/headline",
+            runs=[Run(text="Klimaschutz konkret.",
+                      paragraph_style="tent/headline")],
+            anname="Headline Panel A",
+        ),
+        # 4. Pay-off (Gelb 16pt Vollkorn Italic — sub-headline)
+        TextFrame(
+            x_mm=55, y_mm=27, w_mm=230, h_mm=8,
+            layer=LAYER_TEXT,
+            rotation_deg=0,
+            style="tent/payoff",
+            runs=[Run(text="Konkret. Lokal. Jetzt.",
+                      paragraph_style="tent/payoff")],
+            anname="Pay-off Panel A",
+        ),
+        # 5. Photo-Backing polygon (Dunkelgrün safety bg under photo)
+        Polygon(
+            x_mm=-3, y_mm=39, w_mm=303, h_mm=33,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            rotation_deg=0,
+            anname="Photo-Backing Panel A",
+        ),
+        # 6. Hintergrund-Mitmachen photo — populated by build_preview INJECT_MAP
+        ImageFrame(
+            x_mm=0, y_mm=39, w_mm=297, h_mm=33,
+            inline_image_data=None,
+            inline_image_ext=None,
+            scale_type=0, ratio=1,
+            layer=LAYER_BILDER,
+            rotation_deg=0,
+            anname="Hintergrund-Mitmachen",
+        ),
+        # 7. QR-Code (D1-conformant 17×17 mm in white zone, NOT in footer)
+        ImageFrame(
+            x_mm=12, y_mm=78, w_mm=17, h_mm=17,
+            inline_image_data=qr_data,
+            inline_image_ext=qr_ext,
+            scale_type=0, ratio=1,
+            layer=LAYER_BILDER,
+            rotation_deg=0,
+            anname="QR-Code (mitmachen, panel A)",
+        ),
+        # 8. Body / Bullets (2 short bullets at 12pt — drops V0 third bullet)
+        TextFrame(
+            x_mm=32, y_mm=78, w_mm=110, h_mm=16,
+            layer=LAYER_TEXT,
+            rotation_deg=0,
+            style="tent/body",
+            runs=[Run(
+                text=("• Erneuerbare Energie für alle\n"
+                      "• Leistbares Wohnen schützen"),
+                paragraph_style="tent/body",
+            )],
+            anname="Body Panel A",
+        ),
+        # 9. Termine (2 lines at 9pt — drops "Nächste Termine" header)
+        TextFrame(
+            x_mm=152, y_mm=78, w_mm=133, h_mm=16,
+            layer=LAYER_TEXT,
+            rotation_deg=0,
+            style="tent/termine",
+            runs=[Run(
+                text=("• 12. Juni — Klimastammtisch\n"
+                      "• 26. Juni — Bezirkstreffen"),
+                paragraph_style="tent/termine",
+            )],
+            anname="Termine Panel A",
+        ),
+        # 10. Footer-Strip polygon (Hellgrün, full bleed, at apex)
+        Polygon(
+            x_mm=-3, y_mm=95, w_mm=303, h_mm=10,
+            fill="Hellgrün",
+            layer=LAYER_HINTERGRUND,
+            rotation_deg=0,
+            anname="Footer-Strip Panel A",
+        ),
+        # 11. CTA-Footer (white-on-Hellgrün URL — 11pt Gotham Bold)
+        TextFrame(
+            x_mm=12, y_mm=97, w_mm=200, h_mm=6,
+            layer=LAYER_TEXT,
+            rotation_deg=0,
+            style="tent/cta-footer",
+            runs=[Run(text="gruene-noe.at/mitmachen",
+                      paragraph_style="tent/cta-footer")],
+            anname="CTA-Footer Panel A",
+        ),
+        # 12. Impressum (right-aligned white 6pt — fills footer-strip right edge)
+        TextFrame(
+            x_mm=215, y_mm=97, w_mm=80, h_mm=6,
+            layer=LAYER_TEXT,
+            rotation_deg=0,
+            style="tent/impressum",
+            runs=[Run(
+                text="Medieninhaber: Die Grünen NÖ — gruene-noe.at",
+                paragraph_style="tent/impressum",
+            )],
+            anname="Impressum (Tent)",
+        ),
+    ]
+
+
 def build_template() -> Document:
     """Issue #12 D13: return constructed Document; persistence is the
     caller's job (CLI wrapper below or structural_check).
@@ -171,124 +330,9 @@ def build_template() -> Document:
         master="Normal",
     )
 
-    # ---- PANEL A (y=0..105) — normal orientation ---------------------------
-    # Logo (Brand-Bund) top-left of Panel A. iter-3: migrated from
-    # gruene-cmyk.png wordmark (3.5:1) to gruene-logo-bund-dunkel.png
-    # (~1.12:1 brushstroke G + DIE-GRÜNEN tag). Frame re-sized 36×32 mm
-    # to match the new aspect. On A5-quer (kurze Kante=210) the
-    # Quickguide Print target is 3×M = 37.8 mm — 36 mm sits at 95%. ✓
-    # h=32 keeps clearance to the Hintergrund-Mitmachen photo at y=44.
-    logo_brand = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
-    if logo_brand.exists():
-        lc_data, lc_ext = pack_inline_image(logo_brand.read_bytes(), "png")
-        page.add(ImageFrame(
-            x_mm=12, y_mm=10, w_mm=36, h_mm=32,
-            inline_image_data=lc_data, inline_image_ext=lc_ext,
-            scale_type=0, ratio=1,
-            layer=LAYER_BILDER,
-            anname="Logo Grüne (panel A)",
-        ))
-
-    # Headline Panel A — placed to the right of the logo
-    page.add(TextFrame(
-        x_mm=62, y_mm=12, w_mm=223, h_mm=24,
-        layer=LAYER_TEXT,
-        style="tent/headline",
-        runs=[Run(text="Klimaschutz konkret.",
-                  paragraph_style="tent/headline")],
-        anname="Headline Panel A",
-    ))
-
-    # Body Panel A — aligned with headline (under it, slightly indented).
-    # iter-3: tightened to h=26 mm to free space below for the events list.
-    page.add(TextFrame(
-        x_mm=62, y_mm=44, w_mm=223, h_mm=26,
-        layer=LAYER_TEXT,
-        style="tent/body",
-        runs=[Run(
-            text=("• Erneuerbare Energie ausbauen\n"
-                  "• Öffis verdoppeln\n"
-                  "• Wärmepumpe statt Gas"),
-            paragraph_style="tent/body",
-        )],
-        anname="Body Panel A",
-    ))
-
-    # iter-3: Mitmachen-CTA between the photo (ends y=77) and the QR
-    # (starts y=80) — placed in the right column to keep the photo+QR
-    # column unbroken. Width 60 mm is enough for the German CTA text
-    # at 11pt Bold without truncation.
-    page.add(TextFrame(
-        x_mm=62, y_mm=68, w_mm=60, h_mm=6,
-        layer=LAYER_TEXT,
-        style="tent/cta",
-        runs=[Run(text="Mitmachen — Komm zu uns!",
-                  paragraph_style="tent/cta")],
-        anname="CTA Panel A",
-    ))
-
-    # iter-3: Events list (Nächste Termine) below the CTA. Starts at
-    # y=76 (CTA ends at y=74) and uses h=20 (3 lines × 13pt linesp ≈ 16 mm
-    # plus padding). Full-width body column from x=125 to keep clear of
-    # the CTA above and visually anchor as a separate block.
-    page.add(TextFrame(
-        x_mm=125, y_mm=68, w_mm=160, h_mm=26,
-        layer=LAYER_TEXT,
-        style="tent/termine",
-        runs=[Run(
-            text=("Nächste Termine\n"
-                  "• 12. Juni — Klimastammtisch, GH zur Post (Mödling)\n"
-                  "• 26. Juni — Bezirkstreffen Niederösterreich-Süd"),
-            paragraph_style="tent/termine",
-        )],
-        anname="Termine Panel A",
-    ))
-
-    # Hintergrund-Mitmachen photo — populated by build_preview() via
-    # INJECT_MAP using the post-#24 library.inject_into_frame idiom.
-    # build_template() emits the frame with inline_image_data=None for
-    # round-trip stability (structural_check / spec_check do not need
-    # the photo bytes).
-    page.add(ImageFrame(
-        x_mm=12, y_mm=44, w_mm=44, h_mm=33,
-        inline_image_data=None,
-        inline_image_ext=None,
-        scale_type=0, ratio=1,
-        layer=LAYER_BILDER,
-        anname="Hintergrund-Mitmachen",
-    ))
-
-    # QR-Mitmachen slot (Issue #11): 17x17 mm — enlarged from spec's prior
-    # 14 mm to satisfy D1's 0.5 mm/module minimum at QR version 4 (33 modules,
-    # 17/33 = 0.515 mm/module). Conditional inject.
-    qr_mitmachen_path = HERE / "samples" / "qr-mitmachen.png"
-    qr_data, qr_ext = (None, None)
-    if qr_mitmachen_path.exists():
-        qr_data, qr_ext = pack_inline_image(
-            qr_mitmachen_path.read_bytes(), "png"
-        )
-    page.add(ImageFrame(
-        x_mm=12, y_mm=80, w_mm=17, h_mm=17,
-        inline_image_data=qr_data,
-        inline_image_ext=qr_ext,
-        scale_type=0, ratio=1,
-        layer=LAYER_BILDER,
-        anname="QR-Code (mitmachen, panel A)",
-    ))
-
-    # Impressum (just above the fold line — y=96..100 = 4 mm tall, narrowed
-    # to start at x=35 so it doesn't run under the QR slot)
-    page.add(TextFrame(
-        x_mm=35, y_mm=96, w_mm=257, h_mm=4,
-        layer=LAYER_TEXT,
-        style="tent/impressum",
-        runs=[Run(
-            text=("Medieninhaber: Die Grünen NÖ, "
-                  "Daniel-Gran-Straße 48, 3100 St. Pölten."),
-            paragraph_style="tent/impressum",
-        )],
-        anname="Impressum (Tent)",
-    ))
+    # ---- PANEL A (y=0..105) — V1 "Hero Band", upright DE -------------------
+    for prim in _panel_de():
+        page.add(prim)
 
     # ---- FOLD LINE at y=105 ---------------------------------------------
     page.add(TableTentFold(page_size_mm=(TRIM_W_MM, TRIM_H_MM),
@@ -373,11 +417,10 @@ def build_template() -> Document:
         rotation_deg=180,
     ))
 
-    # Logo Panel B (rotated 180°). iter-3: same Brand-Bund logo as Panel A,
-    # 36×32 mm pre-rotation at (12, 178). After rotation 180° around bbox
-    # center: rotated_x = 12+36 = 48, rotated_y = 178+32 = 210.
-    if logo_brand.exists():
-        lc2_data, lc2_ext = pack_inline_image(logo_brand.read_bytes(), "png")
+    # Logo Panel B (rotated 180°). T03/T04 transition: still V0 frame
+    # geometry; T04 will replace this whole V0 Panel B block via _panel_en().
+    lc2_data, lc2_ext = _logo_inline()
+    if lc2_data is not None:
         page.add(ImageFrame(
             x_mm=48, y_mm=210, w_mm=36, h_mm=32,
             inline_image_data=lc2_data, inline_image_ext=lc2_ext,
