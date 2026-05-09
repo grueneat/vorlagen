@@ -1803,14 +1803,19 @@ def build_template():
             TextFrame(
             x_mm=135.33199999999982,
             y_mm=130.14,
+            # Issue #25 (revisit): col 3 widened to 54.667 (matching
+            # cols 1+2) so page 10's body grid extends uniformly to
+            # x=190 — matching the P9 Spread · left hero above (which
+            # is at x=20, w=170, ending at x=190). Was w=50 (default,
+            # ending at x=185.3) which left a 4.7mm gap to the hero's
+            # right edge — the user-cited "hero wider than text" bug.
+            w_mm=54.66666666666666,
             # h 229.30 -> 149.86 in #22 T13: original frame ended at
             # y=278.54 (49.24+229.30); after y move to 130.14, the
             # original h would push the bottom to y=359.44, far past
             # page bottom (297) — inside_page error. Shrink to keep
             # the bottom at y=280 (3mm above the PageNumber strip at
-            # y=283.7). Column 3 stays larger because it doesn't
-            # overlap the green card (the card is only 112mm wide
-            # at x=20..132, leaving column 3 at x=135.3 untouched).
+            # y=283.7).
             h_mm=149.86,
             layer=0,
             anname='Kopie von u2da1 (17)',
@@ -2021,17 +2026,17 @@ def build_template():
     ))
 
     page10.add(ImageFrame(
-        # Issue #25: shrink P10 Portrait to fit INSIDE the right text
-        # column (x=135.3, w=54.67) and stop above the footer band at
-        # y=283. Was x=135.3, w=77.7 (right edge at 213, full-bleed)
-        # and y=202.57+94.43=297 (full-bleed bottom into footer band).
-        # Per user-cited fix in ISSUE.md ("Portrait should sit INSIDE
-        # the right-text-column, not extend past it"). Both x and y
-        # now confine the portrait to the body grid.
+        # Issue #25 (revisit): P10 Portrait shrunk to fit inside the
+        # right text column (x=135.3, w=54.67) AND its vertical extent
+        # capped at y=279 to align with the longest adjacent body
+        # column ("Kopie von u2da1 (18)" ends at y=279). Was h=80.43
+        # making the portrait extend 4mm BELOW the body text, which
+        # the user flagged as "profil bild reicht vertikal ueber den
+        # text hinaus".
         x_mm=135.3,
         y_mm=202.57248624122553,
         w_mm=54.66666666666666,
-        h_mm=80.42751375823458,
+        h_mm=76.42751375877447,
         layer=0,
         image='',
         line_width_pt=1,
@@ -2085,19 +2090,36 @@ def build_template():
         local_scale=(0.027554308528516, 0.027554308528516),
     ))
 
+    page10.add(PageNumber(
+        # Issue #25 (revisit): page 11 (RIGHT) was previously missing a
+        # page-number frame — the upstream original SLA omitted it on
+        # this page. Adding a footer-alley PageNumber on the RIGHT
+        # outer-margin side (x=195.48) so users can see the page
+        # number on the printed back-cover-side of the spread.
+        x_mm=195.48295270104117,
+        y_mm=285.10833333227686,
+        w_mm=12.775464220466706,
+        h_mm=9.480247708017236,
+        layer=0,
+        anname='Kopie von u2d45 (8)',
+        clip_edit=True,
+        line_width_pt=1,
+        col_gap_mm=3.207461712525627,
+    ))
+
     page11.add(ImageFrame(
         # Issue #25 (revisit): extend Dunkelgrün band on page12 (LEFT)
-        # DOWNWARD to cover the entire page (h: 213.92 -> 297.18 so
-        # y_max=297). User-cited fix: "extend the green background
-        # down to fill the whole page so there are no borders on the
-        # left and right of the image". Image stays at text-column
-        # width but now sits ON GREEN (no visible white borders).
-        # Right edge stays at x=207 (3mm safe from the spine) so
-        # spine_safety doesn't fire for this LEFT-page decoration.
+        # DOWNWARD to cover the area around the bottom photo (h:
+        # 213.92 -> 283.18 so y_max=283 = top of footer band). User-
+        # cited fix: "extend the green background down to fill the
+        # whole page so there are no borders on the left and right
+        # of the image". Polygon stops AT the footer band start so
+        # the page number (Dunkelgrün-on-white "Seitenzahl" style)
+        # remains visible in the footer alley below.
         x_mm=-3,
         y_mm=-0.1807155930984082,
         w_mm=210.0,
-        h_mm=297.1807155930984,
+        h_mm=283.1807155930984,
         layer=0,
         image='',
         fill='Dunkelgrün',
