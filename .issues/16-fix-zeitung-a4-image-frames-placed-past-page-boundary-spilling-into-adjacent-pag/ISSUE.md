@@ -40,7 +40,7 @@ Mechanical fix — no design rework, no rendering re-evaluation.
 6. **Add a regression test** in `tools/sla_lib/tests/test_zeitung_overflow.py`: imports `templates.zeitung-a4-grun.build`, runs `inside_page` from #14 against `build_doc()`, asserts zero errors. (One test, no rendering, fast in CI.)
 7. **Note in `templates/zeitung-a4-grun/README.md`** that the upstream Scribus original has these placement bugs and the round-trip therefore deliberately diverges from byte-faithful at these two locations.
 
-## Acceptance criteria
+## Acceptance Criteria
 
 - [ ] After this issue's commits, `python3 -m sla_lib.builder.structural_check --all` reports zero `inside_page` errors on `zeitung-a4-grun`.
 - [ ] No `meta.yml::brand_overrides` entries remain on `zeitung-a4-grun` referencing this issue.
