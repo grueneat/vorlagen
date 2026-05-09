@@ -68,3 +68,73 @@ python3 templates/infostand-tent-card-a5-quer/build.py
 ## Lizenz
 
 Templates liegen unter der Creative-Commons-Lizenz wie der Rest des Repos.
+
+## V1 Layout: Hero Band (2026-05-09)
+
+V1 etabliert den Rotation-Contract für Multi-Panel-Templates (wiederverwendet
+in #21 kandidat-falzflyer): Panel A (DE) bleibt aufrecht, Panel B (EN) ist
+um 180° gedreht — beim Falzen lesen beide Tisch-Seiten korrekt.
+
+### Layout zones
+
+Panel A (y=0..105 mm, mirror um y=105 für Panel B):
+
+- **Hero-Band** Dunkelgrün full-bleed an der Apex-Seite (y=-3..42; oberer Streifen).
+  Enthält Logo (links 38×30) + Headline 26pt White + Pay-off 16pt Italic Gelb.
+- **Photo-Backing** Dunkelgrün full-bleed (y=39..72) — Sicherheit falls Foto fehlt.
+- **Photo-Band** `Hintergrund-Mitmachen` 297×33 (y=39..72) — full-bleed 9:1-Slab durch
+  Tisch + Personen via build_preview INJECT_MAP + library.inject_into_frame.
+- **Weiße Info-Zone** (y=78..94): QR-Code links (12, 78, 17×17) + Bullets (32..142)
+  + Termine (152..285).
+- **Footer-Strip** Hellgrün full-bleed an der Falz (y=95..105). Enthält
+  CTA-Footer URL (links) + Impressum 6pt White (rechts).
+- **Mittelfalz** y=105 Spot-Color "Falz" (LAYER=3, DRUCKEN=0).
+
+Panel B spiegelt um y=105: Polygons rotation_deg=0 (Rechtecke), Text/Image-Frames
+rotation_deg=180 mit bbox-corner SLA-Math `(x+w, 210-y, w, h)`. Die beiden
+Hellgrün-Footer-Strips abutten an der Falz und bilden ein 20 mm-Band über
+den Apex (y=95..115 ungefaltet).
+
+### QR module-size decision
+
+QR-Code bleibt **17×17 mm** in der weißen Info-Zone (Panel A: (12, 78, 17, 17);
+Panel B: (29, 132, 17, 17, ROT=180)). Die kodierte URL `https://noe.gruene.at/mitmachen/`
+(32 Zeichen, error-correction H) ergibt QR-v4 (33 Module). Bei 17 mm Frame-Breite:
+17/33 ≈ **0.515 mm/Modul** — D1-konform (≥ 0.5 mm Mindestmodulgröße).
+
+Reduktion auf 14 mm würde 0.424 mm/Modul ergeben (D1-Verletzung); Reduktion auf
+QR-v3 (29 Module) erfordert URL-Verkürzung (out of scope, Brand-Stewardship-
+Koordination separat). **Footer-Strip beherbergt nur CTA-Footer + Impressum —
+QR liegt NICHT im Footer-Strip.**
+
+### Logo aspect note
+
+Logo-Asset `shared/logos/gruene-weiss.png` (413×118 px, 3.5:1 wordmark "DIE GRÜNEN",
+weiß-auf-transparent). V1 Logo-Frame ist 38×30 mm (1.27:1). Scribus auto-fit
+(`scale_type=0, ratio=1`) preserves aspect → das Wordmark rendert mit **38×10.86 mm**
+zentriert im 30 mm hohen Frame, mit ca. 9.5 mm vertikalem Atemraum oben + unten.
+
+Die Brand-Regel `brand:logo_size_3M` operiert auf `frame.w_mm` (38 mm ≈ 3M ± 0.2 mm ✓).
+Die 30 mm Frame-Höhe balanciert den Headline+Pay-off-Stack rechts (y=9..35 = 26 mm hoch).
+Eine künftige Iteration könnte ein `bund-weiss.png` mit echter 3M-Höhe in Auftrag geben
+oder das Logo-Frame auf 38×11 mm verkleinern (exakte Wordmark-Aspect); V1 akzeptiert
+die 10.86 mm gerenderte Höhe und überschreibt `brand:image_fills_frame` für die
+Logo-Letterbox.
+
+### Photo crop note
+
+Quell-Asset `kontext_infostand_szene` (1536×1024, 1.5:1) wird in `build_preview()`
+auf 9:1 zugeschnitten via `library.inject_into_frame(target_w_mm=item.w_mm,
+target_h_mm=item.h_mm)` mit LIVE Frame-Dimensionen (post-#24-Idiom). Manifest
+`crop_focus: [0.50, 0.55]` zentriert den Crop horizontal mittig + minimal unter
+der vertikalen Mitte (Tisch + Personen). Akzeptabel für Demo; Produktions-
+Aspect-Optimierung getrackt in #13.
+
+### Build & verify
+
+```bash
+python3 templates/infostand-tent-card-a5-quer/build.py
+PYTHONPATH=tools python3 -m sla_lib.builder.structural_check infostand-tent-card-a5-quer
+python3 -m unittest templates._smoke.test_infostand_tent_card_a5_quer
+python3 -m unittest tools.sla_lib.tests.test_infostand_tent_card_geometry
+```
