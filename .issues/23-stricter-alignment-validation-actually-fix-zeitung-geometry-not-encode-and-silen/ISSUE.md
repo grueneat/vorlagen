@@ -29,6 +29,18 @@ This issue makes validation **stricter by default** AND **actually fixes** the Z
 
 ## Scope
 
+**Strict ordering (per user direction "build the validation script first until it finds all of those issues by itself" + "review visually if necessary but make sure the script finds these issues in a generic way"):**
+
+1. Build Phases 1+2+3 (rules + audit tool + CI script) FIRST.
+2. Run `bin/audit-alignment zeitung-a4-grun --strict` and verify all 6 known issues from Phase 3b are detected.
+3. **If issues are missed:** strengthen the rules. **The rules must be generic** — they MUST work on any template, not be hardcoded with Zeitung-specific anname matches or coordinate constants. Tune by adjusting thresholds + detection logic, not by special-casing.
+4. **Visual review is permitted** for this specific verification step: comparing the audit's output against `templates/zeitung-a4-grun/page-*.png` to confirm the script catches what a human would catch. This is the only place Claude reads images in this issue.
+5. **Iterate** Phase 1 + Phase 3b until the audit catches every visible alignment issue without false-positive explosion.
+6. Only then proceed to Phase 4 (fix Zeitung based on audit's findings, not pre-listed coordinates).
+7. Re-run audit after fix → must report zero error-severity violations on Zeitung.
+
+This is TDD-for-rules: known violations are the test cases the rules must catch generically.
+
 ### Phase 1 — Stricter rules (`tools/sla_lib/builder/brand_constraints.py`)
 
 **New rule `brand:bleed_coverage`** (severity=ERROR):
@@ -55,6 +67,17 @@ This issue makes validation **stricter by default** AND **actually fixes** the Z
 - For pairs of full-width-ish frames on the same page that touch each other vertically (one's bottom == other's top within 0.5 mm), assert their outer bboxes match (`x ≈ x'` and `x+w ≈ x'+w'` within 0.5 mm).
 - Catches page-1 `Cover Hero` vs `u2950` mismatch.
 
+**New rule `brand:image_in_container_flush`** (severity=ERROR):
+- For each ImageFrame whose bbox is contained inside a colored Polygon (fill in `{Dunkelgrün, Hellgrün, Magenta, Gelb}`), assert at least **2 of the 4 edges are flush** (within 0.5 mm) with the container's edges. A portrait sitting inside a green card with arbitrary inset on all four sides (page-8 `P7 Portrait` vs `u918`: 3.4 mm right gap + 5.6 mm top gap + asymmetric left/bottom) is forbidden — the design intent is either flush-anchor (TL/TR/BL/BR corner anchored) or a uniform inset (all-four-sides equal). Asymmetric insets indicate accidental drift.
+- Skip via `brand_overrides[brand:image_in_container_flush]` per template if the design is genuinely asymmetric.
+
+**New rule `brand:portrait_column_alignment`** (severity=ERROR):
+- For each ImageFrame on a page that is "portrait-shaped" (`h > w` AND `h > 60` mm AND `w > 30` mm) AND is adjacent to a text column above it (text frame whose bbox bottom is within 30 mm of image top AND whose `x` matches `image.x` within 25 mm), assert:
+  - `image.x ≈ text_column.x` (within 0.5 mm) — share left axis with column.
+  - **AND** `image.x + image.w ≈ text_column.x + text_column.w` (within 0.5 mm) OR `image.x + image.w ≈ page_w + bleed` (right edge in bleed). Width-match-or-bleed: portrait must either be column-width OR extend to outer bleed.
+- Catches page-11 `P10 Portrait` (left axis matches column ✓ but right edge is 8.1 mm short of bleed AND not column-width). Catches page-8 `P7 Portrait` (left edge doesn't match column above, right edge doesn't match polygon edge).
+- Skip per-template via `brand_overrides`.
+
 ### Phase 2 — Audit tool tightening (`tools/audit_alignment.py`)
 
 - New default thresholds matching the new rule (`--axis-tol 25.0 --adjacency-tol 30.0`); CLI flags still override.
@@ -71,6 +94,23 @@ This issue makes validation **stricter by default** AND **actually fixes** the Z
 - Per-template `meta.yml::brand_overrides` lets templates skip a rule with documented reason. After Phase 4 the Zeitung geometry passes all rules naturally — Zeitung does NOT skip them. Other templates (postkarte, plakat, V1-bound) get pre-applied skips with reason "scheduled for follow-up audit" so the global gate doesn't block them mid-rollout.
 - `bin/audit-alignment --strict` exit-codes: `0` clean across all templates, `1` any error-severity violation. Output stays Markdown for human reading; `--json` for machine-readable.
 
+### Phase 3b — Build-detector verification gate (BEFORE Phase 4)
+
+After Phases 1+2+3 land, run `bin/audit-alignment zeitung-a4-grun --strict` and confirm it reports the following known issues. **If any are missing, return to Phase 1 and strengthen the rule until the issue is caught.** This is the build-detector-first contract.
+
+Required detections (from this issue's "Why" section, verified against current main):
+
+| # | Page | Issue | Rule that should catch it |
+|---|---|---|---|
+| 1 | 1 | `Cover Hero` (x=0, w=210) ≠ `u2950` outer-bbox extent (x=-3 to x=213) | `brand:cover_extent_match` OR `brand:bleed_coverage` |
+| 2 | 2,5,10,11,12,13,14 (×11 frames) | full-width frames inset from outer edge (no outer bleed) | `brand:bleed_coverage` |
+| 3 | 8 | `P7 Portrait` not flush with `u918` polygon (3.4 mm right + 5.6 mm top) | `brand:image_in_container_flush` |
+| 4 | 8 | `P7 Portrait` left edge doesn't match column-3 text axis above | `brand:portrait_column_alignment` |
+| 5 | 10 | text columns `Kopie von u2d5c (13)` etc. partially overlap green polygon `Kopie von u1529` | `brand:image_text_overlap` |
+| 6 | 11 | `P10 Portrait` right edge 8.1 mm short of bleed | `brand:portrait_column_alignment` |
+
+If `bin/audit-alignment zeitung-a4-grun --strict` reports all 6 (no missing detections), proceed to Phase 4. Else: strengthen rules and re-run.
+
 ### Phase 4 — Actually fix Zeitung geometry (`templates/zeitung-a4-grun/build.py`)
 
 - **Page 1 Cover Hero**: `(x=0, w=210)` → `(x=-3, w=216)` (full-bleed match with u2950).
@@ -80,9 +120,9 @@ This issue makes validation **stricter by default** AND **actually fixes** the Z
 - **Page 12 unnamed Dunkelgrün + P11 Bottom**: each `(x=0, w=207)` → `(x=-3, w=210)` (LEFT page outer = bleed-extended).
 - **Page 13 unnamed**: similar inversion for RIGHT page.
 - **Page 14 P13 Hero + unnamed**: `(x=0, w=207)` → `(x=-3, w=210)`.
-- **Page 8 P7 Portrait**: `(x=135.3, y=200.6, w=51.3, h=76.4)` → `(x=139.7, y=195, w=50.3, h=82)` — flush with u918 right (190) and top (195). Or alternative: shrink u918 to match portrait. Decide based on design intent (planner).
-- **Page 10 text columns**: extend `Kopie von u2d5c (13)` and `u2da1 (16)` only to y=175 (matching green-card top), not y=252.4. Or: shrink green card (Polygon Kopie von u1529) to start below text columns.
-- **Page 11 P10 Portrait**: `(x=135.3, w=66.6)` → `(x=135.3, w=74.7)` — extend right edge to bleed (page_w=210 + 3 = 213 - 138.3 = 74.7).
+- **Page 8 P7 Portrait + u918**: portrait must satisfy `brand:image_in_container_flush` AND `brand:portrait_column_alignment`. Recommended: `P7 Portrait (x=135.3, y=195, w=54.7, h=82)` — flush with u918 top (y=195) AND right (x=190 → x+w=190 → w=54.7). Aligns with column-3 above (x=135.3, w=54.7). Or alternative: shrink u918 to fit portrait. Planner decides per design intent.
+- **Page 10 text columns + Polygon `Kopie von u1529`**: image-text overlap. Recommended: text columns end at y=175 (matching green-card top, no overlap). Verifies `brand:image_text_overlap` clean.
+- **Page 11 P10 Portrait**: `(x=135.3, y=202.6, w=66.6, h=94.4)` → `(x=135.3, y=202.6, w=77.7, h=94.4)` — column-x preserved AND right edge extends to outer bleed (x+w = 213). Verifies `brand:portrait_column_alignment` clean (right edge in bleed).
 
 ### Phase 5 — Drop encode-and-silence CONSTRAINTS entries
 
