@@ -73,7 +73,7 @@ def build_doc() -> Document:
         name="tueranhaenger/headline",
         font="Vollkorn Black Italic",
         fontsize=28,
-        linesp=30,
+        linesp=25.2,
         linesp_mode=0,
         align=0,
         fcolor="Dunkelgrün",
@@ -137,6 +137,59 @@ def build_doc() -> Document:
         linesp_mode=0,
         align=0,
         fcolor="Black",
+        language="de",
+    ))
+
+    # V1 (#18) — *-on-green parallel ParaStyles for Hellgrün/Dunkelgrün backings.
+    # Pattern from #17 (postkarte-a6-quer V1). Originals stay unchanged.
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/body-on-green",
+        font="Gotham Narrow Book",
+        fontsize=11,
+        linesp=14,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/url-on-green",
+        font="Vollkorn Black Italic",
+        fontsize=11,
+        linesp=14,
+        linesp_mode=0,
+        align=0,
+        fcolor="Gelb",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/cand-name-on-green",
+        font="Gotham Narrow Bold",
+        fontsize=18,           # bumped from 14 per ISSUE.md V1 spec
+        linesp=20,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/cand-pos-on-green",
+        font="Gotham Narrow Book Italic",
+        fontsize=10,
+        linesp=12,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/impressum-on-green",
+        font="Gotham Narrow Book",
+        fontsize=6,
+        linesp=7,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
         language="de",
     ))
 

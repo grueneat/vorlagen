@@ -78,6 +78,11 @@ ci_overrides:
     - "tueranhaenger/cand-pos"
     - "tueranhaenger/url"
     - "tueranhaenger/impressum"
+    - "tueranhaenger/body-on-green"
+    - "tueranhaenger/url-on-green"
+    - "tueranhaenger/cand-name-on-green"
+    - "tueranhaenger/cand-pos-on-green"
+    - "tueranhaenger/impressum-on-green"
   non_ci_colors:
     - "Stanzkontur"      # document-local spot color (D4 revised)
   non_ci_layers:
