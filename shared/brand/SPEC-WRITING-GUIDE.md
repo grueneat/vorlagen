@@ -160,6 +160,14 @@ gehören sie hinein.
 - **Anti-Pattern:** „Die Belege sind aligned." (Welche? Auf welcher Achse? Mit
   welcher Toleranz? Wo ist der Code-Verweis?)
 
+#### Issue #14 — neue Constraint-Factory `aligned_below`
+
+- `aligned_below(below, above, gap_mm, tolerance_mm=0.5, name="")` — sperrt das
+  „Bild hängt unter der Headline auf derselben linken Achse"-Muster ein.
+  Per-Template free-form Constraint. Argumentreihenfolge: `(below, above)` —
+  erstes Argument ist der Frame, der unten hängt; zweites der Anker oben.
+  Issue #14.
+
 ## 6. Construct-then-add Konvention
 
 Constraint-Listen brauchen `anname`-Strings, um Frames zu referenzieren. Damit dieses
@@ -231,6 +239,14 @@ Das Format wird durch [`tools/sla_lib/builder/meta_schema.py`](../../tools/sla_l
 JSON-Schema-validiert. Bei Schema-Verletzung (fehlende `id`, fehlende `reason`,
 ungültiges Pattern): `ValueError`-Raise mit klarem Pointer auf die Stelle.
 
+### Issue #14 — neue Brand-Regel `brand:inside_page`
+
+- `brand:inside_page` — jeder Non-Master-Frame liegt mit rotation- und
+  anchor-bewusster Bbox innerhalb von `[-bleed, w+bleed] × [-bleed, h+bleed]`
+  seiner Seite. Severity: **Warning** bei >0.5 mm Übersicht, **Error** bei
+  >1.0 mm. Skipping über `meta.yml::brand_overrides` (Rule-Level — keine
+  Per-Frame-Allowlist). Issue #14.
+
 ### Worked Example aus Phase-4-Entdeckung (Türanhänger)
 
 Während Phase 4 von Issue #12 wurde entdeckt, dass der Türanhänger den HL/SL-
@@ -264,6 +280,40 @@ Erklärung sind unzureichend.
   (Brand-Team-Review pending).
 - **Nein** — Override als Workaround für einen Implementierungs-Bug. Den Bug fixen.
 - **Nein** — Override ohne klare Begründung. Das ist nur stille Akzeptanz von Drift.
+
+### SpreadImage-Migration — ein Bild über zwei Doppelseiten
+
+Wenn ein Bild als kontinuierliches Bild über zwei Doppelseiten gerendert
+werden soll (z.B. ein Foto-Spread auf den Innenseiten einer Zeitung), ist
+das heute übliche Muster — ein einzelner `ImageFrame` mit `x_mm=0` und
+`w_mm=2*page_w_mm` auf der linken Seite — fundamental kaputt: der Frame
+überschreitet den rechten Rand der linken Seite um eine volle Seitenbreite
+und wird von `brand:inside_page` als Error geflagged.
+
+#### ❌ Falsch — überschreitet den rechten Rand der linken Seite um eine volle Seitenbreite
+
+```python
+ImageFrame(x_mm=0, y_mm=0, w_mm=2*page_w, h_mm=page_h,
+           image="cover.jpg", anname="P9 Spread")
+```
+
+#### ✅ Richtig — zwei `inside_page`-saubere Frames, rechte Hälfte scrollt das Quellbild nach links
+
+```python
+from sla_lib.builder.blocks import SpreadImage
+
+spread = SpreadImage(image="cover.jpg",
+                     page_w_mm=210, page_h_mm=297, h_mm=297,
+                     base_anname="P9 Spread")
+spread.place(page_left, page_right)
+# → Frames mit anname "P9 Spread · left" und "P9 Spread · right"
+# → rechte Hälfte verwendet local_offset_mm=(-210, 0)  [NEGATIV-x!]
+# → scale_type=0 hard-pinned (sonst würde Scribus jede Hälfte einzeln
+#   auto-fitten und der Spread visuell zerbrechen)
+```
+
+Vollständige Signatur in `tools/sla_lib/builder/blocks.py::SpreadImage`.
+Issue #14 / #16 (zeitung-Migration).
 
 ## 8. Worked Example — themen-plakat-a3-quer
 
