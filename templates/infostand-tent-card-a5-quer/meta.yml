@@ -57,7 +57,10 @@ ci_overrides:
   non_ci_styles:
     - "tent/headline"
     - "tent/body"
+    - "tent/termine"
     - "tent/impressum"
+    - "tent/payoff"
+    - "tent/cta-footer"
   non_ci_colors:
     - "Falz"             # document-local spot color
   non_ci_layers:

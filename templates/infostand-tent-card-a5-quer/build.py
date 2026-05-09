@@ -75,56 +75,71 @@ def build_doc() -> Document:
     # Document-local Falz spot color
     doc.add_color("Falz", cmyk=(100, 0, 0, 0), spot=True)
 
-    # Per-template ParaStyles
+    # Per-template ParaStyles — V1 "Hero Band" mutation pattern (#20).
+    # Headline: white-on-Dunkelgrün, sized down from 36→26 to match V1 hero-band height.
     doc.add_para_style(ParaStyle(
         name="tent/headline",
         font="Vollkorn Black Italic",
-        fontsize=36,
-        linesp=40,
+        fontsize=26,
+        linesp=23.4,
         linesp_mode=0,
         align=0,
-        fcolor="Dunkelgrün",
+        fcolor="White",
         language="de",
     ))
+    # Body: bullets in white zone — fontsize trimmed 14→12 to fit 16 mm h with 2 short bullets.
     doc.add_para_style(ParaStyle(
         name="tent/body",
         font="Gotham Narrow Book",
-        fontsize=14,
-        linesp=18,
+        fontsize=12,
+        linesp=15.6,
         linesp_mode=0,
         align=0,
         fcolor="Black",
         language="de",
     ))
+    # Termine: trimmed 10→9 to fit 2 lines in 16 mm h (drops the V0 "Nächste Termine" header).
+    doc.add_para_style(ParaStyle(
+        name="tent/termine",
+        font="Gotham Narrow Book",
+        fontsize=9,
+        linesp=11.7,
+        linesp_mode=0,
+        align=0,
+        fcolor="Black",
+        language="de",
+    ))
+    # Impressum: white-on-Hellgrün, right-aligned (align=2), bumped 5→6 for footer-strip legibility.
     doc.add_para_style(ParaStyle(
         name="tent/impressum",
         font="Gotham Narrow Book",
-        fontsize=5,
-        linesp=6,
+        fontsize=6,
+        linesp=7.8,
         linesp_mode=0,
-        align=0,
-        fcolor="Black",
+        align=2,
+        fcolor="White",
         language="de",
     ))
-    # iter-3: CTA + Termine styles for Panel A's mid-section.
+    # NEW V1: Pay-off — Vollkorn Italic 16pt Gelb, sits below Headline in hero-band.
     doc.add_para_style(ParaStyle(
-        name="tent/cta",
+        name="tent/payoff",
+        font="Vollkorn Black Italic",
+        fontsize=16,
+        linesp=14.4,
+        linesp_mode=0,
+        align=0,
+        fcolor="Gelb",
+        language="de",
+    ))
+    # NEW V1: CTA-Footer — Gotham Bold 11pt White, lives in Hellgrün footer-strip.
+    doc.add_para_style(ParaStyle(
+        name="tent/cta-footer",
         font="Gotham Narrow Bold",
         fontsize=11,
         linesp=14,
         linesp_mode=0,
         align=0,
-        fcolor="Dunkelgrün",
-        language="de",
-    ))
-    doc.add_para_style(ParaStyle(
-        name="tent/termine",
-        font="Gotham Narrow Book",
-        fontsize=10,
-        linesp=13,
-        linesp_mode=0,
-        align=0,
-        fcolor="Black",
+        fcolor="White",
         language="de",
     ))
 
