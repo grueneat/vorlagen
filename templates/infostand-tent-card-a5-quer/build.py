@@ -55,9 +55,23 @@ LAYER_TEXT = 2
 LAYER_FALZ = 3
 
 
-def build_doc() -> Document:
+# Post-#24 INJECT_MAP idiom (#19 RESEARCH §1, locked decision #1):
+# value = bare lib_id (manifest key). build_preview() reads target_w_mm /
+# target_h_mm LIVE from each frame, eliminating literal-target drift.
+INJECT_MAP: dict[str, str] = {
+    "Hintergrund-Mitmachen":         "kontext_infostand_szene",
+    "Hintergrund-Mitmachen Panel B": "kontext_infostand_szene",
+}
+
+
+def build_template() -> Document:
     """Issue #12 D13: return constructed Document; persistence is the
-    caller's job (CLI wrapper below or structural_check)."""
+    caller's job (CLI wrapper below or structural_check).
+
+    Round-trip stability: produces the SLA without inline image data on
+    INJECT_MAP frames (clean for structural_check + spec_check).
+    build_preview() wraps this and injects library images for actual
+    rendering (page-01.png + preview.pdf)."""
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Infostand-Tent-Card A5 quer",
@@ -230,19 +244,15 @@ def build_doc() -> Document:
         anname="Termine Panel A",
     ))
 
-    # Hintergrund-Mitmachen photo — central library reference (#13).
-    # Frame 44×33mm landscape (~1.33:1); source 1536×1024 (~1.5:1) — minor
-    # crop. library.crop_for_frame re-stamps the watermark band on the
-    # cropped output.
-    hg_data, hg_ext = (None, None)
-    hg_img = library.load("kontext_infostand_szene", optional=True)
-    if hg_img is not None:
-        hg_bytes = library.crop_for_frame(hg_img, target_w_mm=44, target_h_mm=33)
-        hg_data, hg_ext = pack_inline_image(hg_bytes, "jpg")
+    # Hintergrund-Mitmachen photo — populated by build_preview() via
+    # INJECT_MAP using the post-#24 library.inject_into_frame idiom.
+    # build_template() emits the frame with inline_image_data=None for
+    # round-trip stability (structural_check / spec_check do not need
+    # the photo bytes).
     page.add(ImageFrame(
         x_mm=12, y_mm=44, w_mm=44, h_mm=33,
-        inline_image_data=hg_data,
-        inline_image_ext=hg_ext,
+        inline_image_data=None,
+        inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="Hintergrund-Mitmachen",
@@ -380,8 +390,41 @@ def build_doc() -> Document:
     return doc
 
 
+def build_preview() -> Document:
+    """Inject demo library images for gallery PNG render (#24 idiom).
+
+    Pattern: pre-crops the source image to each frame's LIVE dimensions
+    via library.inject_into_frame, eliminating the literal-target drift
+    that produced regressions in earlier iters.
+    """
+    doc = build_template()
+    if not INJECT_MAP:
+        return doc
+    for page in doc.pages:
+        for item in page.items:
+            if not isinstance(item, ImageFrame):
+                continue
+            lib_id = INJECT_MAP.get(item.anname)
+            if not lib_id:
+                continue
+            img = library.load(lib_id, optional=True)
+            if img is None:
+                continue
+            library.inject_into_frame(
+                item, img,
+                target_w_mm=item.w_mm,   # LIVE frame dims (post-#24)
+                target_h_mm=item.h_mm,
+            )
+    return doc
+
+
+# Alias for structural_check / spec_check / smoke — they expect build_doc.
+# Keep this alias indefinitely; it points at the clean template (no photos).
+build_doc = build_template
+
+
 def build(out_path: str | Path = HERE / "template.sla") -> Path:
-    doc = build_doc()
+    doc = build_preview()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
