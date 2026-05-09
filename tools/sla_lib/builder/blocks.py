@@ -678,6 +678,69 @@ class FoldedPanel:
 
 
 # ---------------------------------------------------------------------------
+# Block 9b: SpreadImage (Issue #14)
+# Two ImageFrames sharing one source image to render a continuous picture
+# across two facing pages. Replaces the today-broken (x=page_w, w=page_w)
+# overflow pattern.
+# ---------------------------------------------------------------------------
+@dataclass
+class SpreadImage:
+    """Two ImageFrames, one per facing page, sharing one source image.
+
+    Right half uses ``local_offset_mm=(-page_w_mm, 0)`` so the source
+    image "scrolls" left and the right half shows the right half of the
+    picture. Both frames are ``inside_page``-clean by construction
+    (each sits at ``x=0`` on its own page).
+
+    ``scale_type`` is hard-pinned to 0 (free / aspect-locked); the
+    default 1 (auto-fit) breaks the spread because each half auto-fits
+    independently.
+
+    Anname pattern: when ``base_anname`` is set, the two frames are named
+    ``f"{base} · left"`` and ``f"{base} · right"`` (middle-dot ' · ',
+    matching ``WahlkreuzSymbol``'s convention). Empty ``base_anname``
+    leaves both anname fields empty.
+    """
+
+    image: str
+    page_w_mm: float
+    page_h_mm: float
+    h_mm: float
+    y_mm: float = 0.0
+    base_anname: str = ""
+    scale_type: int = 0
+    local_scale: tuple[float, float] = (1.0, 1.0)
+
+    def emit(self) -> tuple[ImageFrame, ImageFrame]:
+        left = ImageFrame(
+            x_mm=0.0, y_mm=self.y_mm,
+            w_mm=self.page_w_mm, h_mm=self.h_mm,
+            image=self.image,
+            local_scale=self.local_scale,
+            local_offset_mm=(0.0, 0.0),
+            scale_type=self.scale_type,
+            anname=f"{self.base_anname} · left" if self.base_anname else "",
+        )
+        right = ImageFrame(
+            x_mm=0.0, y_mm=self.y_mm,
+            w_mm=self.page_w_mm, h_mm=self.h_mm,
+            image=self.image,
+            local_scale=self.local_scale,
+            local_offset_mm=(-self.page_w_mm, 0.0),  # NEGATIVE x — see docstring
+            scale_type=self.scale_type,
+            anname=f"{self.base_anname} · right" if self.base_anname else "",
+        )
+        return left, right
+
+    def place(self, page_left, page_right) -> tuple[ImageFrame, ImageFrame]:
+        """Convenience: emit + add to two pages, return both frames."""
+        l, r = self.emit()
+        page_left.add(l)
+        page_right.add(r)
+        return l, r
+
+
+# ---------------------------------------------------------------------------
 # Block 10: DoorHangerCutout
 # Spec: templates/_specs/wahltag-tueranhaenger.md
 # ---------------------------------------------------------------------------
