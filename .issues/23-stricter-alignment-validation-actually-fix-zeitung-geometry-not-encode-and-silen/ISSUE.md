@@ -34,7 +34,11 @@ This issue makes validation **stricter by default** AND **actually fixes** the Z
 1. Build Phases 1+2+3 (rules + audit tool + CI script) FIRST.
 2. Run `bin/audit-alignment zeitung-a4-grun --strict` and verify all 6 known issues from Phase 3b are detected.
 3. **If issues are missed:** strengthen the rules. **The rules must be generic** — they MUST work on any template, not be hardcoded with Zeitung-specific anname matches or coordinate constants. Tune by adjusting thresholds + detection logic, not by special-casing.
-4. **Visual review is permitted** for this specific verification step: comparing the audit's output against `templates/zeitung-a4-grun/page-*.png` to confirm the script catches what a human would catch. This is the only place Claude reads images in this issue.
+4. **Visual review is permitted** for this specific verification step: comparing the audit's output against `templates/zeitung-a4-grun/page-*.png` to confirm the script catches what a human would catch. Two routes available:
+   - **Codex CLI** (preferred for token-budget reasons): `codex exec` with a prompt that asks Codex to identify alignment issues in `templates/zeitung-a4-grun/page-*.png` and produce a structured list (page, type, what's wrong). Compare against `bin/audit-alignment` JSON output. Run via `issue-cli review-exec --tool codex --prompt <path> --name zeitung-alignment-audit --review-type topic --review-mode topic --output-dir reviews/`. Save Codex's report alongside the audit's report in the issue directory.
+   - **Direct Claude image read**: only as fallback if Codex disagrees with audit and a tiebreaker is needed. Limit to user-reported pages (1, 8, 10, 11, 12).
+   
+   The two outputs become the test suite for the rules — every visual issue on either list MUST be in the audit's output. If the audit misses one, strengthen the rules.
 5. **Iterate** Phase 1 + Phase 3b until the audit catches every visible alignment issue without false-positive explosion.
 6. Only then proceed to Phase 4 (fix Zeitung based on audit's findings, not pre-listed coordinates).
 7. Re-run audit after fix → must report zero error-severity violations on Zeitung.
@@ -96,7 +100,11 @@ This is TDD-for-rules: known violations are the test cases the rules must catch 
 
 ### Phase 3b — Build-detector verification gate (BEFORE Phase 4)
 
-After Phases 1+2+3 land, run `bin/audit-alignment zeitung-a4-grun --strict` and confirm it reports the following known issues. **If any are missing, return to Phase 1 and strengthen the rule until the issue is caught.** This is the build-detector-first contract.
+After Phases 1+2+3 land:
+1. Run `bin/audit-alignment zeitung-a4-grun --strict --json > reviews/audit-zeitung.json`.
+2. Run Codex visual review via `issue-cli review-exec --tool codex --prompt prompts/zeitung-visual-audit.md --name zeitung-visual --review-type topic --review-mode topic --output-dir reviews/` with a prompt that asks Codex to enumerate alignment issues per page in `templates/zeitung-a4-grun/page-*.png` (output: structured Markdown list).
+3. Cross-check: every visual issue Codex reports MUST appear in the audit JSON. If the audit misses any, strengthen the rule (Phase 1) and re-run. **Generic rules only — no Zeitung-specific anname matches or coordinate constants in the rule code.**
+4. Confirm at minimum the following known issues are detected.
 
 Required detections (from this issue's "Why" section, verified against current main):
 
