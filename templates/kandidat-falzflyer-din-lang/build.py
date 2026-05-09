@@ -54,6 +54,19 @@ LAYER_TEXT = 2
 LAYER_FALZ = 3
 
 
+# Post-#24 INJECT_MAP idiom (#19 RESEARCH §1, locked decision #1):
+# value = bare lib_id (manifest key). build_preview() reads target_w_mm /
+# target_h_mm LIVE from each frame, eliminating literal-target drift.
+# Em-dash literal U+2014 in Thema annames per RESEARCH locked #4.
+INJECT_MAP: dict[str, str] = {
+    "P1 Kandidat-Portrait":  "portrait_maria",
+    "P4 Thema 1 — Photo":    "themen_klimaschutz_solar",
+    "P4 Thema 2 — Photo":    "themen_soziales_kaffeehaus",
+    "P5 Thema 3 — Photo":    "themen_bildung_volksschule",
+    "P5 Thema 4 — Photo":    "themen_wirtschaft_handwerk",
+}
+
+
 def _top_band(panel_index: int) -> Polygon:
     """V1 universal Top-Band helper — emit 31mm Dunkelgrün Polygon for one
     of the 4 panels that get an explicit Top-Band Polygon (P1, P2, P4, P5).
@@ -330,21 +343,13 @@ def _add_front(doc, page0):
             anname="P1 Logo Grüne (weiss)",
         ))
 
-    # Kandidat-Portrait — central library reference (#13). When the library
-    # has the entry, the demo portrait is cropped to the 87×105mm frame and
-    # embedded with watermark re-applied (R-WATERMARK-CROP). On fresh
-    # checkouts without the library JPGs, the slot stays empty.
-    portrait_data, portrait_ext = (None, None)
-    portrait_img = library.load("portrait_maria", optional=True)
-    if portrait_img is not None:
-        portrait_bytes = library.crop_for_frame(
-            portrait_img, target_w_mm=87, target_h_mm=105
-        )
-        portrait_data, portrait_ext = pack_inline_image(portrait_bytes, "jpg")
+    # Kandidat-Portrait — central library reference (#13). Frame dims only;
+    # build_preview() injects the cropped image via INJECT_MAP at the LIVE
+    # frame dimensions (post-#24 idiom).
     page0.add(ImageFrame(
         x_mm=6, y_mm=28, w_mm=87, h_mm=105,
-        inline_image_data=portrait_data,
-        inline_image_ext=portrait_ext,
+        inline_image_data=None,
+        inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P1 Kandidat-Portrait",
@@ -464,27 +469,11 @@ def _add_front(doc, page0):
 
 
 def _add_back(doc, page1):
-    # Themen-photo slots (issue #13): 3 small landscape images cropped from
-    # central library. Frame aspect 87×24mm = 3.6:1 — aggressive horizontal
-    # crop from 1.5:1 source (1536×1024). library.crop_for_frame() re-applies
-    # the Symbolfoto watermark band on the cropped output (R-WATERMARK-CROP).
-    # Theme 4 (Lokale Wirtschaft) stays text-only to keep panel rhythm.
-    THEMEN_LIBRARY_IDS = {
-        "klimaschutz": "themen_klimaschutz_solar",
-        "soziales":    "themen_soziales_kaffeehaus",  # D8 fix: kaffeehaus, not gemeindebau
-        "bildung":     "themen_bildung_volksschule",
-    }
-    THEMEN_FRAME_W_MM = 87.0
-    THEMEN_FRAME_H_MM = 24.0
-
-    def _photo_inline(name):
-        img = library.load(THEMEN_LIBRARY_IDS[name], optional=True)
-        if img is None:
-            return (None, None)
-        cropped = library.crop_for_frame(
-            img, target_w_mm=THEMEN_FRAME_W_MM, target_h_mm=THEMEN_FRAME_H_MM
-        )
-        return pack_inline_image(cropped, "jpg")
+    # Themen-photo slots (issue #13): photos injected via INJECT_MAP in
+    # build_preview() — the frames here carry geometry only. Post-#24
+    # idiom: read frame dims LIVE rather than hardcoding target_w/h.
+    # Theme 4 (Lokale Wirtschaft) stays text-only in V0; T08 makes it a
+    # photo slot for V1.
 
     # ---- Panel 4 — Themen 1+2 (x=0..99) -----
     page1.add(TextFrame(
@@ -494,11 +483,10 @@ def _add_back(doc, page1):
                   paragraph_style="falzflyer/thema-headline")],
         anname="P4 Thema 1 — Headline",
     ))
-    p4_t1_data, p4_t1_ext = _photo_inline("klimaschutz")
     page1.add(ImageFrame(
         x_mm=6, y_mm=36, w_mm=87, h_mm=24,
-        inline_image_data=p4_t1_data,
-        inline_image_ext=p4_t1_ext,
+        inline_image_data=None,
+        inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 1 — Photo",
@@ -521,11 +509,10 @@ def _add_back(doc, page1):
                   paragraph_style="falzflyer/thema-headline")],
         anname="P4 Thema 2 — Headline",
     ))
-    p4_t2_data, p4_t2_ext = _photo_inline("soziales")
     page1.add(ImageFrame(
         x_mm=6, y_mm=121, w_mm=87, h_mm=24,
-        inline_image_data=p4_t2_data,
-        inline_image_ext=p4_t2_ext,
+        inline_image_data=None,
+        inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 2 — Photo",
@@ -549,11 +536,10 @@ def _add_back(doc, page1):
                   paragraph_style="falzflyer/thema-headline")],
         anname="P5 Thema 3 — Headline",
     ))
-    p5_t3_data, p5_t3_ext = _photo_inline("bildung")
     page1.add(ImageFrame(
         x_mm=105, y_mm=36, w_mm=87, h_mm=24,
-        inline_image_data=p5_t3_data,
-        inline_image_ext=p5_t3_ext,
+        inline_image_data=None,
+        inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P5 Thema 3 — Photo",
@@ -688,9 +674,10 @@ def _add_back(doc, page1):
     ))
 
 
-def build_doc() -> Document:
-    """Issue #12 D13: return constructed Document; persistence is the
-    caller's job (CLI wrapper below or structural_check)."""
+def build_template() -> Document:
+    """Return clean Document with frame definitions but NO inline image data
+    on INJECT_MAP-managed photos. structural_check + spec_check + smoke
+    consume this; build_preview() wraps it for actual rendering."""
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Kandidat-Falzflyer DIN-lang",
@@ -724,8 +711,41 @@ def build_doc() -> Document:
     return doc
 
 
+def build_preview() -> Document:
+    """Inject demo library images for gallery PNG render (#24 idiom).
+
+    Pre-crops each library image to the LIVE frame dimensions via
+    library.inject_into_frame, eliminating the literal-target drift that
+    produced regressions in earlier iters.
+    """
+    doc = build_template()
+    if not INJECT_MAP:
+        return doc
+    for page in doc.pages:
+        for item in page.items:
+            if not isinstance(item, ImageFrame):
+                continue
+            lib_id = INJECT_MAP.get(item.anname)
+            if not lib_id:
+                continue
+            img = library.load(lib_id, optional=True)
+            if img is None:
+                continue
+            library.inject_into_frame(
+                item, img,
+                target_w_mm=item.w_mm,   # LIVE frame dims (post-#24)
+                target_h_mm=item.h_mm,
+            )
+    return doc
+
+
+# Alias for structural_check / spec_check / smoke — they expect build_doc.
+# Keep this alias indefinitely; it points at the clean template (no photos).
+build_doc = build_template
+
+
 def build(out_path: str | Path = HERE / "template.sla") -> Path:
-    doc = build_doc()
+    doc = build_preview()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
