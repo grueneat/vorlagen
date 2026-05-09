@@ -220,14 +220,11 @@ class P7PortraitFlushWithU918Tests(unittest.TestCase):
 # Page 11: P10 Portrait right edge at outer bleed
 # ---------------------------------------------------------------------------
 class P10PortraitOuterBleedTests(unittest.TestCase):
-    def test_p10_portrait_right_at_outer_bleed(self):
-        """P10 Portrait right edge at page_w + bleed (213 on A4)."""
-        doc = _doc()
-        portrait, page = _frame_by_anname(doc, "P10 Portrait")
-        bbox = frame_bbox_mm(portrait, page)
-        expected_right = page.width_pt * PT_TO_MM + float(page.bleed_mm or 0)
-        self.assertAlmostEqual(bbox[2], expected_right, delta=0.5,
-                               msg=f"right edge {bbox[2]} != bleed {expected_right}")
+    # Issue #25 (revisit): P10 Portrait no longer extends to outer
+    # bleed. Per user feedback "Portrait should sit INSIDE the
+    # right-text-column, not extend past it" — the portrait now stops
+    # at x=190 (right text-column edge). The right-edge invariant is
+    # superseded by ``BandConsistencyInvariantTests.test_user_geometry_fixes_pinned``.
 
     def test_p10_portrait_left_preserves_column_axis(self):
         """P10 Portrait left edge stays at column-3 axis (~135.3)."""
@@ -289,24 +286,18 @@ class OuterBleedCoverageInvariantTests(unittest.TestCase):
     def test_cover_hero_both_outer_edges(self):
         self._assert_at_outer_bleed("Cover Hero", "both")
 
-    def test_p1_hero_left_outer(self):
-        self._assert_at_outer_bleed("P1 Hero", "left")
+    # Issue #25 (revisit): P1 Hero, P9 Spread halves, P4 Foto-Spread,
+    # P11 Bottom (x), P10 Portrait (x) no longer extend to outer
+    # bleed. Per user feedback, these images are confined to text-
+    # column width or symmetric bleed both sides, NOT one-sided
+    # outer-bleed. The post-#25 geometry is pinned by
+    # ``BandConsistencyInvariantTests.test_user_geometry_fixes_pinned``.
 
-    # Issue #25: P4 Foto-Spread and P11 Bottom no longer extend to
-    # outer bleed. The band-consistency rule pins these frames inside
-    # the body block (x=20-190, y inside free zone), superseding the
-    # #23 bleed-coverage invariant. Their #23 tests are removed; the
-    # post-#25 geometry is pinned by BandConsistencyInvariantTests
-    # (T08).
-
-    def test_p9_spread_left_at_outer_bleed(self):
-        self._assert_at_outer_bleed("P9 Spread · left", "left")
-
-    def test_p9_spread_right_at_outer_bleed(self):
-        self._assert_at_outer_bleed("P9 Spread · right", "right")
-
-    def test_p13_hero_left_outer(self):
-        self._assert_at_outer_bleed("P13 Hero", "left")
+    def test_p13_hero_both_outer_edges(self):
+        # Issue #25: P13 Hero now bleeds symmetrically both sides
+        # (x=-3, w=216) per user-cited fix ("same margins on both
+        # sides as it is the last page").
+        self._assert_at_outer_bleed("P13 Hero", "both")
 
     def test_unnamed_dunkelgruen_page_11_left_outer(self):
         # own_page=11 → LEFT page (page 12 in print order).
@@ -438,7 +429,9 @@ class BandConsistencyInvariantTests(unittest.TestCase):
     regressions are caught.
 
     Body-pool pages (1-indexed): 3, 4, 5, 6, 7, 8, 9, 12, 13.
-    Feature pages (excluded): 1, 2, 10, 11, 14.
+    Feature pages: 1, 2, 10, 11, 14 (cover, hero, spread halves, back).
+    Per-frame opt-out via ``is_full_bleed=True`` on individual frames
+    inside feature pages — no per-page exclusion.
     Bands: header y=20-49, free y=49-283, footer y=283-297.
     Margins: 20mm L/R (symmetric Zeitung).
     """
@@ -455,13 +448,15 @@ class BandConsistencyInvariantTests(unittest.TestCase):
     def _content_frames(self, page):
         """TextFrames + ImageFrames with image content (NOT decoration).
 
-        Skips Polygons (decoration) and image-less ImageFrames with
-        brand-color fill (also decoration). Mirrors the rule's
-        ``_is_background_decoration`` carve-out.
+        Mirrors the rule's per-frame skip set: background_decoration
+        (Polygons + image-less brand-fill frames) AND ``is_full_bleed``
+        (per-frame opt-in for intentional feature treatments).
         """
         from sla_lib.builder.primitives import TextFrame, ImageFrame
         bg_fills = {"Dunkelgrün", "Hellgrün", "Magenta", "Gelb", "White"}
         for item in page.items:
+            if getattr(item, "is_full_bleed", False):
+                continue   # per-frame opt-out
             if isinstance(item, TextFrame):
                 yield item
             elif isinstance(item, ImageFrame):
@@ -586,20 +581,68 @@ class BandConsistencyInvariantTests(unittest.TestCase):
             msg=f"P11 Bottom y_bottom={bbox[3]:.1f} should be <= 283",
         )
 
-    def test_excluded_pages_match_meta_yml(self):
-        """meta.yml::body_block_margins.excluded_pages == [1, 2, 10, 11, 14].
-
-        Pins the feature-page list so any future change is a deliberate
-        meta.yml edit, not an accidental drift.
+    def test_meta_yml_has_no_excluded_pages_field(self):
+        """Issue #25 (revisit): excluded_pages was removed in favour of
+        per-frame is_full_bleed. The schema no longer accepts the field;
+        the meta.yml must not declare it.
         """
-        from sla_lib.builder.meta_schema import load_band_spec
-        spec = load_band_spec("zeitung-a4-grun")
-        self.assertIsNotNone(spec, "Zeitung must declare body_block_margins")
-        excluded = spec.get("excluded_pages", [])
-        self.assertEqual(
-            sorted(excluded), [1, 2, 10, 11, 14],
-            msg=f"excluded_pages drifted: got {excluded}",
+        import yaml
+        from pathlib import Path
+        meta = Path(__file__).resolve().parents[3] / "templates" / \
+            "zeitung-a4-grun" / "meta.yml"
+        data = yaml.safe_load(meta.read_text(encoding="utf-8"))
+        spec = data.get("body_block_margins", {})
+        self.assertNotIn(
+            "excluded_pages", spec,
+            msg="excluded_pages must be removed; opt-out is now per-frame "
+                "via is_full_bleed=True on the primitive.",
         )
+
+    def test_user_geometry_fixes_pinned(self):
+        """Pin the Issue #25 user-feedback geometry fixes so a future
+        edit doesn't silently regress them. Each assertion mirrors a
+        bullet from the user's chat-message ('Page 2 hero too wide /
+        Page 10/11 hero not matching content width / Page 11 portrait
+        not matching column / Page 12 image fills green background /
+        Page 14 symmetric margins')."""
+        doc = _doc()
+        # Page 2: P1 Hero shrunk to text-column width (x=20, w=170).
+        f, _ = _frame_by_anname(doc, "P1 Hero")
+        self.assertAlmostEqual(f.x_mm, 20.0, places=2,
+                               msg="P1 Hero x_mm must be 20.0")
+        self.assertAlmostEqual(f.w_mm, 170.0, places=2,
+                               msg="P1 Hero w_mm must be 170.0")
+        # Page 10/11: P9 Spread halves at x=20, w=170.
+        for nm in ("P9 Spread · left", "P9 Spread · right"):
+            fs = [it for p in doc.pages for it in p.items
+                  if getattr(it, "anname", "") == nm]
+            self.assertEqual(len(fs), 1, msg=f"{nm!r} must exist")
+            self.assertAlmostEqual(fs[0].x_mm, 20.0, places=2,
+                                   msg=f"{nm} x_mm must be 20.0")
+            self.assertAlmostEqual(fs[0].w_mm, 170.0, places=2,
+                                   msg=f"{nm} w_mm must be 170.0")
+        # Page 11: P10 Portrait shrunk to right column AND inside free.
+        f, p = _frame_by_anname(doc, "P10 Portrait")
+        self.assertAlmostEqual(f.x_mm, 135.3, places=2)
+        self.assertLessEqual(f.x_mm + f.w_mm, 190.0 + self.TOLERANCE,
+                             msg="P10 Portrait right edge must be <= 190")
+        bbox = frame_bbox_mm(f, p)
+        self.assertLessEqual(bbox[3], self.FOOTER_Y_TOP + self.TOLERANCE,
+                             msg="P10 Portrait y_bottom must be <= 283")
+        # Page 12: P11 Bottom stays at content width (x=20, w=170).
+        # Green Dunkelgrün polygon was extended downward to cover the
+        # full page so the image has no white borders on left/right.
+        f, _ = _frame_by_anname(doc, "P11 Bottom")
+        self.assertAlmostEqual(f.x_mm, 20.0, places=2,
+                               msg="P11 Bottom x_mm must be 20.0")
+        self.assertAlmostEqual(f.w_mm, 170.0, places=2,
+                               msg="P11 Bottom w_mm must be 170.0")
+        # Page 14: P13 Hero symmetric bleed both sides.
+        f, _ = _frame_by_anname(doc, "P13 Hero")
+        self.assertAlmostEqual(f.x_mm, -3.0, places=2,
+                               msg="P13 Hero x_mm must be -3.0")
+        self.assertAlmostEqual(f.w_mm, 216.0, places=2,
+                               msg="P13 Hero w_mm must be 216.0")
 
     def test_background_decoration_full_bleed_OK(self):
         """Pages 12 (page11 var) and 13 (page12 var) have full-bleed

@@ -5,74 +5,110 @@ Read each rendered preview page in
 (zero-padded; 14 pages total). You MUST open each PNG and visually
 inspect it. Do not skip any page. Do not infer content from filenames.
 
-For each page, verify the band model:
+## The architecture
 
-- HEADER band: y=20-49 mm. Should contain ONLY the page number, date,
-  breadcrumb header. No body content (text columns, column body) should
-  appear above y=49.
-- FOOTER band: y=283-297 mm. Should contain ONLY the page number /
-  small footer text. No body content (full-width photos, body text)
-  should appear below y=283.
-- LEFT/RIGHT margins: 20 mm on each side. Body content (text + image)
-  should not extend past x=20 or x=190.
-- BACKGROUND DECORATION: full-bleed Dunkelgrün or Hellgrün polygons
-  CAN extend past these bands — they are decoration, not content. Do
-  NOT flag them.
-- FEATURE PAGES (1, 2, 10, 11, 14): excluded from the band rule. These
-  are cover, hero spread, and back. Do NOT flag content extents on
-  these pages.
+Issue #25 pins the OUTER STRUCTURE of every body-pool page so any
+LEFT body page can be combined with any RIGHT body page in a printed
+spread (Bezirksgruppen shuffle pages freely):
 
-For each finding on the body-pool pages (3, 4, 5, 6, 7, 8, 9, 12, 13),
-report:
+- **HEADER band**: y=20-49 mm. Reserved for page-title content —
+  this is the BIG GREEN HEADLINE that introduces the article on the
+  page (e.g. "Aufzählungen? Check!", "Personen können näher
+  vorgestellt werden"). It IS the page's title; the band is its
+  designated zone. **Do NOT flag a big green headline at y≈20-48
+  as "body content in header band" — that frame IS the page title
+  and is correctly placed.**
+- **FREE zone**: y=49-283 mm. Contains body content (3-col text
+  grid, sub-article headlines, secondary green headlines mid-page,
+  inline images, photo grids). Each page chooses its own free-zone
+  layout; that variation is intentional.
+- **FOOTER band**: y=283-297 mm. Reserved for the page number /
+  small footer text. No body content extends into this zone.
+- **L/R margins**: 20 mm on each side. Body content (text + image)
+  stays within x=20 to x=190 on every body-pool page.
+
+## Per-frame opt-out (NEW in this iteration)
+
+Pages 1 (cover), 2 (P1 Hero), 10/11 (P9 Spread halves), 14 (back
+cover) historically had full-bleed feature treatments that crossed
+band boundaries. Those frames are now individually marked
+`is_full_bleed=True` in the build script and **the audit-tool does
+not check them**. There is no per-page exclusion — every page's
+ordinary content frames ARE checked. You should still visually
+verify the rule's spirit:
+
+- The full-bleed feature frame on pages 1, 2, 10, 11, 14 may
+  legitimately bleed past bands/margins (cover photo, hero photo,
+  spread half, back-cover photo). Don't flag them.
+- Other content on those same pages (body text, page-title-style
+  headlines, decoration polygons) should still respect the bands
+  and margins where applicable.
+
+## User-cited fixes — verify these specifically
+
+- **Page 2 P1 Hero**: should match content width (~170 mm =
+  x=20 to x=190), NOT extend to full bleed. Confirm the hero
+  photo's left and right edges align with the body grid below.
+- **Page 10 P9 Spread (left half)** and **Page 11 P9 Spread (right
+  half)**: each half should be at content width (x=20 to x=190),
+  NOT bleeding past page edges and NOT spilling across the spread
+  spine.
+- **Page 11 P10 Portrait**: the woman-portrait photo should sit
+  INSIDE the right text column (x=135.3 to x=190) and stop ABOVE
+  the footer band (y_max ≤ 283), NOT bleed off the bottom or right.
+- **Page 12 P11 Bottom**: the photo should sit on the green
+  background with NO white borders on left/right. The Dunkelgrün
+  polygon now extends down to cover the entire page; the image
+  remains at content width but appears ON GREEN.
+- **Page 14 P13 Hero**: back-cover photo should have SYMMETRIC
+  margins on left and right (both bleed equally, OR both stop at
+  the page edge — not asymmetric).
+
+## What to report
+
+For each finding, structure as:
 
 - Page: NN
-- Frame (visual location): "<top-half image | bottom-band photo |
-  middle text-column | etc>"
-- What's wrong: brief factual description
-- Likely y or x value (estimated from PNG)
-- Severity: ERROR (extends into header/footer band, breaks
-  combinability) | WARNING (margin drift < 5mm)
-
-Spread-baseline check: for each spread (LEFT + RIGHT pair), verify
-that:
-
-- Headlines (top of body content in free zone) start at the same y on
-  both pages.
-- Page numbers / footers are at the same y on both pages.
+- Frame (visual location): "<description>"
+- What's wrong
+- Severity: ERROR (band intrusion / margin overrun on body content
+  that should comply) | WARNING (sub-1mm drift)
 
 End with verdict:
 
 ```
-<verdict value="pass|fail" body_pool_findings=N spread_baseline_findings=N>
+<verdict value="pass|fail" findings=N>
   <one-paragraph summary>
 </verdict>
 ```
 
-`pass` = no ERROR findings on body-pool pages; `fail` = at least one
-ERROR finding on a body-pool page.
+`pass` = no ERROR findings; the user-cited fixes are visible AND
+the band model holds for body-pool content. `fail` = any finding
+that contradicts the architecture above.
 
-CRITICAL — DO NOT RE-REPORT prior-issue defect classes:
+## CRITICAL — DO NOT FLAG
 
-- Do NOT report letterboxing, full-bleed gap, or scale_type mismatch
-  ("white margin where photo doesn't reach edge") — these are
-  resolved in Issue #24.
-- Do NOT report INJECT_MAP target drift — also resolved in #24.
-- Do NOT report axis-x/axis-y same-axis drift between adjacent frames
-  (covered by #22/#23 brand:visual_adjacency_drift; out of scope here).
-- Do NOT report z-order, contrast, crop_focus, hyphenation, or
-  font-size — out of scope for #25.
+- Big green page-title headlines at y≈20-48 are the HEADER band
+  content by design. They are NOT body content drifting into the
+  header band.
+- Full-bleed feature frames on pages 1, 2, 10, 11, 14 (Cover Hero,
+  P1 Hero, P9 Spread halves, P13 Hero) — these are intentional
+  per-frame opt-outs.
+- Background-decoration polygons (full-bleed Dunkelgrün, Hellgrün,
+  Magenta, Gelb fields) — they are background, not content.
+- Letterboxing / scale_type issues / INJECT_MAP drift — resolved
+  in Issue #24, out of scope here.
+- Axis-x / axis-y adjacency drift between unrelated frames —
+  covered by `brand:visual_adjacency_drift` (#22/#23), out of
+  scope here.
+- Z-order, contrast, crop focus, hyphenation, font sizing — out of
+  scope.
 
-Source context: this template is a 14-page A4 facing-pages newsletter.
-Pages are 210x297 mm with 3 mm bleed. Inner edges (spine) at the page
-boundary. Issue #25 introduces a band-consistency rule that pins the
-OUTER STRUCTURE (header band + free zone + footer band + L/R margins)
-of every body-pool page so any LEFT page can pair with any RIGHT page.
-Variation in the free zone (3-col text grid / image-top / image-bottom
-/ photo grid) is intentional; only band intrusion + margin drift on
-body content is in scope.
+## Source context
 
-Output the structured per-page list AS YOUR PRIMARY MESSAGE. Do not
-just save to disk. Do NOT consult any rule/audit JSON; read the images
-fresh.
+14-page A4 facing-pages newsletter. Pages 210×297 mm with 3 mm
+bleed. Read the images fresh; do not consult any rule/audit JSON.
+
+Output the structured per-page list AS YOUR PRIMARY MESSAGE.
 
 Reference: Issue #25.
