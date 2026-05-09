@@ -392,17 +392,42 @@ def _add_front(doc, page0):
         anname="P1 Slogan",
     ))
 
-    # ---- Panel 2 (Teaser) — x=99..198 -----
+    # ---- Panel 2 (Mein Plan) — x=99..198 — V1 Top-Band + Body-Backing ----
+    # NEW V1: P2 Top-Band — 31mm Dunkelgrün, inner panel flush both folds.
+    page0.add(_top_band(1))
+
+    # NEW V1: P2 Top-Title "Mein Plan"
     page0.add(TextFrame(
-        x_mm=105, y_mm=20, w_mm=87, h_mm=22,
+        x_mm=105, y_mm=8, w_mm=87, h_mm=14,
+        layer=LAYER_TEXT, style="falzflyer/top-title",
+        runs=[Run(text="Mein Plan",
+                  paragraph_style="falzflyer/top-title")],
+        anname="P2 Top-Title",
+    ))
+
+    # P2 Teaser-Headline — V1: y 20->38, h=22 (UNCHANGED style: redaktioneller)
+    page0.add(TextFrame(
+        x_mm=105, y_mm=38, w_mm=87, h_mm=22,
         layer=LAYER_TEXT,
         style="falzflyer/teaser-headline",
         runs=[Run(text="Was ich für Mödling will",
                   paragraph_style="falzflyer/teaser-headline")],
         anname="P2 Teaser-Headline",
     ))
+
+    # NEW V1: P2 Body-Backing — Hellgrün card backing for the teaser body.
+    page0.add(Polygon(
+        x_mm=99, y_mm=66, w_mm=99, h_mm=144,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="P2 Body-Backing",
+    ))
+
+    # P2 Teaser-Body — V1: x 105->113 (inset +8mm for breathing inside
+    # Hellgrün card), y 44->72, w 87->73, h 130 (V1 style: fcolor=White
+    # mutation; align=0 KEEP redaktioneller).
     page0.add(TextFrame(
-        x_mm=105, y_mm=44, w_mm=87, h_mm=130,
+        x_mm=113, y_mm=72, w_mm=73, h_mm=130,
         layer=LAYER_TEXT,
         style="falzflyer/teaser-body",
         runs=[Run(
@@ -421,14 +446,28 @@ def _add_front(doc, page0):
     # carries the brand identity; a second small logo competes with the
     # Body-Backing card and is redundant.
 
-    # ---- Panel 3 (Closer) — x=198..297, on Dunkelgrün --------
-    # Wahlkreuz hero (Dunkelgrün bg already provides D12 contract)
+    # ---- Panel 3 (Wahltag) — x=198..297, on vollflächig Dunkelgrün -----
+    # P3 Hintergrund polygon already added above (V0 frame, kept unchanged).
+
+    # NEW V1: P3 Top-Title "Wahltag" — Gelb override (per spec L76-80, sits
+    # within Dunkelgrün band but tagged Gelb to distinguish from White
+    # top-titles on the other panels).
+    page0.add(TextFrame(
+        x_mm=204, y_mm=8, w_mm=87, h_mm=14,
+        layer=LAYER_TEXT, style="falzflyer/top-title",
+        fcolor="Gelb",
+        runs=[Run(text="Wahltag",
+                  paragraph_style="falzflyer/top-title")],
+        anname="P3 Top-Title",
+    ))
+
+    # Wahlkreuz hero — V1: y 30->44 (UNCHANGED size 50x50)
     wahlkreuz_path = HERE.parents[1] / "shared" / "assets" / "wahlkreuz.png"
     if not wahlkreuz_path.exists():
         raise FileNotFoundError(f"Wahlkreuz asset not found at {wahlkreuz_path}")
     wk_data, wk_ext = pack_inline_image(wahlkreuz_path.read_bytes(), "png")
     page0.add(ImageFrame(
-        x_mm=222, y_mm=30, w_mm=50, h_mm=50,
+        x_mm=222, y_mm=44, w_mm=50, h_mm=50,
         inline_image_data=wk_data,
         inline_image_ext=wk_ext,
         scale_type=0,
@@ -436,9 +475,9 @@ def _add_front(doc, page0):
         layer=LAYER_BILDER,
         anname="P3 Wahlkreuz",
     ))
-    # Closer headline (white on Dunkelgrün)
+    # Closer headline — V1: y 90->100, h=32, closer-headline (mutated align=1)
     page0.add(TextFrame(
-        x_mm=204, y_mm=90, w_mm=87, h_mm=32,
+        x_mm=204, y_mm=100, w_mm=87, h_mm=32,
         layer=LAYER_TEXT,
         style="falzflyer/closer-headline",
         runs=[
@@ -449,18 +488,18 @@ def _add_front(doc, page0):
         ],
         anname="P3 Closer-Headline",
     ))
-    # Datum-Akzent (Gelb)
+    # Datum-Akzent — V1: y 125->145, h=22, closer-datum (mutated align=1)
     page0.add(TextFrame(
-        x_mm=204, y_mm=125, w_mm=87, h_mm=22,
+        x_mm=204, y_mm=145, w_mm=87, h_mm=22,
         layer=LAYER_TEXT,
         style="falzflyer/closer-datum",
         runs=[Run(text="Sonntag, 23. Mai 2026",
                   paragraph_style="falzflyer/closer-datum")],
         anname="P3 Datum-Akzent",
     ))
-    # URL
+    # URL — V1: y 175->185, h=12, closer-url (mutated align=1)
     page0.add(TextFrame(
-        x_mm=204, y_mm=175, w_mm=87, h_mm=12,
+        x_mm=204, y_mm=185, w_mm=87, h_mm=12,
         layer=LAYER_TEXT,
         style="falzflyer/closer-url",
         runs=[Run(text="gruene-moedling.at",
