@@ -38,6 +38,13 @@ brand_overrides:
       (already merged); pre-applied here to keep structural_check --all
       green during the #23 PR. Re-audit and decide fix-vs-override in
       the #17 fixup PR.
+  - id: brand:image_fills_frame
+    reason: >-
+      Scheduled for follow-up audit per #24 — image-fills-frame check
+      added in #24 surfaces letterbox/INJECT_MAP-drift class globally;
+      per-template review for fix-vs-override classification deferred
+      to follow-up issue (#25). Zeitung is the only template with
+      verified clean image-content extents post-#24.
 ci_overrides:
   non_ci_styles:
     - "wahlaufruf/headline"

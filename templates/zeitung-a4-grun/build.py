@@ -2570,45 +2570,57 @@ def build_preview():
     research/codebase.md §2.3 — conservative subset).
     """
     doc = build_template()
+    # Issue #24 fix: each entry is now ONLY the library asset id (string).
+    # Target dims are READ FROM THE FRAME at injection time (see loop
+    # below). Prior to #24 each entry was (lib_id, target_w_mm,
+    # target_h_mm) and the literal target tuples drifted out of sync
+    # with frame.w_mm / frame.h_mm after #22 T12 (spine inset) and
+    # #23 T07 (outer-bleed extension), causing rendered content to
+    # land 3-11 mm short of frame edges (white pillarbox margins on
+    # the bleed side; verified RESEARCH.md drift table — P10 worst at
+    # 11 mm). Reading live frame dims removes the drift surface
+    # entirely. brand:image_fills_frame (added in #24) catches future
+    # regressions of this class.
     INJECT_MAP = {
-        # anname → (library_id, target_w_mm, target_h_mm)
-        # Targets match the FRAME's actual w_mm post-#22 T12 spine inset
-        # (frames at right-edge=210 were inset to w=207; same on left).
-        # Misalignment between target_w_mm and frame.w_mm causes the
-        # cropped image to render larger than the frame and Scribus
-        # spills into the bleed (incl. across the spine).
-        "Cover Hero": ("themen_klimaschutz_windrad", 210, 155.6),
-        "P1 Hero": ("themen_soziales_gemeindebau", 207, 130.2),     # T12 inset
-        "P2 Mid": ("themen_bildung_volksschule", 112.3, 58),
-        "P3 Hero": ("themen_wirtschaft_handwerk", 71.7, 58.2),       # T12 inset
+        # anname -> library_id
+        "Cover Hero":          "themen_klimaschutz_windrad",
+        "P1 Hero":             "themen_soziales_gemeindebau",
+        "P2 Mid":              "themen_bildung_volksschule",
+        "P3 Hero":             "themen_wirtschaft_handwerk",
         # P4 Foto-Spread stays SINGLE-PAGE (upstream has no page-3 half).
-        "P4 Foto-Spread": ("kontext_buergerversammlung", 207, 108.1),  # T12 inset
-        "P5 Hero": ("themen_verkehr_radweg", 112.3, 84.1),
-        "P7 Portrait": ("portrait_maria", 51.3, 76.4),
+        "P4 Foto-Spread":      "kontext_buergerversammlung",
+        "P5 Hero":             "themen_verkehr_radweg",
+        "P7 Portrait":         "portrait_maria",
         # P9 Spread converted to SpreadImage in #22 T11; both halves
         # get the same source image (the SpreadImage right half uses
         # local_offset_mm=(-page_w_mm, 0) so the source image "scrolls"
         # left and the right half shows the right half of the picture —
         # single source bytes, two halves). Intentional shared PDF
         # object across pages 9+10.
-        "P9 Spread · left": ("themen_klimaschutz_solar", 210, 126.1),
-        "P9 Spread · right": ("themen_klimaschutz_solar", 210, 126.1),
-        "P10 Portrait": ("portrait_stefan", 66.6, 94.4),
-        "P11 Bottom": ("kontext_stammtisch_cafe", 207, 83.3),         # T12 inset
-        "P13 Hero": ("kontext_infostand_szene", 207, 147.4),          # T12 inset
+        "P9 Spread · left":    "themen_klimaschutz_solar",
+        "P9 Spread · right":   "themen_klimaschutz_solar",
+        "P10 Portrait":        "portrait_stefan",
+        "P11 Bottom":          "kontext_stammtisch_cafe",
+        "P13 Hero":            "kontext_infostand_szene",
     }
     for page in doc.pages:
         for frame in page.items:
             if isinstance(frame, ImageFrame) and frame.anname in INJECT_MAP:
-                lib_id, w, h = INJECT_MAP[frame.anname]
+                lib_id = INJECT_MAP[frame.anname]
                 img = library.load(lib_id, optional=True)
                 if img is None:
                     continue  # library bytes not yet generated
                 # inject_into_frame handles crop + pack + sets scale_type=0
                 # (Scribus ScaleAuto). The crop already matches the frame
                 # aspect via crop_for_frame, so RATIO=1 fills exactly.
+                # Issue #24 fix: read frame.w_mm / frame.h_mm LIVE so
+                # the injected JPEG's dims stay in lockstep with the
+                # frame extent whenever build.py edits frame geometry.
+                # No more INJECT_MAP target drift.
                 library.inject_into_frame(
-                    frame, img, target_w_mm=w, target_h_mm=h
+                    frame, img,
+                    target_w_mm=frame.w_mm,
+                    target_h_mm=frame.h_mm,
                 )
     return doc
 

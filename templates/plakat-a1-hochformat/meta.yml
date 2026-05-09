@@ -36,6 +36,13 @@ brand_overrides:
       Scheduled for follow-up audit per #23 — caption-on-photo / decorative
       overlaps audited at time of #23, not yet reviewed for fix-vs-override
       classification.
+  - id: brand:image_fills_frame
+    reason: >-
+      Scheduled for follow-up audit per #24 — image-fills-frame check
+      added in #24 surfaces letterbox/INJECT_MAP-drift class globally;
+      per-template review for fix-vs-override classification deferred
+      to follow-up issue (#25). Zeitung is the only template with
+      verified clean image-content extents post-#24.
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"

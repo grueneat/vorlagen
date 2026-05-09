@@ -1043,6 +1043,256 @@ class _VisualAdjacencyDriftRule(BrandRule):
 
 
 # ---------------------------------------------------------------------------
+# brand:image_fills_frame (Issue #24)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _ImageFillsFrameRule(BrandRule):
+    """Image content fills frame extent.
+
+    Catches the regression class where an ImageFrame's rendered-content
+    extent (computed from ``scale_type`` + ``local_scale`` + asset native
+    dims via PIL or qCompress decode) is smaller than the frame's outer
+    extent — leaving white pillarbox/letterbox margins inside the frame.
+
+    Two failure modes:
+
+      1. INJECT_MAP target drift (the post-#22/#23 Zeitung regression
+         class): ``library.inject_into_frame`` was called with a
+         ``target_w_mm/target_h_mm`` smaller than the actual
+         ``frame.w_mm/h_mm`` (e.g. literal target tuples that drifted
+         out of sync after a frame-extent edit). The cropped JPEG
+         renders at the OLD target size; the frame's outer N mm shows
+         frame ``fill`` (white).
+      2. Aspect-mismatch letterboxing on ``scale_type=1, ratio=1``
+         frames: Scribus computes ``s = min(frame_w/native_w,
+         frame_h/native_h)`` (qMin) and centers; aspect-mismatched
+         assets leave white margins on the long axis.
+
+    Severity: ``error`` if the frame's rotation-aware bbox touches the
+    page bleed (``±bleed`` on any edge), else ``warning``. The bleed-
+    touching variant is visible after print cut and counts as a fatal
+    print defect; interior letterboxing is visible but recoverable in
+    review.
+
+    Skips:
+      - Master pages (no rendered content).
+      - Image-less frames (``not (item.image or item.src or
+        item.inline_image_data)``) — solid-fill polygons-as-frames.
+        The 3 unnamed Dunkelgrün polygons on Zeitung pages 12/13/14 +
+        any other template's image-less ImageFrame.
+      - ``scale_type=1, ratio=0`` (stretch fills exactly — no letterbox
+        possible).
+
+    Tolerance: ``max(tolerance_mm, tolerance_ratio_pct/100 *
+    max(item.w_mm, item.h_mm))`` — 1% of the long side, floor 0.5 mm.
+
+    Per-template skip via
+    ``meta.yml::brand_overrides[brand:image_fills_frame]``.
+    """
+
+    tolerance_ratio_pct: float = 1.0   # 1% of longer frame side
+    tolerance_mm: float = 0.5          # absolute floor
+    # On scale_type=0, the user can deliberately render an asset at a
+    # non-unity ``local_scale`` to inset it inside a larger frame
+    # (e.g. icons/logos in an oversized hit-area). The "image fills
+    # frame" expectation only applies when the user did NOT manually
+    # downscale via local_scale. Frames whose effective local_scale
+    # diverges from 1.0 by more than this fraction are exempted.
+    # ``inject_into_frame`` always leaves local_scale=(1.0, 1.0) so
+    # the INJECT_MAP-drift class is unaffected by this carve.
+    nonunity_local_scale_threshold: float = 0.05
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            for item in page.items:
+                if not isinstance(item, ImageFrame):
+                    continue
+                # SKIP image-less ImageFrames (solid-fill polygons-as-
+                # frames). Per locked decision #3 (Issue #24).
+                has_image = bool(
+                    item.image or item.src
+                    or getattr(item, "inline_image_data", None)
+                )
+                if not has_image:
+                    continue
+                # SKIP frames where the user explicitly downscaled via
+                # local_scale (e.g. icons in oversized hit-areas, logos
+                # at intentional inset). The "fills frame" expectation
+                # only applies when local_scale ~ 1.0, which is exactly
+                # what ``inject_into_frame`` produces.
+                if item.scale_type == 0:
+                    scx, scy = item.local_scale
+                    thr = self.nonunity_local_scale_threshold
+                    if (abs(scx - 1.0) > thr or abs(scy - 1.0) > thr):
+                        continue
+                aw_px, ah_px, dpi = self._resolve_asset(item, doc)
+                if aw_px is None:
+                    violations.append(self._asset_warning(item))
+                    continue
+                rw, rh = self._rendered_extent_mm(item, aw_px, ah_px, dpi)
+                if rw is None:
+                    # scale_type=1, ratio=0 (stretch) — fills exactly.
+                    continue
+                gap_w = item.w_mm - rw
+                gap_h = item.h_mm - rh
+                long_side = max(item.w_mm, item.h_mm)
+                tol = max(
+                    self.tolerance_mm,
+                    self.tolerance_ratio_pct / 100.0 * long_side,
+                )
+                if gap_w <= tol and gap_h <= tol:
+                    continue
+                bbox = _frame_bbox_mm(item, page)
+                pw_mm = page.width_pt * PT_TO_MM
+                ph_mm = page.height_pt * PT_TO_MM
+                bleed = float(getattr(page, "bleed_mm", None) or 3.0)
+                sev = (
+                    "error"
+                    if self._is_full_bleed(bbox, bleed, pw_mm, ph_mm)
+                    else "warning"
+                )
+                ident = (item.anname
+                         or f"<unnamed y={item.y_mm:.1f}>")
+                violations.append(Violation(
+                    rule_id=self.id,
+                    severity=sev,
+                    targets=(ident,),
+                    message=(
+                        f"frame {item.anname!r} "
+                        f"({item.w_mm:.1f}x{item.h_mm:.1f}mm) renders "
+                        f"{rw:.1f}x{rh:.1f}mm — "
+                        f"{gap_w:.1f}x{gap_h:.1f}mm white margin. "
+                        f"Either: update INJECT_MAP target to "
+                        f"({item.w_mm:.3f}, {item.h_mm:.3f}); or "
+                        f"library.compute_aspect_fill(...) for "
+                        f"non-INJECT path."
+                    ),
+                ))
+        return violations
+
+    def _resolve_asset(self, item, doc):
+        """Resolve (asset_w_px, asset_h_px, dpi) for an ImageFrame.
+
+        Returns ``(None, None, 300)`` on any failure — caller emits one
+        warning per missing asset (not silent skip). Per pitfalls §1.
+        """
+        import base64
+        import struct
+        import zlib
+        from io import BytesIO
+        try:
+            from PIL import Image, ImageOps, UnidentifiedImageError
+        except ImportError:  # pragma: no cover
+            return (None, None, 300)
+        try:
+            if getattr(item, "inline_image_data", None):
+                raw = base64.b64decode(item.inline_image_data)
+                # qCompress prefix: 4-byte big-endian uncompressed-length.
+                if len(raw) < 4:
+                    return (None, None, 300)
+                _ = struct.unpack(">I", raw[:4])[0]
+                img_bytes = zlib.decompress(raw[4:])
+                im = Image.open(BytesIO(img_bytes))
+                w_px, h_px = im.size
+                dpi_pair = im.info.get("dpi", (300, 300))
+                try:
+                    dpi = int(dpi_pair[0]) or 300
+                except (TypeError, ValueError):
+                    dpi = 300
+                return (w_px, h_px, dpi)
+            img_path = item.image or item.src
+            if not img_path:
+                return (None, None, 300)
+            from pathlib import Path
+            p = Path(img_path)
+            if not p.is_absolute():
+                root = getattr(doc, "_template_root", None)
+                if root is not None:
+                    p = Path(root) / img_path
+                else:
+                    p = Path.cwd() / img_path
+            if not p.exists():
+                return (None, None, 300)
+            im = Image.open(p)
+            # Defensive: honor EXIF orientation for end-user assets.
+            try:
+                im = ImageOps.exif_transpose(im)
+            except Exception:
+                pass
+            w_px, h_px = im.size
+            dpi_pair = im.info.get("dpi", (300, 300))
+            try:
+                dpi = int(dpi_pair[0]) or 300
+            except (TypeError, ValueError):
+                dpi = 300
+            return (w_px, h_px, dpi)
+        except (FileNotFoundError, OSError, ValueError, UnidentifiedImageError):
+            return (None, None, 300)
+        except Exception:
+            return (None, None, 300)
+
+    def _rendered_extent_mm(self, item, aw_px, ah_px, dpi):
+        """Return (rendered_w_mm, rendered_h_mm) per Scribus draw matrix.
+
+        Three-branch dispatch (pitfalls §17):
+          - scale_type=0: ScaleAuto. Image renders at native_mm * LOCALSCX.
+          - scale_type=1, ratio=1: Manual + preserve aspect. qMin scale,
+            centered letterbox INSIDE the frame.
+          - scale_type=1, ratio=0: Manual stretch. Fills exactly — no
+            letterbox; return (None, None) so caller skips.
+        """
+        scx, scy = item.local_scale
+        nat_w_mm = aw_px * 25.4 / dpi
+        nat_h_mm = ah_px * 25.4 / dpi
+        if item.scale_type == 0:
+            return (nat_w_mm * scx, nat_h_mm * scy)
+        if item.scale_type == 1 and item.ratio == 1:
+            s = min(item.w_mm / nat_w_mm, item.h_mm / nat_h_mm)
+            return (nat_w_mm * s, nat_h_mm * s)
+        # scale_type=1, ratio=0 → stretch fills.
+        return (None, None)
+
+    def _is_full_bleed(self, bbox, bleed, pw_mm, ph_mm) -> bool:
+        """True if any bbox edge is within 0.5mm of the page bleed.
+
+        Uses the rotation-aware bbox from ``frame_bbox_mm`` — never raw
+        ``item.x_mm + item.w_mm``. Per pitfalls §7.
+        """
+        if bbox is None:
+            return False
+        x0, y0, x1, y1 = bbox
+        # Outer-bleed edges: x=-bleed (left), x=pw+bleed (right),
+        # y=-bleed (top), y=ph+bleed (bottom). Frame edges at x=0 / pw
+        # are NOT outer-bleed; only frames extending into ±bleed count.
+        eps = 0.5
+        if x0 <= -bleed + eps:
+            return True
+        if x1 >= pw_mm + bleed - eps:
+            return True
+        if y0 <= -bleed + eps:
+            return True
+        if y1 >= ph_mm + bleed - eps:
+            return True
+        return False
+
+    def _asset_warning(self, item):
+        ident = item.anname or f"<unnamed y={item.y_mm:.1f}>"
+        return Violation(
+            rule_id=self.id,
+            severity="warning",
+            targets=(ident,),
+            message=(
+                f"asset missing/corrupt for {item.anname!r} "
+                f"(image={item.image!r}); cannot verify "
+                f"image_fills_frame"
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Module-level rule registry
 # ---------------------------------------------------------------------------
 def _make_rule(cls, **kwargs) -> BrandRule:
@@ -1167,5 +1417,27 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
             "warning-only by default."
         ),
         severity="warning",
+    ),
+    _make_rule(
+        _ImageFillsFrameRule,
+        id="brand:image_fills_frame",
+        name="Image content fills frame extent",
+        description=(
+            "Each ImageFrame's rendered-content extent (computed from "
+            "scale_type + local_scale + asset native dims) must reach "
+            "the frame's outer extent within tolerance (1%% of long "
+            "side, floor 0.5mm). Catches INJECT_MAP target drift after "
+            "frame extents change (the post-#22/#23 Zeitung regression "
+            "class) and aspect-mismatch letterboxing on "
+            "scale_type=1+ratio=1. Severity ERROR for full-bleed frames "
+            "(rotation-aware bbox touches +/-bleed); WARNING otherwise. "
+            "Image-less frames (solid-fill polygons) are skipped. "
+            "Per-template skip via "
+            "meta.yml::brand_overrides[brand:image_fills_frame]."
+        ),
+        # Per-violation severity is computed dynamically in check() via
+        # _is_full_bleed. Registry severity is "error" so any violation
+        # that escapes the bleed-carve still fails structural_check.
+        severity="error",
     ),
 ]

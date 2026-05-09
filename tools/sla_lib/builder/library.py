@@ -500,6 +500,49 @@ def inject_into_frame(
     frame.scale_type = 0
 
 
+def compute_aspect_fill(
+    frame_w_mm: float,
+    frame_h_mm: float,
+    asset_w_px: int,
+    asset_h_px: int,
+    dpi: int = 300,
+) -> tuple[float, float]:
+    """Return (local_scale_x, local_scale_y) for aspect-FILL ("cover") at scale_type=0.
+
+    Scribus has no native "fill / cover" image mode (Mantis #15448 still
+    open as of 2026-05). Templates that don't use ``inject_into_frame``
+    (which crops the asset to the frame aspect via ``crop_for_frame`` and
+    sidesteps the issue) can use this helper to compute LOCALSCX/SCY for
+    an aspect-fill render at ``scale_type=0``.
+
+    Returns the SAME scalar in both components (qMax of the per-axis
+    scale ratios). The image will then OVERFLOW the frame on its long
+    axis; pair with appropriate ``local_offset_mm`` to choose the crop
+    window — but BEWARE pitfall #14 from #22 RESEARCH (DSL unit bug at
+    LOCALSCX != 1: ``local_offset_mm`` is mm at LOCALSCX=1, not mm of
+    frame translation). Issue #24 does NOT use this helper for Zeitung
+    (locked decision #8); Zeitung uses ``inject_into_frame`` which
+    pre-crops to the frame aspect.
+
+    Args:
+        frame_w_mm: Target frame width in mm.
+        frame_h_mm: Target frame height in mm.
+        asset_w_px: Source image native width in pixels.
+        asset_h_px: Source image native height in pixels.
+        dpi: Assumed JFIF density of the source. Default 300 matches
+            ``crop_for_frame``'s output.
+
+    Returns:
+        ``(s, s)`` where
+        ``s = max(frame_w_mm / asset_w_mm_at_dpi,
+                  frame_h_mm / asset_h_mm_at_dpi)``.
+    """
+    asset_w_mm = asset_w_px * 25.4 / dpi
+    asset_h_mm = asset_h_px * 25.4 / dpi
+    s = max(frame_w_mm / asset_w_mm, frame_h_mm / asset_h_mm)
+    return (s, s)
+
+
 def regenerate(id: str, *, force: bool = False, max_attempts: int = 5) -> bool:
     """Re-run codex generation for a library image based on its manifest prompt.
 

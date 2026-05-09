@@ -118,7 +118,11 @@ class CliTests(unittest.TestCase):
         with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as f:
             tmp = f.name
         try:
-            rc = main(["zeitung-a4-grun", "--md", tmp])
+            # Disable image-extent check: this template carries known
+            # pre-#24 INJECT_MAP-drift findings until T05 lands.
+            rc = main([
+                "zeitung-a4-grun", "--md", tmp, "--no-check-image-extent",
+            ])
             self.assertEqual(rc, 0)
             content = Path(tmp).read_text(encoding="utf-8")
             self.assertTrue(content.startswith("# audit_alignment"))
@@ -137,6 +141,113 @@ class CliTests(unittest.TestCase):
                     p.exists(),
                     msg=f"missing {p}: cwd files = {list(Path(tmp).iterdir())}",
                 )
+
+
+# ---------------------------------------------------------------------------
+# Issue #24: image-extent audit channel
+# ---------------------------------------------------------------------------
+def _doc_with_undersized_inline_image():
+    """One-page A4 doc with one ImageFrame holding a 95mm-wide JPEG on a
+    100x100mm frame — produces a 5mm gap_w letterbox warning."""
+    from io import BytesIO
+    from PIL import Image
+    from sla_lib.builder.primitives import pack_inline_image
+
+    im = Image.new("RGB", (
+        int(round(95.0 * 300 / 25.4)),    # 1122
+        int(round(100.0 * 300 / 25.4)),   # 1181
+    ), (200, 200, 200))
+    buf = BytesIO()
+    im.save(buf, format="JPEG", quality=80, dpi=(300, 300))
+    data, _ = pack_inline_image(buf.getvalue(), "jpg")
+
+    d = Document(title="t", template_id="t")
+    d.add_page(size="A4")
+    d.pages[0].add(ImageFrame(
+        x_mm=50, y_mm=50, w_mm=100, h_mm=100,
+        inline_image_data=data, inline_image_ext="jpg",
+        scale_type=0, anname="undersized_hero",
+    ))
+    return d
+
+
+class ImageExtentAuditTests(unittest.TestCase):
+    def test_audit_doc_emits_image_extent_warnings_when_jpeg_undersized(self):
+        """Synthetic doc + undersized inline JPEG -> 1 image_extent_warnings entry."""
+        d = _doc_with_undersized_inline_image()
+        rep = _audit_doc(
+            d, constraints=[],
+            axis_tol_mm=DEFAULTS["axis_tol_mm"],
+            adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+        )
+        self.assertEqual(len(rep.pages), 1)
+        warns = rep.pages[0].image_extent_warnings
+        self.assertEqual(len(warns), 1, msg=f"got: {warns}")
+        # Warning should contain the severity prefix and the gap text.
+        self.assertIn("[WARNING]", warns[0])
+        self.assertIn("white margin", warns[0])
+        # _report_has_findings must surface this as a finding.
+        from audit_alignment import _report_has_findings
+        self.assertTrue(_report_has_findings(rep))
+
+    def test_audit_doc_skips_check_when_disabled(self):
+        """check_image_extent=False -> no image_extent_warnings entries."""
+        d = _doc_with_undersized_inline_image()
+        rep = _audit_doc(
+            d, constraints=[],
+            axis_tol_mm=DEFAULTS["axis_tol_mm"],
+            adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+            check_image_extent=False,
+        )
+        self.assertEqual(rep.pages[0].image_extent_warnings, [])
+        # And the report has no findings either.
+        from audit_alignment import _report_has_findings
+        self.assertFalse(_report_has_findings(rep))
+
+    def test_cli_no_check_image_extent_flag_disables_rule(self):
+        """`--no-check-image-extent` skips invocation of the rule —
+        the JSON output must have empty image_extent_warnings on every
+        page, even on Zeitung pre-T05 (which has 7 INJECT_MAP-drift
+        findings when the rule IS invoked)."""
+        import io, contextlib, json as _json
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = main([
+                "zeitung-a4-grun", "--no-check-image-extent", "--json",
+            ])
+        # rc may be 0 or 1 depending on existing #23 visual_adjacency_drift
+        # suspicious_pairs (out of scope for this test); we only care that
+        # image_extent_warnings is empty on every page.
+        self.assertIn(rc, (0, 1))
+        d = _json.loads(buf.getvalue())
+        for page in d.get("pages", []):
+            self.assertEqual(page.get("image_extent_warnings", []), [])
+
+    def test_cli_check_image_extent_default_includes_field(self):
+        """With default flags, every page in Zeitung's JSON output
+        must have an image_extent_warnings list (possibly empty post-T05
+        or non-empty pre-T05)."""
+        import io, contextlib, json as _json
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            main(["zeitung-a4-grun", "--json"])
+        d = _json.loads(buf.getvalue())
+        for page in d.get("pages", []):
+            self.assertIn("image_extent_warnings", page)
+            self.assertIsInstance(page["image_extent_warnings"], list)
+
+    def test_json_output_includes_image_extent_warnings_field(self):
+        """Per-page JSON dict contains an image_extent_warnings list."""
+        d = _doc_with_undersized_inline_image()
+        rep = _audit_doc(
+            d, constraints=[],
+            axis_tol_mm=DEFAULTS["axis_tol_mm"],
+            adjacency_tol_mm=DEFAULTS["adjacency_tol_mm"],
+        )
+        out = report_to_json(rep)
+        self.assertIn("pages", out)
+        self.assertIn("image_extent_warnings", out["pages"][0])
+        self.assertEqual(len(out["pages"][0]["image_extent_warnings"]), 1)
 
 
 if __name__ == "__main__":  # pragma: no cover

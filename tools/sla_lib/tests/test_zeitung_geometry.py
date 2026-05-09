@@ -42,6 +42,79 @@ def _load_zeitung_doc():
     return mod.build_doc()
 
 
+def _load_zeitung_preview_doc():
+    """Load templates/zeitung-a4-grun/build.py and call build_preview().
+
+    Different from _load_zeitung_doc which calls build_doc() (the clean
+    end-user variant with empty inline_image_data on every photo frame).
+    build_preview() runs the INJECT_MAP loop, populating inline JPEGs
+    sized to live frame.w_mm / frame.h_mm at injection time (Issue #24
+    fix). Required for ImageContentExtentInvariantTests below.
+    """
+    build_py = ROOT / "templates" / "zeitung-a4-grun" / "build.py"
+    spec = importlib.util.spec_from_file_location(
+        "zeitung_build_preview", build_py,
+    )
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.build_preview()
+
+
+def _content_extent_mm(frame):
+    """Compute (rendered_w_mm, rendered_h_mm) of a frame's inline image.
+
+    Decodes the qCompress-encoded inline_image_data (reverse of
+    primitives.py::pack_inline_image), reads PIL native dims + JFIF
+    density, returns rendered mm per Scribus draw matrix:
+
+      - scale_type=0: nat_mm * local_scale (the inject_into_frame path).
+      - scale_type=1, ratio=1: centred letterbox INSIDE; qMin scale.
+      - scale_type=1, ratio=0: stretch fills exactly (returns frame mm).
+    """
+    import base64
+    import struct
+    import zlib
+    from io import BytesIO
+    from PIL import Image
+    if not frame.inline_image_data:
+        raise AssertionError(
+            f"frame {frame.anname!r} has no inline_image_data — "
+            "ImageContentExtentInvariantTests requires build_preview() "
+            "output (Issue #24 INJECT_MAP loop)."
+        )
+    raw = base64.b64decode(frame.inline_image_data)
+    _ = struct.unpack(">I", raw[:4])[0]   # uncompressed-length prefix
+    img_bytes = zlib.decompress(raw[4:])
+    im = Image.open(BytesIO(img_bytes))
+    w_px, h_px = im.size
+    dpi_pair = im.info.get("dpi", (300, 300))
+    try:
+        dpi = int(dpi_pair[0]) or 300
+    except (TypeError, ValueError):
+        dpi = 300
+    scx, scy = frame.local_scale
+    if frame.scale_type == 0:
+        return (w_px * 25.4 / dpi * scx, h_px * 25.4 / dpi * scy)
+    if frame.scale_type == 1 and frame.ratio == 1:
+        nat_w_mm = w_px * 25.4 / dpi
+        nat_h_mm = h_px * 25.4 / dpi
+        s = min(frame.w_mm / nat_w_mm, frame.h_mm / nat_h_mm)
+        return (nat_w_mm * s, nat_h_mm * s)
+    # scale_type=1, ratio=0: stretch fills exactly.
+    return (frame.w_mm, frame.h_mm)
+
+
+_PREVIEW_DOC = None
+
+
+def _preview_doc():
+    global _PREVIEW_DOC
+    if _PREVIEW_DOC is None:
+        _PREVIEW_DOC = _load_zeitung_preview_doc()
+    return _PREVIEW_DOC
+
+
 def _frame_by_anname(doc, anname):
     """Return (item, page). Raises if not found in non-master pages."""
     for page in doc.pages:
@@ -273,6 +346,83 @@ class Page9TextColumnsAboveGreenCardTests(unittest.TestCase):
         col, p_c = _frame_by_anname(doc, "Kopie von u2da1 (16)")
         col_bottom = frame_bbox_mm(col, p_c)[3]
         self.assertLess(col_bottom, green_top - 0.5)
+
+
+# ---------------------------------------------------------------------------
+# Issue #24: ImageContentExtentInvariantTests
+# ---------------------------------------------------------------------------
+class ImageContentExtentInvariantTests(unittest.TestCase):
+    """For each fixed photo frame, rendered content extent ~= frame extent.
+
+    Pinning style: relationship-pinning per #23 locked decision #7
+    (and #24 locked decision #5). assertAlmostEqual with delta=0.5 mm.
+
+    Excludes the 2 SpreadImage halves (P9 left/right) — they're
+    SpreadImage primitives whose rendered-content extent uses a
+    half-page offset_mm trick (see SpreadImage.emit math). The
+    inject_into_frame path still applies (build_preview runs INJECT_MAP
+    over them too) so they ARE in INJECT_MAP, but the rendered-content
+    invariant for SpreadImage halves is NOT "rendered ~ frame extent"
+    — it's "rendered ~ 2 * page_w_mm" (the full spread). Exclude them
+    here; the SpreadImage geometry contract is pinned in
+    test_spread_image.py.
+
+    Excludes the 3 unnamed Dunkelgrün polygons on Zeitung pages
+    12/13/14 — they're solid-fill image-less ImageFrames (the rule
+    in #24 also skips them per locked decision #3); they have no
+    inline_image_data so _content_extent_mm would raise.
+
+    These 10 tests would FAIL on the pre-#24 INJECT_MAP literal-
+    target state (7 of 10 frames had gap_w >= 3mm per RESEARCH.md
+    root-cause table); they pass post-T05+T06.
+    """
+
+    def _assert_fills_frame(self, anname, tol_mm=0.5):
+        doc = _preview_doc()
+        item, _page = _frame_by_anname(doc, anname)
+        rw, rh = _content_extent_mm(item)
+        self.assertAlmostEqual(
+            rw, item.w_mm, delta=tol_mm,
+            msg=(f"{anname}: rendered_w {rw:.3f} != frame_w "
+                 f"{item.w_mm:.3f} (gap {item.w_mm - rw:.3f} mm > "
+                 f"tol {tol_mm} mm)"),
+        )
+        self.assertAlmostEqual(
+            rh, item.h_mm, delta=tol_mm,
+            msg=(f"{anname}: rendered_h {rh:.3f} != frame_h "
+                 f"{item.h_mm:.3f} (gap {item.h_mm - rh:.3f} mm > "
+                 f"tol {tol_mm} mm)"),
+        )
+
+    def test_cover_hero_fills_frame(self):
+        self._assert_fills_frame("Cover Hero")
+
+    def test_p1_hero_fills_frame(self):
+        self._assert_fills_frame("P1 Hero")
+
+    def test_p2_mid_fills_frame(self):
+        self._assert_fills_frame("P2 Mid")
+
+    def test_p3_hero_fills_frame(self):
+        self._assert_fills_frame("P3 Hero")
+
+    def test_p4_foto_spread_fills_frame(self):
+        self._assert_fills_frame("P4 Foto-Spread")
+
+    def test_p5_hero_fills_frame(self):
+        self._assert_fills_frame("P5 Hero")
+
+    def test_p7_portrait_fills_frame(self):
+        self._assert_fills_frame("P7 Portrait")
+
+    def test_p10_portrait_fills_frame(self):
+        self._assert_fills_frame("P10 Portrait")
+
+    def test_p11_bottom_fills_frame(self):
+        self._assert_fills_frame("P11 Bottom")
+
+    def test_p13_hero_fills_frame(self):
+        self._assert_fills_frame("P13 Hero")
 
 
 if __name__ == "__main__":  # pragma: no cover
