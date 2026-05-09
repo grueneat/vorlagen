@@ -22,7 +22,6 @@ CLI:
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import sys
 from dataclasses import dataclass, field
@@ -99,27 +98,9 @@ class TemplateReport:
 
 
 # ---------------------------------------------------------------------------
-# Template loader
+# Template loader (extracted to template_loader.py — Issue #22 / decision #7)
 # ---------------------------------------------------------------------------
-def _load_build_module(slug: str, root: Path = _REPO_ROOT):
-    """Load templates/<slug>/build.py via importlib (with full package path).
-
-    We use importlib.util.spec_from_file_location with a unique module
-    name to avoid sys.modules cross-contamination when --all iterates.
-    """
-    p = root / "templates" / slug / "build.py"
-    if not p.exists():
-        raise FileNotFoundError(f"template build.py not found: {p}")
-    mod_name = f"_strcheck_template_{slug.replace('-', '_')}"
-    # Drop any cached module so re-imports always re-evaluate.
-    sys.modules.pop(mod_name, None)
-    spec = importlib.util.spec_from_file_location(mod_name, p)
-    if spec is None or spec.loader is None:  # pragma: no cover
-        raise ImportError(f"cannot create import spec for {p}")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[mod_name] = mod
-    spec.loader.exec_module(mod)
-    return mod
+from .template_loader import load_build_module as _load_build_module  # noqa: E402,F401
 
 
 def _violation_to_issue(v, default_rule_id: str) -> CheckIssue:
