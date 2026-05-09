@@ -40,6 +40,9 @@ _BRAND_OVERRIDE_SCHEMA: dict = {
 }
 
 
+_SLA_DIFF_STRICT_SCHEMA: dict = {"type": "boolean"}
+
+
 def _meta_path(slug: str, root: Path | None = None) -> Path:
     if root is None:
         root = Path(__file__).resolve().parents[3]
@@ -66,6 +69,33 @@ def load_brand_overrides(slug: str, root: Path | None = None) -> set[str]:
     if overrides is None:
         return set()
     return _validate_and_collect_ids(overrides, p)
+
+
+def load_sla_diff_strict(slug: str, root: Path | None = None) -> bool:
+    """Return per-template ``sla_diff_strict`` flag (default True).
+
+    Templates that intentionally diverge from their upstream SLA opt out
+    by setting ``sla_diff_strict: false`` at the top level of meta.yml.
+    Used by ``tools/render_pipeline.py::_run_sla_diff_strict`` to skip
+    the strict round-trip diff for opted-out templates (issue #16).
+    """
+    p = _meta_path(slug, root)
+    if not p.exists():
+        return True
+    try:
+        data = yaml.safe_load(p.read_text(encoding="utf-8"))
+    except yaml.YAMLError as e:
+        raise ValueError(f"meta.yml at {p} is not valid YAML: {e}") from e
+    if not isinstance(data, dict) or "sla_diff_strict" not in data:
+        return True
+    value = data["sla_diff_strict"]
+    try:
+        jsonschema.validate(instance=value, schema=_SLA_DIFF_STRICT_SCHEMA)
+    except jsonschema.ValidationError as e:
+        raise ValueError(
+            f"meta.yml sla_diff_strict at {p} must be a boolean: {e.message}"
+        ) from e
+    return bool(value)
 
 
 def _validate_and_collect_ids(overrides: Any, path: Path) -> set[str]:

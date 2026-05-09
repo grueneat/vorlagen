@@ -162,16 +162,79 @@ class PlakatRoundTrip(unittest.TestCase):
 
 class ZeitungRoundTrip(unittest.TestCase):
     """Zeitung reproduction: 14 pages, 140 frames, 14 linked chains, 23 styles,
-    12 var pgno, 86 FRTYPE=3 paths, 6 inline images, 2 master pages, facing-pages."""
+    12 var pgno, 86 FRTYPE=3 paths, 6 inline images, 2 master pages, facing-pages.
+
+    Issue #16: zeitung intentionally diverges from the upstream original SLA at
+    two frames (build.py:1802 P9 Spread; build.py:2061 unnamed page-12 polygon
+    moved to page12). The committed build.py therefore no longer round-trips
+    byte-stable against ``gruene-zeitung-vorlage-original.sla`` — see the
+    template's meta.yml::sla_diff_strict=false and the README divergence note.
+    The committed-build round-trip test below tolerates the two known frame-move
+    criticals; ``ZeitungConverterFreshRun`` (further down) keeps validating the
+    converter's bootstrap path stays clean against the unmodified original.
+    """
 
     TEMPLATE_DIR = ROOT / "templates" / "zeitung-a4-grun"
     ORIGINAL = ROOT / "gruene-zeitung-vorlage-original.sla"
 
+    # Issue #16: criticals + drift warnings on these OwnPages are intentional
+    # — the two moved frames change the per-page item count and PTYPE/FRTYPE
+    # sequence on pages 11 and 12 (0-indexed) and shift the matched-by-position
+    # PAGEOBJECT indices, surfacing as position-/size-drift warnings on the
+    # adjacent objects. The Frame A move on page 9 (P9 Spread x=210→0) shows
+    # up as a single XPOS drift on PAGEOBJECT[89] OwnPage=9. Anything outside
+    # this allow-list is a real round-trip regression and must fail the test.
+    _ALLOWED_CRITICAL_OWNPAGES = ("11", "12")
+    _ALLOWED_DRIFT_OWNPAGES = ("9", "11", "12")
+    _DRIFT_WARNING_CODES = (
+        "position-drift",
+        "size-drift",
+        # Knock-on warnings from positional re-matching of shifted frames
+        # within pages 11 / 12 (per-paragraph override and ITEXT content
+        # mismatches against neighbouring objects):
+        "para-attr-value-mismatch",
+        "storytext-element-attr-value-mismatch",
+    )
+
+    def _critical_path_ownpage(self, issue) -> str | None:
+        """Extract the OwnPage segment from an issue path, or None.
+
+        sla_diff issue paths look like ``PAGEOBJECT[107] OwnPage=11 .PTYPE``;
+        we slice out the digit string after ``OwnPage=`` so we can allow-list
+        the two pages that issue #16 intentionally diverged on.
+        """
+        path = issue.path or ""
+        marker = "OwnPage="
+        idx = path.find(marker)
+        if idx < 0:
+            return None
+        rest = path[idx + len(marker):]
+        # Stop at the next space or bracket (path is space-separated tokens).
+        end = len(rest)
+        for i, ch in enumerate(rest):
+            if ch in (" ", ".", "[", "]"):
+                end = i
+                break
+        return rest[:end] or None
+
     def test_diff_against_original_clean(self):
         sla = _run_build(self.TEMPLATE_DIR / "build.py")
         report = _diff_clean(self.ORIGINAL, sla)
-        self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
-                         msg=f"critical: {[i.short() for i in report.issues if i.severity == sla_diff.SEVERITY_CRITICAL]}")
+        # Issue #16: filter out criticals on the two intentionally diverged
+        # pages. Anything on a different page is a real regression.
+        criticals_off_allowed_pages = [
+            i for i in report.issues
+            if i.severity == sla_diff.SEVERITY_CRITICAL
+            and self._critical_path_ownpage(i) not in self._ALLOWED_CRITICAL_OWNPAGES
+        ]
+        self.assertEqual(
+            criticals_off_allowed_pages, [],
+            msg=(
+                f"unexpected criticals outside the issue #16 allowed pages "
+                f"({self._ALLOWED_CRITICAL_OWNPAGES}): "
+                f"{[i.short() for i in criticals_off_allowed_pages]}"
+            ),
+        )
         # build.py now uses brand=Brand.gruene_noe() which injects ci/* paragraph
         # styles, the 4-layer brand stack (Hintergrund/Bilder/Text/Hilfslinien),
         # and the full 7-color palette. Zeitung's original SLA carries a single
@@ -191,6 +254,14 @@ class ZeitungRoundTrip(unittest.TestCase):
                 i.code in ("extra-style", "extra-layer")
                 or (i.code == "extra-color" and i.right in _BRAND_COLOR_NAMES)
                 or (i.code == "missing-layer" and i.left in _LEGACY_LAYER_NAMES)
+                # Issue #16: tolerate drift on the two intentionally diverged
+                # pages (the frame moves shift positional matching for
+                # neighbouring objects on the same OwnPage) and the single
+                # XPOS drift on the moved P9 Spread frame itself (page 9).
+                or (
+                    i.code in self._DRIFT_WARNING_CODES
+                    and self._critical_path_ownpage(i) in self._ALLOWED_DRIFT_OWNPAGES
+                )
             )
         ]
         self.assertEqual(non_brand_warnings, [],

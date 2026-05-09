@@ -16,7 +16,15 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 9e914ec9e9473d3ea68d6a57d70bd2d2a4b23dec5eb25f39e203cbba8755437e
+previews_for_sla: c0a3900920e100b0c75e98b2b8d136f08067250edd09f6510353a3893ebda96f
+
+# Issue #16 — this template intentionally diverges from gruene-zeitung-
+# vorlage-original.sla at two frames (build.py:1802 P9 Spread, build.py:2061
+# unnamed page-12 polygon — both authoring drift in the upstream Scribus
+# original). Strict round-trip diff is opted out here; the divergence is
+# documented in this template's README.md and gated by render_pipeline.py
+# honouring this flag.
+sla_diff_strict: false
 
 # Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
 brand_overrides:
@@ -30,10 +38,13 @@ brand_overrides:
       trip diff is the byte-stable contract.
   - id: brand:inside_page
     reason: >-
-      Two frames (P9 Spread at build.py:1802-1811, unnamed page-12 image
-      at 2061-2071) overflow the right page edge by >200 mm — tracked in
-      issue #16. This override silences the rule globally for zeitung
-      until #16 lands the SpreadImage migration.
+      Residual after issue #16: the rotated cover-page polygon `u2950`
+      (build.py:246-256, 148.6×220.5 mm at (216.41, 155.57), rotation 90°,
+      fill Dunkelgrün) overflows the page bottom by ~4.17 mm — its
+      rotation-aware bbox extends below y=300. Tracked separately in
+      GH #39. Removing this override requires resolving #39 first
+      (do not delete pre-emptively — `structural_check --all` will go
+      red).
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"

@@ -4,10 +4,12 @@ All tests are Scribus-free: they operate on hand-crafted byte strings and
 synthetic YAML fixtures. No subprocess calls to xvfb-run or Scribus.
 """
 import hashlib
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 # Ensure tools/ is on the import path.
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools"))
@@ -15,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools"))
 from render_pipeline import (  # noqa: E402
     EPOCH_DATE,
     FIXED_PDF_ID,
+    _run_sla_diff_strict,
     _scrub_pdf_metadata,
     _select_render_source,
     _sha256_of,
@@ -297,6 +300,32 @@ class SelectRenderSourceTests(unittest.TestCase):
                 _select_render_source(tdir),
                 tdir / "template.sla",
             )
+
+
+class SlaDiffStrictGateTests(unittest.TestCase):
+    """Issue #16 / T02: per-template opt-out for the strict round-trip diff."""
+
+    def test_skips_when_meta_opts_out(self) -> None:
+        meta = {
+            "id": "fake",
+            "original_sla": "../../fake.sla",
+            "sla_diff_strict": False,
+        }
+        with patch("subprocess.run") as mock_run:
+            rc = _run_sla_diff_strict("fake", Path("/tmp/fake-tdir"), meta)
+        self.assertEqual(rc, 0)
+        mock_run.assert_not_called()
+
+    def test_runs_when_flag_absent(self) -> None:
+        meta = {"id": "fake", "original_sla": "../../fake.sla"}
+        fake_result = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+        with patch("subprocess.run", return_value=fake_result) as mock_run:
+            rc = _run_sla_diff_strict("fake", Path("/tmp/fake-tdir"), meta)
+        self.assertEqual(rc, 0)
+        self.assertEqual(mock_run.call_count, 1)
+        self.assertIn("--strict", mock_run.call_args.args[0])
 
 
 if __name__ == "__main__":

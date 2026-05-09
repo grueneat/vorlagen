@@ -387,6 +387,13 @@ def _run_sla_diff_strict(tid: str, tdir: Path, meta: dict) -> int:
     if not original_rel:
         print(f"[{tid}] skipping sla_diff — no original_sla in meta.yml", file=sys.stderr)
         return 0
+    if not meta.get("sla_diff_strict", True):
+        print(
+            f"[{tid}] skipping strict sla_diff — meta.yml::sla_diff_strict=false "
+            f"(template intentionally diverges from upstream; see issue #16)",
+            file=sys.stderr,
+        )
+        return 0
     original_abs = (tdir / original_rel).resolve()
     template_sla = tdir / "template.sla"
     r = subprocess.run(
