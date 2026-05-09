@@ -49,6 +49,32 @@ python3 templates/zeitung-a4-grun/build.py
 
 Wer das Layout strukturell ändern will (z.B. neue Beispielseite, Master-Page-Anpassung) editiert `build.py` und re-generiert. Wer nur Inhalte ändert oder eine konkrete Ausgabe baut, arbeitet direkt in Scribus an der `template.sla`.
 
+## Bekannte Abweichungen vom Original-SLA
+
+`gruene-zeitung-vorlage-original.sla` enthält zwei Bildrahmen, die der
+Scribus-Autor versehentlich um 210 mm nach rechts (auf den Off-Page-
+Scratch-Canvas) plaziert hat — sie rendern im Original-PDF nichts
+Sichtbares (verifiziert via `pdfimages -list`):
+
+- `P9 Spread` (build.py:1802, war `x_mm=210` auf `page9`) → korrigiert
+  auf `x_mm=0` auf derselben Seite. `anname` bleibt erhalten, damit
+  `INJECT_MAP` und `CONSTRAINTS` weiter aufgelöst werden. Issue #16.
+- Unbenannter Vollseiten-Dunkelgrün-Rahmen (build.py:2061, war
+  `page11.add(...)` mit `x_mm=210`) → verschoben zu `page12.add(...)`
+  mit `x_mm=0` (gedruckte Seite 13, dem ursprünglich gemeinten Ziel).
+  Issue #16.
+
+Daher weicht `template.sla` an diesen zwei Stellen bewusst vom
+Original-SLA ab. Der Round-Trip-Check `tools/sla_diff.py --strict`
+ist für diese Vorlage entsprechend deaktiviert
+(`meta.yml::sla_diff_strict: false`); `tools/render_pipeline.py`
+überspringt den Strict-Diff für Templates mit diesem Flag.
+
+Eine dritte, davon unabhängige Überfüllung — der gedrehte
+Cover-Polygon `u2950` (build.py:246-256, ~4.17 mm Bottom-Overshoot) —
+bleibt vorerst durch den `brand_overrides[brand:inside_page]`-Eintrag
+abgedeckt und wird in GH #39 separat behoben.
+
 ## Brand
 
 Alle Farben und Schriften referenzieren `shared/ci.yml`. Direkt-Edits an Stilen in der SLA werden vom CI-Validator (`tools/check_ci.py`) als Drift gemeldet.
