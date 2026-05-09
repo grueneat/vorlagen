@@ -509,7 +509,43 @@ Vertrag; Spec-Prosa ist menschliche Erläuterung des Vertrags.
   pro Seite einer Doppelseite, sodass das Quellbild als kontinuierliches
   Bild über zwei Seiten hinweg gerendert wird. Rechte Hälfte verwendet
   `local_offset_mm=(-page_w_mm, 0)` (negativ!). Ersetzt das heute defekte
-  Muster `ImageFrame(x=page_w, w=page_w)`.
+  Muster `ImageFrame(x=page_w, w=page_w)`. Anname-Suffix
+  ` · (left|right)` ist load-bearing — `brand:spine_safety` (Issue #22)
+  exempted SpreadImage-Hälften via diesem Pattern.
+
+### Neue Brand-Regeln (Issue #22)
+
+- **`brand:spine_safety`** (warning) — On `facing_pages=True` Dokumenten
+  warnt die Regel, wenn ein Non-SpreadImage-Frame mit seiner Rücken-Seite
+  innerhalb von 3mm vom Buchrücken sitzt. Scribus erweitert den 3mm-Bleed
+  über den Rücken hinweg in die gegenüberliegende Seite. Cover-Seite
+  (own_page=0) wird übersprungen — bei Facing-Pages-Dokumenten steht sie
+  alleine. SpreadImage-Hälften sind via Anname-Pattern
+  ` · (left|right)$` exempt.
+- **`brand:undeclared_alignment_drift`** (warning) — Heuristischer
+  Detektor für Paare visueller Frames die fast aligniert/anliegend
+  erscheinen, aber NICHT in der Per-Template-`CONSTRAINTS = […]`-Liste
+  deklariert sind. Drei Tests: Achsen-Ausrichtung x/y (`min_drift_mm
+  < |a.x0 - b.x0| < axis_tolerance_mm`), und Vertikal-Adjacency (A
+  über B mit Gap im `(min_drift_mm, adjacency_gap_mm)`-Bereich).
+  Defaults: `axis_tolerance_mm=5.0`, `adjacency_gap_mm=12.0`,
+  `min_drift_mm=0.5`. Skipped: Master-Pages, anonyme Frames,
+  rotierte Frames. Per-Template opt-out via
+  `meta.yml::brand_overrides[brand:undeclared_alignment_drift]`.
+
+### Audit-Tool (Issue #22)
+
+`tools/audit_alignment.py` (CLI-Shim `bin/audit-alignment`) emittiert
+einen Per-Template-Markdown-/JSON-Report:
+- Page-by-Page-Primitive-Inventory (Anzahl + Side-Detection).
+- Verdächtige undeklarierte Adjacencies (selbe Heuristik wie
+  `brand:undeclared_alignment_drift`) mit ready-to-paste-Skeletons
+  (`same_x("A", "B", name="p1_x")`, `aligned_below(...)`).
+- Spine-Safety-Kandidaten (Frames innerhalb 3mm vom Rücken).
+
+CI integriert über `.github/workflows/pages.yml::Run alignment audit`
+als informational step (`|| true`); Promotion auf fatal nach
+genügend encoded Templates (locked decision #10).
 
 Konvention pro Constraint in der Spec:
 
@@ -522,12 +558,18 @@ Konvention pro Constraint in der Spec:
 - **Headline → Sub-Headline-Distanz 52 mm.** Code-Verweis:
   `CONSTRAINTS["hl_to_sub"]`. Prüft `distance_y(equals=52.0)`.
 - **Brand-Constraints.** Automatisch aktiv via `BRAND_CONSTRAINTS` (siehe
-  `tools/sla_lib/builder/brand_constraints.py`); 9 Regeln zu Color-Palette,
+  `tools/sla_lib/builder/brand_constraints.py`); 11 Regeln zu Color-Palette,
   Font-Family, Line-Spacing, HL/SL-Distanz, Logo-Größe, Text-auf-Grün, Bleed,
   Wahlkreuz-Hintergrund, **`brand:inside_page`** (Issue #14: jeder Non-Master-
   Frame liegt mit rotation- und anchor-bewusster Bbox innerhalb von
-  `[-bleed, w+bleed] × [-bleed, h+bleed]` seiner Seite; Skipping über
-  `meta.yml::brand_overrides`). Diese Spec NICHT wiederholen.
+  `[-bleed, w+bleed] × [-bleed, h+bleed]` seiner Seite),
+  **`brand:spine_safety`** (Issue #22: Non-SpreadImage-Frames auf
+  Facing-Pages-Dokumenten müssen mind. 3mm vom Rücken eingerückt sein;
+  warning-only), **`brand:undeclared_alignment_drift`** (Issue #22:
+  Heuristik — Paare nahezu visuell ausgerichteter/anliegender Frames
+  ohne explizite Constraint-Deklaration; warning-only, per-template
+  opt-out via `meta.yml::brand_overrides`). Skipping über
+  `meta.yml::brand_overrides`. Diese Spec NICHT wiederholen.
 ```
 
 Wenn ein Template eine Brand-Regel intentional verletzt (z.B. Logo bewusst kleiner als

@@ -40,15 +40,19 @@ The nine rules:
 """
 from __future__ import annotations
 
-import math
+import itertools
 import re
 from dataclasses import dataclass
-from typing import Iterable, Optional
+from typing import Iterable
 
+from .bbox import (  # noqa: F401  -- back-compat aliases for existing rules
+    frame_bbox_mm as _frame_bbox_mm,
+    rotated_bbox as _rotated_bbox,
+)
 from .ci import Color, load_ci
 from .constraints import Violation
 from .document import PT_TO_MM, mm_to_pt
-from .primitives import TextFrame, ImageFrame, Polygon, resolve_anchor
+from .primitives import TextFrame, ImageFrame, Polygon
 
 
 # ---------------------------------------------------------------------------
@@ -58,9 +62,14 @@ from .primitives import TextFrame, ImageFrame, Polygon, resolve_anchor
 class BrandRule:
     """A brand-CI constraint over a built Document.
 
-    ``check(primitives, doc)`` walks the primitive list (already
-    obtained from ``Document.iter_all_primitives()``) and inspects the
-    doc-level metadata as needed.
+    ``check(primitives, doc, constraints=None)`` walks the primitive list
+    (already obtained from ``Document.iter_all_primitives()``) and
+    inspects the doc-level metadata as needed.
+
+    The optional ``constraints`` kwarg is the per-template
+    ``CONSTRAINTS = [...]`` list (Issue #22 / locked decision #3). Most
+    rules ignore it; ``brand:undeclared_alignment_drift`` consumes it
+    to know which pair-relationships are intentional.
     """
 
     id: str
@@ -69,7 +78,7 @@ class BrandRule:
     severity: str = "error"
 
     # The actual predicate body is supplied via subclass.
-    def check(self, primitives: list, doc) -> list:  # pragma: no cover
+    def check(self, primitives: list, doc, constraints=None) -> list:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -101,7 +110,7 @@ def _all_para_styles(doc) -> dict:
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class _ColorPaletteRule(BrandRule):
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         allowed = _allowed_colors(doc)
         violations: list[Violation] = []
         for p in primitives:
@@ -124,7 +133,7 @@ class _ColorPaletteRule(BrandRule):
 
 @dataclass(frozen=True)
 class _FontFamilyRule(BrandRule):
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         allowed = set(load_ci().fonts)
         violations: list[Violation] = []
         styles = _all_para_styles(doc)
@@ -159,7 +168,7 @@ class _LineSpacingRule(BrandRule):
     factor: float = 0.9
     tolerance_pt: float = 0.5
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         for name, ps in _all_para_styles(doc).items():
             fs = getattr(ps, "fontsize", None)
@@ -186,7 +195,7 @@ class _HlSlDistanceRule(BrandRule):
     baseline_mm: float = 5.4
     tolerance_mm: float = 1.0
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         # Find pairs by anname substring: "Headline" + "Sub" / "Sub-Headline"
         # / "Subline".  One pair per page is the common case; multiple
@@ -236,7 +245,7 @@ class _LogoSize3MRule(BrandRule):
     factor: float = 3.0
     tolerance_mm: float = 0.5
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         if not doc.pages:
             return violations
@@ -272,7 +281,7 @@ class _LogoSize3MRule(BrandRule):
 class _TextOnGreenRule(BrandRule):
     green_colors: tuple = ("Dunkelgrün", "Hellgrün")
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         # Find white-fill text frames on brand-headline paragraph styles.
         white_headlines = [
@@ -313,7 +322,7 @@ class _Bleed3mmRule(BrandRule):
     expected_mm: float = 3.0
     tolerance_mm: float = 0.01
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         for p in doc.pages:
             if abs(p.bleed_mm - self.expected_mm) > self.tolerance_mm:
@@ -333,7 +342,7 @@ class _Bleed3mmRule(BrandRule):
 class _WahlkreuzColoredBgRule(BrandRule):
     allowed: tuple = ("Dunkelgrün", "Hellgrün", "Magenta")
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         wahlkreuz_frames = [
             p for p in primitives
@@ -366,60 +375,9 @@ class _WahlkreuzColoredBgRule(BrandRule):
 
 
 # ---------------------------------------------------------------------------
-# Bbox helpers (Issue #14) — used by _InsidePageRule
-# ---------------------------------------------------------------------------
-def _rotated_bbox(
-    x: float, y: float, w: float, h: float, deg: float,
-) -> tuple[float, float, float, float]:
-    """Axis-aligned bbox of a w×h rectangle rotated CCW by ``deg`` around
-    its top-left corner ``(x, y)``.
-
-    Returns ``(min_x, min_y, max_x, max_y)`` in the same units as the inputs.
-    For ``deg == 0`` returns the un-rotated corners exactly (no float fuzz).
-    Pivot convention matches Scribus ROT (CCW positive, top-left anchor;
-    deduced from the plakat-a1-hochformat ROT=270 page-fit, verified
-    against the rotated Impressum frame in templates/plakat-a1-hochformat).
-    """
-    if deg == 0:
-        return x, y, x + w, y + h
-    rad = math.radians(deg)
-    cos_a, sin_a = math.cos(rad), math.sin(rad)
-    pts = [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)]
-    rx = [px * cos_a - py * sin_a for px, py in pts]
-    ry = [px * sin_a + py * cos_a for px, py in pts]
-    return x + min(rx), y + min(ry), x + max(rx), y + max(ry)
-
-
-def _frame_bbox_mm(item, page) -> Optional[tuple[float, float, float, float]]:
-    """Page-local mm bbox of ``item`` on ``page``, or ``None`` if the item
-    has no spatial extent (e.g. ``Run``, ``ParaStyle``).
-
-    Mirrors ``_Frame._xy_pt`` for anchor-positioned frames so the bbox
-    reflects the SLA-emit-time position, not the dead ``x_mm/y_mm``.
-
-    Limitation: verbatim-pt overrides (``xpos_pt`` / ``width_pt`` etc.) are
-    NOT honored in this first cut — the rule falls back to ``*_mm``. The
-    two known offenders (zeitung P9 Spread, unnamed page-12 image) use
-    ``x_mm``/``w_mm`` directly so this is safe today; widen if a future
-    template exercises the override path.
-    """
-    if not all(hasattr(item, a) for a in ("x_mm", "y_mm", "w_mm", "h_mm")):
-        return None
-    if getattr(item, "anchor", None) is not None:
-        x_pt, y_pt = resolve_anchor(
-            item.anchor, page.width_pt, page.height_pt,
-            mm_to_pt(item.w_mm), mm_to_pt(item.h_mm),
-        )
-        x_mm, y_mm = x_pt * PT_TO_MM, y_pt * PT_TO_MM
-    else:
-        x_mm, y_mm = float(item.x_mm), float(item.y_mm)
-    w_mm, h_mm = float(item.w_mm), float(item.h_mm)
-    rot = float(getattr(item, "rotation_deg", 0) or 0)
-    return _rotated_bbox(x_mm, y_mm, w_mm, h_mm, rot)
-
-
-# ---------------------------------------------------------------------------
 # brand:inside_page (Issue #14)
+# Bbox helpers extracted to bbox.py (Issue #22 / locked decision #7);
+# re-exported above as _frame_bbox_mm / _rotated_bbox for back-compat.
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class _InsidePageRule(BrandRule):
@@ -454,7 +412,7 @@ class _InsidePageRule(BrandRule):
     tolerance_mm: float = 0.5
     error_cutoff_mm: float = 1.0
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         # We IGNORE the flat ``primitives`` arg — only doc-level
         # iteration carries ``(page, item)`` pairs. Pattern matches
         # _Bleed3mmRule.
@@ -493,6 +451,259 @@ class _InsidePageRule(BrandRule):
                     targets=(ident,),
                 ))
         return violations
+
+
+# ---------------------------------------------------------------------------
+# brand:spine_safety (Issue #22)
+# ---------------------------------------------------------------------------
+SPINE_SAFETY_INSET_MM = 3.0
+
+# Side detector for facing-pages templates. ``Page.is_left`` is hardcoded
+# False on doc pages (document.py:391-393), so we MUST detect side via
+# ``master_name``. Word-boundary regex avoids substring false matches on
+# future template names. Case-insensitive so "Links"/"Rechts"/"LINKS" all
+# work.
+SIDE_RX = re.compile(r"\b(links|rechts)\b", re.IGNORECASE)
+
+# SpreadImage halves intentionally touch the spine (each half is a
+# full-page-width frame at x=0 on its own page). The blocks.SpreadImage
+# emitter names them ``<base> · left`` / ``<base> · right`` (middle-dot
+# ' · '). NOTE: do NOT reuse this anname suffix for non-SpreadImage
+# frames — the rule will erroneously skip them.
+SPREAD_HALF_RX = re.compile(r" · (left|right)$")
+
+
+@dataclass(frozen=True)
+class _SpineSafetyRule(BrandRule):
+    """Spine-safety on facing-pages docs.
+
+    On a facing-pages document, a non-SpreadImage frame whose spine-side
+    edge is within ``inset_mm`` of the spine causes Scribus's bleed to
+    leak across the spine into the facing page. This rule warns so the
+    template author can either inset the frame or migrate to
+    ``SpreadImage`` for an intentional spread.
+
+    Side detection: ``master_name`` regex ``\\b(links|rechts)\\b`` (case
+    insensitive). ``Page.is_left`` is broken (hardcoded False at
+    ``document.py:391-393``) — DO NOT use it.
+
+    Scope:
+      - Single-page docs (``facing_pages=False``) → no-op (early return).
+      - Master pages → skipped.
+      - Frames with spread-half anname suffix (`` · left``/`` · right``)
+        → skipped (intentional spread).
+      - Pages with master_name not matching either side → ONE warning
+        per such page (so the bug surfaces, but doesn't silently skip).
+
+    Severity = warning (heuristic; the user may intentionally bleed
+    backgrounds across the spine via SpreadImage). Per-template opt-out
+    via ``meta.yml::brand_overrides[brand:spine_safety]``.
+    """
+
+    inset_mm: float = SPINE_SAFETY_INSET_MM
+    tolerance_mm: float = 0.5
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        # Early exit: spine-safety only matters on facing-pages docs.
+        if not getattr(doc, "facing_pages", False):
+            return []
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            # Skip the cover page (own_page == 0). In facing-pages mode
+            # Scribus's PageSet "Facing Pages" with FirstPage=1 places
+            # page 0 ALONE in the right column (verified at
+            # document.py:376-378). With no facing left page, a spine-
+            # touching frame on the cover doesn't leak anywhere.
+            if page.own_page == 0:
+                continue
+            m = SIDE_RX.search(page.master_name or "")
+            if not m:
+                loc = (page.label or page.master_name
+                       or f"page#{page.own_page}")
+                violations.append(Violation(
+                    severity="warning",
+                    rule_id=self.id,
+                    message=(
+                        f"page {loc!r} uses master_name "
+                        f"{page.master_name!r} which does not match "
+                        f"'links'/'rechts'; spine-safety could not be "
+                        f"evaluated"
+                    ),
+                    targets=(page.master_name or "",),
+                ))
+                continue
+            side = m.group(1).lower()
+            pw_mm = page.width_pt * PT_TO_MM
+            for item in page.items:
+                anname = getattr(item, "anname", "") or ""
+                # Exempt SpreadImage halves — intentional spine touch.
+                if SPREAD_HALF_RX.search(anname):
+                    continue
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                x0, _y0, x1, _y1 = bbox
+                if side == "links":
+                    # LEFT page: spine is on the right (x = pw_mm).
+                    gap = pw_mm - x1
+                    if gap < self.inset_mm - self.tolerance_mm:
+                        ident = anname or f"<unnamed {type(item).__name__}>"
+                        violations.append(Violation(
+                            severity="warning",
+                            rule_id=self.id,
+                            message=(
+                                f"frame {ident!r} on LEFT page "
+                                f"{page.master_name!r} has right edge "
+                                f"x={x1:.2f}mm within "
+                                f"{self.inset_mm:.1f}mm of spine "
+                                f"(page_w={pw_mm:.2f}mm); Scribus bleed "
+                                f"will leak across to the facing RIGHT "
+                                f"page. Use SpreadImage if intentional, "
+                                f"or inset the frame's right edge by "
+                                f">={self.inset_mm:.1f}mm."
+                            ),
+                            targets=(ident,),
+                        ))
+                else:  # "rechts"
+                    # RIGHT page: spine is on the left (x = 0).
+                    if x0 < self.inset_mm - self.tolerance_mm:
+                        ident = anname or f"<unnamed {type(item).__name__}>"
+                        violations.append(Violation(
+                            severity="warning",
+                            rule_id=self.id,
+                            message=(
+                                f"frame {ident!r} on RIGHT page "
+                                f"{page.master_name!r} has left edge "
+                                f"x={x0:.2f}mm within "
+                                f"{self.inset_mm:.1f}mm of spine; "
+                                f"Scribus bleed will leak across to the "
+                                f"facing LEFT page. Use SpreadImage if "
+                                f"intentional, or inset the frame's left "
+                                f"edge by >={self.inset_mm:.1f}mm."
+                            ),
+                            targets=(ident,),
+                        ))
+        return violations
+
+
+# ---------------------------------------------------------------------------
+# brand:undeclared_alignment_drift (Issue #22)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _UndeclaredDriftRule(BrandRule):
+    """Heuristic detector for undeclared visual adjacency.
+
+    For each page, iterates every pair of named primitives and flags
+    pairs that *appear* visually aligned/adjacent but are NOT declared
+    in the per-template ``CONSTRAINTS = [...]`` list.
+
+    Three suspicious-pair tests:
+      - **axis-x**: ``min_drift_mm < |a.x0 - b.x0| < axis_tolerance_mm``
+        → suggests ``same_x``.
+      - **axis-y**: same on y → suggests ``same_y``.
+      - **adjacency-y**: A above B (``a.y1 < b.y0``) with gap in
+        ``(min_drift_mm, adjacency_gap_mm)`` AND ``|a.x0 - b.x0|
+        < axis_tolerance_mm`` → suggests ``aligned_below``.
+
+    Defaults: ``axis_tolerance_mm=5.0``, ``adjacency_gap_mm=12.0``,
+    ``min_drift_mm=0.5``.
+
+    Skips:
+      - Master pages.
+      - Primitives without ``anname``.
+      - Rotated frames (rotation_deg != 0) — bbox math is misleading.
+      - Pairs already declared in ``constraints`` (via
+        ``Constraint.referenced_annames()``); pair key is
+        ``frozenset({a, b})`` for symmetry.
+
+    Severity = warning by default (heuristic; can false-positive).
+    Per-template opt-out via ``meta.yml::brand_overrides``.
+    """
+
+    axis_tolerance_mm: float = 5.0
+    adjacency_gap_mm: float = 12.0
+    min_drift_mm: float = 0.5
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        constraints = constraints or []
+        # Build declared-pair set from CONSTRAINTS list.
+        declared: set = set()
+        for c in constraints:
+            try:
+                names = c.referenced_annames()
+            except Exception:
+                # BrandRule entries (or anything without referenced_annames)
+                # don't contribute pairs — skip.
+                continue
+            names = [n for n in names if n]
+            if len(names) < 2:
+                continue
+            for a, b in itertools.combinations(names, 2):
+                if a != b:
+                    declared.add(frozenset((a, b)))
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            spatial = []
+            for item in page.items:
+                an = getattr(item, "anname", "") or ""
+                if not an:
+                    continue
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                spatial.append((an, item, bbox))
+            for i, (pa, p_item, p_bbox) in enumerate(spatial):
+                for qa, q_item, q_bbox in spatial[i + 1:]:
+                    if frozenset((pa, qa)) in declared:
+                        continue
+                    # Skip rotated frames — rotated bbox semantics make
+                    # axis/adjacency tests meaningless.
+                    if (float(getattr(p_item, "rotation_deg", 0) or 0) != 0
+                            or float(getattr(q_item, "rotation_deg", 0)
+                                     or 0) != 0):
+                        continue
+                    px0, py0, px1, py1 = p_bbox
+                    qx0, qy0, qx1, qy1 = q_bbox
+                    dx = abs(px0 - qx0)
+                    dy = abs(py0 - qy0)
+                    if self.min_drift_mm < dx < self.axis_tolerance_mm:
+                        violations.append(self._mk(
+                            pa, qa, "axis-x", dx, "same_x",
+                        ))
+                        continue
+                    if self.min_drift_mm < dy < self.axis_tolerance_mm:
+                        violations.append(self._mk(
+                            pa, qa, "axis-y", dy, "same_y",
+                        ))
+                        continue
+                    # Adjacency test: P above Q?
+                    if py1 < qy0:
+                        gap = qy0 - py1
+                        if (self.min_drift_mm < gap < self.adjacency_gap_mm
+                                and dx < self.axis_tolerance_mm):
+                            violations.append(self._mk(
+                                pa, qa, "adjacency-y", gap, "aligned_below",
+                                extra=f"P above Q (gap {gap:.2f}mm)",
+                            ))
+        return violations
+
+    def _mk(self, pa, qa, kind, drift, suggested, extra=""):
+        return Violation(
+            severity="warning",
+            rule_id=self.id,
+            message=(
+                f"frames {pa!r} and {qa!r} appear visually adjacent "
+                f"({kind} drift {drift:.2f}mm)"
+                f"{' ' + extra if extra else ''}. "
+                f"Either declare with {suggested}({pa!r}, {qa!r}, ...) "
+                f"in CONSTRAINTS, or fix the geometry."
+            ),
+            targets=(pa, qa),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -558,5 +769,27 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
         name="Frames inside page bounds",
         description="Every non-master frame's rotation-aware bbox sits "
                     "inside its own page's [-bleed, w+bleed] x [-bleed, h+bleed].",
+    ),
+    _make_rule(
+        _SpineSafetyRule,
+        id="brand:spine_safety",
+        name="Spine-safety on facing pages",
+        description=(
+            "On facing-pages docs, non-SpreadImage frames must inset "
+            "at least 3mm from the spine; otherwise Scribus extends the "
+            "bleed across the spine into the facing page."
+        ),
+        severity="warning",
+    ),
+    _make_rule(
+        _UndeclaredDriftRule,
+        id="brand:undeclared_alignment_drift",
+        name="Undeclared alignment drift",
+        description=(
+            "Pairs of frames that appear visually aligned/adjacent but "
+            "are not declared in the template's CONSTRAINTS list. "
+            "Heuristic; warning-only by default."
+        ),
+        severity="warning",
     ),
 ]

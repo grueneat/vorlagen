@@ -1,17 +1,9 @@
-"""Regression tests for the residual zeitung inside_page overflow.
+"""Regression tests for zeitung inside_page + spine_safety + drift rules.
 
-Issue #16 fixed the two right-edge spread frames in build.py:
-  - `P9 Spread` (build.py:1802) — moved from x=210 to x=0 on its own page;
-    `anname` preserved so INJECT_MAP and CONSTRAINTS keep resolving.
-  - Unnamed full-A4 Dunkelgrün polygon (build.py:2061) — moved from
-    page11 (print 12) to page12 (print 13) at x=0.
-
-One residual overflow remains, tracked in GH #39:
-  - Rotated cover-page polygon `u2950` (build.py:246-256) — Polygon at
-    (216.41, 155.57, 148.60, 220.49, rotation 90°, fill Dunkelgrün).
-    Rotation-aware bbox spans (-4.08, 155.57)→(216.41, 304.17), overshooting
-    the page bottom by 4.17 mm. Silenced today by the rule-level
-    `brand:inside_page` override (which now points at GH #39).
+Issue #16 fixed the two right-edge spread frames in build.py.
+Issue #22 trimmed the rotated cover-polygon `u2950` and inset the
+remaining spine-touching frames; the brand:inside_page override was
+removed as a result. GH #39 is closed by #22.
 """
 from __future__ import annotations
 
@@ -23,25 +15,31 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 
-from sla_lib.builder.brand_constraints import _InsidePageRule  # noqa: E402
+from sla_lib.builder.brand_constraints import (  # noqa: E402
+    _InsidePageRule, _SpineSafetyRule, _UndeclaredDriftRule,
+)
 
 
-def _load_zeitung_doc():
-    """Load templates/zeitung-a4-grun/build.py and return its built doc."""
+def _load_zeitung_module():
+    """Load templates/zeitung-a4-grun/build.py module."""
     build_py = ROOT / "templates" / "zeitung-a4-grun" / "build.py"
     spec = importlib.util.spec_from_file_location("zeitung_build", build_py)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.build_doc()
+    return mod
+
+
+def _load_zeitung_doc():
+    """Return the built doc."""
+    return _load_zeitung_module().build_doc()
 
 
 class ZeitungInsidePageRegressionTests(unittest.TestCase):
-    def test_inside_page_finds_only_u2950_without_override(self):
-        """After #16: only the cover-polygon u2950 (~4.17 mm) remains.
-
-        Tracked in GH #39. If this count grows, a real new overflow has been
-        introduced — investigate before bumping the assertion.
+    def test_inside_page_zero_errors_after_u2950_trim(self):
+        """After #22 T10 the rotated cover-polygon u2950 was trimmed to
+        fit page+bleed; the rule reports zero errors WITHOUT the
+        override (which #22 T16 removed from meta.yml).
         """
         doc = _load_zeitung_doc()
         rule = _InsidePageRule(
@@ -52,32 +50,77 @@ class ZeitungInsidePageRegressionTests(unittest.TestCase):
         violations = rule.check(list(doc.iter_all_primitives()), doc)
         errors = [v for v in violations if v.severity == "error"]
         self.assertEqual(
-            len(errors), 1,
+            len(errors), 0,
             msg=(
-                f"expected exactly 1 inside_page error after #16 "
-                f"(rotated u2950 cover polygon), got {len(errors)}: "
+                f"expected zero inside_page errors after #22 T10 "
+                f"u2950 trim, got {len(errors)}: "
                 f"{[v.message for v in errors]}"
             ),
         )
-        self.assertEqual(errors[0].targets, ("u2950",))
 
-    def test_inside_page_passes_with_override(self):
-        # Use the production structural_check pipeline (override IS active).
-        # The override now references GH #39 (the u2950 cover polygon
-        # follow-up); the two named frames the original ISSUE.md called
-        # out were fixed in #16's T04+T05.
+    def test_inside_page_passes_after_override_removed(self):
+        """After #22 T16 the brand:inside_page override is gone from
+        meta.yml. structural_check reports zero inside_page errors AND
+        the rule is NOT in skipped_brand_rules.
+        """
         from sla_lib.builder import structural_check as sc
 
         report = sc.check_template("zeitung-a4-grun", root=ROOT)
-        # No inside_page errors when the override is active.
         inside_page_errors = [
             issue for issue in report.brand_issues
-            if issue.severity == "error" and issue.rule_id == "brand:inside_page"
+            if issue.severity == "error"
+            and issue.rule_id == "brand:inside_page"
         ]
         self.assertEqual(inside_page_errors, [])
-        # And the rule is listed under skipped_brand_rules.
         skipped_ids = {rid for rid, _reason in report.skipped_brand_rules}
-        self.assertIn("brand:inside_page", skipped_ids)
+        self.assertNotIn("brand:inside_page", skipped_ids)
+
+
+class ZeitungSpineSafetyTests(unittest.TestCase):
+    def test_spine_safety_zero_warnings_on_zeitung(self):
+        """After #22 T11 (P9 SpreadImage) + T12 (spine inset),
+        _SpineSafetyRule reports zero warnings on zeitung."""
+        doc = _load_zeitung_doc()
+        rule = _SpineSafetyRule(
+            id="brand:spine_safety",
+            name="Spine safety",
+            description="(test instance)",
+        )
+        violations = rule.check(list(doc.iter_all_primitives()), doc)
+        self.assertEqual(
+            violations, [],
+            msg=(
+                f"expected zero spine_safety warnings, got "
+                f"{[v.message for v in violations]}"
+            ),
+        )
+
+
+class ZeitungUndeclaredDriftTests(unittest.TestCase):
+    def test_undeclared_drift_zero_warnings_on_zeitung(self):
+        """After #22 T13 (geometry fixes) + T14 (CONSTRAINTS
+        encoding), _UndeclaredDriftRule reports zero warnings when
+        invoked with the per-template CONSTRAINTS list."""
+        mod = _load_zeitung_module()
+        doc = mod.build_doc()
+        rule = _UndeclaredDriftRule(
+            id="brand:undeclared_alignment_drift",
+            name="Undeclared drift",
+            description="(test instance)",
+        )
+        constraints = getattr(mod, "CONSTRAINTS", []) or []
+        violations = rule.check(
+            list(doc.iter_all_primitives()), doc,
+            constraints=constraints,
+        )
+        self.assertEqual(
+            violations, [],
+            msg=(
+                f"expected zero undeclared-drift warnings on zeitung "
+                f"with the CONSTRAINTS list applied, got "
+                f"{[v.message for v in violations]}"
+            ),
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

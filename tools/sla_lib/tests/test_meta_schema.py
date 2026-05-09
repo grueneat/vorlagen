@@ -54,9 +54,11 @@ class SlaDiffStrictTests(unittest.TestCase):
     def test_brand_overrides_loader_unchanged(self):
         # Regression guard: T01's additive change must not perturb the
         # existing load_brand_overrides() behaviour for zeitung.
+        # #22 T16 removed the brand:inside_page override (u2950 was
+        # trimmed in T10), so only brand:line_spacing_0.9 remains.
         ids = load_brand_overrides("zeitung-a4-grun")
         self.assertIn("brand:line_spacing_0.9", ids)
-        self.assertIn("brand:inside_page", ids)
+        self.assertNotIn("brand:inside_page", ids)
 
 
 if __name__ == "__main__":  # pragma: no cover

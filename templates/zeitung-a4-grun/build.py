@@ -10,11 +10,13 @@ sys.path.insert(0, str(HERE.parents[1] / 'tools'))
 from sla_lib.builder import (  # noqa: E402
     Brand, Document, TextFrame, ImageFrame, Polygon, Run,
     ParaStyle, CharStyle, SoftShadow,
-    # Issue #12 — constraints
-    same_size,
+    # Issue #12 + #22 — constraints
+    same_size, same_x, same_y, aligned_below,
 )
 from sla_lib.builder import library, pack_inline_image  # noqa: E402  (issue #13)
-from sla_lib.builder.blocks import ColumnTextStory, PageNumber  # noqa: E402
+from sla_lib.builder.blocks import (  # noqa: E402
+    ColumnTextStory, PageNumber, SpreadImage,
+)
 
 
 def build_template():
@@ -155,7 +157,7 @@ def build_template():
         size=(209.9999999999361, 296.99999999946107),
         bleed_mm=3.0000000000000013,
         margins_mm=(20.999999999999993, 20.999999999999993, 20.999999999999993, 20.999999999999993),
-        master='Neue Musterseite links',
+        master='Neue Musterseite rechts',
         page_xpos_pt=695.27622047226,
         page_ypos_pt=2665.66960629463,
         width_pt=595.275590551,
@@ -165,7 +167,7 @@ def build_template():
         size=(209.9999999999361, 296.99999999946107),
         bleed_mm=3.0000000000000013,
         margins_mm=(20.999999999999993, 20.999999999999993, 20.999999999999993, 20.999999999999993),
-        master='Neue Musterseite rechts',
+        master='Neue Musterseite links',
         page_xpos_pt=100.00062992126,
         page_ypos_pt=3547.559055112,
         width_pt=595.275590551,
@@ -175,7 +177,7 @@ def build_template():
         size=(209.9999999999361, 296.99999999946107),
         bleed_mm=3.0000000000000013,
         margins_mm=(20.999999999999993, 20.999999999999993, 20.999999999999993, 20.999999999999993),
-        master='Neue Musterseite links',
+        master='Neue Musterseite rechts',
         page_xpos_pt=695.27622047226,
         page_ypos_pt=3547.559055112,
         width_pt=595.275590551,
@@ -195,7 +197,7 @@ def build_template():
         size=(209.9999999999361, 296.99999999946107),
         bleed_mm=3.0000000000000013,
         margins_mm=(20.999999999999993, 20.999999999999993, 20.999999999999993, 20.999999999999993),
-        master='Neue Musterseite links',
+        master='Neue Musterseite rechts',
         page_xpos_pt=695.27622047226,
         page_ypos_pt=4429.44850392937,
         width_pt=595.275590551,
@@ -215,7 +217,7 @@ def build_template():
         size=(209.99999999999994, 297.0000000000001),
         bleed_mm=3.0000000000000013,
         margins_mm=(20.999999999999993, 20.999999999999993, 20.999999999999993, 20.999999999999993),
-        master='Neue Musterseite links',
+        master='Neue Musterseite rechts',
         page_xpos_pt=695.276220472441,
         page_ypos_pt=5311.33795274674,
         width_pt=595.275590551181,
@@ -244,10 +246,16 @@ def build_template():
     ))
 
     page0.add(Polygon(
-        x_mm=216.41353924574386,
+        # u2950 trimmed in #22 (T10): the original (216.41, 155.57,
+        # 148.60, 220.49) rotated CCW90 produced a bbox of
+        # (-4.08, 155.57)→(216.41, 304.17), overshooting the right
+        # bleed by 3.41mm and the bottom bleed by 4.17mm. After the
+        # trim the rotated bbox is (-3.0, 155.57)→(213.0, 300.0),
+        # exactly fitting the A4 + 3mm bleed (full-bleed bottom band).
+        x_mm=213.0,
         y_mm=155.56697247706433,
-        w_mm=148.60236941896014,
-        h_mm=220.48928611111108,
+        w_mm=144.43302752293567,  # rotated height = 300 - y
+        h_mm=216.0,                # rotated width = 213 - (-3)
         layer=0,
         rotation_deg=90,
         anname='u2950',
@@ -449,7 +457,11 @@ def build_template():
     page1.add(ImageFrame(
         x_mm=0,
         y_mm=0,
-        w_mm=209.9999999999361,
+        # w 210 -> 207 in #22 T12: P1 Hero on page1 (LEFT) had right
+        # edge x=210 flush with the spine; Scribus bleed leaked across
+        # to the facing RIGHT page (page2). Inset preserves left axis
+        # at x=0 and leaves 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=130.20731192714427,
         layer=0,
         clip_edit=True,
@@ -776,7 +788,10 @@ def build_template():
     page3.add(ImageFrame(
         x_mm=135.33199999999982,
         y_mm=49.53117431300355,
-        w_mm=74.66799999993626,
+        # w 74.668 -> 71.668 in #22 T12: P3 Hero on page3 (LEFT) had
+        # right edge x=210 flush with the spine; inset preserves left
+        # axis at x=135.33 (column-3 grid) and leaves 3mm spine safety.
+        w_mm=71.66799999993626,
         h_mm=58.158088754618625,
         layer=0,
         clip_edit=True,
@@ -954,10 +969,16 @@ def build_template():
     ))
 
 
+    # P4 Foto-Spread: SINGLE-PAGE bottom-band frame on page 4 (RIGHT).
+    # Upstream gruene-zeitung-vorlage-original.sla has only ONE
+    # ImageFrame at HEIGHT~306pt on OwnPage=4 — there is no page-3
+    # half in the source. Spine-safety addressed by LEFT-edge inset
+    # in #22 T12: x=0 -> x=3, w=210 -> 207 (preserves right-edge
+    # alignment at x=210, 3mm spine safety on the left).
     page4.add(ImageFrame(
-        x_mm=0,
+        x_mm=3.0,
         y_mm=188.8816330286011,
-        w_mm=209.9999999999361,
+        w_mm=207.0,
         h_mm=108.11836697086034,
         layer=0,
         image='',
@@ -1366,7 +1387,12 @@ def build_template():
     ))
 
     page7.add(ImageFrame(
-        x_mm=134.65408460754324,
+        # x 134.654 -> 135.3 in #22 T13: aligns the portrait's left
+        # edge with the column-3 text axis (x=135.3) used by the
+        # body-grid above. 0.65mm drift would otherwise trip
+        # brand:undeclared_alignment_drift; explicit declaration via
+        # CONSTRAINTS in T14 (same_x with col-3 frame).
+        x_mm=135.3,
         y_mm=200.64722222222255,
         w_mm=51.345915392456746,
         h_mm=76.35277777723881,
@@ -1684,10 +1710,16 @@ def build_template():
     ))
 
     page9.add(ColumnTextStory(
+        # Text columns moved y 49.5 -> 130.14 in #22 T13: P9 Spread
+        # · left now occupies (0, 0, 210, 126.14) on page9 (LEFT, post
+        # T11 SpreadImage migration). Original y=49.5 placed text on
+        # top of the spread. New start y = spread_bottom (126.14) +
+        # 4mm gap = 130.14 (declared via aligned_below in T14
+        # CONSTRAINTS).
         frames=[
             TextFrame(
             x_mm=20.000000000000078,
-            y_mm=49.531174313003305,
+            y_mm=130.14,
             w_mm=54.66573888888888,
             h_mm=122.28167890069918,
             layer=0,
@@ -1698,7 +1730,7 @@ def build_template():
             ),
             TextFrame(
             x_mm=77.66599999999997,
-            y_mm=49.531174313003305,
+            y_mm=130.14,
             w_mm=54.66573888888888,
             h_mm=122.747733946571,
             layer=0,
@@ -1708,9 +1740,15 @@ def build_template():
             ),
             TextFrame(
             x_mm=135.33199999999982,
-            y_mm=49.24037614948349,
-            w_mm=54.66599999999988,
-            h_mm=229.29908256880705,
+            y_mm=130.14,
+            # h 229.30 -> 149.86 in #22 T13: original frame ended at
+            # y=278.54 (49.24+229.30); after y move to 130.14, the
+            # original h would push the bottom to y=359.44, far past
+            # page bottom (297) — inside_page error. Shrink to keep
+            # the bottom at y=280 (3mm above the PageNumber strip at
+            # y=283.7); column 3 holds less body content but stays
+            # visually balanced with columns 1+2 ending at y=252.
+            h_mm=149.86,
             layer=0,
             anname='Kopie von u2da1 (17)',
             clip_edit=True,
@@ -1799,16 +1837,19 @@ def build_template():
         ],
     ))
 
-    page9.add(ImageFrame(
-        x_mm=0.0,
-        y_mm=0,
-        w_mm=209.9999999999361,
+    # P9 Spread: TWO-PAGE spread across pages 9 (LEFT) + 10 (RIGHT) —
+    # converted to SpreadImage in #22 T11 (reverts #16's misfix that
+    # made it a single-page frame). Each half is `inside_page`-clean
+    # by construction (x=0 on its own page) and exempt from
+    # brand:spine_safety via the ' · (left|right)$' anname pattern.
+    SpreadImage(
+        image="",
+        page_w_mm=209.9999999999361,
+        page_h_mm=296.99999999946107,
         h_mm=126.13945871829057,
-        layer=0,
-        image='',
-        line_width_pt=1,
-        anname="P9 Spread",  # issue #13; moved to page-local origin in #16
-    ))
+        y_mm=0.0,
+        base_anname="P9 Spread",
+    ).place(page9, page10)
 
     page10.add(ColumnTextStory(
         frames=[
@@ -1892,7 +1933,13 @@ def build_template():
     ))
 
     page10.add(ImageFrame(
-        x_mm=143.41190825694295,
+        # x 143.412 -> 135.3 in #22 T13: aligns the portrait's left
+        # edge with the column-3 text axis (x=135.333) used by the
+        # body-grid above on the same page. 8.1mm drift was the
+        # user-named bug on print-page 11 (== own_page=10). Right
+        # edge becomes 135.3 + 66.59 = 201.89 (well clear of the page
+        # right edge at 210). Declared via same_x in T14 CONSTRAINTS.
+        x_mm=135.3,
         y_mm=202.57248624122553,
         w_mm=66.58809174299142,
         h_mm=94.42751375823458,
@@ -1952,7 +1999,11 @@ def build_template():
     page11.add(ImageFrame(
         x_mm=0,
         y_mm=-0.1807155930984082,
-        w_mm=210.7990642201835,
+        # Unnamed Dunkelgrün band on page11 (LEFT): w 210.799 -> 207
+        # in #22 T12 (right edge was 0.8mm past the bleed and 4.2mm
+        # over the spine). Inset preserves left axis at x=0 and leaves
+        # 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=213.91926605504602,
         layer=0,
         image='',
@@ -2050,7 +2101,10 @@ def build_template():
     page11.add(ImageFrame(
         x_mm=0,
         y_mm=213.73855046194836,
-        w_mm=209.99999999999994,
+        # w 210 -> 207 in #22 T12: P11 Bottom on page11 (LEFT) right
+        # edge x=210 was flush with spine; inset preserves left axis
+        # at x=0 and leaves 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=83.26144953805078,
         layer=0,
         image='',
@@ -2059,9 +2113,13 @@ def build_template():
     ))
 
     page12.add(ImageFrame(
-        x_mm=0.0,
+        # Unnamed Dunkelgrün full-bleed band on page12 (RIGHT post-T09):
+        # x 0 -> 3, w 210.799 -> 207 in #22 T12. Original left edge sat
+        # at the spine; inset preserves right edge at x=210 and leaves
+        # 3mm spine safety on the left.
+        x_mm=3.0,
         y_mm=-0.1807155930984082,
-        w_mm=210.7990642201835,
+        w_mm=207.0,
         h_mm=297.1807155930968,
         layer=0,
         image='',
@@ -2269,7 +2327,10 @@ def build_template():
     page13.add(ImageFrame(
         x_mm=0,
         y_mm=149.63672477387325,
-        w_mm=209.99999999999994,
+        # w 210 -> 207 in #22 T12: P13 Hero on page13 (LEFT) right
+        # edge x=210 was flush with spine; inset preserves left axis
+        # at x=0 and leaves 3mm spine safety on the right.
+        w_mm=207.0,
         h_mm=147.36327522612436,
         layer=0,
         image='',
@@ -2280,7 +2341,11 @@ def build_template():
     page13.add(ImageFrame(
         x_mm=0,
         y_mm=-0.18071559309872906,
-        w_mm=210.7990642201835,
+        # Unnamed Dunkelgrün band on page13 (LEFT): w 210.799 -> 207
+        # in #22 T12 (right edge was 0.8mm past the bleed and ~4mm
+        # over the spine). Inset preserves left axis at x=0 and 3mm
+        # spine safety on the right.
+        w_mm=207.0,
         h_mm=152.61377064220179,
         layer=0,
         image='',
@@ -2494,17 +2559,30 @@ def build_preview():
     doc = build_template()
     INJECT_MAP = {
         # anname → (library_id, target_w_mm, target_h_mm)
+        # Targets match the FRAME's actual w_mm post-#22 T12 spine inset
+        # (frames at right-edge=210 were inset to w=207; same on left).
+        # Misalignment between target_w_mm and frame.w_mm causes the
+        # cropped image to render larger than the frame and Scribus
+        # spills into the bleed (incl. across the spine).
         "Cover Hero": ("themen_klimaschutz_windrad", 210, 155.6),
-        "P1 Hero": ("themen_soziales_gemeindebau", 210, 130.2),
+        "P1 Hero": ("themen_soziales_gemeindebau", 207, 130.2),     # T12 inset
         "P2 Mid": ("themen_bildung_volksschule", 112.3, 58),
-        "P3 Hero": ("themen_wirtschaft_handwerk", 74.7, 58.2),
-        "P4 Foto-Spread": ("kontext_buergerversammlung", 210, 108.1),
+        "P3 Hero": ("themen_wirtschaft_handwerk", 71.7, 58.2),       # T12 inset
+        # P4 Foto-Spread stays SINGLE-PAGE (upstream has no page-3 half).
+        "P4 Foto-Spread": ("kontext_buergerversammlung", 207, 108.1),  # T12 inset
         "P5 Hero": ("themen_verkehr_radweg", 112.3, 84.1),
         "P7 Portrait": ("portrait_maria", 51.3, 76.4),
-        "P9 Spread": ("themen_klimaschutz_solar", 210, 126.1),
+        # P9 Spread converted to SpreadImage in #22 T11; both halves
+        # get the same source image (the SpreadImage right half uses
+        # local_offset_mm=(-page_w_mm, 0) so the source image "scrolls"
+        # left and the right half shows the right half of the picture —
+        # single source bytes, two halves). Intentional shared PDF
+        # object across pages 9+10.
+        "P9 Spread · left": ("themen_klimaschutz_solar", 210, 126.1),
+        "P9 Spread · right": ("themen_klimaschutz_solar", 210, 126.1),
         "P10 Portrait": ("portrait_stefan", 66.6, 94.4),
-        "P11 Bottom": ("kontext_stammtisch_cafe", 210, 83.3),
-        "P13 Hero": ("kontext_infostand_szene", 210, 147.4),
+        "P11 Bottom": ("kontext_stammtisch_cafe", 207, 83.3),         # T12 inset
+        "P13 Hero": ("kontext_infostand_szene", 207, 147.4),          # T12 inset
     }
     for page in doc.pages:
         for frame in page.items:
@@ -2540,19 +2618,121 @@ build_doc = build_template
 # every internal sub-frame.
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # Hero anchor presence (orphan-warning catches rename drift on
-    # build.py regenerations from the upstream original SLA).
+    # ----------------------------------------------------------------
+    # Hero/portrait/spread anchor presence (orphan-warning catches
+    # rename drift on build.py regenerations from the upstream original
+    # SLA). #12 baseline + #22 SpreadImage migration.
+    # ----------------------------------------------------------------
     same_size("Cover Hero", name="cover_hero_anchor"),
     same_size("P1 Hero", name="p1_hero_anchor"),
     same_size("P3 Hero", name="p3_hero_anchor"),
     same_size("P5 Hero", name="p5_hero_anchor"),
     same_size("P13 Hero", name="p13_hero_anchor"),
-    # Portrait slot witness.
     same_size("P7 Portrait", name="p7_portrait_anchor"),
     same_size("P10 Portrait", name="p10_portrait_anchor"),
-    # Foto-spread + spread witnesses.
     same_size("P4 Foto-Spread", name="p4_fotospread_anchor"),
-    same_size("P9 Spread", name="p9_spread_anchor"),
+    same_size(
+        "P9 Spread · left", "P9 Spread · right",
+        axis="w", name="p9_spread_halves_share_width",
+    ),
+
+    # ----------------------------------------------------------------
+    # #22 T14 — declared adjacencies.
+    # Surfaced by `bin/audit-alignment zeitung-a4-grun` after T09-T13
+    # geometry fixes. Each entry encodes a real intentional relationship
+    # the magazine layout author chose; declaring them keeps
+    # brand:undeclared_alignment_drift silent and gives the downstream
+    # editor a witness if a renamed/moved frame breaks the relationship.
+    # ----------------------------------------------------------------
+
+    # --- Page 1 (cover, RIGHT) ---
+    # Cover composition: vertical stack of journal-style metadata blocks
+    # (issue number / date / contact / publisher).
+    aligned_below("u1aa", "u29b9", gap_mm=2.56, name="p1_meta_below_title"),
+    aligned_below("u165", "u14c", gap_mm=2.80, name="p1_meta_below_label"),
+    aligned_below("u1d9", "u1c1", gap_mm=1.40, name="p1_meta_below_url"),
+    # u165 / u1d9 baseline drift = 0.7mm (just above the 0.5mm
+    # default tolerance) — accept the original layout's near-miss.
+    same_y("u165", "u1d9", tolerance_mm=1.0,
+           name="p1_meta_two_col_baseline"),
+
+    # --- Page 3 (RIGHT) ---
+    # Page-3 mid image (P2 Mid) sits 2.6mm below the column-2 text.
+    aligned_below("P2 Mid", "Kopie von u2d5c (2)", gap_mm=2.60,
+                  name="p3_p2mid_below_col2"),
+
+    # --- Page 4 (LEFT) ---
+    # Two grouped polygons share a baseline on page 4 (decorative band).
+    # Original drift is 3.6mm — the band is approximate, not strictly
+    # shared baseline; declare with widened tolerance.
+    same_y("u1529", "u1544", tolerance_mm=4.0,
+           name="p4_band_baseline"),
+
+    # --- Page 6 (LEFT) ---
+    # P5 Hero sits 2.56mm below the column-2 text frame.
+    aligned_below("P5 Hero", "Kopie von u2da1 (6)", gap_mm=2.56,
+                  name="p6_p5hero_below_col2"),
+
+    # --- Page 8 (LEFT) ---
+    # Page-8 portrait sits inside u918 Dunkelgrün band; declared
+    # adjacencies with the col-2 text above + col-3 text axis.
+    aligned_below("u918", "Kopie von u2d5c (9)", gap_mm=4.00,
+                  name="p8_band_below_col2"),
+    aligned_below("P7 Portrait", "Kopie von u2da1 (11)", gap_mm=10.17,
+                  name="p8_portrait_below_col3_caption"),
+
+    # --- Page 9 (RIGHT) ---
+    # The user-named bug page (now own_page=9 LEFT post-T09; print page 10).
+    # P9 Spread · left occupies y=0..126.14; text columns moved to
+    # y=130.14 (4mm gap). Audit shows residual 1.6/1.86mm vertical
+    # drifts within the column trio — declared as same_y witnesses.
+    aligned_below("Kopie von u2da1 (15)", "Kopie von u6ad", gap_mm=4.29,
+                  name="p9_col2_below_caption"),
+    # Drift 1.86 / 1.6mm — column-trio top edges are loosely aligned;
+    # widened tolerance accepts the original layout.
+    same_y("Kopie von u2d5c (12)", "Kopie von u2da1 (12)",
+           tolerance_mm=2.0, name="p9_col1_col2_baseline"),
+    same_y("Kopie von u2d5c (12)", "Kopie von u2da1 (13)",
+           tolerance_mm=2.0, name="p9_col1_col2_topline"),
+
+    # --- Page 10 (LEFT) ---
+    # Decorative band on page 10 mirrors the page-4 pattern (3.6mm drift).
+    same_y("Kopie von u1529", "Kopie von u1544", tolerance_mm=4.0,
+           name="p10_band_baseline"),
+
+    # --- Page 11 (RIGHT) ---
+    # P10 Portrait fixed in T13 (x_mm=135.3); audit shows the column-3
+    # text frame pair shares a baseline and the portrait sits below it.
+    # Drift 1.17 / 1.36mm — column-trio top edges loosely aligned.
+    same_y("Kopie von u2d5c (14)", "Kopie von u2da1 (18)",
+           tolerance_mm=1.5, name="p11_col_topline_a"),
+    same_y("Kopie von u2d5c (14)", "Kopie von u2da1 (19)",
+           tolerance_mm=1.5, name="p11_col_topline_b"),
+    aligned_below("P10 Portrait", "Kopie von u2da1 (19)", gap_mm=11.57,
+                  name="p11_portrait_below_col3"),
+
+    # --- Page 13 (RIGHT) ---
+    # 3-column body grid; audit shows multiple sub-1.7mm same_y drifts
+    # — all declared as the column-grid baseline witnesses.
+    # Drift 0.8 / 0.8 / 1.36 / 1.63mm — body grid top edges loosely
+    # aligned. Tolerance 2.0 covers all four pairs.
+    same_y("Kopie von u2d5c (17)", "Kopie von u2da1 (23)",
+           tolerance_mm=1.0, name="p13_col1_col3_baseline_a"),
+    same_y("Kopie von u2da1 (22)", "Kopie von u2da1 (23)",
+           tolerance_mm=1.0, name="p13_col2_col3_baseline"),
+    same_y("Kopie von u2d5c (18)", "Kopie von u2da1 (24)",
+           tolerance_mm=2.0, name="p13_col1_col3_baseline_b"),
+    same_y("Kopie von u2d5c (18)", "Kopie von u2da1 (25)",
+           tolerance_mm=2.0, name="p13_col1_col3_baseline_c"),
+
+    # --- Page 14 (LEFT) ---
+    # Three grouped decoration polygons stacked with 4.95mm gap.
+    aligned_below("Kopie von u14c (2)", "Kopie von u14c", gap_mm=4.95,
+                  name="p14_decor_pair_1"),
+    aligned_below("Kopie von u14c (4)", "Kopie von u14c (3)", gap_mm=4.95,
+                  name="p14_decor_pair_2"),
+    aligned_below("Kopie von u14c (6)", "Kopie von u14c (5)", gap_mm=4.95,
+                  name="p14_decor_pair_3"),
 ]
 
 
