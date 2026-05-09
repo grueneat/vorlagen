@@ -2,7 +2,7 @@
 id: '22'
 title: 'Alignment system v2: spine-safety + undeclared-drift detection + audit tooling
   + apply to stable templates'
-status: open
+status: done
 priority: high
 labels:
 - bug
