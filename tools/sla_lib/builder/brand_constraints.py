@@ -61,9 +61,14 @@ from .primitives import TextFrame, ImageFrame, Polygon
 class BrandRule:
     """A brand-CI constraint over a built Document.
 
-    ``check(primitives, doc)`` walks the primitive list (already
-    obtained from ``Document.iter_all_primitives()``) and inspects the
-    doc-level metadata as needed.
+    ``check(primitives, doc, constraints=None)`` walks the primitive list
+    (already obtained from ``Document.iter_all_primitives()``) and
+    inspects the doc-level metadata as needed.
+
+    The optional ``constraints`` kwarg is the per-template
+    ``CONSTRAINTS = [...]`` list (Issue #22 / locked decision #3). Most
+    rules ignore it; ``brand:undeclared_alignment_drift`` consumes it
+    to know which pair-relationships are intentional.
     """
 
     id: str
@@ -72,7 +77,7 @@ class BrandRule:
     severity: str = "error"
 
     # The actual predicate body is supplied via subclass.
-    def check(self, primitives: list, doc) -> list:  # pragma: no cover
+    def check(self, primitives: list, doc, constraints=None) -> list:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -104,7 +109,7 @@ def _all_para_styles(doc) -> dict:
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class _ColorPaletteRule(BrandRule):
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         allowed = _allowed_colors(doc)
         violations: list[Violation] = []
         for p in primitives:
@@ -127,7 +132,7 @@ class _ColorPaletteRule(BrandRule):
 
 @dataclass(frozen=True)
 class _FontFamilyRule(BrandRule):
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         allowed = set(load_ci().fonts)
         violations: list[Violation] = []
         styles = _all_para_styles(doc)
@@ -162,7 +167,7 @@ class _LineSpacingRule(BrandRule):
     factor: float = 0.9
     tolerance_pt: float = 0.5
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         for name, ps in _all_para_styles(doc).items():
             fs = getattr(ps, "fontsize", None)
@@ -189,7 +194,7 @@ class _HlSlDistanceRule(BrandRule):
     baseline_mm: float = 5.4
     tolerance_mm: float = 1.0
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         # Find pairs by anname substring: "Headline" + "Sub" / "Sub-Headline"
         # / "Subline".  One pair per page is the common case; multiple
@@ -239,7 +244,7 @@ class _LogoSize3MRule(BrandRule):
     factor: float = 3.0
     tolerance_mm: float = 0.5
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         if not doc.pages:
             return violations
@@ -275,7 +280,7 @@ class _LogoSize3MRule(BrandRule):
 class _TextOnGreenRule(BrandRule):
     green_colors: tuple = ("Dunkelgrün", "Hellgrün")
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         # Find white-fill text frames on brand-headline paragraph styles.
         white_headlines = [
@@ -316,7 +321,7 @@ class _Bleed3mmRule(BrandRule):
     expected_mm: float = 3.0
     tolerance_mm: float = 0.01
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         for p in doc.pages:
             if abs(p.bleed_mm - self.expected_mm) > self.tolerance_mm:
@@ -336,7 +341,7 @@ class _Bleed3mmRule(BrandRule):
 class _WahlkreuzColoredBgRule(BrandRule):
     allowed: tuple = ("Dunkelgrün", "Hellgrün", "Magenta")
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         violations: list[Violation] = []
         wahlkreuz_frames = [
             p for p in primitives
@@ -406,7 +411,7 @@ class _InsidePageRule(BrandRule):
     tolerance_mm: float = 0.5
     error_cutoff_mm: float = 1.0
 
-    def check(self, primitives: list, doc) -> list:
+    def check(self, primitives: list, doc, constraints=None) -> list:
         # We IGNORE the flat ``primitives`` arg — only doc-level
         # iteration carries ``(page, item)`` pairs. Pattern matches
         # _Bleed3mmRule.

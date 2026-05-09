@@ -187,7 +187,7 @@ def check_template(slug: str, root: Path = _REPO_ROOT) -> TemplateReport:
             )
             continue
         try:
-            violations = rule.check(primitives, doc)
+            violations = rule.check(primitives, doc, constraints=constraint_list)
         except Exception as e:
             rep.brand_issues.append(CheckIssue(
                 severity="error", rule_id=rule.id,
