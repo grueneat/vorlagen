@@ -238,6 +238,9 @@ def build_template():
         # Issue #23 T07: extend cover image to BOTH outer bleed edges so
         # the full-bleed visual matches u2950's (x=-3..213) extent. Cover
         # is own_page=0 (RIGHT-alone), so both edges are outer.
+        # Issue #25: opt out of band-rule per-frame via is_full_bleed
+        # (replaces the per-page excluded_pages escape hatch). The cover
+        # photo is intentional full-bleed feature design.
         x_mm=-3,
         y_mm=0,
         w_mm=216,
@@ -246,6 +249,7 @@ def build_template():
         image='',
         line_width_pt=1,
         anname="Cover Hero",  # issue #13
+        is_full_bleed=True,
     ))
 
     page0.add(Polygon(
@@ -316,6 +320,9 @@ def build_template():
     ))
 
     page0.add(TextFrame(
+        # Issue #25: rotated-störer text deliberately overhangs the
+        # right body margin (extends past x=190 to ~x=200) for the
+        # cover Magenta badge design — opt out of band rule per-frame.
         x_mm=166.18939525947908,
         y_mm=195.99562214207455,
         w_mm=31.905402967990675,
@@ -324,6 +331,7 @@ def build_template():
         rotation_deg=355,
         line_width_pt=1.00000000000002,
         col_gap_mm=0,
+        is_full_bleed=True,
         runs=[
             Run(text='Hier', separator='para', paragraph_style='Schrift Störer  '),
             Run(text='steht ein', separator='para', paragraph_style='Schrift Störer  '),
@@ -350,6 +358,9 @@ def build_template():
     ))
 
     page0.add(TextFrame(
+        # Issue #25: rotated postal-zustellung label sits in the right
+        # outer margin alley AND spans free + footer bands — standard
+        # Austrian Post addressing position. Opt out per-frame.
         x_mm=199.47222222222123,
         y_mm=293.60776146789016,
         w_mm=102.99816513761445,
@@ -358,6 +369,7 @@ def build_template():
         rotation_deg=270,
         line_width_pt=1,
         col_gap_mm=0,
+        is_full_bleed=True,
         runs=[
             Run(text='zugestellt durch: ÖSTERREICHISCHE POST AG ', fcolor='White', fshade=50, separator='para', paragraph_style='Zustellerhinweis (Post)'),
         ],
@@ -444,6 +456,9 @@ def build_template():
     ))
 
     page0.add(TextFrame(
+        # Issue #25: "Ausgabe MM/YY" sits at y=7.7-19.9 ABOVE the
+        # header band (y=20-49) — masthead-corner placement. Opt out
+        # per-frame.
         x_mm=163.16422731906283,
         y_mm=7.74448419979613,
         w_mm=38.68256880733945,
@@ -452,23 +467,31 @@ def build_template():
         line_width_pt=1,
         trail_style='Monat/Ausgabe',
         col_gap_mm=0,
+        is_full_bleed=True,
         runs=[
             Run(text='Ausgabe 03/26'),
         ],
     ))
 
     page1.add(ImageFrame(
-        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
-        # preserving the #22 T12 spine inset (x+w=207). w grows
-        # 207 -> 210 to keep right edge at x=207.
-        x_mm=-3,
+        # Issue #25: shrink P1 Hero to text-column width (x=20, w=170)
+        # so the hero's horizontal extent matches the underlying body
+        # grid below — user-cited fix from ISSUE.md ("Should be text-
+        # column-block width (~170mm = x=20 to x=190, matching the
+        # 3-column body grid below)"). Replaces the prior #23 T07
+        # outer-bleed extension that the user observed extending 20mm
+        # past the body text on each side. Y span (0-130) still crosses
+        # the header-band boundary at y=49 — this is intentional cover-
+        # photo design, opted out via is_full_bleed=True (per-frame).
+        x_mm=20,
         y_mm=0,
-        w_mm=210.0,
+        w_mm=170.0,
         h_mm=130.20731192714427,
         layer=0,
         clip_edit=True,
         image='',
         anname="P1 Hero",  # issue #13
+        is_full_bleed=True,
     ))
 
     page1.add(PageNumber(
@@ -532,9 +555,12 @@ def build_template():
     ))
 
     page1.add(TextFrame(
-        x_mm=20.000000000000078,
+        # Issue #25: shrink overlay headline to match the shrunken P1
+        # Hero (x=20, w=170). Was w=172.86 (right edge x=192.86, past
+        # the body-margin spec at x=190 by 2.86mm).
+        x_mm=20.0,
         y_mm=78.21281651430048,
-        w_mm=172.85594495412835,
+        w_mm=170.0,
         h_mm=48.23669724770661,
         layer=0,
         line_width_pt=1,
@@ -1875,21 +1901,43 @@ def build_template():
     ))
 
     # P9 Spread: TWO-PAGE spread across pages 9 (LEFT) + 10 (RIGHT) —
-    # converted to SpreadImage in #22 T11 (reverts #16's misfix that
-    # made it a single-page frame). Each half is `inside_page`-clean
-    # by construction and exempt from brand:spine_safety via the
-    # ' · (left|right)$' anname pattern.
-    # Issue #23 T07: outer_bleed_mm=3.0 extends each half outward to
-    # the outer bleed (LEFT half x=-3..213, RIGHT half x=0..213).
-    SpreadImage(
-        image="",
-        page_w_mm=209.9999999999361,
-        page_h_mm=296.99999999946107,
-        h_mm=126.13945871829057,
+    # originally a SpreadImage with outer-bleed extension. Issue #25:
+    # shrunk to text-column width on both halves (x=20, w=170) per
+    # user-cited fix from ISSUE.md ("Should be text-column-block width.
+    # Plus bottom bleed."). The "spread" continuity is sacrificed; each
+    # half now displays as a content-width hero on its own page so they
+    # don't bleed past the body grid or spill across the spine. y span
+    # (0-126) still crosses the header-band boundary at y=49 — opted
+    # out per-frame via is_full_bleed=True.
+    page9.add(ImageFrame(
+        x_mm=20.0,
         y_mm=0.0,
-        base_anname="P9 Spread",
-        outer_bleed_mm=3.0,
-    ).place(page9, page10)
+        w_mm=170.0,
+        h_mm=126.13945871829057,
+        layer=0,
+        local_scale=(1.0, 1.0),
+        local_offset_mm=(0.0, 0.0),
+        scale_type=0,
+        image='',
+        anname="P9 Spread · left",
+        is_full_bleed=True,
+    ))
+    page10.add(ImageFrame(
+        x_mm=20.0,
+        y_mm=0.0,
+        w_mm=170.0,
+        h_mm=126.13945871829057,
+        layer=0,
+        local_scale=(1.0, 1.0),
+        # Negative x offset to expose the right half of the source image
+        # (mirrors the SpreadImage convention before the #25 shrink). The
+        # offset = the visible width on the LEFT half = 170mm.
+        local_offset_mm=(-170.0, 0.0),
+        scale_type=0,
+        image='',
+        anname="P9 Spread · right",
+        is_full_bleed=True,
+    ))
 
     page10.add(ColumnTextStory(
         frames=[
@@ -1973,16 +2021,17 @@ def build_template():
     ))
 
     page10.add(ImageFrame(
-        # x 143.412 -> 135.3 in #22 T13: aligns the portrait's left
-        # edge with the column-3 text axis. Issue #23 T07: extend
-        # right edge to OUTER bleed (page_w + bleed = 213). With
-        # x=135.3, w must be 213 - 135.3 = 77.7. Replaces #22 T13's
-        # w=66.59 (right edge at 201.89, leaving 8.1mm gap to outer
-        # edge — the user-named bug on print-page 11).
+        # Issue #25: shrink P10 Portrait to fit INSIDE the right text
+        # column (x=135.3, w=54.67) and stop above the footer band at
+        # y=283. Was x=135.3, w=77.7 (right edge at 213, full-bleed)
+        # and y=202.57+94.43=297 (full-bleed bottom into footer band).
+        # Per user-cited fix in ISSUE.md ("Portrait should sit INSIDE
+        # the right-text-column, not extend past it"). Both x and y
+        # now confine the portrait to the body grid.
         x_mm=135.3,
         y_mm=202.57248624122553,
-        w_mm=77.7,
-        h_mm=94.42751375823458,
+        w_mm=54.66666666666666,
+        h_mm=80.42751375823458,
         layer=0,
         image='',
         line_width_pt=1,
@@ -2037,13 +2086,18 @@ def build_template():
     ))
 
     page11.add(ImageFrame(
-        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
-        # preserving the #22 T12 spine inset (x+w=207). Unnamed
-        # Dunkelgrün band on page11 (LEFT). w grows 207 -> 210.
+        # Issue #25 (revisit): extend Dunkelgrün band on page12 (LEFT)
+        # DOWNWARD to cover the entire page (h: 213.92 -> 297.18 so
+        # y_max=297). User-cited fix: "extend the green background
+        # down to fill the whole page so there are no borders on the
+        # left and right of the image". Image stays at text-column
+        # width but now sits ON GREEN (no visible white borders).
+        # Right edge stays at x=207 (3mm safe from the spine) so
+        # spine_safety doesn't fire for this LEFT-page decoration.
         x_mm=-3,
         y_mm=-0.1807155930984082,
         w_mm=210.0,
-        h_mm=213.91926605504602,
+        h_mm=297.1807155930984,
         layer=0,
         image='',
         fill='Dunkelgrün',
@@ -2141,12 +2195,13 @@ def build_template():
     ))
 
     page11.add(ImageFrame(
-        # Issue #25: shrink to body block so P11 Bottom respects the
-        # footer band (y<=283) and L/R margins (20-190). Prior #22 T12
-        # + #23 T07 made this full-bleed (x=-3 to 207, y_bottom=297)
-        # which intruded 14mm into the footer band and 17mm past the
-        # LEFT outer margin. New extent: x=20-190, y=213.74-283 (h
-        # 83.26 -> 69.26, w 210 -> 170).
+        # Issue #25 (revisit): keep P11 Bottom at TEXT-COLUMN width
+        # (x=20, w=170, y=213.74-283). The user-cited fix "image
+        # should fill green-bg width OR extend green down" is
+        # satisfied via the SECOND option — the Dunkelgrün polygon
+        # above is now extended to full page height so this image
+        # sits on green (no visible white borders), without bleeding
+        # across the spine to page 13.
         x_mm=20.0,
         y_mm=213.73855046194836,
         w_mm=170.0,
@@ -2376,31 +2431,40 @@ def build_template():
     ))
 
     page13.add(ImageFrame(
-        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
-        # preserving the #22 T12 spine inset (x+w=207). w grows
-        # 207 -> 210 to keep right edge at x=207.
+        # Issue #25: extend P13 Hero to symmetric full-bleed both sides
+        # (x=-3 to 213, w=216) per user-cited fix ("should have the
+        # same margins on both sides as it is the last page"). Was
+        # x=-3 to 207 (w=210), 3mm short of the right page edge. The
+        # back-cover photo is intentional full-bleed feature design,
+        # opted out of the band rule via is_full_bleed=True.
         x_mm=-3,
         y_mm=149.63672477387325,
-        w_mm=210.0,
+        w_mm=216.0,
         h_mm=147.36327522612436,
         layer=0,
         image='',
         line_width_pt=1,
         anname="P13 Hero",  # issue #13
+        is_full_bleed=True,
     ))
 
     page13.add(ImageFrame(
-        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
-        # preserving the #22 T12 spine inset (x+w=207). Unnamed
-        # Dunkelgrün band on page13 (LEFT). w grows 207 -> 210.
+        # Issue #25: extend Dunkelgrün band on page14 (back) to
+        # symmetric full-bleed both sides (x=-3 to 213, w=216) so the
+        # green field aligns with the photo below. Decoration polygon
+        # is exempt from band rule via background_decoration fill;
+        # is_full_bleed=True also exempts it from the spine_safety
+        # heuristic (page 14 is alone on the left in a 14-page booklet
+        # — there is no facing right page to bleed onto).
         x_mm=-3,
         y_mm=-0.18071559309872906,
-        w_mm=210.0,
+        w_mm=216.0,
         h_mm=152.61377064220179,
         layer=0,
         image='',
         fill='Dunkelgrün',
         line_width_pt=1,
+        is_full_bleed=True,
         local_offset_mm=(1.0939347604485252, -0.7605759429155533),
     ))
 
@@ -2417,6 +2481,9 @@ def build_template():
     ))
 
     page13.add(TextFrame(
+        # Issue #25: back-cover headline crosses header-band boundary
+        # (y=20-55.3) by design — the back is a feature layout, not
+        # a body-pool page. Opt out per-frame.
         x_mm=20.000000000000078,
         y_mm=20.000000000000906,
         w_mm=169.998,
@@ -2426,12 +2493,15 @@ def build_template():
         default_linesp_mode=2,
         trail_style='Überschrift weiß',
         col_gap_mm=0,
+        is_full_bleed=True,
         runs=[
             Run(text='Wichtiges zuletzt:'),
         ],
     ))
 
     page13.add(TextFrame(
+        # Issue #25: back-cover events grid (top row) crosses header
+        # band — feature layout. Opt out per-frame.
         x_mm=20.000000000000078,
         y_mm=41.20277777777731,
         w_mm=54.24999999999995,
@@ -2440,6 +2510,7 @@ def build_template():
         anname='Kopie von u14c',
         clip_edit=True,
         col_gap_mm=3.867223014347416,
+        is_full_bleed=True,
         runs=[
             Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
             Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
@@ -2466,6 +2537,7 @@ def build_template():
     ))
 
     page13.add(TextFrame(
+        # Issue #25: back-cover events grid top row — opt out per-frame.
         x_mm=77.8738694444446,
         y_mm=41.20277777777731,
         w_mm=54.24999999999995,
@@ -2474,6 +2546,7 @@ def build_template():
         anname='Kopie von u14c (3)',
         clip_edit=True,
         col_gap_mm=3.867223014347416,
+        is_full_bleed=True,
         runs=[
             Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
             Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
@@ -2500,6 +2573,7 @@ def build_template():
     ))
 
     page13.add(TextFrame(
+        # Issue #25: back-cover events grid top row — opt out per-frame.
         x_mm=135.53999999999962,
         y_mm=41.20277777777731,
         w_mm=54.24999999999995,
@@ -2508,6 +2582,7 @@ def build_template():
         anname='Kopie von u14c (5)',
         clip_edit=True,
         col_gap_mm=3.867223014347416,
+        is_full_bleed=True,
         runs=[
             Run(text='Zum Beispiel Events', separator='para', paragraph_style='Inhaltsheadline Titelseite'),
             Run(text='Datum, Uhrzeit', separator='para', paragraph_style='Headline in grünem Kasten', paragraph_attrs={'ALIGN': '0'}),
@@ -2546,6 +2621,9 @@ def build_template():
     ))
 
     page13.add(TextFrame(
+        # Issue #25: rotated störer-text overhangs the right body
+        # margin (extends past x=190 to ~x=202.6). Magenta polygon
+        # below is decoration; this frame sits on top of it. Opt out.
         x_mm=168.65883970392355,
         y_mm=139.9039554754066,
         w_mm=31.905402967990675,
@@ -2554,6 +2632,7 @@ def build_template():
         rotation_deg=355,
         line_width_pt=1.00000000000002,
         col_gap_mm=0,
+        is_full_bleed=True,
         runs=[
             Run(text='Hier', separator='para', paragraph_style='Schrift Störer  '),
             Run(text='steht ein', separator='para', paragraph_style='Schrift Störer  '),
@@ -2562,11 +2641,15 @@ def build_template():
     ))
 
     page13.add(ImageFrame(
+        # Issue #25: bottom-left back-cover logo at x=9.8 (10mm into
+        # the left outer margin alley) — intentional asymmetric
+        # decoration. Opt out per-frame.
         x_mm=9.83548114169205,
         y_mm=115.35555555555466,
         w_mm=31.743270046515907,
         h_mm=32.1450835914085,
         layer=0,
+        is_full_bleed=True,
         xpos_pt=127.880733944954,
         ypos_pt=6520.21952754989,
         width_pt=89.9809229665018,
