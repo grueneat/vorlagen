@@ -2058,8 +2058,8 @@ def build_template():
         anname="P11 Bottom",  # issue #13
     ))
 
-    page11.add(ImageFrame(
-        x_mm=209.99999999999991,
+    page12.add(ImageFrame(
+        x_mm=0.0,
         y_mm=-0.1807155930984082,
         w_mm=210.7990642201835,
         h_mm=297.1807155930968,
