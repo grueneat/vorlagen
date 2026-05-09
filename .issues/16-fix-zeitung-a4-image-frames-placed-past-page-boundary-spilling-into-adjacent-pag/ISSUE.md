@@ -2,7 +2,7 @@
 id: '16'
 title: 'Fix Zeitung A4: image frames placed past page boundary spilling into adjacent
   pages'
-status: open
+status: done
 priority: high
 labels:
 - bug
