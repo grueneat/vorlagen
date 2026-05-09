@@ -1800,14 +1800,14 @@ def build_template():
     ))
 
     page9.add(ImageFrame(
-        x_mm=209.99999999993608,
+        x_mm=0.0,
         y_mm=0,
         w_mm=209.9999999999361,
         h_mm=126.13945871829057,
         layer=0,
         image='',
         line_width_pt=1,
-        anname="P9 Spread",  # issue #13
+        anname="P9 Spread",  # issue #13; moved to page-local origin in #16
     ))
 
     page10.add(ColumnTextStory(
