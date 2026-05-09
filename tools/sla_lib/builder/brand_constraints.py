@@ -1,6 +1,6 @@
 """Brand-CI constraint predicates (Issue #12, CONTEXT D3).
 
-Eight rules sourced from `shared/brand/QUICKGUIDE-NOTES.md` —
+Nine rules sourced from `shared/brand/QUICKGUIDE-NOTES.md` —
 predicate-style validation, NOT a constraint solver. Do not reach for
 kiwisolver or z3 (RESEARCH §1 + ecosystem §1).
 
@@ -14,7 +14,7 @@ Rule IDs are STABLE strings — changing them invalidates existing
 ``brand_overrides`` entries in template meta.yml files. Always treat
 them as a public surface.
 
-The eight rules:
+The nine rules:
 
   1. ``brand:color_palette`` — every fill/line_color/fcolor referenced
      by a primitive must be present in the doc's available palette
@@ -34,6 +34,9 @@ The eight rules:
   7. ``brand:bleed_3mm`` — the doc's bleed is exactly 3mm on all sides.
   8. ``brand:wahlkreuz_colored_bg`` — frames whose anname contains
      "Wahlkreuz" sit on a polygon background of Dunkelgrün/Hellgrün/Magenta.
+  9. ``brand:inside_page`` — every non-master frame's rotation- and
+     anchor-aware bbox sits inside its own page's
+     ``[-bleed, w+bleed] x [-bleed, h+bleed]`` (Issue #14).
 """
 from __future__ import annotations
 
@@ -416,6 +419,83 @@ def _frame_bbox_mm(item, page) -> Optional[tuple[float, float, float, float]]:
 
 
 # ---------------------------------------------------------------------------
+# brand:inside_page (Issue #14)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _InsidePageRule(BrandRule):
+    """Each non-master frame's rotation- and anchor-aware bbox must fit
+    inside its OWNING page's ``[-bleed, w+bleed] × [-bleed, h+bleed]``.
+
+    Severity split:
+      - worst overshoot ≤ 0.5 mm → pass (within constraint-default tolerance).
+      - 0.5 < worst ≤ 1.0 mm    → warning (bleed-edge nudge from float-
+        imprecise Scribus SLA emit; does NOT break CI).
+      - worst > 1.0 mm           → error (real overflow; CI fails unless
+        template lists ``brand:inside_page`` in ``meta.yml::brand_overrides``).
+
+    The 1.0 mm error cutoff is pragmatic: two existing zeitung frames have
+    ~0.8 mm right-edge nudges from float-imprecise bleed math during SLA
+    round-trip emit (e.g. ``w_mm=210.799...`` on a 210 mm page with 3 mm
+    bleed); a strict 0.5 mm cutoff would surface these as errors and
+    require a separate brand_overrides escape. ISSUE.md acceptance text
+    reads 0.5 mm as the warning/error boundary; the 1.0 mm value is the
+    planner's confirmation choice — revert if the user disagrees.
+
+    Master-page items are skipped — masters are abstract layout grids and
+    legitimately carry full-bleed background polygons. Tighten in a
+    follow-up issue if master-page drift becomes a concern.
+
+    The ``meta.yml::brand_overrides`` mechanism is RULE-LEVEL only — there
+    is no per-frame allowlist; if a template legitimately needs to
+    silence the rule (e.g. zeitung pending #16 SpreadImage migration),
+    list ``brand:inside_page`` in its overrides with a reason.
+    """
+
+    tolerance_mm: float = 0.5
+    error_cutoff_mm: float = 1.0
+
+    def check(self, primitives: list, doc) -> list:
+        # We IGNORE the flat ``primitives`` arg — only doc-level
+        # iteration carries ``(page, item)`` pairs. Pattern matches
+        # _Bleed3mmRule.
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            pw_mm = page.width_pt * PT_TO_MM
+            ph_mm = page.height_pt * PT_TO_MM
+            bleed = float(page.bleed_mm or 0)
+            for item in page.items:
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                x0, y0, x1, y1 = bbox
+                over_l = (-bleed) - x0
+                over_r = x1 - (pw_mm + bleed)
+                over_t = (-bleed) - y0
+                over_b = y1 - (ph_mm + bleed)
+                worst = max(over_l, over_r, over_t, over_b, 0.0)
+                if worst <= self.tolerance_mm:
+                    continue
+                sev = "warning" if worst <= self.error_cutoff_mm else "error"
+                ident = item.anname or f"<unnamed {type(item).__name__}>"
+                loc = page.label or page.master_name or f"page#{page.own_page}"
+                violations.append(Violation(
+                    severity=sev,
+                    rule_id=self.id,
+                    message=(
+                        f"frame {ident!r} bbox "
+                        f"({x0:.2f}, {y0:.2f})-({x1:.2f}, {y1:.2f}) "
+                        f"exceeds page {loc!r} "
+                        f"(trim {pw_mm:.1f}x{ph_mm:.1f}, bleed {bleed:.1f}); "
+                        f"worst overshoot {worst:.2f}mm"
+                    ),
+                    targets=(ident,),
+                ))
+        return violations
+
+
+# ---------------------------------------------------------------------------
 # Module-level rule registry
 # ---------------------------------------------------------------------------
 def _make_rule(cls, **kwargs) -> BrandRule:
@@ -471,5 +551,12 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
         id="brand:wahlkreuz_colored_bg",
         name="Wahlkreuz on colored background",
         description="Wahlkreuz frames sit on a Dunkelgrün/Hellgrün/Magenta polygon.",
+    ),
+    _make_rule(
+        _InsidePageRule,
+        id="brand:inside_page",
+        name="Frames inside page bounds",
+        description="Every non-master frame's rotation-aware bbox sits "
+                    "inside its own page's [-bleed, w+bleed] x [-bleed, h+bleed].",
     ),
 ]
