@@ -61,14 +61,15 @@ This issue makes validation **stricter by default** AND **actually fixes** the Z
 - New `--strict` mode: emit ERRORs (not warnings) for everything. Used in CI per-template after the template is "audited clean".
 - Output adds geometric-outcome suggestions: not just "declare with `same_x(A, B)`" but also "OR fix geometry: A.x=N, B.x=N".
 
-### Phase 3 — Geometric outcome tests (`tools/sla_lib/tests/test_zeitung_geometry.py` NEW)
+### Phase 3 — Generalized CI script (NOT template-specific tests)
 
-- Pin specific (x, y, w, h) for the 11 detected outer-bleed-gap frames after their fix.
-- Pin Cover Hero outer-bbox == u2950 outer-bbox (full-bleed match).
-- Pin no image-text partial overlap on Zeitung.
-- Pin page-8 portrait flush with u918 polygon (top + right edges).
-- Pin page-10 text columns ending at green-card top (no overlap).
-- These tests fail before geometry fix lands; pass after.
+**Per user direction:** validation must be **generalized across all templates**, not pinned to Zeitung coordinates. Mechanism = the new BrandRules running globally + a CI script that hard-fails on any error-severity violation across any template.
+
+- **No `test_zeitung_geometry.py`.** Pinning specific frame coordinates would be brittle (any future legitimate Zeitung edit breaks the test) AND template-specific (other templates need the same protection but wouldn't get it).
+- Instead: **`bin/audit-alignment --all --strict`** wired into `.github/workflows/pages.yml` exits non-zero on ANY error-severity violation across ANY template. Promoted from #22's informational `|| true` to fatal in this issue.
+- Rule-level unit tests stay generic: each new rule has its own `test_brand_<rule>.py` using synthetic mini-docs to verify the rule semantics. NO real-template coordinates pinned.
+- Per-template `meta.yml::brand_overrides` lets templates skip a rule with documented reason. After Phase 4 the Zeitung geometry passes all rules naturally — Zeitung does NOT skip them. Other templates (postkarte, plakat, V1-bound) get pre-applied skips with reason "scheduled for follow-up audit" so the global gate doesn't block them mid-rollout.
+- `bin/audit-alignment --strict` exit-codes: `0` clean across all templates, `1` any error-severity violation. Output stays Markdown for human reading; `--json` for machine-readable.
 
 ### Phase 4 — Actually fix Zeitung geometry (`templates/zeitung-a4-grun/build.py`)
 
@@ -93,9 +94,11 @@ For each declaration in `templates/zeitung-a4-grun/CONSTRAINTS = [...]` that was
 - `postkarte-a6-kampagne`, `plakat-a1-hochformat`, all V1-bound templates — pre-applied `brand_overrides[brand:bleed_coverage]` skip with reason "single-page, no facing-page bleed concerns" if facing_pages=False.
 - `wahlaufruf-postkarte-a6-quer` (just merged in #17): single-page, no bleed-coverage applicable, but **`brand:image_text_overlap` MAY surface real issues** — re-run audit and document.
 
-### Phase 7 — Update `bin/audit-alignment` invocation in CI
+### Phase 7 — Promote `bin/audit-alignment` to fatal CI step
 
-`.github/workflows/pages.yml`: keep informational (`|| true`) for now. After Zeitung is geometrically clean, promote to fatal in a follow-up.
+`.github/workflows/pages.yml`: `bin/audit-alignment --all --strict` becomes a fatal step (no `|| true`). Drops in this PR — Zeitung is clean by Phase 4; other templates have skip overrides applied in Phase 6.
+
+Subsequent template work (e.g. #18-#21) MUST keep this CI step green: either by passing the rules naturally OR by adding a documented `brand_overrides` skip per template.
 
 ## Acceptance Criteria
 
