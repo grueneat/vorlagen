@@ -29,6 +29,18 @@ brand_overrides:
       The Zeitung uses journalism conventions (tighter headline leading, looser
       caption leading) that differ from the unified-Quickguide rule. Round-
       trip diff is the byte-stable contract.
+  - id: brand:bleed_coverage
+    reason: >-
+      Scheduled for fix in T07 of #23. Zeitung has 11 full-width frames
+      (Cover Hero, P1 Hero, P4 Foto-Spread, P9 Spread halves, P11 Bottom,
+      P13 Hero, plus 3 unnamed Dunkelgrün polygons) inset 3mm from the
+      outer edge — violates brand:bleed_coverage. Fixed in T07 atomic
+      commit; this temporary override is REMOVED in T07.
+  - id: brand:image_text_overlap
+    reason: >-
+      Scheduled for fix in T07 of #23. Page-10 Polygon `Kopie von u1529`
+      partially overlaps text columns; fixed in T07 atomic commit. This
+      temporary override is REMOVED in T07.
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
