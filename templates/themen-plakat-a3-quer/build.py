@@ -443,36 +443,58 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
 # for the convention.
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # All three beleg-headlines share y=130 (the row alignment baseline).
-    same_y(
-        "Beleg 1 — Headline",
-        "Beleg 2 — Headline",
-        "Beleg 3 — Headline",
-        name="beleg_headlines_row",
-    ),
-    # All three beleg-bodies share y=152.
-    same_y(
-        "Beleg 1 — Body",
-        "Beleg 2 — Body",
-        "Beleg 3 — Body",
-        name="beleg_bodies_row",
-    ),
-    # Vertical hierarchy: headline -> subheadline distance.
-    distance_y("Headline These", "Sub-Headline", equals=52.0,
-                name="hl_to_sub"),
-    # Beleg-headline-to-body distance per column.
-    distance_y("Beleg 1 — Headline", "Beleg 1 — Body", equals=22.0,
-                name="beleg1_hd_to_body"),
-    # Style consistency across the three Beleg-headlines.
-    same_style(
-        "Beleg 1 — Headline", "Beleg 2 — Headline", "Beleg 3 — Headline",
-        name="beleg_hd_style_consistent",
-    ),
-    # Style consistency across the three Beleg-bodies.
-    same_style(
-        "Beleg 1 — Body", "Beleg 2 — Body", "Beleg 3 — Body",
-        name="beleg_body_style_consistent",
-    ),
+    # Headline-stack vertical hierarchy: Sub sits below Headline These in same
+    # right-half column. distance_y measures |a.y - b.y| = top-to-top distance.
+    # Headline These y=70, Sub-Headline y=172 → 172-70 = 102.
+    distance_y("Headline These", "Sub-Headline", equals=102.0,
+               name="hl_to_sub"),
+
+    # Three Evidence cards share top y=210 and same width=124.67 (row alignment +
+    # uniform card sizing).
+    same_y("Beleg 1 — Card", "Beleg 2 — Card", "Beleg 3 — Card",
+           name="cards_top_aligned"),
+    same_size("Beleg 1 — Card", "Beleg 2 — Card", "Beleg 3 — Card",
+              name="cards_same_size"),
+
+    # Cards mirror around page horizontal centre (axis 210mm = page_w/2).
+    # Card 1 left=15 ↔ Card 3 right=405.67 → axis (15+405.67)/2 = 210.335 → drift
+    # 0.335mm < 0.5mm tolerance ✓.
+    mirrored_x("Beleg 1 — Card", "Beleg 3 — Card", axis_mm=210.0,
+               name="cards_mirror_around_page_center"),
+
+    # Per-card inner-axis sharing: 3 stat-heros / labels / bodies share x = col_x+5.
+    # NOTE: Card itself NOT in this same_x — Card.x = col_x, contents.x = col_x+5;
+    # 5mm drift > 0.5mm tol would FAIL. Containment encoded by inside() below.
+    # (Pitfalls §3 P3 — ISSUE.md errata.)
+    same_x("Beleg 1 — Stat", "Beleg 1 — Label", "Beleg 1 — Body",
+           name="card1_v_axis"),
+    same_x("Beleg 2 — Stat", "Beleg 2 — Label", "Beleg 2 — Body",
+           name="card2_v_axis"),
+    same_x("Beleg 3 — Stat", "Beleg 3 — Label", "Beleg 3 — Body",
+           name="card3_v_axis"),
+
+    # Per-card containment: each Stat/Label/Body sits inside its Card backing.
+    # 9 inside() constraints — declarative witness for "white text on green polygon".
+    inside("Beleg 1 — Stat",  "Beleg 1 — Card", name="b1_stat_in_card"),
+    inside("Beleg 1 — Label", "Beleg 1 — Card", name="b1_label_in_card"),
+    inside("Beleg 1 — Body",  "Beleg 1 — Card", name="b1_body_in_card"),
+    inside("Beleg 2 — Stat",  "Beleg 2 — Card", name="b2_stat_in_card"),
+    inside("Beleg 2 — Label", "Beleg 2 — Card", name="b2_label_in_card"),
+    inside("Beleg 2 — Body",  "Beleg 2 — Card", name="b2_body_in_card"),
+    inside("Beleg 3 — Stat",  "Beleg 3 — Card", name="b3_stat_in_card"),
+    inside("Beleg 3 — Label", "Beleg 3 — Card", name="b3_label_in_card"),
+    inside("Beleg 3 — Body",  "Beleg 3 — Card", name="b3_body_in_card"),
+
+    # Themen-Hero containment in Hero-Foto-Card (NOT aligned_below to Sub-Headline
+    # — pitfalls §4 P4: Hero (x=18) and Sub-Headline (x=235) are side-by-side in
+    # the 60/40 split, NOT vertically stacked.)
+    inside("Themen-Hero", "Hero-Foto-Card", name="hero_in_card"),
+
+    # Style consistency across the 3 Stat / Body frames.
+    same_style("Beleg 1 — Stat", "Beleg 2 — Stat", "Beleg 3 — Stat",
+               name="stat_style_consistent"),
+    same_style("Beleg 1 — Body", "Beleg 2 — Body", "Beleg 3 — Body",
+               name="body_style_consistent"),
 ]
 
 
