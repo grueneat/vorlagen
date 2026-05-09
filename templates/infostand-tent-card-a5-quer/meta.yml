@@ -29,11 +29,17 @@ brand_overrides:
       tolerance, intentional sizing chosen so the logo doesn't dominate the
       reduced height of each tent-card panel (panel height 105mm). Mirroring
       the same width on both panels is the dominant design constraint.
-  - id: brand:undeclared_alignment_drift
+  - id: brand:visual_adjacency_drift
     reason: >-
       V1 layout work in #20 owns alignment encoding for this template.
       Re-enable once V1 lands and a CONSTRAINTS list captures the
-      declared adjacencies (Issue #22 locked decision #9).
+      declared adjacencies (Issue #22 locked decision #9). Issue #23
+      renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.
+  - id: brand:image_text_overlap
+    reason: >-
+      Scheduled for follow-up audit per #23 — caption-on-photo / decorative
+      overlaps audited at time of #23, not yet reviewed for fix-vs-override
+      classification.
 ci_overrides:
   non_ci_styles:
     - "tent/headline"

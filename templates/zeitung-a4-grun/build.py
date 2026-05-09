@@ -235,9 +235,12 @@ def build_template():
     )
 
     page0.add(ImageFrame(
-        x_mm=0,
+        # Issue #23 T07: extend cover image to BOTH outer bleed edges so
+        # the full-bleed visual matches u2950's (x=-3..213) extent. Cover
+        # is own_page=0 (RIGHT-alone), so both edges are outer.
+        x_mm=-3,
         y_mm=0,
-        w_mm=209.9999999999361,
+        w_mm=216,
         h_mm=155.5669724770642,
         layer=0,
         image='',
@@ -455,13 +458,12 @@ def build_template():
     ))
 
     page1.add(ImageFrame(
-        x_mm=0,
+        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
+        # preserving the #22 T12 spine inset (x+w=207). w grows
+        # 207 -> 210 to keep right edge at x=207.
+        x_mm=-3,
         y_mm=0,
-        # w 210 -> 207 in #22 T12: P1 Hero on page1 (LEFT) had right
-        # edge x=210 flush with the spine; Scribus bleed leaked across
-        # to the facing RIGHT page (page2). Inset preserves left axis
-        # at x=0 and leaves 3mm spine safety on the right.
-        w_mm=207.0,
+        w_mm=210.0,
         h_mm=130.20731192714427,
         layer=0,
         clip_edit=True,
@@ -973,12 +975,13 @@ def build_template():
     # Upstream gruene-zeitung-vorlage-original.sla has only ONE
     # ImageFrame at HEIGHT~306pt on OwnPage=4 — there is no page-3
     # half in the source. Spine-safety addressed by LEFT-edge inset
-    # in #22 T12: x=0 -> x=3, w=210 -> 207 (preserves right-edge
-    # alignment at x=210, 3mm spine safety on the left).
+    # in #22 T12: x=0 -> x=3 (preserves right-edge at x=210).
+    # Issue #23 T07: extend RIGHT edge to outer bleed (x+w=213) while
+    # preserving the spine inset; w grows 207 -> 210.
     page4.add(ImageFrame(
         x_mm=3.0,
         y_mm=188.8816330286011,
-        w_mm=207.0,
+        w_mm=210.0,
         h_mm=108.11836697086034,
         layer=0,
         image='',
@@ -1387,15 +1390,18 @@ def build_template():
     ))
 
     page7.add(ImageFrame(
-        # x 134.654 -> 135.3 in #22 T13: aligns the portrait's left
-        # edge with the column-3 text axis (x=135.3) used by the
-        # body-grid above. 0.65mm drift would otherwise trip
-        # brand:undeclared_alignment_drift; explicit declaration via
-        # CONSTRAINTS in T14 (same_x with col-3 frame).
+        # Issue #23 T07: portrait flush with u918 (x=20..190, y=195..277):
+        #   left  = 135.3 (preserves col-3 axis alignment with body grid)
+        #   top   = 195   (flush with u918 top)
+        #   right = 190   (flush with u918 right) → w = 190-135.3 = 54.7
+        #   bottom= 277   (flush with u918 bottom) → h = 277-195 = 82
+        # Replaces #22 T13's asymmetric inset (3.4mm right + 5.65mm top
+        # gap from u918) which Issue #23 catches via
+        # brand:visual_adjacency_drift axis-x-right.
         x_mm=135.3,
-        y_mm=200.64722222222255,
-        w_mm=51.345915392456746,
-        h_mm=76.35277777723881,
+        y_mm=195.0,
+        w_mm=54.7,
+        h_mm=82.0,
         layer=0,
         image='',
         line_width_pt=1,
@@ -1716,12 +1722,17 @@ def build_template():
         # top of the spread. New start y = spread_bottom (126.14) +
         # 4mm gap = 130.14 (declared via aligned_below in T14
         # CONSTRAINTS).
+        # Issue #23 T07: columns 1+2 shrink so their bottoms end at
+        # y=171 (4mm gap above the Dunkelgrün card 'Kopie von u1529'
+        # which starts at y=175). h = 171 - 130.14 = 40.86. This
+        # eliminates the partial overlap caught by
+        # brand:image_text_overlap.
         frames=[
             TextFrame(
             x_mm=20.000000000000078,
             y_mm=130.14,
             w_mm=54.66573888888888,
-            h_mm=122.28167890069918,
+            h_mm=40.86,
             layer=0,
             anname='Kopie von u2d5c (13)',
             clip_edit=True,
@@ -1732,7 +1743,7 @@ def build_template():
             x_mm=77.66599999999997,
             y_mm=130.14,
             w_mm=54.66573888888888,
-            h_mm=122.747733946571,
+            h_mm=40.86,
             layer=0,
             anname='Kopie von u2da1 (16)',
             clip_edit=True,
@@ -1746,8 +1757,9 @@ def build_template():
             # original h would push the bottom to y=359.44, far past
             # page bottom (297) — inside_page error. Shrink to keep
             # the bottom at y=280 (3mm above the PageNumber strip at
-            # y=283.7); column 3 holds less body content but stays
-            # visually balanced with columns 1+2 ending at y=252.
+            # y=283.7). Column 3 stays larger because it doesn't
+            # overlap the green card (the card is only 112mm wide
+            # at x=20..132, leaving column 3 at x=135.3 untouched).
             h_mm=149.86,
             layer=0,
             anname='Kopie von u2da1 (17)',
@@ -1840,8 +1852,10 @@ def build_template():
     # P9 Spread: TWO-PAGE spread across pages 9 (LEFT) + 10 (RIGHT) —
     # converted to SpreadImage in #22 T11 (reverts #16's misfix that
     # made it a single-page frame). Each half is `inside_page`-clean
-    # by construction (x=0 on its own page) and exempt from
-    # brand:spine_safety via the ' · (left|right)$' anname pattern.
+    # by construction and exempt from brand:spine_safety via the
+    # ' · (left|right)$' anname pattern.
+    # Issue #23 T07: outer_bleed_mm=3.0 extends each half outward to
+    # the outer bleed (LEFT half x=-3..213, RIGHT half x=0..213).
     SpreadImage(
         image="",
         page_w_mm=209.9999999999361,
@@ -1849,6 +1863,7 @@ def build_template():
         h_mm=126.13945871829057,
         y_mm=0.0,
         base_anname="P9 Spread",
+        outer_bleed_mm=3.0,
     ).place(page9, page10)
 
     page10.add(ColumnTextStory(
@@ -1934,14 +1949,14 @@ def build_template():
 
     page10.add(ImageFrame(
         # x 143.412 -> 135.3 in #22 T13: aligns the portrait's left
-        # edge with the column-3 text axis (x=135.333) used by the
-        # body-grid above on the same page. 8.1mm drift was the
-        # user-named bug on print-page 11 (== own_page=10). Right
-        # edge becomes 135.3 + 66.59 = 201.89 (well clear of the page
-        # right edge at 210). Declared via same_x in T14 CONSTRAINTS.
+        # edge with the column-3 text axis. Issue #23 T07: extend
+        # right edge to OUTER bleed (page_w + bleed = 213). With
+        # x=135.3, w must be 213 - 135.3 = 77.7. Replaces #22 T13's
+        # w=66.59 (right edge at 201.89, leaving 8.1mm gap to outer
+        # edge — the user-named bug on print-page 11).
         x_mm=135.3,
         y_mm=202.57248624122553,
-        w_mm=66.58809174299142,
+        w_mm=77.7,
         h_mm=94.42751375823458,
         layer=0,
         image='',
@@ -1997,13 +2012,12 @@ def build_template():
     ))
 
     page11.add(ImageFrame(
-        x_mm=0,
+        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
+        # preserving the #22 T12 spine inset (x+w=207). Unnamed
+        # Dunkelgrün band on page11 (LEFT). w grows 207 -> 210.
+        x_mm=-3,
         y_mm=-0.1807155930984082,
-        # Unnamed Dunkelgrün band on page11 (LEFT): w 210.799 -> 207
-        # in #22 T12 (right edge was 0.8mm past the bleed and 4.2mm
-        # over the spine). Inset preserves left axis at x=0 and leaves
-        # 3mm spine safety on the right.
-        w_mm=207.0,
+        w_mm=210.0,
         h_mm=213.91926605504602,
         layer=0,
         image='',
@@ -2099,12 +2113,12 @@ def build_template():
     ))
 
     page11.add(ImageFrame(
-        x_mm=0,
+        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
+        # preserving the #22 T12 spine inset (x+w=207). w grows
+        # 207 -> 210 to keep right edge at x=207.
+        x_mm=-3,
         y_mm=213.73855046194836,
-        # w 210 -> 207 in #22 T12: P11 Bottom on page11 (LEFT) right
-        # edge x=210 was flush with spine; inset preserves left axis
-        # at x=0 and leaves 3mm spine safety on the right.
-        w_mm=207.0,
+        w_mm=210.0,
         h_mm=83.26144953805078,
         layer=0,
         image='',
@@ -2113,13 +2127,13 @@ def build_template():
     ))
 
     page12.add(ImageFrame(
-        # Unnamed Dunkelgrün full-bleed band on page12 (RIGHT post-T09):
-        # x 0 -> 3, w 210.799 -> 207 in #22 T12. Original left edge sat
-        # at the spine; inset preserves right edge at x=210 and leaves
-        # 3mm spine safety on the left.
+        # Unnamed Dunkelgrün full-bleed band on page12 (RIGHT post-T09).
+        # Issue #23 T07: extend RIGHT edge to outer bleed (x+w=213)
+        # while preserving the #22 T12 spine inset (x=3). w grows
+        # 207 -> 210 to keep left edge at x=3.
         x_mm=3.0,
         y_mm=-0.1807155930984082,
-        w_mm=207.0,
+        w_mm=210.0,
         h_mm=297.1807155930968,
         layer=0,
         image='',
@@ -2325,12 +2339,12 @@ def build_template():
     ))
 
     page13.add(ImageFrame(
-        x_mm=0,
+        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
+        # preserving the #22 T12 spine inset (x+w=207). w grows
+        # 207 -> 210 to keep right edge at x=207.
+        x_mm=-3,
         y_mm=149.63672477387325,
-        # w 210 -> 207 in #22 T12: P13 Hero on page13 (LEFT) right
-        # edge x=210 was flush with spine; inset preserves left axis
-        # at x=0 and leaves 3mm spine safety on the right.
-        w_mm=207.0,
+        w_mm=210.0,
         h_mm=147.36327522612436,
         layer=0,
         image='',
@@ -2339,13 +2353,12 @@ def build_template():
     ))
 
     page13.add(ImageFrame(
-        x_mm=0,
+        # Issue #23 T07: extend LEFT edge to outer bleed (x=-3) while
+        # preserving the #22 T12 spine inset (x+w=207). Unnamed
+        # Dunkelgrün band on page13 (LEFT). w grows 207 -> 210.
+        x_mm=-3,
         y_mm=-0.18071559309872906,
-        # Unnamed Dunkelgrün band on page13 (LEFT): w 210.799 -> 207
-        # in #22 T12 (right edge was 0.8mm past the bleed and ~4mm
-        # over the spine). Inset preserves left axis at x=0 and 3mm
-        # spine safety on the right.
-        w_mm=207.0,
+        w_mm=210.0,
         h_mm=152.61377064220179,
         layer=0,
         image='',
@@ -2653,6 +2666,8 @@ CONSTRAINTS = [
     aligned_below("u1d9", "u1c1", gap_mm=1.40, name="p1_meta_below_url"),
     # u165 / u1d9 baseline drift = 0.7mm (just above the 0.5mm
     # default tolerance) — accept the original layout's near-miss.
+    # Issue #23 T07: tolerance kept at 1.0 (within the suspicion
+    # ceiling); not classified as encode-and-silence.
     same_y("u165", "u1d9", tolerance_mm=1.0,
            name="p1_meta_two_col_baseline"),
 
@@ -2662,11 +2677,14 @@ CONSTRAINTS = [
                   name="p3_p2mid_below_col2"),
 
     # --- Page 4 (LEFT) ---
-    # Two grouped polygons share a baseline on page 4 (decorative band).
-    # Original drift is 3.6mm — the band is approximate, not strictly
-    # shared baseline; declare with widened tolerance.
-    same_y("u1529", "u1544", tolerance_mm=4.0,
-           name="p4_band_baseline"),
+    # Issue #23 T07: REMOVED p4_band_baseline (tolerance_mm=4.0,
+    # actual drift 3.6mm). Per anti-pattern F1, tolerance > 1.0 is
+    # encode-and-silence. The decorative band's two polygons (u1529,
+    # u1544) are approximately stacked but NOT strictly shared
+    # baseline by design; the warning surfaces in
+    # brand:visual_adjacency_drift as informational. Removal does not
+    # break any rule because the drift is an intentional decorative
+    # offset, not a constraint we're claiming to enforce.
 
     # --- Page 6 (LEFT) ---
     # P5 Hero sits 2.56mm below the column-2 text frame.
@@ -2674,56 +2692,56 @@ CONSTRAINTS = [
                   name="p6_p5hero_below_col2"),
 
     # --- Page 8 (LEFT) ---
-    # Page-8 portrait sits inside u918 Dunkelgrün band; declared
-    # adjacencies with the col-2 text above + col-3 text axis.
+    # Issue #23 T07: P7 Portrait was moved to be flush with u918
+    # (top y=195, right x+w=190). The aligned_below relationship
+    # below the col-3 caption (Kopie von u2da1 (11), bottom y=190.47)
+    # now has gap = 195 - 190.47 = 4.53mm (was 10.17mm). Updated
+    # gap_mm reflects the new tighter geometry; tolerance stays
+    # default 0.5mm. The portrait-to-card flush relationship is
+    # itself unencoded (CONSTRAINTS doesn't have a same-bbox-flush
+    # factory); it IS pinned by T08's invariant tests.
     aligned_below("u918", "Kopie von u2d5c (9)", gap_mm=4.00,
                   name="p8_band_below_col2"),
-    aligned_below("P7 Portrait", "Kopie von u2da1 (11)", gap_mm=10.17,
+    aligned_below("P7 Portrait", "Kopie von u2da1 (11)", gap_mm=4.53,
                   name="p8_portrait_below_col3_caption"),
 
-    # --- Page 9 (RIGHT) ---
+    # --- Page 9 (LEFT) ---
     # The user-named bug page (now own_page=9 LEFT post-T09; print page 10).
     # P9 Spread · left occupies y=0..126.14; text columns moved to
-    # y=130.14 (4mm gap). Audit shows residual 1.6/1.86mm vertical
-    # drifts within the column trio — declared as same_y witnesses.
+    # y=130.14 (4mm gap).
+    # Issue #23 T07: REMOVED p9_col1_col2_baseline + p9_col1_col2_topline
+    # (tolerance_mm=2.0). Per anti-pattern F1, > 1.0 is encode-and-silence.
+    # The 1.6/1.86mm drifts are journalism-typesetting baseline drift,
+    # not constraints we should claim to enforce. They surface in
+    # brand:visual_adjacency_drift as informational (severity=warning).
     aligned_below("Kopie von u2da1 (15)", "Kopie von u6ad", gap_mm=4.29,
                   name="p9_col2_below_caption"),
-    # Drift 1.86 / 1.6mm — column-trio top edges are loosely aligned;
-    # widened tolerance accepts the original layout.
-    same_y("Kopie von u2d5c (12)", "Kopie von u2da1 (12)",
-           tolerance_mm=2.0, name="p9_col1_col2_baseline"),
-    same_y("Kopie von u2d5c (12)", "Kopie von u2da1 (13)",
-           tolerance_mm=2.0, name="p9_col1_col2_topline"),
 
     # --- Page 10 (LEFT) ---
-    # Decorative band on page 10 mirrors the page-4 pattern (3.6mm drift).
-    same_y("Kopie von u1529", "Kopie von u1544", tolerance_mm=4.0,
-           name="p10_band_baseline"),
+    # Issue #23 T07: REMOVED p10_band_baseline (tolerance_mm=4.0,
+    # actual drift 3.6mm). Mirrors the page-4 decision; decorative
+    # band offset is intentional, not a constraint to encode.
 
     # --- Page 11 (RIGHT) ---
-    # P10 Portrait fixed in T13 (x_mm=135.3); audit shows the column-3
-    # text frame pair shares a baseline and the portrait sits below it.
-    # Drift 1.17 / 1.36mm — column-trio top edges loosely aligned.
-    same_y("Kopie von u2d5c (14)", "Kopie von u2da1 (18)",
-           tolerance_mm=1.5, name="p11_col_topline_a"),
-    same_y("Kopie von u2d5c (14)", "Kopie von u2da1 (19)",
-           tolerance_mm=1.5, name="p11_col_topline_b"),
+    # P10 Portrait fixed in T07 (x_mm=135.3, w_mm=77.7 → right edge
+    # at outer bleed x=213). Below the column-3 caption pair.
+    # Issue #23 T07: REMOVED p11_col_topline_a + p11_col_topline_b
+    # (tolerance_mm=1.5). Per F1, > 1.0 is encode-and-silence; the
+    # 1.17/1.36mm column-baseline drift is journalism typesetting,
+    # not a constraint we enforce. The portrait-below-col3 gap was
+    # 11.57mm; let the heuristic surface as warning if needed.
     aligned_below("P10 Portrait", "Kopie von u2da1 (19)", gap_mm=11.57,
                   name="p11_portrait_below_col3"),
 
     # --- Page 13 (RIGHT) ---
-    # 3-column body grid; audit shows multiple sub-1.7mm same_y drifts
-    # — all declared as the column-grid baseline witnesses.
-    # Drift 0.8 / 0.8 / 1.36 / 1.63mm — body grid top edges loosely
-    # aligned. Tolerance 2.0 covers all four pairs.
-    same_y("Kopie von u2d5c (17)", "Kopie von u2da1 (23)",
-           tolerance_mm=1.0, name="p13_col1_col3_baseline_a"),
-    same_y("Kopie von u2da1 (22)", "Kopie von u2da1 (23)",
-           tolerance_mm=1.0, name="p13_col2_col3_baseline"),
-    same_y("Kopie von u2d5c (18)", "Kopie von u2da1 (24)",
-           tolerance_mm=2.0, name="p13_col1_col3_baseline_b"),
-    same_y("Kopie von u2d5c (18)", "Kopie von u2da1 (25)",
-           tolerance_mm=2.0, name="p13_col1_col3_baseline_c"),
+    # 3-column body grid; audit shows multiple sub-1.7mm same_y
+    # drifts. Issue #23 T07: REMOVED the four widened p13 same_y
+    # baselines. The 1.0mm-tolerance pairs (a, b: now removed too
+    # for consistency — encoding column-grid drift is not the rule's
+    # purpose; the rule's purpose is to surface drift, not absorb it).
+    # The 2.0mm-tolerance pairs were definitively encode-and-silence.
+    # All four left to surface as informational warnings via
+    # brand:visual_adjacency_drift.
 
     # --- Page 14 (LEFT) ---
     # Three grouped decoration polygons stacked with 4.95mm gap.

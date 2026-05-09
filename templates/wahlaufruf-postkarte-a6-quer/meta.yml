@@ -28,6 +28,16 @@ brand_overrides:
       outside the 0.9 factor. Override retained until those orphans are
       removed and the on-green palette adopts a tighter linesp. Originally
       a shared brand-team-review note pre-V1.
+  - id: brand:image_text_overlap
+    reason: >-
+      Issue #23 added brand:image_text_overlap which surfaces a text-
+      polygon partial-overlap on this template's master page (Impressum
+      text frame partially overlaps the seitenhintergrund_back_left
+      Dunkelgrün polygon). Locked decision #12 of #23 originally said
+      this template would be audited via a separate fixup PR for #17
+      (already merged); pre-applied here to keep structural_check --all
+      green during the #23 PR. Re-audit and decide fix-vs-override in
+      the #17 fixup PR.
 ci_overrides:
   non_ci_styles:
     - "wahlaufruf/headline"

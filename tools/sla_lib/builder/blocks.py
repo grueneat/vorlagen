@@ -687,10 +687,9 @@ class FoldedPanel:
 class SpreadImage:
     """Two ImageFrames, one per facing page, sharing one source image.
 
-    Right half uses ``local_offset_mm=(-page_w_mm, 0)`` so the source
-    image "scrolls" left and the right half shows the right half of the
-    picture. Both frames are ``inside_page``-clean by construction
-    (each sits at ``x=0`` on its own page).
+    Right half uses ``local_offset_mm=(-(page_w + outer_bleed), 0)`` so
+    the source image "scrolls" left and the right half shows the right
+    half of the picture, including any outer-bleed extension.
 
     ``scale_type`` is hard-pinned to 0 (free / aspect-locked); the
     default 1 (auto-fit) breaks the spread because each half auto-fits
@@ -700,6 +699,12 @@ class SpreadImage:
     ``f"{base} · left"`` and ``f"{base} · right"`` (middle-dot ' · ',
     matching ``WahlkreuzSymbol``'s convention). Empty ``base_anname``
     leaves both anname fields empty.
+
+    ``outer_bleed_mm`` (Issue #23 T05): when > 0, each half extends
+    outward by N mm so the spread visually reaches the outer bleed on
+    facing-pages docs. Default 0.0 preserves prior behavior. The right
+    half's ``local_offset_mm`` is adjusted to ``-(page_w + outer_bleed)``
+    so the source-image scroll accounts for the additional bleed area.
     """
 
     image: str
@@ -710,11 +715,13 @@ class SpreadImage:
     base_anname: str = ""
     scale_type: int = 0
     local_scale: tuple[float, float] = (1.0, 1.0)
+    outer_bleed_mm: float = 0.0   # NEW (Issue #23 T05)
 
     def emit(self) -> tuple[ImageFrame, ImageFrame]:
+        b = float(self.outer_bleed_mm)
         left = ImageFrame(
-            x_mm=0.0, y_mm=self.y_mm,
-            w_mm=self.page_w_mm, h_mm=self.h_mm,
+            x_mm=-b, y_mm=self.y_mm,
+            w_mm=self.page_w_mm + b, h_mm=self.h_mm,
             image=self.image,
             local_scale=self.local_scale,
             local_offset_mm=(0.0, 0.0),
@@ -723,10 +730,12 @@ class SpreadImage:
         )
         right = ImageFrame(
             x_mm=0.0, y_mm=self.y_mm,
-            w_mm=self.page_w_mm, h_mm=self.h_mm,
+            w_mm=self.page_w_mm + b, h_mm=self.h_mm,
             image=self.image,
             local_scale=self.local_scale,
-            local_offset_mm=(-self.page_w_mm, 0.0),  # NEGATIVE x — see docstring
+            # NEGATIVE x — see docstring. Bleed-aware: extra bleed area
+            # must be accounted for in the source-image scroll offset.
+            local_offset_mm=(-(self.page_w_mm + b), 0.0),
             scale_type=self.scale_type,
             anname=f"{self.base_anname} · right" if self.base_anname else "",
         )

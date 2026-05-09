@@ -1,42 +1,40 @@
-"""Brand-CI constraint predicates (Issue #12, CONTEXT D3).
+"""Brand-CI constraint predicates (Issue #12 + #14 + #22 + #23).
 
-Nine rules sourced from `shared/brand/QUICKGUIDE-NOTES.md` —
-predicate-style validation, NOT a constraint solver. Do not reach for
+Predicate-style validation, NOT a constraint solver. Do not reach for
 kiwisolver or z3 (RESEARCH §1 + ecosystem §1).
 
-Each rule is a frozen ``BrandRule`` dataclass with a ``check(primitives,
-doc)`` method returning a list of ``Violation`` objects (severity
-"error" by default). Rules are auto-applied by ``structural_check.py``
-unless the template's ``meta.yml`` lists the rule's id under
-``brand_overrides`` with an explanation reason.
+Each rule is a frozen ``BrandRule`` dataclass with a
+``check(primitives, doc, constraints=None)`` method returning a list
+of ``Violation`` objects (severity "error" by default). Rules are
+auto-applied by ``structural_check.py`` unless the template's
+``meta.yml`` lists the rule's id under ``brand_overrides`` with an
+explanation reason.
 
 Rule IDs are STABLE strings — changing them invalidates existing
 ``brand_overrides`` entries in template meta.yml files. Always treat
 them as a public surface.
 
-The nine rules:
+The fourteen rules (post-#23):
 
-  1. ``brand:color_palette`` — every fill/line_color/fcolor referenced
-     by a primitive must be present in the doc's available palette
-     (CI brand colors plus doc-extras).
-  2. ``brand:font_family`` — every TextFrame uses a font from the
-     allow-list ``shared/ci.yml::fonts``.
-  3. ``brand:line_spacing_0.9`` — registered paragraph styles' linesp
-     equals fontsize x 0.9 within 0.5pt.
-  4. ``brand:hl_sl_distance_x2`` — for each (Headline, Sub-Headline)
-     pair (anname substring match), the y-distance roughly equals
-     baseline_x x 2 (baseline ~5.4mm, allow ±1mm).
-  5. ``brand:logo_size_3M`` — ImageFrames with anname containing "Logo"
-     have width ~3xM with M = 0.06 x kurze_kante.
-  6. ``brand:text_on_green`` — TextFrames that use brand-headline
-     paragraph styles AND have white fcolor must overlap a Polygon
-     with green fill (Dunkelgrün/Hellgrün).
-  7. ``brand:bleed_3mm`` — the doc's bleed is exactly 3mm on all sides.
-  8. ``brand:wahlkreuz_colored_bg`` — frames whose anname contains
-     "Wahlkreuz" sit on a polygon background of Dunkelgrün/Hellgrün/Magenta.
-  9. ``brand:inside_page`` — every non-master frame's rotation- and
-     anchor-aware bbox sits inside its own page's
-     ``[-bleed, w+bleed] x [-bleed, h+bleed]`` (Issue #14).
+  1. ``brand:color_palette``
+  2. ``brand:font_family``
+  3. ``brand:line_spacing_0.9``
+  4. ``brand:hl_sl_distance_x2``
+  5. ``brand:logo_size_3M``
+  6. ``brand:text_on_green``
+  7. ``brand:bleed_3mm``
+  8. ``brand:wahlkreuz_colored_bg``
+  9. ``brand:inside_page`` (Issue #14)
+ 10. ``brand:spine_safety`` (Issue #22)
+ 11. ``brand:bleed_coverage`` (Issue #23) — full-width frames must
+     extend to outer bleed on facing-pages docs.
+ 12. ``brand:image_text_overlap`` (Issue #23) — text and
+     image/filled-polygon must not partially overlap.
+ 13. ``brand:cover_extent_match`` (Issue #23) — vertically touching
+     full-width frames must share outer-bbox extents.
+ 14. ``brand:visual_adjacency_drift`` (Issue #23) — replaces
+     brand:undeclared_alignment_drift from #22 with 4-axis checks
+     (left/right/top/bottom) plus declaration-disagreement detection.
 """
 from __future__ import annotations
 
@@ -68,8 +66,10 @@ class BrandRule:
 
     The optional ``constraints`` kwarg is the per-template
     ``CONSTRAINTS = [...]`` list (Issue #22 / locked decision #3). Most
-    rules ignore it; ``brand:undeclared_alignment_drift`` consumes it
-    to know which pair-relationships are intentional.
+    rules ignore it; ``brand:visual_adjacency_drift`` consumes it to
+    know which pair-relationships are intentional AND to re-execute
+    each declaration against the actual geometry to detect declarations
+    that disagree with their own tolerance (Issue #23 locked decision #5).
     """
 
     id: str
@@ -589,60 +589,355 @@ class _SpineSafetyRule(BrandRule):
 
 
 # ---------------------------------------------------------------------------
-# brand:undeclared_alignment_drift (Issue #22)
+# brand:bleed_coverage (Issue #23)
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
-class _UndeclaredDriftRule(BrandRule):
-    """Heuristic detector for undeclared visual adjacency.
+class _BleedCoverageRule(BrandRule):
+    """Outer-edge bleed coverage on facing-pages documents.
 
-    For each page, iterates every pair of named primitives and flags
-    pairs that *appear* visually aligned/adjacent but are NOT declared
-    in the per-template ``CONSTRAINTS = [...]`` list.
+    For each non-master page, identifies *full-width* frames
+    (``w >= full_width_threshold * page_w``) that are not
+    anchor-positioned, not rotated, and not SpreadImage halves. Each
+    must extend to its OUTER bleed edge:
 
-    Three suspicious-pair tests:
-      - **axis-x**: ``min_drift_mm < |a.x0 - b.x0| < axis_tolerance_mm``
-        → suggests ``same_x``.
-      - **axis-y**: same on y → suggests ``same_y``.
-      - **adjacency-y**: A above B (``a.y1 < b.y0``) with gap in
-        ``(min_drift_mm, adjacency_gap_mm)`` AND ``|a.x0 - b.x0|
-        < axis_tolerance_mm`` → suggests ``aligned_below``.
+      - LEFT page  (master_name contains "links"):  ``x0 <= -bleed + tol``
+      - RIGHT page (master_name contains "rechts"): ``x1 >= page_w + bleed - tol``
+      - COVER       (own_page == 0): both edges treated as outer.
 
-    Defaults: ``axis_tolerance_mm=5.0``, ``adjacency_gap_mm=12.0``,
-    ``min_drift_mm=0.5``.
+    Severity = ``error`` — leaving a white margin on the outer edge
+    after print cut is a print-cut hazard.
+
+    Locked decision #1: cutoff is 0.95 * page_w (NOT 0.7 from ISSUE.md).
+    0.7 produces 19 false positives on Zeitung (the body grid at
+    20mm margin = 0.81 ratio). 0.95 dissolves the per-frame
+    ``(no-bleed)`` exemption tag — interior margin polygons (e.g.
+    Zeitung u918, w/page=0.81) fall below the cutoff naturally.
+
+    Skips:
+      - Single-page docs (``facing_pages=False``) → early return.
+      - Master pages.
+      - SpreadImage halves (anname suffix `` · left``/`` · right``).
+      - Rotated frames (rotation != 0).
+      - Anchor-positioned frames.
+      - Pages whose master_name doesn't match links/rechts (cover handled
+        via own_page=0 special-case; other unknown sides are
+        spine_safety's territory).
+
+    Per-template opt-out via ``meta.yml::brand_overrides[brand:bleed_coverage]``.
+    """
+
+    full_width_threshold: float = 0.95   # locked decision #1
+    tolerance_mm: float = 0.5
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        if not getattr(doc, "facing_pages", False):
+            return []
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            own_page = getattr(page, "own_page", None)
+            m = SIDE_RX.search(page.master_name or "")
+            pw_mm = page.width_pt * PT_TO_MM
+            bleed = float(page.bleed_mm or 0)
+            for item in page.items:
+                anname = getattr(item, "anname", "") or (
+                    f"<unnamed {type(item).__name__} "
+                    f"y={getattr(item, 'y_mm', 0):.1f}>"
+                )
+                # SpreadImage halves are spread-intentional.
+                if SPREAD_HALF_RX.search(anname):
+                    continue
+                if float(getattr(item, "rotation_deg", 0) or 0) != 0:
+                    continue
+                if getattr(item, "anchor", None) is not None:
+                    continue
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                x0, _y0, x1, _y1 = bbox
+                w = x1 - x0
+                if w < self.full_width_threshold * pw_mm:
+                    continue   # not full-width
+                if own_page == 0:
+                    # Cover (own_page=0): RIGHT-alone, both edges outer.
+                    if x0 > -bleed + self.tolerance_mm:
+                        violations.append(self._mk_violation(
+                            "LEFT (cover)", anname, page,
+                            x0, x0 - (-bleed), -bleed,
+                        ))
+                    if x1 < pw_mm + bleed - self.tolerance_mm:
+                        violations.append(self._mk_violation(
+                            "RIGHT (cover)", anname, page,
+                            x1, (pw_mm + bleed) - x1, pw_mm + bleed,
+                        ))
+                    continue
+                if not m:
+                    # spine_safety emits its own unknown-side warning.
+                    continue
+                side = m.group(1).lower()
+                if side == "links":
+                    if x0 > -bleed + self.tolerance_mm:
+                        violations.append(self._mk_violation(
+                            "LEFT", anname, page,
+                            x0, x0 - (-bleed), -bleed,
+                        ))
+                else:  # rechts
+                    if x1 < pw_mm + bleed - self.tolerance_mm:
+                        violations.append(self._mk_violation(
+                            "RIGHT", anname, page,
+                            x1, (pw_mm + bleed) - x1, pw_mm + bleed,
+                        ))
+        return violations
+
+    def _mk_violation(self, side, anname, page, actual, drift, expected):
+        loc = page.label or page.master_name or f"page#{page.own_page}"
+        return Violation(
+            severity="error",
+            rule_id=self.id,
+            message=(
+                f"frame {anname!r} on {side} page {loc!r}: outer edge at "
+                f"{actual:.2f}mm but should be at {expected:.2f}mm "
+                f"(missing {drift:.2f}mm of bleed coverage). Either fix "
+                f"geometry to extend to outer bleed OR add to "
+                f"meta.yml::brand_overrides[brand:bleed_coverage] with reason."
+            ),
+            targets=(anname,),
+        )
+
+
+# ---------------------------------------------------------------------------
+# brand:image_text_overlap (Issue #23)
+# ---------------------------------------------------------------------------
+# Fills considered "filled polygons" for overlap-with-text purposes.
+# Decorative outlines (None / "" / "Black") are NOT in scope.
+FILLED_POLYGON_FILLS = ("Dunkelgrün", "Hellgrün", "Magenta", "Gelb")
+
+
+@dataclass(frozen=True)
+class _ImageTextOverlapRule(BrandRule):
+    """Text and image/filled-polygon must not partially overlap.
+
+    For each non-master page, iterates every (shape, text) pair where
+    *shape* is either an ``ImageFrame`` or a filled ``Polygon`` (fill
+    in ``FILLED_POLYGON_FILLS``). Allowed configurations:
+
+      - Zero overlap (disjoint bounding boxes).
+      - Text fully contained in shape (caption-on-photo).
+      - Shape fully contained in text (drop-cap; rare).
+
+    Forbidden: any partial overlap (text crossing the shape boundary).
+
+    Severity = ``error``.
+
+    Locked decision #2: scope MUST include filled Polygons. The
+    documented page-10 Zeitung bug is Polygon×Text (Dunkelgrün card
+    overlapping body-text columns). Limiting to ImageFrame would miss
+    the documented case.
+
+    Per-template opt-out via
+    ``meta.yml::brand_overrides[brand:image_text_overlap]`` for
+    templates with intentional decorative overlaps.
+    """
+
+    tolerance_mm: float = 0.1
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            shapes: list = []
+            texts: list = []
+            for item in page.items:
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                if isinstance(item, ImageFrame):
+                    shapes.append((item, bbox, "image"))
+                elif (isinstance(item, Polygon)
+                        and getattr(item, "fill", None)
+                        in FILLED_POLYGON_FILLS):
+                    shapes.append((item, bbox, "filled-polygon"))
+                elif isinstance(item, TextFrame):
+                    texts.append((item, bbox))
+            for shape, sbox, kind in shapes:
+                sx0, sy0, sx1, sy1 = sbox
+                for txt, tbox in texts:
+                    tx0, ty0, tx1, ty1 = tbox
+                    ox0 = max(sx0, tx0)
+                    oy0 = max(sy0, ty0)
+                    ox1 = min(sx1, tx1)
+                    oy1 = min(sy1, ty1)
+                    if (ox1 - ox0 <= self.tolerance_mm
+                            or oy1 - oy0 <= self.tolerance_mm):
+                        continue
+                    txt_inside = (
+                        sx0 - self.tolerance_mm <= tx0
+                        and tx1 <= sx1 + self.tolerance_mm
+                        and sy0 - self.tolerance_mm <= ty0
+                        and ty1 <= sy1 + self.tolerance_mm
+                    )
+                    shape_inside = (
+                        tx0 - self.tolerance_mm <= sx0
+                        and sx1 <= tx1 + self.tolerance_mm
+                        and ty0 - self.tolerance_mm <= sy0
+                        and sy1 <= ty1 + self.tolerance_mm
+                    )
+                    if txt_inside or shape_inside:
+                        continue
+                    txt_name = getattr(txt, "anname", "") or "<unnamed text>"
+                    shape_name = (getattr(shape, "anname", "")
+                                  or f"<unnamed {kind}>")
+                    loc = (page.label or page.master_name
+                           or f"page#{page.own_page}")
+                    violations.append(Violation(
+                        severity="error",
+                        rule_id=self.id,
+                        message=(
+                            f"text {txt_name!r} partially overlaps {kind} "
+                            f"{shape_name!r} on page {loc!r}: intersection "
+                            f"{ox1-ox0:.1f}x{oy1-oy0:.1f}mm. Either contain "
+                            f"text fully inside, move out, or shrink shape."
+                        ),
+                        targets=(txt_name, shape_name),
+                    ))
+        return violations
+
+
+# ---------------------------------------------------------------------------
+# brand:cover_extent_match (Issue #23)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _CoverExtentMatchRule(BrandRule):
+    """Vertically touching full-width frames must share outer-bbox extents.
+
+    For each non-master page, for each pair of *full-width* frames
+    (``w >= full_width_threshold * page_w``) whose bounding boxes
+    vertically touch (one's bottom == other's top within
+    ``touch_tolerance_mm``), assert their outer-bbox extents match
+    (left edges within ``extent_tolerance_mm`` AND right edges within
+    ``extent_tolerance_mm``).
+
+    Severity = ``warning`` initially per ISSUE.md "WARNING initially,
+    ERROR after audit". Issue #23 keeps WARNING; promote in follow-up.
+
+    Catches the page-1 Zeitung bug: ``Cover Hero`` (x=0..210) shares
+    its top edge with ``u2950`` (Dunkelgrün band, x=-3..213) but their
+    outer extents differ → 3mm white margin appears at the cut.
+    """
+
+    full_width_threshold: float = 0.95
+    touch_tolerance_mm: float = 0.5
+    extent_tolerance_mm: float = 0.5
+
+    def check(self, primitives: list, doc, constraints=None) -> list:
+        violations: list = []
+        for page in doc.pages:
+            if page.is_master:
+                continue
+            pw_mm = page.width_pt * PT_TO_MM
+            wide: list = []
+            for item in page.items:
+                bbox = _frame_bbox_mm(item, page)
+                if bbox is None:
+                    continue
+                x0, _y0, x1, _y1 = bbox
+                if (x1 - x0) >= self.full_width_threshold * pw_mm:
+                    wide.append((item, bbox))
+            for i, (a_item, abox) in enumerate(wide):
+                for b_item, bbox in wide[i + 1:]:
+                    ax0, ay0, ax1, ay1 = abox
+                    bx0, by0, bx1, by1 = bbox
+                    touch = (
+                        abs(ay1 - by0) < self.touch_tolerance_mm
+                        or abs(by1 - ay0) < self.touch_tolerance_mm
+                    )
+                    if not touch:
+                        continue
+                    if (abs(ax0 - bx0) <= self.extent_tolerance_mm
+                            and abs(ax1 - bx1) <= self.extent_tolerance_mm):
+                        continue
+                    a_n = (getattr(a_item, "anname", "")
+                           or f"<unnamed {type(a_item).__name__}>")
+                    b_n = (getattr(b_item, "anname", "")
+                           or f"<unnamed {type(b_item).__name__}>")
+                    loc = (page.label or page.master_name
+                           or f"page#{page.own_page}")
+                    violations.append(Violation(
+                        severity="warning",
+                        rule_id=self.id,
+                        message=(
+                            f"frames {a_n!r} (x:{ax0:.1f}..{ax1:.1f}) and "
+                            f"{b_n!r} (x:{bx0:.1f}..{bx1:.1f}) touch "
+                            f"vertically on page {loc!r} but their outer-"
+                            f"bbox extents differ. Either make them share "
+                            f"extents (left+right) OR override via meta.yml."
+                        ),
+                        targets=(a_n, b_n),
+                    ))
+        return violations
+
+
+# ---------------------------------------------------------------------------
+# brand:visual_adjacency_drift (Issue #23, replaces #22's
+# brand:undeclared_alignment_drift)
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _VisualAdjacencyDriftRule(BrandRule):
+    """Heuristic detector for undeclared visual adjacency — 4-axis.
+
+    Replaces #22's brand:undeclared_alignment_drift with broader
+    detection (locked decisions #3 + #5):
+
+      - **4-axis** drift checks (dx_left, dx_right, dy_top, dy_bottom)
+        instead of just (dx_left, dy_top). Catches the Zeitung
+        page-8 right-edge mismatch invisible to the prior rule.
+      - **Declaration-disagreement detection**: rather than silently
+        dropping pairs that appear in CONSTRAINTS, the rule re-runs
+        ``c.check(primitives_by_anname)`` on each declaration. If the
+        constraint's own tolerance is breached by actual geometry,
+        the rule emits "declaration ... disagrees with actual geometry"
+        — breaking the encode-and-silence escape (the constraint's
+        own tolerance becomes the audit boundary).
+
+    Default thresholds:
+      - axis_drift_min_mm   = 0.5  (avoid float-noise warnings)
+      - axis_drift_max_mm   = 25.0 (was 5.0 — page-8 5.6mm missed)
+      - adjacency_gap_min_mm = 0.5
+      - adjacency_gap_max_mm = 30.0 (was 12.0)
+
+    Severity = ``warning`` (heuristic; can false-positive). Per-template
+    opt-out via ``meta.yml::brand_overrides[brand:visual_adjacency_drift]``.
 
     Skips:
       - Master pages.
-      - Primitives without ``anname``.
-      - Rotated frames (rotation_deg != 0) — bbox math is misleading.
-      - Pairs already declared in ``constraints`` (via
-        ``Constraint.referenced_annames()``); pair key is
-        ``frozenset({a, b})`` for symmetry.
-
-    Severity = warning by default (heuristic; can false-positive).
-    Per-template opt-out via ``meta.yml::brand_overrides``.
+      - Primitives without anname.
+      - Rotated frames (rotation_deg != 0).
     """
 
-    axis_tolerance_mm: float = 5.0
-    adjacency_gap_mm: float = 12.0
-    min_drift_mm: float = 0.5
+    axis_drift_min_mm: float = 0.5
+    axis_drift_max_mm: float = 25.0
+    adjacency_gap_min_mm: float = 0.5
+    adjacency_gap_max_mm: float = 30.0
 
     def check(self, primitives: list, doc, constraints=None) -> list:
         constraints = constraints or []
-        # Build declared-pair set from CONSTRAINTS list.
-        declared: set = set()
+        # Build declared-pair → list-of-constraints map. We need the
+        # actual declarations (not just frozenset membership) so the
+        # disagreement check can re-execute each constraint.
+        declared: dict = {}
         for c in constraints:
             try:
-                names = c.referenced_annames()
+                names = [n for n in c.referenced_annames() if n]
             except Exception:
-                # BrandRule entries (or anything without referenced_annames)
-                # don't contribute pairs — skip.
                 continue
-            names = [n for n in names if n]
             if len(names) < 2:
                 continue
             for a, b in itertools.combinations(names, 2):
                 if a != b:
-                    declared.add(frozenset((a, b)))
+                    declared.setdefault(frozenset((a, b)), []).append(c)
+
         violations: list = []
         for page in doc.pages:
             if page.is_master:
@@ -655,52 +950,93 @@ class _UndeclaredDriftRule(BrandRule):
                 bbox = _frame_bbox_mm(item, page)
                 if bbox is None:
                     continue
+                if float(getattr(item, "rotation_deg", 0) or 0) != 0:
+                    continue
                 spatial.append((an, item, bbox))
-            for i, (pa, p_item, p_bbox) in enumerate(spatial):
-                for qa, q_item, q_bbox in spatial[i + 1:]:
-                    if frozenset((pa, qa)) in declared:
+
+            for i, (pa, p_item, pbox) in enumerate(spatial):
+                for qa, q_item, qbox in spatial[i + 1:]:
+                    px0, py0, px1, py1 = pbox
+                    qx0, qy0, qx1, qy1 = qbox
+                    pair_key = frozenset((pa, qa))
+                    pair_decls = declared.get(pair_key, [])
+
+                    if pair_decls:
+                        # Disagreement check: re-run each declaration
+                        # against the actual primitives. If the
+                        # constraint's own tolerance is breached, surface
+                        # a warning. This breaks encode-and-silence at
+                        # the declaration's tolerance boundary.
+                        primitives_by_anname = {pa: p_item, qa: q_item}
+                        for c in pair_decls:
+                            try:
+                                inner_viols = c.check(primitives_by_anname)
+                            except Exception:
+                                inner_viols = []
+                            for iv in inner_viols:
+                                violations.append(Violation(
+                                    severity="warning",
+                                    rule_id=self.id,
+                                    message=(
+                                        f"declaration "
+                                        f"{getattr(c, 'name', c.id)!r} for "
+                                        f"pair ({pa!r}, {qa!r}) disagrees "
+                                        f"with actual geometry: {iv.message}. "
+                                        f"Either fix declaration or fix "
+                                        f"geometry."
+                                    ),
+                                    targets=(pa, qa),
+                                ))
+                        # Don't ALSO fire heuristic on declared pairs.
                         continue
-                    # Skip rotated frames — rotated bbox semantics make
-                    # axis/adjacency tests meaningless.
-                    if (float(getattr(p_item, "rotation_deg", 0) or 0) != 0
-                            or float(getattr(q_item, "rotation_deg", 0)
-                                     or 0) != 0):
+
+                    # 4-axis heuristic checks (locked decision #3).
+                    dx_left = abs(px0 - qx0)
+                    dx_right = abs(px1 - qx1)
+                    dy_top = abs(py0 - qy0)
+                    dy_bottom = abs(py1 - qy1)
+                    fired = False
+                    for axis_label, drift, suggested in (
+                        ("axis-x-left", dx_left,
+                         "same_x (left edges)"),
+                        ("axis-x-right", dx_right,
+                         "same_x_right (right edges)"),
+                        ("axis-y-top", dy_top,
+                         "same_y (top edges)"),
+                        ("axis-y-bottom", dy_bottom,
+                         "same_y_bottom (bottom edges)"),
+                    ):
+                        if (self.axis_drift_min_mm < drift
+                                < self.axis_drift_max_mm):
+                            violations.append(self._mk(
+                                pa, qa, axis_label, drift, suggested,
+                            ))
+                            fired = True
+                            break
+                    if fired:
                         continue
-                    px0, py0, px1, py1 = p_bbox
-                    qx0, qy0, qx1, qy1 = q_bbox
-                    dx = abs(px0 - qx0)
-                    dy = abs(py0 - qy0)
-                    if self.min_drift_mm < dx < self.axis_tolerance_mm:
-                        violations.append(self._mk(
-                            pa, qa, "axis-x", dx, "same_x",
-                        ))
-                        continue
-                    if self.min_drift_mm < dy < self.axis_tolerance_mm:
-                        violations.append(self._mk(
-                            pa, qa, "axis-y", dy, "same_y",
-                        ))
-                        continue
-                    # Adjacency test: P above Q?
+                    # Stacked-adjacency: P above Q with small gap,
+                    # sharing left or right edge.
                     if py1 < qy0:
                         gap = qy0 - py1
-                        if (self.min_drift_mm < gap < self.adjacency_gap_mm
-                                and dx < self.axis_tolerance_mm):
+                        if (self.adjacency_gap_min_mm < gap
+                                < self.adjacency_gap_max_mm
+                                and (dx_left < self.axis_drift_max_mm
+                                     or dx_right < self.axis_drift_max_mm)):
                             violations.append(self._mk(
                                 pa, qa, "adjacency-y", gap, "aligned_below",
-                                extra=f"P above Q (gap {gap:.2f}mm)",
                             ))
         return violations
 
-    def _mk(self, pa, qa, kind, drift, suggested, extra=""):
+    def _mk(self, pa, qa, kind, drift, suggested):
         return Violation(
             severity="warning",
             rule_id=self.id,
             message=(
                 f"frames {pa!r} and {qa!r} appear visually adjacent "
-                f"({kind} drift {drift:.2f}mm)"
-                f"{' ' + extra if extra else ''}. "
-                f"Either declare with {suggested}({pa!r}, {qa!r}, ...) "
-                f"in CONSTRAINTS, or fix the geometry."
+                f"({kind} drift {drift:.2f}mm). Either declare "
+                f"{suggested}({pa!r}, {qa!r}, ...) in CONSTRAINTS, "
+                f"OR fix geometry to share the axis."
             ),
             targets=(pa, qa),
         )
@@ -782,13 +1118,53 @@ BRAND_CONSTRAINTS: list[BrandRule] = [
         severity="warning",
     ),
     _make_rule(
-        _UndeclaredDriftRule,
-        id="brand:undeclared_alignment_drift",
-        name="Undeclared alignment drift",
+        _BleedCoverageRule,
+        id="brand:bleed_coverage",
+        name="Outer-edge bleed coverage on facing-pages",
         description=(
-            "Pairs of frames that appear visually aligned/adjacent but "
-            "are not declared in the template's CONSTRAINTS list. "
-            "Heuristic; warning-only by default."
+            "Full-width frames (w >= 0.95 * page_w) on facing-pages docs "
+            "must extend to the outer bleed (LEFT page: x <= -bleed; "
+            "RIGHT page: x+w >= page_w + bleed; cover own_page=0 treats "
+            "both edges as outer). SpreadImage halves and rotated frames "
+            "are exempt; per-template skip via "
+            "meta.yml::brand_overrides[brand:bleed_coverage]."
+        ),
+    ),
+    _make_rule(
+        _ImageTextOverlapRule,
+        id="brand:image_text_overlap",
+        name="Text and image/filled-polygon partial overlap",
+        description=(
+            "Text and image-or-filled-polygon must not partially overlap. "
+            "Allowed: zero overlap, text fully inside shape (caption-on-"
+            "photo), shape fully inside text (drop-cap). Filled polygons "
+            "are those with fill in {Dunkelgrün, Hellgrün, Magenta, Gelb}."
+        ),
+    ),
+    _make_rule(
+        _CoverExtentMatchRule,
+        id="brand:cover_extent_match",
+        name="Vertically touching full-width frames share extents",
+        description=(
+            "Pairs of full-width frames (w >= 0.95 * page_w) that "
+            "vertically touch (one's bottom == other's top within 0.5mm) "
+            "must share outer-bbox extents (left+right within 0.5mm). "
+            "Catches the cover-image vs full-bleed-band mismatch class."
+        ),
+        severity="warning",
+    ),
+    _make_rule(
+        _VisualAdjacencyDriftRule,
+        id="brand:visual_adjacency_drift",
+        name="Visual adjacency drift (4-axis + declaration disagreement)",
+        description=(
+            "Pairs of frames that appear visually aligned/adjacent on any "
+            "of 4 axes (left/right/top/bottom edges) but are not declared "
+            "in the template's CONSTRAINTS list. Declarations are "
+            "re-executed against the actual geometry — declarations whose "
+            "own tolerance is breached emit a 'declaration disagrees' "
+            "warning (breaks the encode-and-silence escape). Heuristic; "
+            "warning-only by default."
         ),
         severity="warning",
     ),

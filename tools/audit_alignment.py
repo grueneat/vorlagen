@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
-"""audit_alignment — alignment-audit CLI + library (Issue #22).
+"""audit_alignment — alignment-audit CLI + library (Issue #22 + #23).
 
 Per-template Markdown / JSON report listing:
   - Page-by-page primitive inventory (count + side detection).
   - Suspicious-undeclared adjacencies with ready-to-paste constraint
-    skeletons (e.g. ``same_x("A", "B", name="p1_x")``).
+    skeletons (e.g. ``same_x("A", "B", name="p1_x")``) PLUS the
+    geometric-outcome alternative (e.g. "OR fix geometry: A.x=N").
   - Spine-safety candidates (frames within 3mm of the spine on
     facing-page docs).
+  - Tolerance-suspicion findings (Issue #23 locked decision #6):
+    constraints whose ``tolerance_mm > 1.0`` or ``gap_mm > 30.0`` are
+    flagged as suspicious encode-and-silence patterns.
 
 CLI:
 
     python3 tools/audit_alignment.py <slug> [--json | --md FILE.md]
     python3 tools/audit_alignment.py --all [--output-dir build/audit/]
-    --axis-tol-mm <float>       (default 5.0)
-    --adjacency-tol-mm <float>  (default 12.0)
+    --axis-tol-mm <float>       (default 25.0; was 5.0 pre-#23)
+    --adjacency-tol-mm <float>  (default 30.0; was 12.0 pre-#23)
+    --strict                    (Issue #23: exit 1 on any finding;
+                                 used by Phase 3b verification gate)
 
-The CLI always exits 0 — this is informational tooling, not a CI gate
-(locked decision #10).
+Without ``--strict`` the CLI exits 0 — informational tooling. With
+``--strict`` it exits 1 if any suspicious-pair OR tolerance-suspicion
+finding is emitted across any template.
 """
 from __future__ import annotations
 
@@ -44,7 +51,10 @@ from sla_lib.builder.structural_check import (  # noqa: E402
 )
 from sla_lib.builder.template_loader import load_build_module  # noqa: E402
 
-DEFAULTS = dict(axis_tol_mm=5.0, adjacency_tol_mm=12.0, min_drift_mm=0.5)
+DEFAULTS = dict(axis_tol_mm=25.0, adjacency_tol_mm=30.0, min_drift_mm=0.5)
+# Tolerance-suspicion thresholds (Issue #23 locked decision #6).
+SUSPICIOUS_TOLERANCE_MM = 1.0
+SUSPICIOUS_GAP_MM = 30.0
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +67,7 @@ class SuspiciousPair:
     kind: str          # "axis-x" | "axis-y" | "adjacency-y"
     delta_mm: float
     suggested: str     # ready-to-paste 'same_x("A", "B", name="p1_x")'
+    geometric_alternative: str = ""  # Issue #23: "OR fix geometry: A.x=N..."
 
 
 @dataclass
@@ -72,11 +83,28 @@ class PageAuditReport:
 
 
 @dataclass
+class ToleranceSuspicion:
+    """A constraint whose declared tolerance/gap exceeds the suspicious threshold.
+
+    Issue #23 locked decision #6: encode-and-silence has two patterns —
+    declaring with a widened tolerance to absorb drift, OR declaring a
+    larger gap than visually intended. Both surface as suspicions here.
+    """
+    constraint_id: str
+    constraint_name: str
+    tolerance_mm: Optional[float]
+    gap_mm: Optional[float]
+    targets: list
+    message: str
+
+
+@dataclass
 class TemplateAuditReport:
     slug: str
     facing_pages: bool
     pages: list = field(default_factory=list)                 # list[PageAuditReport]
     fatal_error: Optional[str] = None
+    tolerance_suspicions: list = field(default_factory=list)  # list[ToleranceSuspicion]
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +138,39 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
         slug=slug,
         facing_pages=getattr(doc, "facing_pages", False),
     )
+    # Issue #23 locked decision #6: tolerance-suspicion findings.
+    for c in constraints or []:
+        tol = getattr(c, "tolerance_mm", None)
+        gap = getattr(c, "gap_mm", None)
+        suspicious = False
+        notes = []
+        if tol is not None and tol > SUSPICIOUS_TOLERANCE_MM:
+            suspicious = True
+            notes.append(f"tolerance_mm={tol:.2f} (> {SUSPICIOUS_TOLERANCE_MM:.1f})")
+        if gap is not None and gap > SUSPICIOUS_GAP_MM:
+            suspicious = True
+            notes.append(f"gap_mm={gap:.2f} (> {SUSPICIOUS_GAP_MM:.1f})")
+        if not suspicious:
+            continue
+        try:
+            targets = list(c.referenced_annames())
+        except Exception:
+            targets = list(getattr(c, "targets", ()))
+        cname = getattr(c, "name", "") or c.id
+        rep.tolerance_suspicions.append(ToleranceSuspicion(
+            constraint_id=c.id,
+            constraint_name=cname,
+            tolerance_mm=tol,
+            gap_mm=gap,
+            targets=targets,
+            message=(
+                f"constraint {cname!r} on {targets} declared with "
+                f"{', '.join(notes)}. Was the geometry intent fuzzy or "
+                f"did the spec drift to absorb misalignment? Consider "
+                f"tightening to tolerance_mm=0.5 (default) or fixing "
+                f"the geometry."
+            ),
+        ))
     # Reuse the spine-safety rule for spine warnings (single source of truth).
     spine_rule = _SpineSafetyRule(
         id="brand:spine_safety", name="", description="",
@@ -163,20 +224,30 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
                 dx = abs(px0 - qx0)
                 dy = abs(py0 - qy0)
                 if DEFAULTS["min_drift_mm"] < dx < axis_tol_mm:
+                    target_x = (px0 + qx0) / 2
                     page_rep.suspicious_pairs.append(SuspiciousPair(
                         a=pa, b=qa, kind="axis-x", delta_mm=dx,
                         suggested=(
                             f'same_x("{pa}", "{qa}", '
                             f'name="p{idx + 1}_x_{len(page_rep.suspicious_pairs) + 1}")'
                         ),
+                        geometric_alternative=(
+                            f"OR fix geometry: set {pa}.x_mm={target_x:.2f} "
+                            f"and {qa}.x_mm={target_x:.2f} to share the axis."
+                        ),
                     ))
                     continue
                 if DEFAULTS["min_drift_mm"] < dy < axis_tol_mm:
+                    target_y = (py0 + qy0) / 2
                     page_rep.suspicious_pairs.append(SuspiciousPair(
                         a=pa, b=qa, kind="axis-y", delta_mm=dy,
                         suggested=(
                             f'same_y("{pa}", "{qa}", '
                             f'name="p{idx + 1}_y_{len(page_rep.suspicious_pairs) + 1}")'
+                        ),
+                        geometric_alternative=(
+                            f"OR fix geometry: set {pa}.y_mm={target_y:.2f} "
+                            f"and {qa}.y_mm={target_y:.2f} to share the axis."
                         ),
                     ))
                     continue
@@ -191,6 +262,10 @@ def _audit_doc(doc, constraints, axis_tol_mm: float,
                                 f'aligned_below("{qa}", "{pa}", '
                                 f'gap_mm={gap:.2f}, '
                                 f'name="p{idx + 1}_below_{len(page_rep.suspicious_pairs) + 1}")'
+                            ),
+                            geometric_alternative=(
+                                f"OR fix geometry: set {qa}.y_mm="
+                                f"{py1:.2f} (touching {pa}.bottom)."
                             ),
                         ))
         # Attach spine-safety warnings to this page when targets match.
@@ -253,6 +328,20 @@ def report_to_markdown(rep: TemplateAuditReport) -> str:
         "```",
         "",
     ]
+    if rep.tolerance_suspicions:
+        lines.append(
+            f"## Tolerance-suspicion findings "
+            f"({len(rep.tolerance_suspicions)})"
+        )
+        lines.append(
+            "_Constraints declared with `tolerance_mm > 1.0` or "
+            "`gap_mm > 30.0` — possible encode-and-silence pattern. "
+            "Issue #23 locked decision #6._"
+        )
+        for ts in rep.tolerance_suspicions:
+            lines.append(f"- `{ts.constraint_name}` ({ts.constraint_id}): "
+                         f"{ts.message}")
+        lines.append("")
     for pr in rep.pages:
         lines.append(
             f"## Page {pr.page_idx + 1} "
@@ -271,6 +360,8 @@ def report_to_markdown(rep: TemplateAuditReport) -> str:
                     f"`{sp.a}` ↔ `{sp.b}`"
                 )
                 lines.append(f"    - suggested: `{sp.suggested}`")
+                if sp.geometric_alternative:
+                    lines.append(f"    - {sp.geometric_alternative}")
         if pr.spine_warnings:
             lines.append(
                 f"- spine-safety candidates ({len(pr.spine_warnings)}):"
@@ -286,6 +377,17 @@ def report_to_json(rep: TemplateAuditReport) -> dict:
         "slug": rep.slug,
         "facing_pages": rep.facing_pages,
         "fatal_error": rep.fatal_error,
+        "tolerance_suspicions": [
+            {
+                "constraint_id": ts.constraint_id,
+                "constraint_name": ts.constraint_name,
+                "tolerance_mm": ts.tolerance_mm,
+                "gap_mm": ts.gap_mm,
+                "targets": ts.targets,
+                "message": ts.message,
+            }
+            for ts in rep.tolerance_suspicions
+        ],
         "pages": [
             {
                 "page_idx": pr.page_idx,
@@ -299,6 +401,7 @@ def report_to_json(rep: TemplateAuditReport) -> dict:
                         "a": sp.a, "b": sp.b, "kind": sp.kind,
                         "delta_mm": sp.delta_mm,
                         "suggested": sp.suggested,
+                        "geometric_alternative": sp.geometric_alternative,
                     }
                     for sp in pr.suspicious_pairs
                 ],
@@ -307,6 +410,18 @@ def report_to_json(rep: TemplateAuditReport) -> dict:
             for pr in rep.pages
         ],
     }
+
+
+def _report_has_findings(rep: TemplateAuditReport) -> bool:
+    """True if the report has any tolerance-suspicion or suspicious-pair finding."""
+    if rep.fatal_error:
+        return True
+    if rep.tolerance_suspicions:
+        return True
+    for pr in rep.pages:
+        if pr.suspicious_pairs or pr.spine_warnings:
+            return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -321,10 +436,23 @@ def main(argv=None) -> int:
                     help="write Markdown report to PATH instead of stdout")
     ap.add_argument("--output-dir", default=None,
                     help="--all: write per-template Markdown reports here")
-    ap.add_argument("--axis-tol-mm", type=float,
-                    default=DEFAULTS["axis_tol_mm"])
-    ap.add_argument("--adjacency-tol-mm", type=float,
-                    default=DEFAULTS["adjacency_tol_mm"])
+    ap.add_argument(
+        "--axis-tol-mm", type=float,
+        default=DEFAULTS["axis_tol_mm"],
+        help=("Axis-alignment drift tolerance (mm). Default 25.0 matches "
+              "brand:visual_adjacency_drift; was 5.0 pre-#23."),
+    )
+    ap.add_argument(
+        "--adjacency-tol-mm", type=float,
+        default=DEFAULTS["adjacency_tol_mm"],
+        help="Adjacency gap tolerance (mm). Default 30.0; was 12.0 pre-#23.",
+    )
+    ap.add_argument(
+        "--strict", action="store_true",
+        help=("Exit 1 on any finding (tolerance-suspicion, "
+              "suspicious-pair, spine-warning, or fatal_error). Used by "
+              "Phase 3b verification gate (Issue #23)."),
+    )
     ap.add_argument("--root", type=Path, default=REPO_ROOT)
     ns = ap.parse_args(argv)
     if ns.all and ns.slug:
@@ -347,6 +475,8 @@ def main(argv=None) -> int:
             for rep in reps:
                 print(report_to_markdown(rep))
                 print()
+        if ns.strict and any(_report_has_findings(r) for r in reps):
+            return 1
         return 0
     rep = audit_template(
         ns.slug, ns.root,
@@ -359,6 +489,8 @@ def main(argv=None) -> int:
         Path(ns.md).write_text(report_to_markdown(rep), encoding="utf-8")
     else:
         print(report_to_markdown(rep))
+    if ns.strict and _report_has_findings(rep):
+        return 1
     return 0
 
 

@@ -16,7 +16,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 4d948c67b2293b994282c13479a0edb85fec7fcb46e91050cbc32dcc49cf276a
+previews_for_sla: 52d16770de3ada0ef92bbdbc5ea86b1aabef7e255e28a9a3d0731d663dfe3b8b
 sla_diff_strict: false
 
 # Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
@@ -29,6 +29,19 @@ brand_overrides:
       The Zeitung uses journalism conventions (tighter headline leading, looser
       caption leading) that differ from the unified-Quickguide rule. Round-
       trip diff is the byte-stable contract.
+  - id: brand:image_text_overlap
+    reason: >-
+      Caption-on-photo intentional design pattern: several text frames
+      (page-1 cover headline u2989 over u2950 band, page-3/page-7 caption
+      text inside u6ad/Kopie-von-u6ad polygons, page-14 captions on
+      P13 Hero) extend slightly beyond their containing colored polygons.
+      The page-10 Polygon `Kopie von u1529` overlap with text columns
+      `Kopie von u2d5c (13)`/`(16)` was the documented bug — FIXED in
+      Issue #23 T07 by shrinking the columns' h_mm to end above the
+      green card. Remaining 9 cases are caption-on-photo design intent;
+      tightening text frames to match polygon edges exactly would change
+      the visual layout. Out of scope for #23; revisit per follow-up
+      audit.
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
