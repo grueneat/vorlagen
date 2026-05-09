@@ -113,15 +113,23 @@ jobs:
           python3 bin/check-stale-previews
           for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4-grun; do
             tid=$(basename "$tdir")
-            # Resolve original_sla relative to the template directory
-            original=$(python3 -c "
+            # Resolve original_sla relative to the template directory and read
+            # the per-template `sla_diff_strict` opt-out flag (see issue #16:
+            # zeitung intentionally diverges from the upstream original to fix
+            # frame-attachment bugs).
+            read original strict <<<"$(python3 -c "
           import os, sys, yaml
           m = yaml.safe_load(open('$tdir/meta.yml'))
           rel = m.get('original_sla', '')
           if not rel:
-            sys.exit('no original_sla in meta.yml')
-          print(os.path.normpath(os.path.join('$tdir', rel)))
-          ")
+              sys.exit('no original_sla in meta.yml')
+          print(os.path.normpath(os.path.join('$tdir', rel)),
+                'true' if m.get('sla_diff_strict', True) else 'false')
+          ")"
+            if [ "$strict" != "true" ]; then
+              echo "=== sla_diff $tid: SKIPPED (sla_diff_strict=false in meta.yml) ==="
+              continue
+            fi
             mkdir -p "build/validation/$tid"
             echo "=== sla_diff $tid ==="
             python3 tools/sla_diff.py \
