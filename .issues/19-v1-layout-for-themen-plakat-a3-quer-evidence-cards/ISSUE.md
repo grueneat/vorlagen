@@ -68,7 +68,7 @@ aligned_below("Themen-Hero", "Sub-Headline", gap_mm=8.0,
 2. **Stat-Zahlen as new Headline-Inhalt** — V1 replaces "12 700 grüne Jobs" headline with a big number + caps label. Requires content-discipline from Bezirksgruppen. Not blocking implementation, but flag in `templates/themen-plakat-a3-quer/README.md`.
 3. **HL/Sub-Gap formula** (`60×2 = 42 mm`) is intentionally violated by the 60/40 split layout. Add `meta.yml::brand_overrides` with reason "60/40 column-split layout — gap unfolds across columns, not lines".
 
-## Acceptance criteria
+## Acceptance Criteria
 
 - [ ] V1 deltas applied in `templates/themen-plakat-a3-quer/build.py` in one commit.
 - [ ] `build.py` regenerates `template.sla` cleanly.
