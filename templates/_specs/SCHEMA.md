@@ -492,9 +492,24 @@ neben der Slot-Tabelle (CONTEXT D6).
 Begründung: Constraints leben als Code in `templates/<slug>/build.py::CONSTRAINTS`
 (siehe `tools/sla_lib/builder/constraints.py` für die Factories: `same_y`, `same_x`,
 `same_size`, `mirrored_x`, `mirrored_y`, `inside`, `equal_gap`, `hierarchy`,
-`same_style`, `distance_x`, `distance_y`). Doppelte Source-of-Truth (YAML in Spec +
-Python in build.py) würde zwangsläufig auseinanderlaufen. Code ist Vertrag; Spec-Prosa
-ist menschliche Erläuterung des Vertrags.
+`same_style`, `distance_x`, `distance_y`, `aligned_below`). Doppelte Source-of-Truth
+(YAML in Spec + Python in build.py) würde zwangsläufig auseinanderlaufen. Code ist
+Vertrag; Spec-Prosa ist menschliche Erläuterung des Vertrags.
+
+### Neue Factories (Issue #14)
+
+- `aligned_below(below, above, gap_mm, tolerance_mm=0.5, name="")` — `below`
+  hängt unter `above` auf derselben x-Achse mit dem definierten Abstand
+  (`below.y_mm == above.y_mm + above.h_mm + gap_mm`). Per-Template
+  free-form Constraint. Argumentreihenfolge `(below, above)` ist
+  load-bearing — erstes Argument ist der hängende Frame.
+- `SpreadImage(image, page_w_mm, page_h_mm, h_mm, y_mm=0, base_anname="",
+  scale_type=0, local_scale=(1,1))` — Block-Utility in
+  `tools/sla_lib/builder/blocks.py`; gibt zwei `ImageFrame`s aus, eine
+  pro Seite einer Doppelseite, sodass das Quellbild als kontinuierliches
+  Bild über zwei Seiten hinweg gerendert wird. Rechte Hälfte verwendet
+  `local_offset_mm=(-page_w_mm, 0)` (negativ!). Ersetzt das heute defekte
+  Muster `ImageFrame(x=page_w, w=page_w)`.
 
 Konvention pro Constraint in der Spec:
 
@@ -507,9 +522,12 @@ Konvention pro Constraint in der Spec:
 - **Headline → Sub-Headline-Distanz 52 mm.** Code-Verweis:
   `CONSTRAINTS["hl_to_sub"]`. Prüft `distance_y(equals=52.0)`.
 - **Brand-Constraints.** Automatisch aktiv via `BRAND_CONSTRAINTS` (siehe
-  `tools/sla_lib/builder/brand_constraints.py`); 8 Regeln zu Color-Palette,
+  `tools/sla_lib/builder/brand_constraints.py`); 9 Regeln zu Color-Palette,
   Font-Family, Line-Spacing, HL/SL-Distanz, Logo-Größe, Text-auf-Grün, Bleed,
-  Wahlkreuz-Hintergrund. Diese Spec NICHT wiederholen.
+  Wahlkreuz-Hintergrund, **`brand:inside_page`** (Issue #14: jeder Non-Master-
+  Frame liegt mit rotation- und anchor-bewusster Bbox innerhalb von
+  `[-bleed, w+bleed] × [-bleed, h+bleed]` seiner Seite; Skipping über
+  `meta.yml::brand_overrides`). Diese Spec NICHT wiederholen.
 ```
 
 Wenn ein Template eine Brand-Regel intentional verletzt (z.B. Logo bewusst kleiner als
