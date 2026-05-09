@@ -16,9 +16,7 @@ build:
   output: template.sla
 
 # DSL-original — no round-trip diff. SHA pin for stale-check.
-previews_for_sla: 703b25071a4917f8696a5444ab06fc524eb2bb7aed48b284a43c98ae928b1996
-
-# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+previews_for_sla: 7f64b8ad585fb5dfb00b82a30a135ac0326bf8c6c99de4c3ed3d7cea7ba08a06
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
