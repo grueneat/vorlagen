@@ -14,7 +14,9 @@ from sla_lib.builder import (  # noqa: E402
     same_size,
 )
 from sla_lib.builder import library, pack_inline_image  # noqa: E402  (issue #13)
-from sla_lib.builder.blocks import ColumnTextStory, PageNumber  # noqa: E402
+from sla_lib.builder.blocks import (  # noqa: E402
+    ColumnTextStory, PageNumber, SpreadImage,
+)
 
 
 def build_template():
@@ -960,6 +962,13 @@ def build_template():
     ))
 
 
+    # P4 Foto-Spread: SINGLE-PAGE bottom-band frame on page 4 (RIGHT).
+    # Originally evaluated for SpreadImage migration (#22 T11) but the
+    # upstream gruene-zeitung-vorlage-original.sla has only ONE
+    # ImageFrame at HEIGHT~306pt on OwnPage=4 — there is no page-3 half
+    # in the source, and converting would overlap page-3 text columns.
+    # Spine-safety addressed by left-edge inset in T12 (x=3, w=207
+    # preserves right-edge alignment).
     page4.add(ImageFrame(
         x_mm=0,
         y_mm=188.8816330286011,
@@ -1805,16 +1814,19 @@ def build_template():
         ],
     ))
 
-    page9.add(ImageFrame(
-        x_mm=0.0,
-        y_mm=0,
-        w_mm=209.9999999999361,
+    # P9 Spread: TWO-PAGE spread across pages 9 (LEFT) + 10 (RIGHT) —
+    # converted to SpreadImage in #22 T11 (reverts #16's misfix that
+    # made it a single-page frame). Each half is `inside_page`-clean
+    # by construction (x=0 on its own page) and exempt from
+    # brand:spine_safety via the ' · (left|right)$' anname pattern.
+    SpreadImage(
+        image="",
+        page_w_mm=209.9999999999361,
+        page_h_mm=296.99999999946107,
         h_mm=126.13945871829057,
-        layer=0,
-        image='',
-        line_width_pt=1,
-        anname="P9 Spread",  # issue #13; moved to page-local origin in #16
-    ))
+        y_mm=0.0,
+        base_anname="P9 Spread",
+    ).place(page9, page10)
 
     page10.add(ColumnTextStory(
         frames=[
@@ -2504,10 +2516,17 @@ def build_preview():
         "P1 Hero": ("themen_soziales_gemeindebau", 210, 130.2),
         "P2 Mid": ("themen_bildung_volksschule", 112.3, 58),
         "P3 Hero": ("themen_wirtschaft_handwerk", 74.7, 58.2),
+        # P4 Foto-Spread stays SINGLE-PAGE (upstream has no page-3 half).
+        # P9 Spread converted to SpreadImage in #22 T11; both halves
+        # get the same source image (the SpreadImage right half uses
+        # local_offset_mm=(-page_w_mm, 0) so the source image "scrolls"
+        # left and the right half shows the right half of the picture —
+        # single source bytes, two halves).
         "P4 Foto-Spread": ("kontext_buergerversammlung", 210, 108.1),
         "P5 Hero": ("themen_verkehr_radweg", 112.3, 84.1),
         "P7 Portrait": ("portrait_maria", 51.3, 76.4),
-        "P9 Spread": ("themen_klimaschutz_solar", 210, 126.1),
+        "P9 Spread · left": ("themen_klimaschutz_solar", 210, 126.1),
+        "P9 Spread · right": ("themen_klimaschutz_solar", 210, 126.1),
         "P10 Portrait": ("portrait_stefan", 66.6, 94.4),
         "P11 Bottom": ("kontext_stammtisch_cafe", 210, 83.3),
         "P13 Hero": ("kontext_infostand_szene", 210, 147.4),
@@ -2556,9 +2575,15 @@ CONSTRAINTS = [
     # Portrait slot witness.
     same_size("P7 Portrait", name="p7_portrait_anchor"),
     same_size("P10 Portrait", name="p10_portrait_anchor"),
-    # Foto-spread + spread witnesses.
+    # P4 Foto-Spread stays single-page (upstream has no page-3 half).
     same_size("P4 Foto-Spread", name="p4_fotospread_anchor"),
-    same_size("P9 Spread", name="p9_spread_anchor"),
+    # P9 Spread was converted to SpreadImage in #22 T11 (' · left' +
+    # ' · right' halves on facing pages 9+10). Witness shared width.
+    same_size(
+        "P9 Spread · left", "P9 Spread · right",
+        axis="w", name="p9_spread_halves_share_width",
+    ),
+    # T14 will append per-page declared adjacencies.
 ]
 
 
