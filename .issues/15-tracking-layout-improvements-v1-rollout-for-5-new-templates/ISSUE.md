@@ -1,7 +1,7 @@
 ---
 id: '15'
 title: 'Tracking: Layout-Improvements V1 rollout for 5 new templates'
-status: open
+status: done
 priority: medium
 labels:
 - templates
