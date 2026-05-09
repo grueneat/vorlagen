@@ -23,12 +23,14 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
-    # Issue #12 — composites + constraints
-    AlignedRow,
-    same_y,
+    # Issue #12 / #14 / #17 — constraints (V1 uses mirrored axes for halo,
+    # aligned_below for vertical stacks, same_x for column alignment)
     same_x,
-    same_style,
     inside,
+    mirrored_x,
+    mirrored_y,
+    aligned_below,
+    distance_y,
 )
 
 
@@ -423,27 +425,34 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
 # Issue #12 — module-level CONSTRAINTS list (read by structural_check).
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # Top row of 2x2 grid: cells 1+2 share y=22 (headline) and y=31 (body).
-    same_y("Cell 1 — Headline", "Cell 2 — Headline", name="back_row1_hd"),
-    same_y("Cell 1 — Body", "Cell 2 — Body", name="back_row1_bd"),
-    # Bottom row of 2x2 grid: cells 3+4 share y=62 (headline) and y=71 (body).
-    same_y("Cell 3 — Headline", "Cell 4 — Headline", name="back_row2_hd"),
-    same_y("Cell 3 — Body", "Cell 4 — Body", name="back_row2_bd"),
-    # Left column shared x: cells 1 & 3 left-aligned.
-    same_x("Cell 1 — Headline", "Cell 3 — Headline", name="back_col1_x"),
-    # Right column shared x: cells 2 & 4 left-aligned at x=78.
-    same_x("Cell 2 — Headline", "Cell 4 — Headline", name="back_col2_x"),
-    # Style consistency across all 4 cell-headlines and all 4 cell-bodies.
-    same_style(
-        "Cell 1 — Headline", "Cell 2 — Headline",
-        "Cell 3 — Headline", "Cell 4 — Headline",
-        name="cell_hd_style_consistent",
-    ),
-    same_style(
-        "Cell 1 — Body", "Cell 2 — Body",
-        "Cell 3 — Body", "Cell 4 — Body",
-        name="cell_bd_style_consistent",
-    ),
+    # Front: halo + symbol share centers (both axes), and halo contains symbol.
+    # mirrored_x/y average centers (NOT same_x/y which compares corners; halo
+    # and symbol corners differ by 1mm > 0.5 tolerance — locked decision #1).
+    mirrored_x("wahlkreuz_halo", "Wahlkreuz", axis_mm=74.0, name="halo_x_centered"),
+    mirrored_y("wahlkreuz_halo", "Wahlkreuz", axis_mm=48.0, name="halo_y_centered"),
+    inside("Wahlkreuz", "wahlkreuz_halo", name="halo_contains_symbol"),
+    # Front: headline stack vertical hierarchy (datum -> cta gap = 10mm).
+    distance_y("headline_datum", "headline_cta", equals=10.0, name="datum_to_cta"),
+    # Back: 3 W-Fragen share x-axis (left edge x=6) for headlines and bodies.
+    same_x("frage_was_headline", "frage_warum_headline", "frage_wann_headline",
+           name="fragen_left_axis"),
+    same_x("frage_was_body", "frage_warum_body", "frage_wann_body",
+           name="bodies_left_axis"),
+    # Back: per-W-Frage stack (body hangs from headline, gap=1mm, same x).
+    aligned_below("frage_was_body", "frage_was_headline", gap_mm=1.0,
+                  name="was_stack"),
+    aligned_below("frage_warum_body", "frage_warum_headline", gap_mm=1.0,
+                  name="warum_stack"),
+    aligned_below("frage_wann_body", "frage_wann_headline", gap_mm=1.0,
+                  name="wann_stack"),
+    # Back: QR block right-axis + label-above + url-below (locked decision #2:
+    # qr_label.y=24, qr_code.y=31, qr_url.y=71 — NOT ISSUE.md's 24/30/68).
+    same_x("qr_label", "qr_code", "qr_url", name="qr_axis"),
+    aligned_below("qr_code", "qr_label", gap_mm=2.0, name="qr_label_anchors_code"),
+    aligned_below("qr_url", "qr_code", gap_mm=4.0, name="qr_url_below_code"),
+    # Back: qr_label hangs from logo_back (right column stacking).
+    aligned_below("qr_label", "logo_back", gap_mm=10.3,
+                  name="logo_back_anchors_qr"),
 ]
 
 
