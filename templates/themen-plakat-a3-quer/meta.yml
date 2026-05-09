@@ -38,6 +38,12 @@ brand_overrides:
   # brand:visual_adjacency_drift REMOVED — V1 CONSTRAINTS captures adjacencies (#22 locked #9).
   # brand:image_text_overlap REMOVED — V1 text fully inside Hellgrün cards (rule carve).
   # brand:image_fills_frame REMOVED — V1 INJECT_MAP pre-crop fills exactly (#24).
+  - id: brand:band_consistency
+    reason: >-
+      Scheduled for follow-up audit per #25 — band-consistency check
+      added in #25 needs per-template body_block_margins spec authoring;
+      deferred to follow-up issue. Zeitung is the only template with
+      verified body-pool band model post-#25.
 ci_overrides:
   non_ci_styles:
     - "themen-plakat/headline"
