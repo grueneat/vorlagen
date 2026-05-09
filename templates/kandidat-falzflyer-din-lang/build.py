@@ -55,27 +55,38 @@ LAYER_FALZ = 3
 
 
 def _add_styles(doc):
-    """Register the 11 falzflyer-local paragraph styles."""
+    """Register the 16 falzflyer-local paragraph styles (V1).
+
+    V1 ParaStyle migration table (per RESEARCH §"V1 ParaStyle table"):
+      MUTATIONS (10): cand-name, slogan, closer-headline, closer-url,
+        closer-datum, contact-headline, contact-body, thema-body, impressum,
+        teaser-body — see per-style notes below.
+      KEPT UNCHANGED (2): teaser-headline, thema-headline.
+      NEW (4): slogan-on-green, quote-on-green, top-title, themen-eyebrow.
+    """
+    # V1: align 0->1, fcolor Dunkelgrün->White (P1 Name on Dunkelgrün card).
     doc.add_para_style(ParaStyle(
         name="falzflyer/cand-name",
         font="Vollkorn Black Italic",
         fontsize=24,
         linesp=27,
-        align=0,
-        fcolor="Dunkelgrün",
+        align=1,
+        fcolor="White",
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1 (KEEP fcolor=Black; Slogan-on-green uses parallel style).
     doc.add_para_style(ParaStyle(
         name="falzflyer/slogan",
         font="Gotham Narrow Bold",
         fontsize=14,
         linesp=17,
-        align=0,
+        align=1,
         fcolor="Black",
         language="de",
         linesp_mode=0,
     ))
+    # V1: UNCHANGED (redaktioneller Charakter, align=0 KEEP).
     doc.add_para_style(ParaStyle(
         name="falzflyer/teaser-headline",
         font="Gotham Narrow Bold",
@@ -86,46 +97,51 @@ def _add_styles(doc):
         language="de",
         linesp_mode=0,
     ))
+    # V1: align stays 0 (redaktioneller); fcolor Black->White (Hellgrün backing).
     doc.add_para_style(ParaStyle(
         name="falzflyer/teaser-body",
         font="Gotham Narrow Book",
         fontsize=11,
         linesp=14,
         align=0,
-        fcolor="Black",
+        fcolor="White",
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1 (already White on Dunkelgrün).
     doc.add_para_style(ParaStyle(
         name="falzflyer/closer-headline",
         font="Gotham Narrow Bold",
         fontsize=22,
         linesp=26,
-        align=0,
+        align=1,
         fcolor="White",
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1.
     doc.add_para_style(ParaStyle(
         name="falzflyer/closer-datum",
         font="Vollkorn Black Italic",
         fontsize=14,
         linesp=18,
-        align=0,
+        align=1,
         fcolor="Gelb",
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1.
     doc.add_para_style(ParaStyle(
         name="falzflyer/closer-url",
         font="Gotham Narrow Bold",
         fontsize=11,
         linesp=14,
-        align=0,
+        align=1,
         fcolor="White",
         language="de",
         linesp_mode=0,
     ))
+    # V1: UNCHANGED (align=0; fcolor stays Dunkelgrün on white themen panels).
     doc.add_para_style(ParaStyle(
         name="falzflyer/thema-headline",
         font="Gotham Narrow Bold",
@@ -136,43 +152,94 @@ def _add_styles(doc):
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1, fontsize 9->10, linesp 11->13 (1.3x body convention).
     doc.add_para_style(ParaStyle(
         name="falzflyer/thema-body",
         font="Gotham Narrow Book",
-        fontsize=9,
-        linesp=11,
-        align=0,
+        fontsize=10,
+        linesp=13,
+        align=1,
         fcolor="Black",
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1, fcolor Dunkelgrün->White (P6 vollflächig).
     doc.add_para_style(ParaStyle(
         name="falzflyer/contact-headline",
         font="Gotham Narrow Bold",
         fontsize=16,
         linesp=20,
-        align=0,
-        fcolor="Dunkelgrün",
+        align=1,
+        fcolor="White",
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1, fcolor Black->White (P6 2-Spalten on Dunkelgrün).
     doc.add_para_style(ParaStyle(
         name="falzflyer/contact-body",
         font="Gotham Narrow Book",
         fontsize=10,
         linesp=12,
-        align=0,
-        fcolor="Black",
+        align=1,
+        fcolor="White",
         language="de",
         linesp_mode=0,
     ))
+    # V1: align 0->1, fcolor Black->White (P6 vollflächig).
     doc.add_para_style(ParaStyle(
         name="falzflyer/impressum",
         font="Gotham Narrow Book",
         fontsize=6,
         linesp=8,
+        align=1,
+        fcolor="White",
+        language="de",
+        linesp_mode=0,
+    ))
+    # NEW V1 (A): P1 Name-Card slogan — Gelb on Dunkelgrün.
+    doc.add_para_style(ParaStyle(
+        name="falzflyer/slogan-on-green",
+        font="Gotham Narrow Bold",
+        fontsize=14,
+        linesp=17,
+        align=1,
+        fcolor="Gelb",
+        language="de",
+        linesp_mode=0,
+    ))
+    # NEW V1 (B): Pull-Quote — registered but no frame in V1 (deferred).
+    doc.add_para_style(ParaStyle(
+        name="falzflyer/quote-on-green",
+        font="Vollkorn Black Italic",
+        fontsize=18,
+        linesp=20,
+        align=1,
+        fcolor="White",
+        language="de",
+        linesp_mode=0,
+    ))
+    # NEW V1 (C): Top-Title — Caps Bold White 11pt for P2/P3/P4/P5/P6
+    # Top-Band tags (left-aligned within band per spec L76-80).
+    doc.add_para_style(ParaStyle(
+        name="falzflyer/top-title",
+        font="Gotham Narrow Bold",
+        fontsize=11,
+        linesp=14,
         align=0,
-        fcolor="Black",
+        fcolor="White",
+        language="de",
+        linesp_mode=0,
+    ))
+    # NEW V1 (D): Themen-Eyebrow — Caps Bold Dunkelgrün 9pt for P4/P5
+    # "THEMA 0X" labels; reused on P6 QR-Captions with frame fcolor=White
+    # override.
+    doc.add_para_style(ParaStyle(
+        name="falzflyer/themen-eyebrow",
+        font="Gotham Narrow Bold",
+        fontsize=9,
+        linesp=12,
+        align=0,
+        fcolor="Dunkelgrün",
         language="de",
         linesp_mode=0,
     ))

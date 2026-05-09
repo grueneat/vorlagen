@@ -19,18 +19,22 @@
     <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6" FONTSIZE="5" FONT="Gotham Narrow Book" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/stoerer" PARENT="ci/default" ALIGN="1" LINESP="11" FONTSIZE="10" FONT="Gotham Narrow Ultra" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/cta" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="13" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/cand-name" ALIGN="0" LINESPMode="0" LINESP="27" FONTSIZE="24" FONT="Vollkorn Black Italic" FCOLOR="Dunkelgrün" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/slogan" ALIGN="0" LINESPMode="0" LINESP="17" FONTSIZE="14" FONT="Gotham Narrow Bold" FCOLOR="Black" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/cand-name" ALIGN="1" LINESPMode="0" LINESP="27" FONTSIZE="24" FONT="Vollkorn Black Italic" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/slogan" ALIGN="1" LINESPMode="0" LINESP="17" FONTSIZE="14" FONT="Gotham Narrow Bold" FCOLOR="Black" LANGUAGE="de"/>
     <STYLE NAME="falzflyer/teaser-headline" ALIGN="0" LINESPMode="0" LINESP="22" FONTSIZE="18" FONT="Gotham Narrow Bold" FCOLOR="Dunkelgrün" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/teaser-body" ALIGN="0" LINESPMode="0" LINESP="14" FONTSIZE="11" FONT="Gotham Narrow Book" FCOLOR="Black" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/closer-headline" ALIGN="0" LINESPMode="0" LINESP="26" FONTSIZE="22" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/closer-datum" ALIGN="0" LINESPMode="0" LINESP="18" FONTSIZE="14" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/closer-url" ALIGN="0" LINESPMode="0" LINESP="14" FONTSIZE="11" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/teaser-body" ALIGN="0" LINESPMode="0" LINESP="14" FONTSIZE="11" FONT="Gotham Narrow Book" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/closer-headline" ALIGN="1" LINESPMode="0" LINESP="26" FONTSIZE="22" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/closer-datum" ALIGN="1" LINESPMode="0" LINESP="18" FONTSIZE="14" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/closer-url" ALIGN="1" LINESPMode="0" LINESP="14" FONTSIZE="11" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="falzflyer/thema-headline" ALIGN="0" LINESPMode="0" LINESP="20" FONTSIZE="16" FONT="Gotham Narrow Bold" FCOLOR="Dunkelgrün" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/thema-body" ALIGN="0" LINESPMode="0" LINESP="11" FONTSIZE="9" FONT="Gotham Narrow Book" FCOLOR="Black" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/contact-headline" ALIGN="0" LINESPMode="0" LINESP="20" FONTSIZE="16" FONT="Gotham Narrow Bold" FCOLOR="Dunkelgrün" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/contact-body" ALIGN="0" LINESPMode="0" LINESP="12" FONTSIZE="10" FONT="Gotham Narrow Book" FCOLOR="Black" LANGUAGE="de"/>
-    <STYLE NAME="falzflyer/impressum" ALIGN="0" LINESPMode="0" LINESP="8" FONTSIZE="6" FONT="Gotham Narrow Book" FCOLOR="Black" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/thema-body" ALIGN="1" LINESPMode="0" LINESP="13" FONTSIZE="10" FONT="Gotham Narrow Book" FCOLOR="Black" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/contact-headline" ALIGN="1" LINESPMode="0" LINESP="20" FONTSIZE="16" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/contact-body" ALIGN="1" LINESPMode="0" LINESP="12" FONTSIZE="10" FONT="Gotham Narrow Book" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/impressum" ALIGN="1" LINESPMode="0" LINESP="8" FONTSIZE="6" FONT="Gotham Narrow Book" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/slogan-on-green" ALIGN="1" LINESPMode="0" LINESP="17" FONTSIZE="14" FONT="Gotham Narrow Bold" FCOLOR="Gelb" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/quote-on-green" ALIGN="1" LINESPMode="0" LINESP="20" FONTSIZE="18" FONT="Vollkorn Black Italic" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/top-title" ALIGN="0" LINESPMode="0" LINESP="14" FONTSIZE="11" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="falzflyer/themen-eyebrow" ALIGN="0" LINESPMode="0" LINESP="12" FONTSIZE="9" FONT="Gotham Narrow Bold" FCOLOR="Dunkelgrün" LANGUAGE="de"/>
     <TableStyle NAME="Default Table Style"/>
     <CellStyle NAME="Default Cell Style"/>
     <LAYERS NUMMER="0" LEVEL="0" NAME="Hintergrund" SICHTBAR="1" DRUCKEN="1" EDIT="1" SELECT="1" FLOW="1" TRANS="1" BLEND="0" OUTL="0" LAYERC="#000000"/>
