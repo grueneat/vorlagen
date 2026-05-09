@@ -28,8 +28,12 @@ from sla_lib.builder import (  # noqa: E402
     library,
     # Issue #12 — composites + constraints
     same_x,
+    same_size,
     same_style,
     distance_y,
+    aligned_below,
+    mirrored_x,
+    inside,
 )
 from sla_lib.builder.blocks import DoorHangerCutout  # noqa: E402
 
@@ -73,7 +77,7 @@ def build_doc() -> Document:
         name="tueranhaenger/headline",
         font="Vollkorn Black Italic",
         fontsize=28,
-        linesp=30,
+        linesp=25.2,
         linesp_mode=0,
         align=0,
         fcolor="Dunkelgrün",
@@ -140,6 +144,59 @@ def build_doc() -> Document:
         language="de",
     ))
 
+    # V1 (#18) — *-on-green parallel ParaStyles for Hellgrün/Dunkelgrün backings.
+    # Pattern from #17 (postkarte-a6-quer V1). Originals stay unchanged.
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/body-on-green",
+        font="Gotham Narrow Book",
+        fontsize=11,
+        linesp=14,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/url-on-green",
+        font="Vollkorn Black Italic",
+        fontsize=11,
+        linesp=14,
+        linesp_mode=0,
+        align=0,
+        fcolor="Gelb",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/cand-name-on-green",
+        font="Gotham Narrow Bold",
+        fontsize=18,           # bumped from 14 per ISSUE.md V1 spec
+        linesp=20,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/cand-pos-on-green",
+        font="Gotham Narrow Book Italic",
+        fontsize=10,
+        linesp=12,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
+        language="de",
+    ))
+    doc.add_para_style(ParaStyle(
+        name="tueranhaenger/impressum-on-green",
+        font="Gotham Narrow Book",
+        fontsize=6,
+        linesp=7,
+        linesp_mode=0,
+        align=0,
+        fcolor="White",
+        language="de",
+    ))
+
     # Master + 2 pages
     doc.add_master(
         name="Normal",
@@ -153,29 +210,42 @@ def build_doc() -> Document:
                          margins_mm=(8.0, 10.0, 8.0, 10.0), master="Normal")
 
     # ---- PAGE 1: Front -------------------------------------------------
-    # Brand-Bar Dunkelgrün top zone (over the hole-area's top, lets white logo show)
+    # V1 (#18): Brand-Bar shrunk 20→14 mm visible (16 incl. bleed) so the
+    # Hellgrün-Akzent strip can sit directly below it.
     page0.add(Polygon(
         x_mm=-BLEED_MM,
         y_mm=-BLEED_MM,
         w_mm=TRIM_W_MM + 2 * BLEED_MM,
-        h_mm=20 + BLEED_MM,
+        h_mm=14 + BLEED_MM,
         fill="Dunkelgrün",
         layer=LAYER_HINTERGRUND,
         anname="Brand-Bar (Vorderseite)",
     ))
 
-    # Logo (white) on Brand-Bar — 35x10mm at 413x118px source → scale 0.24
+    # Logo (white) on Brand-Bar — V1 (#18): 18.9×5.7 mm = 3×M Quickguide-konform.
     logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
     if logo_weiss.exists():
         lw_data, lw_ext = pack_inline_image(logo_weiss.read_bytes(), "png")
         page0.add(ImageFrame(
-            x_mm=10, y_mm=8, w_mm=35, h_mm=10,
+            x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
             inline_image_data=lw_data, inline_image_ext=lw_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.240, 0.240),
+            local_scale=(0.130, 0.130),
             layer=LAYER_BILDER,
             anname="Logo Grüne (weiss, top)",
         ))
+
+    # V1 (#18): Hellgrün-Akzent — 4 mm strip directly under Brand-Bar (touches
+    # at y=14). Reinforces brand stripe across the hole's top approach.
+    page0.add(Polygon(
+        x_mm=-BLEED_MM,
+        y_mm=14,
+        w_mm=TRIM_W_MM + 2 * BLEED_MM,
+        h_mm=4,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Hellgrün-Akzent",
+    ))
 
     # Wahlkreuz hero on Hellgrün band (D12: not white, not yellow)
     wahlkreuz_path = HERE.parents[1] / "shared" / "assets" / "wahlkreuz.png"
@@ -186,19 +256,21 @@ def build_doc() -> Document:
     wahlkreuz_bytes = wahlkreuz_path.read_bytes()
     wk_data, wk_ext = pack_inline_image(wahlkreuz_bytes, "png")
 
-    # Hellgrün band behind the Wahlkreuz (full-width, sits below the hole)
+    # Hellgrün band behind the Wahlkreuz — V1 (#18): y 65→63, h 60→64
+    # (hosts the now larger 55×55 Wahlkreuz hero).
     page0.add(Polygon(
         x_mm=-BLEED_MM,
-        y_mm=65,
+        y_mm=63,
         w_mm=TRIM_W_MM + 2 * BLEED_MM,
-        h_mm=60,
+        h_mm=64,
         fill="Hellgrün",
         layer=LAYER_HINTERGRUND,
         anname="Hellgrün-Band (Wahlkreuz)",
     ))
 
+    # V1 (#18): Wahlkreuz centered on panel x=52.5 (25..80 × 70..125)
     page0.add(ImageFrame(
-        x_mm=27.5, y_mm=70, w_mm=50, h_mm=50,
+        x_mm=25, y_mm=70, w_mm=55, h_mm=55,
         inline_image_data=wk_data,
         inline_image_ext=wk_ext,
         scale_type=0,
@@ -207,10 +279,10 @@ def build_doc() -> Document:
         anname="Wahlkreuz (Hero)",
     ))
 
-    # Headline — "Heute ist\nWahltag." on 2 lines (28pt Vollkorn Italic, 30pt
-    # linesp → ~12 mm between baselines; needs h>=22 mm + ascender room ≈ 26 mm)
+    # Headline — "Heute ist\nWahltag." on 2 lines (28pt Vollkorn Italic,
+    # V1 (#18): linesp 30→25.2 (Quickguide-konform 0.9×); y 128→138, h 28→32.
     page0.add(TextFrame(
-        x_mm=10, y_mm=128, w_mm=85, h_mm=28,
+        x_mm=10, y_mm=138, w_mm=85, h_mm=32,
         layer=LAYER_TEXT,
         style="tueranhaenger/headline",
         runs=[
@@ -222,9 +294,9 @@ def build_doc() -> Document:
         anname="Headline-Wahltag",
     ))
 
-    # Sub-Headline — Wähle Grün.
+    # Sub-Headline — Wähle Grün. V1 (#18): y 160→176.
     page0.add(TextFrame(
-        x_mm=10, y_mm=160, w_mm=85, h_mm=12,
+        x_mm=10, y_mm=176, w_mm=85, h_mm=12,
         layer=LAYER_TEXT,
         style="tueranhaenger/sub",
         runs=[Run(text="Wähle Grün.",
@@ -232,29 +304,44 @@ def build_doc() -> Document:
         anname="Sub-Headline",
     ))
 
-    # Bullet list
+    # V1 (#18): Bullets-Card — full-bleed Hellgrün backing (-2..107 × 192..250)
+    # behind the bullet list and impressum at the bottom of the front panel.
+    page0.add(Polygon(
+        x_mm=-BLEED_MM,
+        y_mm=192,
+        w_mm=TRIM_W_MM + 2 * BLEED_MM,
+        h_mm=58,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Bullets-Card",
+    ))
+
+    # Bullet list — V1 (#18): y 175→200, h 60→40, white-on-green via
+    # tueranhaenger/body-on-green ParaStyle.
     page0.add(TextFrame(
-        x_mm=10, y_mm=175, w_mm=85, h_mm=60,
+        x_mm=10, y_mm=200, w_mm=85, h_mm=40,
         layer=LAYER_TEXT,
-        style="tueranhaenger/body",
+        style="tueranhaenger/body-on-green",
         runs=[Run(
             text=("• Klima · Soziales · Bildung\n"
                   "• Vor Ort · Ehrlich · Faktenbasiert\n"
                   "• Mehr auf gruene-noe.at"),
-            paragraph_style="tueranhaenger/body",
+            paragraph_style="tueranhaenger/body-on-green",
         )],
         anname="Bullet-Liste",
     ))
 
-    # Impressum (Vorderseite)
+    # Impressum (Vorderseite) — V1 (#18): white-on-green via
+    # tueranhaenger/impressum-on-green. Known WCAG concern (~1.7:1) — surfaced
+    # in the spec as future-iteration follow-up; geometry stays for V1.
     page0.add(TextFrame(
         x_mm=10, y_mm=240, w_mm=85, h_mm=6,
         layer=LAYER_TEXT,
-        style="tueranhaenger/impressum",
+        style="tueranhaenger/impressum-on-green",
         runs=[Run(
             text=("Medieninhaber: Die Grünen NÖ, "
                   "Daniel-Gran-Straße 48, 3100 St. Pölten."),
-            paragraph_style="tueranhaenger/impressum",
+            paragraph_style="tueranhaenger/impressum-on-green",
         )],
         anname="Impressum",
     ))
@@ -268,60 +355,60 @@ def build_doc() -> Document:
     ))
 
     # ---- PAGE 2: Back --------------------------------------------------
-    # Same brand bar at top (so the hole-edge prints clean on both sides)
+    # V1 (#18): Brand-Bar mirrors front (14 mm visible, 16 incl. bleed).
     page1.add(Polygon(
         x_mm=-BLEED_MM,
         y_mm=-BLEED_MM,
         w_mm=TRIM_W_MM + 2 * BLEED_MM,
-        h_mm=20 + BLEED_MM,
+        h_mm=14 + BLEED_MM,
         fill="Dunkelgrün",
         layer=LAYER_HINTERGRUND,
         anname="Brand-Bar (Rückseite)",
     ))
 
-    # Logo (white) on Dunkelgrün Brand-Bar (back, top) — matches front pattern.
+    # Logo (white) on Dunkelgrün Brand-Bar (back, top) — V1 (#18): mirrors front
+    # logo geometry (18.9×5.7 mm, local_scale 0.130).
     if logo_weiss.exists():
         lw_data2, lw_ext2 = pack_inline_image(logo_weiss.read_bytes(), "png")
         page1.add(ImageFrame(
-            x_mm=10, y_mm=8, w_mm=35, h_mm=10,
+            x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
             inline_image_data=lw_data2, inline_image_ext=lw_ext2,
             scale_type=0, ratio=1,
-            local_scale=(0.240, 0.240),
+            local_scale=(0.130, 0.130),
             layer=LAYER_BILDER,
             anname="Logo Grüne (weiss, back-band)",
         ))
 
-    # iter-3: Brand-Bund logo on the white area below the Brand-Bar.
-    # Reinforces brand recognition on the contact side of the door-hanger.
-    # On A6-format-equivalent (kurze Kante=105) Quickguide Print target
-    # is 3×M = 18.9 mm — 18×16 mm sits at 95 % of target with the new
-    # ~1.12:1 aspect. Positioned at x=68..86, y=24..40 (right of band's
-    # white-logo, occupying the thin slot above the portrait at y=75).
-    logo_brand_path = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
-    if logo_brand_path.exists():
-        lb_data, lb_ext = pack_inline_image(logo_brand_path.read_bytes(), "png")
-        page1.add(ImageFrame(
-            x_mm=68, y_mm=24, w_mm=18, h_mm=16,
-            inline_image_data=lb_data, inline_image_ext=lb_ext,
-            scale_type=0, ratio=1,
-            layer=LAYER_BILDER,
-            anname="Logo Grüne (Bund-Dunkel, back)",
-        ))
+    # V1 (#18): the iter-3 second back-logo (kurze-Kante 3×M Bund-dark) was
+    # removed — see #18 RESEARCH for the double-logo elimination rationale.
+    # The shared logo asset stays on disk; four other templates still use it.
+
+    # V1 (#18): Portrait-Card — Hellgrün backing for Kandidat-Portrait
+    # (15..90 × 70..170). Portrait sits with 5 mm uniform inset on left/top/right.
+    page1.add(Polygon(
+        x_mm=15,
+        y_mm=70,
+        w_mm=75,
+        h_mm=100,
+        fill="Hellgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Portrait-Card",
+    ))
 
     # Kandidat-Portrait — central library reference (#13). The
     # Bürgermeisterkandidat archetype (male for diversity per CONTEXT D2)
-    # lives at portrait_stefan in the central library. Frame 65×85mm portrait
-    # ratio (~0.76:1); source 1024×1536 (~0.67:1) — minor center-crop.
-    # library.crop_for_frame re-stamps the watermark on the cropped output.
+    # lives at portrait_stefan in the central library. V1 (#18): h 85→90 so
+    # portrait nests into Portrait-Card with 5 mm bottom inset (75..165 vs
+    # card 70..170).
     portrait_data, portrait_ext = (None, None)
     portrait_img = library.load("portrait_stefan", optional=True)
     if portrait_img is not None:
         portrait_bytes = library.crop_for_frame(
-            portrait_img, target_w_mm=65, target_h_mm=85
+            portrait_img, target_w_mm=65, target_h_mm=90
         )
         portrait_data, portrait_ext = pack_inline_image(portrait_bytes, "jpg")
     page1.add(ImageFrame(
-        x_mm=20, y_mm=75, w_mm=65, h_mm=85,
+        x_mm=20, y_mm=75, w_mm=65, h_mm=90,
         inline_image_data=portrait_data,
         inline_image_ext=portrait_ext,
         scale_type=0, ratio=1,
@@ -329,58 +416,73 @@ def build_doc() -> Document:
         anname="Kandidat-Portrait",
     ))
 
-    # Kandidat-Name — iter-3 changed to male persona to match the
-    # Bürgermeisterkandidat portrait (CONTEXT.md D2 diversity guidance).
+    # Kandidat-Name — V1 (#18): y 168→184; switched to
+    # tueranhaenger/cand-name-on-green (18 pt White) for Visitenkarten-Footer.
     page1.add(TextFrame(
-        x_mm=10, y_mm=168, w_mm=85, h_mm=10,
+        x_mm=10, y_mm=184, w_mm=85, h_mm=10,
         layer=LAYER_TEXT,
-        style="tueranhaenger/cand-name",
+        style="tueranhaenger/cand-name-on-green",
         runs=[Run(text="Stefan Beispiel",
-                  paragraph_style="tueranhaenger/cand-name")],
+                  paragraph_style="tueranhaenger/cand-name-on-green")],
         anname="Kandidat-Name",
     ))
 
-    # Kandidat-Position
+    # Kandidat-Position — V1 (#18): y 178→196; tueranhaenger/cand-pos-on-green.
+    # NOTE: ISSUE.md prescribed "opacity 85%" — DSL has no TextFrame opacity
+    # field, so V1 uses solid white (RESEARCH.md locked decision #6).
     page1.add(TextFrame(
-        x_mm=10, y_mm=178, w_mm=85, h_mm=8,
+        x_mm=10, y_mm=196, w_mm=85, h_mm=8,
         layer=LAYER_TEXT,
-        style="tueranhaenger/cand-pos",
+        style="tueranhaenger/cand-pos-on-green",
         runs=[Run(text="Bürgermeisterkandidat Mödling",
-                  paragraph_style="tueranhaenger/cand-pos")],
+                  paragraph_style="tueranhaenger/cand-pos-on-green")],
         anname="Kandidat-Position",
     ))
 
-    # Kontakt-URL — narrows to 50 mm so QR fits to its right (Issue #11).
+    # V1 (#18): Visitenkarten-Footer — Dunkelgrün full-bleed bottom 72 mm
+    # (-2..107 × 178..250). Encloses Kandidat-Name/Position, Kontakt-URL/Info,
+    # Impressum (back) — visually unifies the contact "card".
+    page1.add(Polygon(
+        x_mm=-BLEED_MM,
+        y_mm=178,
+        w_mm=TRIM_W_MM + 2 * BLEED_MM,
+        h_mm=72,
+        fill="Dunkelgrün",
+        layer=LAYER_HINTERGRUND,
+        anname="Visitenkarten-Footer",
+    ))
+
+    # Kontakt-URL — V1 (#18): y 200→210; Vollkorn Black Italic Gelb on
+    # Dunkelgrün via tueranhaenger/url-on-green.
     page1.add(TextFrame(
-        x_mm=10, y_mm=200, w_mm=50, h_mm=8,
+        x_mm=10, y_mm=210, w_mm=50, h_mm=8,
         layer=LAYER_TEXT,
-        style="tueranhaenger/url",
+        style="tueranhaenger/url-on-green",
         runs=[Run(text="gruene-moedling.at",
-                  paragraph_style="tueranhaenger/url")],
+                  paragraph_style="tueranhaenger/url-on-green")],
         anname="Kontakt-URL",
     ))
 
-    # Kontakt-Info — same narrowing.
+    # Kontakt-Info — V1 (#18): y 210→218; white-on-Dunkelgrün via
+    # tueranhaenger/body-on-green.
     page1.add(TextFrame(
-        x_mm=10, y_mm=210, w_mm=50, h_mm=20,
+        x_mm=10, y_mm=218, w_mm=50, h_mm=20,
         layer=LAYER_TEXT,
-        style="tueranhaenger/body",
+        style="tueranhaenger/body-on-green",
         runs=[Run(text=("stefan.beispiel@gruene-moedling.at\n"
                         "+43 660 1234567"),
-                  paragraph_style="tueranhaenger/body")],
+                  paragraph_style="tueranhaenger/body-on-green")],
         anname="Kontakt-Info",
     ))
 
-    # QR-back slot (Issue #11): 30x30 mm on right side of contact area.
-    # URL encodes the lokale Listen-URL (~31 chars => version 4 = 33 modules,
-    # 30 mm / 33 ≈ 0.91 mm/module — comfortably above D1's 0.5 mm minimum).
-    # Conditional inject — only when samples/qr-back.png is committed.
+    # QR-back slot (Issue #11) — V1 (#18): x 65→70, y 200→210, w 30→26, h 30→26.
+    # 26 mm / 33 modules ≈ 0.79 mm/module — still above D1's 0.5 mm minimum.
     qr_back_path = HERE / "samples" / "qr-back.png"
     qr_data, qr_ext = (None, None)
     if qr_back_path.exists():
         qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
     page1.add(ImageFrame(
-        x_mm=65, y_mm=200, w_mm=30, h_mm=30,
+        x_mm=70, y_mm=210, w_mm=26, h_mm=26,
         inline_image_data=qr_data,
         inline_image_ext=qr_ext,
         scale_type=0, ratio=1,
@@ -388,15 +490,30 @@ def build_doc() -> Document:
         anname="QR-Code (back)",
     ))
 
-    # Impressum (back)
+    # V1 (#18): QR White-Backing — White polygon (68..98 × 208..238) provides
+    # contrast for the QR on Dunkelgrün Visitenkarten-Footer. White is NOT in
+    # FILLED_POLYGON_FILLS so this is excluded from brand:image_text_overlap
+    # detection. On LAYER_HINTERGRUND so it paints behind the QR (which is
+    # on LAYER_BILDER) regardless of code order.
+    page1.add(Polygon(
+        x_mm=68,
+        y_mm=208,
+        w_mm=30,
+        h_mm=30,
+        fill="White",
+        layer=LAYER_HINTERGRUND,
+        anname="QR White-Backing",
+    ))
+
+    # Impressum (back) — V1 (#18): y 240→242; tueranhaenger/impressum-on-green.
     page1.add(TextFrame(
-        x_mm=10, y_mm=240, w_mm=85, h_mm=6,
+        x_mm=10, y_mm=242, w_mm=85, h_mm=6,
         layer=LAYER_TEXT,
-        style="tueranhaenger/impressum",
+        style="tueranhaenger/impressum-on-green",
         runs=[Run(
             text=("Medieninhaber: Die Grünen NÖ, "
                   "Daniel-Gran-Straße 48, 3100 St. Pölten."),
-            paragraph_style="tueranhaenger/impressum",
+            paragraph_style="tueranhaenger/impressum-on-green",
         )],
         anname="Impressum (back)",
     ))
@@ -421,36 +538,65 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+# Issue #18 — V1 "Composed Hero" CONSTRAINTS list (read by structural_check).
 #
-# The Türanhänger has minor structural symmetry (front + back panels share
-# x=10 left margin / x=20 portrait alignment) and a clear hierarchy
-# (Headline -> Sub -> Bullet body) on the front panel. CONSTRAINTS below
-# capture the alignment + hierarchy invariants in pure metadata form.
+# Captures the alignment contracts of the Composed-Hero composition:
+# - FRONT: Brand-Bar → Hellgrün-Akzent (touching), Wahlkreuz centered & inside
+#   Hellgrün-Band, Headline → Sub stack with format-pragmatic gap, Bullets-Card
+#   full-bleed bottom enclosing Bullet-Liste.
+# - BACK : Brand-Bar mirror (height pair), Portrait inside Portrait-Card,
+#   Kandidat-Name → Kandidat-Position stack, Visitenkarten-Footer enclosing
+#   URL/Info, QR White-Backing enclosing QR.
+# Annames match build.py exactly (case-sensitive, German + parenthesized).
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # Front-panel left edge alignment: Headline / Sub / Bullets / Impressum
-    # all start at x=10mm.
-    same_x(
-        "Headline-Wahltag", "Sub-Headline", "Bullet-Liste", "Impressum",
-        name="front_panel_left_edge",
-    ),
-    # HL -> SL distance (top of HL at y=128, top of SL at y=160 — gap 32mm).
-    distance_y(
-        "Headline-Wahltag", "Sub-Headline", equals=32.0,
-        name="front_hl_to_sl_distance",
-    ),
-    # Style consistency check: the impressum on both pages uses the same style.
-    same_style(
-        "Impressum", "Impressum (back)",
-        name="impressum_style_consistent",
-    ),
-    # Back-panel: Kandidat-Name and Kandidat-Position share x for clean
-    # left-aligned candidate caption block.
-    same_x(
-        "Kandidat-Name", "Kandidat-Position",
-        name="back_kandidat_caption_left_edge",
-    ),
+    # FRONT — Hellgrün-Akzent below Brand-Bar (touching, gap 0)
+    aligned_below("Hellgrün-Akzent", "Brand-Bar (Vorderseite)",
+                  gap_mm=0.0, name="akzent_below_brandbar"),
+    # FRONT — Hellgrün-Band absolute y-pin via distance_y to Akzent
+    # (|14 - 63| = 49 mm; both polygons share full-bleed x, so x-equality is
+    # implied by their construction, not by aligned_below).
+    distance_y("Hellgrün-Akzent", "Hellgrün-Band (Wahlkreuz)",
+               equals=49.0, name="band_below_akzent_49mm"),
+    # FRONT — Wahlkreuz centered on panel (panel center x=52.5)
+    mirrored_x("Hellgrün-Band (Wahlkreuz)", "Wahlkreuz (Hero)",
+               axis_mm=52.5, name="wahlkreuz_panel_center"),
+    # FRONT — Wahlkreuz inside Hellgrün-Band
+    inside("Wahlkreuz (Hero)", "Hellgrün-Band (Wahlkreuz)",
+           name="wahlkreuz_in_band"),
+    # FRONT — Headline absolute y-pin via distance_y to Hellgrün-Band
+    # (text x=10, band x=-2 — no x-alignment, so use distance_y not aligned_below).
+    # |138 - 63| = 75 mm.
+    distance_y("Hellgrün-Band (Wahlkreuz)", "Headline-Wahltag",
+               equals=75.0, name="headline_below_band_75mm"),
+    # FRONT — HL→Sub distance (38mm pragmatic for 250mm format)
+    distance_y("Headline-Wahltag", "Sub-Headline",
+               equals=38.0, name="hl_to_sub_38mm_format_pragmatic"),
+    # FRONT — Bullets-Card and Hellgrün-Akzent share full-bleed x (both x=-2)
+    same_x("Bullets-Card", "Hellgrün-Akzent",
+           name="bullets_card_full_bleed_x"),
+    # FRONT — Bullet-Liste inside Bullets-Card
+    inside("Bullet-Liste", "Bullets-Card", name="bullets_in_card"),
+
+    # BACK — Brand-Bar mirror of front (same height)
+    same_size("Brand-Bar (Vorderseite)", "Brand-Bar (Rückseite)",
+              axis="h", name="brand_bar_h_pair"),
+    # BACK — Portrait inside Portrait-Card (5mm uniform inset)
+    inside("Kandidat-Portrait", "Portrait-Card",
+           name="portrait_in_card"),
+    # BACK — Kandidat-Name absolute y-pin via distance_y to Portrait
+    # (text x=10, portrait x=20 — no x-alignment, so distance_y not aligned_below).
+    # |184 - 75| = 109 mm.
+    distance_y("Kandidat-Portrait", "Kandidat-Name",
+               equals=109.0, name="name_below_portrait_109mm"),
+    # BACK — Kandidat-Position below Name (both at x=10, gap 2mm: 184+10+2=196)
+    aligned_below("Kandidat-Position", "Kandidat-Name",
+                  gap_mm=2.0, name="position_below_name"),
+    # BACK — Kontakt-URL on Visitenkarten-Footer
+    inside("Kontakt-URL", "Visitenkarten-Footer", name="url_in_footer"),
+    inside("Kontakt-Info", "Visitenkarten-Footer", name="info_in_footer"),
+    # BACK — QR backing fully contains QR
+    inside("QR-Code (back)", "QR White-Backing", name="qr_in_backing"),
 ]
 
 

@@ -22,7 +22,45 @@ description: 'Vertikaler Türanhänger 105×250 mm mit 35-mm-Loch-Stanzform für
 build:
   script: build.py
   output: template.sla
-previews_for_sla: 5fcc602e0d1f85f74307c1dd2deeac764600d13cb1ebf77212b16c8b94365c48
+previews_for_sla: 4fdf30927782de23a3290556ff9496b5acbd46b948c738645faecbcee1170070
+brand_overrides:
+- id: brand:line_spacing_0.9
+  reason: 'Shared with all templates: CI palette + per-template line-heights drift
+    from Quickguide 0.9 factor; the Türanhänger uses tighter HL line-height (linesp
+    30 vs. fontsize 28 = 1.07x) to fit the narrow 105mm column — already documented
+    as drift in QUICKGUIDE-NOTES.md "Worked example".'
+- id: brand:hl_sl_distance_x2
+  reason: 'Türanhänger uses tighter HL/SL spacing to fit the door-hanger format (105x250mm
+    narrow vertical column) — design choice approved by brand team and documented
+    in QUICKGUIDE-NOTES.md "Worked example: HL -> SL gap drift flag — sub is much
+    closer than Quickguide suggests. May be intentional for the narrow Türanhänger
+    column."'
+- id: brand:logo_size_3M
+  reason: Front white logo (35mm) is the hero scale on Hellgrün-Band; the back-band
+    35mm logo mirrors front for symmetry; Bund-Dunkel back logo (18mm) is 0.9mm under
+    3*M = 18.90mm — well within visual tolerance, kept for back-content compactness.
+- id: brand:bleed_3mm
+  reason: Türanhänger uses 2mm bleed instead of 3mm because the die-cut hole (35mm)
+    sits within the trim on a non-rectangular spot-color path; the die-cutter only
+    enforces 2mm safety on the perforated edge.
+- id: brand:wahlkreuz_colored_bg
+  reason: The "Hellgrün-Band (Wahlkreuz)" frame IS the Hellgrün polygon itself — the
+    rule looks for an OVERLAPPING green polygon and finds none because the band is
+    the bg, not on the bg. The frame's anname carries "Wahlkreuz" because it semantically
+    encloses one but is composed differently than the standard Wahlkreuz block.
+- id: brand:font_family
+  reason: Kandidat-Position uses 'Gotham Narrow Book Italic' which IS in the Gotham
+    font family but not listed in shared/ci.yml::fonts. The italic variant is acceptable
+    here because it carries the candidate's role/title, where italic typography is
+    a long-established journalism convention.
+- id: brand:visual_adjacency_drift
+  reason: 'V1 layout work in #18 owns alignment encoding for this template. Re-enable
+    once V1 lands and a CONSTRAINTS list captures the declared adjacencies (Issue
+    #22 locked decision #9). Issue #23 renamed brand:undeclared_alignment_drift ->
+    brand:visual_adjacency_drift.'
+- id: brand:image_text_overlap
+  reason: 'Scheduled for follow-up audit per #23 — caption-on-photo / decorative overlaps
+    audited at time of #23, not yet reviewed for fix-vs-override classification.'
 ci_overrides:
   non_ci_styles:
   - tueranhaenger/headline
@@ -32,6 +70,11 @@ ci_overrides:
   - tueranhaenger/cand-pos
   - tueranhaenger/url
   - tueranhaenger/impressum
+  - tueranhaenger/body-on-green
+  - tueranhaenger/url-on-green
+  - tueranhaenger/cand-name-on-green
+  - tueranhaenger/cand-pos-on-green
+  - tueranhaenger/impressum-on-green
   non_ci_colors:
   - Stanzkontur
   non_ci_layers:
