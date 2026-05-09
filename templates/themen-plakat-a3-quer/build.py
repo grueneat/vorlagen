@@ -47,8 +47,16 @@ COL_W_MM = (TRIM_W_MM - 2 * MARGIN_X_MM - 2 * GUTTER_MM) / 3  # ≈ 124.67
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
-def build_doc() -> Document:
-    """Construct the Themen-Plakat Document. Issue #12 D13 contract.
+def build_template() -> Document:
+    """Construct the Themen-Plakat A3 quer Document — DSL-only, no photo bytes.
+
+    Round-trip stable: T03 removes inline image data so this function is
+    safe to feed into structural_check / spec_check / smoke without
+    triggering image-fills-frame / preview-SHA drift.
+
+    For preview rendering (PDF + PNG gallery) callers go through
+    build_preview() which wraps build_template() and injects library
+    images per INJECT_MAP using the post-#24 idiom (#19 RESEARCH §1).
 
     Returns the Document without saving — callers (CLI / structural_check)
     decide where (or whether) to persist.
@@ -375,8 +383,41 @@ def build_doc() -> Document:
     return doc
 
 
+INJECT_MAP: dict[str, str] = {}   # T04 fills with {"Themen-Hero": "themen_klimaschutz_windrad"}
+
+
+def build_preview() -> Document:
+    """Inject demo library images for gallery PNG render (#24 idiom).
+
+    Pattern: pre-crops the source image to the frame's LIVE dimensions
+    via library.inject_into_frame, eliminating the literal-target drift
+    that produced the half-empty hero frame in iter-3.
+    """
+    doc = build_template()
+    if not INJECT_MAP:
+        return doc
+    for page in doc.pages:
+        for item in page.items:
+            if isinstance(item, ImageFrame) and item.anname in INJECT_MAP:
+                lib_id = INJECT_MAP[item.anname]
+                img = library.load(lib_id, optional=True)
+                if img is None:
+                    continue
+                library.inject_into_frame(
+                    item, img,
+                    target_w_mm=item.w_mm,
+                    target_h_mm=item.h_mm,
+                )
+    return doc
+
+
+# Alias for structural_check / spec_check / smoke — they expect build_doc.
+# Keep this alias indefinitely; it points at the clean template (no photos).
+build_doc = build_template
+
+
 def build(out_path: str | Path = HERE / "template.sla") -> Path:
-    doc = build_doc()
+    doc = build_preview()
     out_path = Path(out_path)
     doc.save(out_path)
     return out_path
