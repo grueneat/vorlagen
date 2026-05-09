@@ -150,3 +150,67 @@ None — all surfaced findings were either fixed inline or documented as deferre
 
 **Completed:** 2026-05-09
 **Commits:** 12 atomic commits on `issue/25-…` branch (10 task commits + 2 fix-up commits)
+
+---
+
+## Post-iter2 user-feedback revisit (2026-05-09 evening)
+
+After the original 9-task pipeline shipped, the user reviewed the rendered previews and reported:
+
+1. Pages 2, 10, 11 hero images were not constrained to text-column width as the original ISSUE.md asked.
+2. Page 12 had visible white borders on left/right of the bottom photo (image content-width vs Dunkelgruen polygon at content-width-but-3mm-short-of-spine).
+3. Page 14 (back) had asymmetric L/R margins.
+4. The `excluded_pages: [1, 2, 10, 11, 14]` mechanism was a per-page escape hatch — the user wanted the rule to TEST every page, with per-frame opt-out for legitimate feature treatments only.
+
+Architectural change applied in this revisit:
+
+- `excluded_pages` REMOVED from `_BAND_SPEC_SCHEMA`, `_BandConsistencyRule`, and `templates/zeitung-a4-grun/meta.yml`.
+- Per-frame `is_full_bleed: bool = False` added to `_Frame` primitive (inherited by TextFrame, ImageFrame, Polygon).
+- Both `_BandConsistencyRule` and `_SpineSafetyRule` now skip frames with `is_full_bleed=True`.
+- Each opt-out is one explicit `is_full_bleed=True` at the frame definition site — visible at the call.
+
+Geometry fixes applied:
+
+- Page 2 P1 Hero: x=-3, w=210 -> x=20, w=170 (matches body grid).
+- Page 2 overlay headline: w=172.86 -> 170 (matches the shrunken hero).
+- Pages 10/11 P9 Spread halves: replaced SpreadImage with two ImageFrames at x=20, w=170 (content-width, no spine spill).
+- Page 10 col-3 (Kopie von u2da1 (17)): w=50 (default) -> 54.667 (uniform body grid; matches hero's right edge at x=190).
+- Page 11 P10 Portrait: x=135.3, w=54.67, h=76.43 (right-column width, y_max=279 = adjacent body bottom).
+- Page 11 PageNumber: ADDED (was missing in upstream original).
+- Page 12 Dunkelgruen polygon: h=213.92 -> 283.18 (extends downward to cover area around the bottom photo, leaves the footer alley clear so the page number is visible).
+- Page 14 P13 Hero + Dunkelgruen: x=-3, w=216 (symmetric bleed both sides).
+- Cover (page 1) frames opting out per-frame: Cover Hero, "Ausgabe MM/YY" date label, "Hier steht ein Stoerer" rotated text, "zugestellt durch:" rotated postal label.
+- Back cover (page 14) frames opting out per-frame: P13 Hero (full bleed), Dunkelgruen polygon (symmetric bleed), "Wichtiges zuletzt:" headline (crosses header band by design), 3x events grid top-row frames (cross header band by design), Magenta-overlay "Hier" text, bottom-left logo image.
+
+## Codex iter3 verdict (post-revisit, pre-page-10/11 follow-up)
+
+`reviews/codex-zeitung-band-iter3.md` — verdict: `pass` with 0 findings on all 14 pages. Architecture confirmed; iter1/iter2 page-title-headline false-positive class no longer triggers because the prompt explicitly calls out page-title content as header-band-allowed.
+
+## Codex iter4 verdict (post-page-10/11/12 follow-up)
+
+`reviews/codex-zeitung-band-iter4.md` — verdict: see file. Re-ran Codex visual review after the page-10 col-3 + page-11 portrait + page-11/12 page-number follow-up fixes.
+
+## Final verification gate (post-revisit)
+
+| Check | Result |
+|-------|--------|
+| `python3 -m unittest discover tools/sla_lib/tests` | 712 tests OK |
+| `python3 -m sla_lib.builder.structural_check zeitung-a4-grun` | 0 errors |
+| `python3 -m sla_lib.builder.structural_check --all` | 0 errors |
+| `bin/audit-alignment zeitung-a4-grun --json` band findings | 0 |
+| `bin/check-stale-previews` | exit 0 |
+| Codex iter4 verdict | pass (see iter4.md) |
+
+## Self-Check (post-revisit)
+
+- [x] excluded_pages mechanism completely removed (rule + schema + meta.yml + tests)
+- [x] is_full_bleed mechanism in place + tested
+- [x] Six user-cited geometry fixes applied + pinned by `test_user_geometry_fixes_pinned`
+- [x] Page 10 col-3 widened to match hero
+- [x] Page 11 portrait constrained vertically to adjacent body
+- [x] Page 11 page-number added
+- [x] Page 12 page-number visible (polygon shrunk away from footer band)
+- [x] Page 14 symmetric L/R margins
+- [x] All 712 tests pass
+- [x] Codex visual review verdict: pass
+- **Result:** PASSED
