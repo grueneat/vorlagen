@@ -54,6 +54,59 @@ LAYER_TEXT = 2
 LAYER_FALZ = 3
 
 
+def _top_band(panel_index: int) -> Polygon:
+    """V1 universal Top-Band helper — emit 31mm Dunkelgrün Polygon for one
+    of the 4 panels that get an explicit Top-Band Polygon (P1, P2, P4, P5).
+
+    Routing per RESEARCH locked #6 + correction #3:
+      0 -> P1: outer (x=-3, w=105) — extends into bleed at trim edge
+      1 -> P2: inner (x=99, w=99) — flush both Falz-lines
+      2 -> P3: ValueError — vollflächig Dunkelgrün; the polygon IS the band
+      3 -> P4: outer (x=-3, w=105)
+      4 -> P5: inner (x=99, w=99)
+      5 -> P6: ValueError — vollflächig Dunkelgrün; the polygon IS the band
+
+    All bands: y=-3, h=31, fill=Dunkelgrün, layer=LAYER_HINTERGRUND.
+    """
+    if panel_index == 0:
+        return Polygon(
+            x_mm=-3, y_mm=-3, w_mm=105, h_mm=31,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            anname="P1 Top-Band",
+        )
+    if panel_index == 1:
+        return Polygon(
+            x_mm=99, y_mm=-3, w_mm=99, h_mm=31,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            anname="P2 Top-Band",
+        )
+    if panel_index == 2:
+        raise ValueError(
+            "P3 is vollflächig — use P3 Hintergrund polygon instead"
+        )
+    if panel_index == 3:
+        return Polygon(
+            x_mm=-3, y_mm=-3, w_mm=105, h_mm=31,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            anname="P4 Top-Band",
+        )
+    if panel_index == 4:
+        return Polygon(
+            x_mm=99, y_mm=-3, w_mm=99, h_mm=31,
+            fill="Dunkelgrün",
+            layer=LAYER_HINTERGRUND,
+            anname="P5 Top-Band",
+        )
+    if panel_index == 5:
+        raise ValueError(
+            "P6 is vollflächig — use P6 Hintergrund polygon instead"
+        )
+    raise ValueError(f"_top_band: panel_index must be 0..5, got {panel_index}")
+
+
 def _add_styles(doc):
     """Register the 16 falzflyer-local paragraph styles (V1).
 
