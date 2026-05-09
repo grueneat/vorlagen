@@ -1,7 +1,7 @@
 ---
 id: '21'
 title: V1 layout for kandidat-falzflyer-din-lang (Falz-Rhythm) + M-Basis fix
-status: open
+status: done
 priority: medium
 labels:
 - templates
