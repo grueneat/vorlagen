@@ -24,12 +24,15 @@ from sla_lib.builder import (  # noqa: E402
     ParaStyle,
     pack_inline_image,
     # Issue #12 / #14 / #17 — constraints (V1 uses mirrored axes for halo,
-    # aligned_below for vertical stacks, same_x for column alignment)
+    # aligned_below for vertical stacks, same_x for column alignment,
+    # distance_x/y to formalize intentional non-aligned offsets that the
+    # `brand:undeclared_alignment_drift` heuristic flags as suspicious).
     same_x,
     inside,
     mirrored_x,
     mirrored_y,
     aligned_below,
+    distance_x,
     distance_y,
 )
 
@@ -453,6 +456,31 @@ CONSTRAINTS = [
     # Back: qr_label hangs from logo_back (right column stacking).
     aligned_below("qr_label", "logo_back", gap_mm=10.3,
                   name="logo_back_anchors_qr"),
+    # Intentional cross-column offsets that the audit heuristic flags as
+    # near-axis (drift < 5mm). Declaring with distance_x/y formalizes
+    # "not aligned, but the gap is by design" — silences
+    # `brand:undeclared_alignment_drift` without changing geometry.
+    # Front: logo (x=6) sits 4mm left of the headline column (x=10).
+    distance_x("Logo Grüne (weiss)", "headline_datum", equals=4.0,
+               name="logo_to_headline_column_offset_datum"),
+    distance_x("Logo Grüne (weiss)", "headline_cta", equals=4.0,
+               name="logo_to_headline_column_offset_cta"),
+    # Back: full-bleed left polygon (x=-3) vs impressum strip (x=0).
+    distance_x("seitenhintergrund_back_left", "impressum_strip_bg",
+               equals=3.0, name="back_bg_strip_x_offset"),
+    # Back: cross-column origin offsets between the W-Fragen rows and the
+    # QR stack (different columns, unrelated y values that happen to land
+    # within 5mm by layout coincidence).
+    distance_y("logo_back", "frage_was_headline", equals=4.0,
+               name="logo_back_to_first_frage_y_offset"),
+    distance_y("frage_was_body", "qr_label", equals=3.0,
+               name="frage_was_body_to_qr_label_y_offset"),
+    distance_y("frage_wann_headline", "qr_url", equals=3.0,
+               name="frage_wann_headline_to_qr_url_y_offset"),
+    # Back: Impressum hangs below the last W-Frage body (frage_wann_body
+    # bottom y=97; impressum y=101.5 → 4.5mm gap on the impressum_strip_bg).
+    aligned_below("Impressum", "frage_wann_body", gap_mm=4.5,
+                  name="impressum_below_wann"),
 ]
 
 
