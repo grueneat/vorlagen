@@ -33,9 +33,14 @@ from sla_lib.builder import (  # noqa: E402
     Run,
     ParaStyle,
     pack_inline_image,
-    # Issue #12 — constraints
-    same_style,
+    # Issue #12 / #20 — constraints
+    aligned_below,
+    inside,
+    mirrored_y,
     same_size,
+    same_style,
+    same_x,
+    same_y,
 )
 from sla_lib.builder.blocks import TableTentFold  # noqa: E402
 
@@ -527,40 +532,58 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Issue #12 — module-level CONSTRAINTS list (read by structural_check).
+# Issue #20 — V1 "Hero Band" CONSTRAINTS list (read by structural_check).
 #
-# Tent-card has a fold at y=105 (A4-quer halved). Panel B (bottom) is
-# rotated 180°, so its frame coords are MEASURED in the rotated frame
-# (top-down from y=210 down to y=105 — i.e. distances below the fold).
-# Asserting geometric mirroring around y=105 directly does not match the
-# coordinate system; instead we assert structural sameness: panels share
-# size, headlines/bodies share style, panel-cta and panel-termine share
-# style consistency.
+# Cross-panel rules limited to rotation-invariant kinds: mirrored_y on
+# Polygons (both rotation_deg=0), same_size on Polygons, same_style on
+# text-frame style pairs. inside() is intra-Panel-A only — raw bbox math
+# fails on rotated/unrotated mismatch (RESEARCH locked decision #4).
+#
+# Apex mirror axis y=105.0 mm (Mittelfalz). Panel A polygons live at
+# y ∈ [-3..105]; Panel B mirror polygons at y ∈ [105..213].
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # Style consistency: both panels' headlines / bodies / CTAs / Termine
-    # use the same paragraph style.
-    same_style(
-        "Headline Panel A", "Headline Panel B",
-        name="panel_headline_style_consistent",
-    ),
-    same_style(
-        "Body Panel A", "Body Panel B",
-        name="panel_body_style_consistent",
-    ),
-    same_style(
-        "CTA Panel A", "CTA Panel B",
-        name="panel_cta_style_consistent",
-    ),
-    same_style(
-        "Termine Panel A", "Termine Panel B",
-        name="panel_termine_style_consistent",
-    ),
-    # Panel A and Panel B headlines share width/height.
-    same_size(
-        "Headline Panel A", "Headline Panel B", axis="both",
-        name="panel_headline_size_match",
-    ),
+    # ── Panel A intra-panel containment (rotation_deg=0 throughout) ──
+    inside("Logo Grüne (panel A)",     "Hero-Band Panel A",      name="logo_in_band_a"),
+    inside("Headline Panel A",          "Hero-Band Panel A",      name="headline_in_band_a"),
+    inside("Pay-off Panel A",           "Hero-Band Panel A",      name="payoff_in_band_a"),
+    inside("Hintergrund-Mitmachen",     "Photo-Backing Panel A",  name="photo_in_backing_a"),
+    inside("CTA-Footer Panel A",        "Footer-Strip Panel A",   name="cta_footer_in_strip_a"),
+    inside("Impressum (Tent)",          "Footer-Strip Panel A",   name="impressum_in_strip_a"),
+    # ── Panel A intra-panel adjacency ──
+    aligned_below("Photo-Backing Panel A", "Hero-Band Panel A", gap_mm=0.0,
+                  name="photo_backing_below_hero_band_a"),
+    same_x("Hero-Band Panel A", "Photo-Backing Panel A", "Footer-Strip Panel A",
+           name="full_bleed_polygons_share_left_x_a"),
+    same_y("Body Panel A", "Termine Panel A",
+           name="bullets_termine_baseline_a"),
+    same_size("Body Panel A", "Termine Panel A", axis="h",
+              name="bullets_termine_height_a"),
+    # ── Panel B intra-panel: only same-rotation-state pairs ──
+    same_y("Body Panel B", "Termine Panel B",
+           name="bullets_termine_baseline_b"),
+    same_size("Body Panel B", "Termine Panel B", axis="h",
+              name="bullets_termine_height_b"),
+    # ── Cross-panel mirror at apex (Polygons only — both rotation_deg=0) ──
+    mirrored_y("Hero-Band Panel A",      "Hero-Band Panel B",      axis_mm=105.0,
+               name="hero_band_mirror_at_apex"),
+    mirrored_y("Photo-Backing Panel A",  "Photo-Backing Panel B",  axis_mm=105.0,
+               name="photo_backing_mirror_at_apex"),
+    mirrored_y("Footer-Strip Panel A",   "Footer-Strip Panel B",   axis_mm=105.0,
+               name="footer_strip_mirror_at_apex"),
+    same_size("Hero-Band Panel A",       "Hero-Band Panel B",
+              name="hero_bands_same_size"),
+    same_size("Photo-Backing Panel A",   "Photo-Backing Panel B",
+              name="photo_backings_same_size"),
+    same_size("Footer-Strip Panel A",    "Footer-Strip Panel B",
+              name="footer_strips_same_size"),
+    # ── Cross-panel style consistency (rotation-invariant) ──
+    same_style("Headline Panel A",   "Headline Panel B",   name="hero_headline_style"),
+    same_style("Pay-off Panel A",    "Pay-off Panel B",    name="payoff_style"),
+    same_style("Body Panel A",       "Body Panel B",       name="bullets_style"),
+    same_style("Termine Panel A",    "Termine Panel B",    name="termine_style"),
+    same_style("CTA-Footer Panel A", "CTA-Footer Panel B", name="cta_footer_style"),
+    same_style("Impressum (Tent)",   "Impressum (Tent, panel B)", name="impressum_style"),
 ]
 
 
