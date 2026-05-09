@@ -165,26 +165,39 @@ def build_doc() -> Document:
         anname="Seitenhintergrund (front)",
     ))
 
-    # Logo (white) top-left on Dunkelgrün front
-    # 413x118 px source → 35x10 mm frame (99.2 x 28.3 pt) → scale ≈ 0.24
+    # V1 (Issue #17): Logo (white) at Print-Soll 3*M = 18.9 mm × 5.7 mm
+    # (was 35×10 with local_scale=0.240; now matches `brand:logo_size_3M`).
+    # local_scale recomputed: 5.7mm/(118px*72/25.4/300dpi) ≈ 0.130.
     logo_weiss_path = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
     if logo_weiss_path.exists():
         lw_data, lw_ext = pack_inline_image(logo_weiss_path.read_bytes(), "png")
         page0.add(ImageFrame(
-            x_mm=6, y_mm=6, w_mm=35, h_mm=10,
+            x_mm=6, y_mm=6, w_mm=18.9, h_mm=5.7,
             inline_image_data=lw_data,
             inline_image_ext=lw_ext,
             scale_type=0, ratio=1,
-            local_scale=(0.240, 0.240),
+            local_scale=(0.130, 0.130),
             layer=1,
             anname="Logo Grüne (weiss)",
         ))
 
-    # Wahlkreuz hero centered (D12: must sit on Dunkelgrün — the page bg
-    # already provides Dunkelgrün, so we don't need an extra background polygon
-    # here; the wahlkreuz PNG has alpha for the area outside the white circle).
-    wahlkreuz_x = (TRIM_W_MM - 55) / 2  # 46.5
-    wahlkreuz_y = 16
+    # V1 (Issue #17): Hellgrün halo polygon — must come BEFORE Wahlkreuz on
+    # layer=0 so the symbol sits ABOVE it. Locked decision #3: explicit
+    # shape="ellipse" (Polygon defaults to rectangle).
+    # Halo center = (43+31, 17+31) = (74, 48). Wahlkreuz center = (44+30,
+    # 18+30) = (74, 48). Both axes match — see CONSTRAINTS in T04.
+    page0.add(Polygon(
+        x_mm=43, y_mm=17, w_mm=62, h_mm=62,
+        fill="Hellgrün",
+        shape="ellipse",
+        layer=0,
+        anname="wahlkreuz_halo",
+    ))
+
+    # Wahlkreuz hero — V1 (Issue #17) repositions to (44, 18) and grows to
+    # 60×60 to fit inside the 62 mm halo with 1mm padding on each side.
+    # ANNAME stays capitalized — `brand:wahlkreuz_colored_bg` is a
+    # case-sensitive substring match (locked decision #4).
     wahlkreuz_path = HERE.parents[1] / "shared" / "assets" / "wahlkreuz.png"
     if not wahlkreuz_path.exists():
         raise FileNotFoundError(
@@ -194,7 +207,7 @@ def build_doc() -> Document:
     wahlkreuz_bytes = wahlkreuz_path.read_bytes()
     wk_data, wk_ext = pack_inline_image(wahlkreuz_bytes, "png")
     page0.add(ImageFrame(
-        x_mm=wahlkreuz_x, y_mm=wahlkreuz_y, w_mm=55, h_mm=55,
+        x_mm=44, y_mm=18, w_mm=60, h_mm=60,
         inline_image_data=wk_data,
         inline_image_ext=wk_ext,
         scale_type=0,
@@ -203,16 +216,28 @@ def build_doc() -> Document:
         anname="Wahlkreuz",
     ))
 
-    # Headline below
+    # V1 (Issue #17): Headline-Wahlaufruf deleted; replaced with the
+    # datum/cta stack below the Wahlkreuz. distance_y(headline_datum,
+    # headline_cta, equals=10.0) is enforced via CONSTRAINTS in T04.
     page0.add(TextFrame(
-        x_mm=10, y_mm=78, w_mm=128, h_mm=20,
+        x_mm=10, y_mm=82, w_mm=128, h_mm=10,
         layer=2,
-        style="wahlaufruf/headline",
+        style="wahlaufruf/headline-emphasis",
         runs=[Run(
-            text="Wähle Grün am 23. Mai",
-            paragraph_style="wahlaufruf/headline",
+            text="SONNTAG, 26. JÄNNER 2026",
+            paragraph_style="wahlaufruf/headline-emphasis",
         )],
-        anname="Headline-Wahlaufruf",
+        anname="headline_datum",
+    ))
+    page0.add(TextFrame(
+        x_mm=10, y_mm=92, w_mm=128, h_mm=10,
+        layer=2,
+        style="wahlaufruf/headline-cta",
+        runs=[Run(
+            text="GIB DEINE STIMME DEN GRÜNEN",
+            paragraph_style="wahlaufruf/headline-cta",
+        )],
+        anname="headline_cta",
     ))
 
     # ---- PAGE 2: Back (2x2 grid + Impressum) ---------------------------
