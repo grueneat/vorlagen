@@ -29,15 +29,6 @@ brand_overrides:
       The Zeitung uses journalism conventions (tighter headline leading, looser
       caption leading) that differ from the unified-Quickguide rule. Round-
       trip diff is the byte-stable contract.
-  - id: brand:inside_page
-    reason: >-
-      Residual after issue #16: the rotated cover-page polygon `u2950`
-      (build.py:246-256, 148.6×220.5 mm at (216.41, 155.57), rotation 90°,
-      fill Dunkelgrün) overflows the page bottom by ~4.17 mm — its
-      rotation-aware bbox extends below y=300. Tracked separately in
-      GH #39. Removing this override requires resolving #39 first
-      (do not delete pre-emptively — `structural_check --all` will go
-      red).
 ci_overrides:
   non_ci_styles:
     - "Default Paragraph Style"
