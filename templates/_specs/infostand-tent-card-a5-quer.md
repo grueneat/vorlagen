@@ -1,9 +1,9 @@
-# Spec: Infostand-Tent-Card A5 quer
+# Spec: Infostand-Tent-Card A5 quer (V1 "Hero Band")
 
 ```yaml
 id: infostand-tent-card-a5-quer
 title: Infostand-Tent-Card A5 quer
-format: A4 quer (297x210) gefalzt zu A5-Tent
+format: A4 quer (297×210) gefalzt zu A5-Tent
 trim_mm: [297, 210]
 bleed_mm: 3
 pages: 1
@@ -15,309 +15,198 @@ audience: [bezirksgruppe, ortsgruppe, infostand-helfer]
 
 ## Audience und Layout-Philosophie
 
-**Infostand-Tisch-Aufsteller** (Tent-Card / Table-Tent): Bezirks-/Ortsgruppen stellen die
-Karte am Infostand, am Pfarrkaffee-Tisch oder bei Veranstaltungen auf. Selbsttragend
+**Infostand-Tisch-Aufsteller** (Tent-Card / Table-Tent): Bezirks-/Ortsgruppen stellen
+die Karte am Infostand, am Pfarrkaffee-Tisch oder bei Veranstaltungen auf. Selbsttragend
 durch eine horizontale Falzung in der Mitte: das A4-quer-Blatt wird zu einem A5-quer-Tent
 gefalzt, das aus beiden Richtungen sichtbar ist.
 
 Lese-Distanz **Tisch-Augen-Distanz** ~50–80 cm.
 
-**Layout-Philosophie:** 3D-doppelseitig sichtbar. Beide Panele (Panel A oben, Panel B unten
-des flach liegenden A4) müssen so layoutet sein, dass nach dem Falzen **jede Seite
-unabhängig richtig liest** — Headline oben, Body darunter. Beim Falzen wird Panel B
-gespiegelt nach unten — bedeutet, der Inhalt von Panel B muss **kopfüber** layoutet sein,
-damit er nach dem Falzen richtig steht. Das Build-Skript handhabt diese Rotation
-automatisch via `TableTentFold`-Block.
+**Layout-Philosophie (V1 — "Hero Band"):** Vierte von fünf V1-Implementierungen; **erstes
+multi-panel Template** im Repository. V1 etabliert den Rotation-Contract für Multi-Panel-
+Vorlagen, der in #21 (kandidat-falzflyer) wiederverwendet wird. Beide Panele (Panel A DE,
+Panel B EN) lesen je nach Tisch-Seite. Das Build-Skript emittiert beide Panele aus einer
+einzelnen Quelle: zwei Builder-Helper `_panel_de()` (aufrecht) und `_panel_en()` (rotiert
+180° via per-Frame-Mathematik).
+
+V1 ersetzt das V0-Layout (Logo + Headline + 3 Bullets + CTA + Termine + Impressum) durch
+ein **Hero-Band-orientiertes** Layout: Dunkelgrün-Hero-Streifen am Apex, Foto-Backing,
+weiße Info-Zone (QR + Bullets + Termine), Hellgrün-Footer-Strip an der Falz mit CTA-URL
++ Impressum. V2 ("Side-By-Side Pillar") + V3 ("Pure Type") sind Backlog (eigene Issues).
+
+V1 nutzt das post-#24 INJECT_MAP-Idiom für `Hintergrund-Mitmachen` (`build_template` +
+`build_preview`-Split, `library.inject_into_frame(target_w_mm=item.w_mm,
+target_h_mm=item.h_mm)` mit LIVE Frame-Dimensionen).
 
 ## Layout — Flach (Page 1, vor dem Falzen)
 
 ```text
-   <----------------297mm--------------->
-  +---------------------------------------+   ↑
-  |                                       |   |
-  |    L              H1 — Klimaschutz    |   |  Panel A
-  |                   (Vollkorn 36 pt)    |   |  (105 mm hoch)
-  |                                       |   |
-  |    Body (28 pt Tisch-Distanz)         |   |
-  |    • Punkt 1                          |   |
-  |    • Punkt 2                          |   |
-  |    • Punkt 3                          |   |
-  +- - - - - - - - - - - - - - - - - - - -+   |
-  |          ← FOLD-LINE y=105 mm →       |   ↓ 210mm
-  +- - - - - - - - - - - - - - - - - - - -+   ↑
-  |    (wird beim Falzen gespiegelt)      |   |
-  |                                       |   |
-  |    Body (28 pt) — ENGLISCH/SECOND     |   |
-  |                                       |   |  Panel B
-  |    H1 — Climate is Economy            |   |  (105 mm hoch,
-  |    (Vollkorn 36 pt)                   |   |   wird kopfüber
-  |                                       |   |   gerendert!)
-  |    L  QR                              |   |
-  |                                       |   ↓
-  +---------------------------------------+
+   <-------------------297mm----------------->
+  +-------------------------------------------+   ↑      Panel A (DE, aufrecht)
+  | ███████████  HERO-BAND DUNKELGRÜN  ███████|   |
+  | █  L = Logo                Headline 26pt █|   | y=-3..42 (Hero-Band, full-bleed)
+  | █  (38×30)                  WHITE         █|   |
+  | █                           Pay-off 16pt  █|   | y=39 → Photo-Backing top
+  | █                           GELB Italic   █|   |
+  | ███████████████████████████████████████████|   |
+  | ░░░░░░░░░░  Photo (Backing Dunkelgrün)  ░░|   |  y=39..72 (Photo + Backing)
+  | ░░ Hintergrund-Mitmachen (full-bleed 9:1)░░|  |
+  | ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░|   |
+  |                                           |   |  y=78..94 (white info zone)
+  | [QR]  • Bullet 1            • Termin 1    |   |  QR(12,78,17×17), bullets(32..142),
+  | 17×17 • Bullet 2            • Termin 2    |   |  termine(152..285)
+  |                                           |   |  y=95..105 (Footer-Strip Hellgrün)
+  | ▓▓ FOOTER-STRIP HELLGRÜN ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ |   |
+  | ▓ gruene-noe.at/mitmachen     Impressum ▓ |   |
+  +- - - - - - - - - - - - - - - - - - - - - -+   |
+  |        ← MITTELFALZ y=105 mm →            |   |  ↕ y=105 (Falz Spot-Color, LAYER=3)
+  +- - - - - - - - - - - - - - - - - - - - - -+   |
+  | ▓▓ FOOTER-STRIP HELLGRÜN (rotiert 180°) ▓ |   |  y=105..115 (mirror of Panel A)
+  |                                           |   |
+  | • Termin 1            • Bullet 1   [QR]   |   |  y=132..148 (info zone, ROT=180)
+  | • Termin 2            • Bullet 2   17×17  |   |
+  |                                           |   |  y=138..171 (Photo-Backing B)
+  | ░░ Photo (Hintergrund-Mitmachen Panel B) ░|   |  y=171..213 (Hero-Band B)
+  | ████████ HERO-BAND DUNKELGRÜN B (180°) ███|   |
+  | █     Pay-off (Italic Gelb 180°)        █ |   |
+  | █     Headline 26pt White (180°)        █ |   | 210mm
+  | █                              L = Logo █ |   |
+  | ███████████████████████████████████████████|   |
+  +-------------------------------------------+   ↓      Panel B (EN, rotiert 180°)
 
-Legende:
-  H1 = Headline (Vollkorn Black Italic 36 pt)
-  Body = Bullet-Liste (Gotham Narrow Book 14 pt)
-  L  = Logo Grüne (CMYK)
-  QR = QR-Code (Event-Anmeldung optional)
-  FOLD-LINE = horizontaler Falz auf Falz-Layer mit Spot-Color
+Mirror-Achse: y=105 (Mittelfalz). Polygons rotation_deg=0 (Rechtecke); Text/Image-
+Frames rotation_deg=180 mit bbox-corner SLA-Math (x_panel_a + w, 210 − y_panel_a).
+Beim Falzen kippt Panel B nach hinten und liest aufrecht für die andere Tisch-Seite.
 ```
 
-## Layout — 3D-Aufsteller-Schema (nach dem Falzen)
+## Slots (Panel A — DE, aufrecht, rotation_deg=0)
 
-```text
-       Vorderansicht           Seitenansicht
-          (Panel A)
-       +-----------+           +-----+
-       |           |           | A   |
-       |  H1       |           | |   |  Tisch-
-       |  Body     |           | | B |  Kontaktzone
-       |           |           | |   |  (3 mm jeder Seite)
-       +-----------+           +=====+
-                                ↓ Tisch
-       Rückansicht
-          (Panel B,
-           gerade gestellt)
-       +-----------+
-       |           |
-       |  H1       |
-       |  Body     |
-       |           |
-       +-----------+
-```
+| Anname (real) | Type | SLA-Coords (x, y, w, h) | Layer | Style/Asset |
+|---|---|---|---|---|
+| `Hero-Band Panel A` | Polygon | (-3, -3, 303, 42) | 0 (Hintergrund) | fill=Dunkelgrün |
+| `Logo Grüne (panel A)` | ImageFrame | (12, 6, 38, 30) | 1 (Bilder) | shared/logos/gruene-weiss.png |
+| `Headline Panel A` | TextFrame | (55, 9, 230, 18) | 2 (Text) | tent/headline (26pt White) |
+| `Pay-off Panel A` | TextFrame | (55, 27, 230, 8) | 2 (Text) | tent/payoff (16pt Italic Gelb) |
+| `Photo-Backing Panel A` | Polygon | (-3, 39, 303, 33) | 0 (Hintergrund) | fill=Dunkelgrün |
+| `Hintergrund-Mitmachen` | ImageFrame | (0, 39, 297, 33) | 1 (Bilder) | INJECT_MAP "kontext_infostand_szene" |
+| `QR-Code (mitmachen, panel A)` | ImageFrame | (12, 78, 17, 17) | 1 (Bilder) | samples/qr-mitmachen.png (D1-konform) |
+| `Body Panel A` | TextFrame | (32, 78, 110, 16) | 2 (Text) | tent/body (12pt, 2 Bullets) |
+| `Termine Panel A` | TextFrame | (152, 78, 133, 16) | 2 (Text) | tent/termine (9pt, 2 Zeilen) |
+| `Footer-Strip Panel A` | Polygon | (-3, 95, 303, 10) | 0 (Hintergrund) | fill=Hellgrün |
+| `CTA-Footer Panel A` | TextFrame | (12, 97, 200, 6) | 2 (Text) | tent/cta-footer (11pt White Bold) |
+| `Impressum (Tent)` | TextFrame | (215, 97, 80, 6) | 2 (Text) | tent/impressum (6pt White right-align) |
+| `Mittelfalz (horizontal)` | Polygon | (0, 105, 297, 0) | 3 (Falz) | fill=Falz Spot-Color, DRUCKEN=0 |
 
-Beide Panele lesen unabhängig. Panel A trifft Personen, die von einer Tischseite
-kommen; Panel B die andere. Inhalts-Strategie: dieselbe Botschaft in zwei Sprachen
-(DE/EN), oder zwei unterschiedliche Themen — Spec-Default ist „selbe Botschaft DE/EN"
-für maximalen Reach.
+## Slots (Panel B — EN, rotation_deg=180 für Text/Image, 0 für Polygons)
 
-## Constraints
+SLA-Math: `Text/Image at Panel-A-LOCAL (x, y, w, h) → SLA (x+w, 210-y, w, h, ROT=180)`;
+`Polygon at Panel-A-LOCAL (x, y, w, h) → SLA (x, 210-y-h, w, h, ROT=0)`.
 
-- **Coordinate-Origin:** Trim-Top-Left (0, 0). Trim 297 × 210 mm. **Bleed 3 mm.**
-- **Falz:** horizontal bei **y = 105 mm** (mittig, halbiert die 210 mm Höhe).
-- **Bottom-3-mm-Tisch-Kontaktzone** (P-PRINT-4): die unterste 3 mm jedes Panels
-  (y=102–105 mm in Panel A; y=207–210 mm in Panel B) MUSS frei von Text und kritischen
-  Bild-Elementen sein. Diese Zone berührt den Tisch und sammelt Schmutz/Wasser.
-- **Headline ≥ 28 pt** (SCHEMA.md A5-Tent-Mindest für Tisch-Distanz). Empfohlen 36 pt.
-- **Body ≥ 14 pt** (Tisch-Distanz). Empfohlen 14 pt.
-- **Margin:** 12 mm allseitig + 3 mm Tisch-Kontaktzone unten.
-- **Panel-Inhalts-Bereich:** 297−24 = 273 mm × (105−12−3) = 90 mm pro Panel.
-- **Background:** weiß für Lesbarkeit; Akzente in Dunkelgrün (Headline + Bullet-Punkte).
+| Anname (real) | Type | SLA-Coords (x, y, w, h) | rotation_deg | Layer | Style/Asset |
+|---|---|---|---|---|---|
+| `Hero-Band Panel B` | Polygon | (-3, 171, 303, 42) | 0 | 0 | fill=Dunkelgrün |
+| `Logo Grüne (panel B)` | ImageFrame | (50, 204, 38, 30) | 180 | 1 | shared/logos/gruene-weiss.png |
+| `Headline Panel B` | TextFrame | (285, 201, 230, 18) | 180 | 2 | tent/headline |
+| `Pay-off Panel B` | TextFrame | (285, 183, 230, 8) | 180 | 2 | tent/payoff |
+| `Photo-Backing Panel B` | Polygon | (-3, 138, 303, 33) | 0 | 0 | fill=Dunkelgrün |
+| `Hintergrund-Mitmachen Panel B` | ImageFrame | (297, 171, 297, 33) | 180 | 1 | INJECT_MAP |
+| `QR-Code (mitmachen, panel B)` | ImageFrame | (29, 132, 17, 17) | 180 | 1 | samples/qr-mitmachen.png |
+| `Body Panel B` | TextFrame | (142, 132, 110, 16) | 180 | 2 | tent/body |
+| `Termine Panel B` | TextFrame | (285, 132, 133, 16) | 180 | 2 | tent/termine |
+| `Footer-Strip Panel B` | Polygon | (-3, 105, 303, 10) | 0 | 0 | fill=Hellgrün |
+| `CTA-Footer Panel B` | TextFrame | (212, 113, 200, 6) | 180 | 2 | tent/cta-footer |
+| `Impressum (Tent, panel B)` | TextFrame | (295, 113, 80, 6) | 180 | 2 | tent/impressum |
 
-## Slot-Tabelle — Panel A (y=0–105 mm)
+Die beiden Hellgrün-Footer-Strips (Panel A 95..105 + Panel B 105..115) abutten an der
+Falz und bilden ein 20 mm breites Hellgrün-Band quer über den Apex.
 
-| anname                       | type             | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                          | example                                              |
-|------------------------------|------------------|------|------|------|------|-----------|------------------------------------|------------------------------------------------------|
-| Logo Grüne (cmyk, panel A)   | ImageFrame       |  12  |  10  |  45  |  14  | —         | shared/logos/gruene-cmyk.png       | (verwende shared/logos/gruene-cmyk.png)              |
-| Headline Panel A             | TextFrame        |  62  |  10  | 223  |  30  | Dunkelgrün| tent/headline                      | Klimaschutz konkret.                                 |
-| Body Panel A                 | TextFrame        |  62  |  44  | 223  |  56  | Black     | tent/body                          | • Erneuerbare Energie ausbauen\n• Öffis verdoppeln\n• Wärmepumpe statt Gas |
-| Hintergrund-Mitmachen        | ImageFrame       |  12  |  44  |  44  |  33  | —         | samples/hintergrund-mitmachen.jpg  | Demo Hintergrund (synthetic, watermarked) — optional |
-| QR-Code (mitmachen, panel A) | ImageFrame       |  12  |  80  |  17  |  17  | —         | samples/qr-mitmachen.png           | Demo: https://noe.gruene.at/mitmachen/ — endusers replace |
-| Impressum (Tent)             | TextFrame        |  35  |  96  | 257  |   4  | Black     | Impressum                          | Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten. |
-| Falzlinie (horizontal)       | Block:TableTentFold|   0|  105| 297  |   0  | Falz      | —                                  | (FoldLine auf Falz-Layer y=105)                      |
+## ParaStyles (V1 — 6 Styles, alle MUTATIONS+ADDS aus V0)
 
-## Slot-Tabelle — Panel B (y=105–210 mm; **kopfüber gerendert**)
+| Name | Font | Size | Linesp | Align | Fcolor | Verwendung |
+|---|---|---|---|---|---|---|
+| `tent/headline` | Vollkorn Black Italic | 26 | 23.4 | 0 (left) | White | Headline auf Hero-Band |
+| `tent/body` | Gotham Narrow Book | 12 | 15.6 | 0 (left) | Black | Bullets in white zone |
+| `tent/termine` | Gotham Narrow Book | 9 | 11.7 | 0 (left) | Black | Termine in white zone |
+| `tent/impressum` | Gotham Narrow Book | 6 | 7.8 | 2 (right) | White | Impressum in Hellgrün-Footer |
+| `tent/payoff` | Vollkorn Black Italic | 16 | 14.4 | 0 (left) | Gelb | Pay-off auf Hero-Band |
+| `tent/cta-footer` | Gotham Narrow Bold | 11 | 14 | 0 (left) | White | CTA-URL in Hellgrün-Footer |
 
-| anname                       | type      | x_mm | y_mm | w_mm | h_mm | fcolor    | style_ref                       | example                                           |
-|------------------------------|-----------|------|------|------|------|-----------|---------------------------------|---------------------------------------------------|
-| Logo Grüne (cmyk, panel B)   | ImageFrame|  240 | 196  |  45  |  14  | —         | shared/logos/gruene-cmyk.png    | (verwende shared/logos/gruene-cmyk.png)           |
-| Headline Panel B             | TextFrame |  12  | 170  | 223  |  30  | Dunkelgrün| tent/headline                   | Climate. Concrete.                                |
-| Body Panel B                 | TextFrame |  12  | 113  | 223  |  56  | Black     | tent/body                       | • Renewables: scale up\n• Public transport: double\n• Heat pump, not gas |
+`tent/cta` (V0) wurde entfernt — kein V1-Frame referenziert ihn.
 
-> **Note (Issue #11, 2026-05-08):** The previous Panel-B `QR-Code (optional)` slot was 14×14 mm, which violates D1's 0.5 mm/module minimum (33-module QR encoding `noe.gruene.at/mitmachen/` would yield 0.42 mm/module). The QR slot has been **enlarged to 17×17 mm** and **moved to Panel A** (Mitmachen-Seite) — yielding 17/33 ≈ 0.515 mm/module, just above the threshold.
+## Constraints — V1 strukturelle Invarianten (Code: `build.py::CONSTRAINTS`)
 
-> **Hinweis zur Panel-B-Rotation:** Sowohl die Markdown-Tabelle als auch der eingebettete
-> YAML-Block enthalten die **finalen Frame-Koordinaten** wie sie im SLA stehen werden —
-> nach Anwendung der 180°-Rotation, die `TableTentFold`/`build.py` für Panel B emittiert.
-> Pivot der Rotation ist die Mitte von Panel B = (148.5, 157.5) mm im flachen A4-quer-Layout.
-> Bei einer Person, die das gefalzte Tent von der Rückseite betrachtet, lesen die Frames
-> dann korrekt aufrecht. Tabelle + YAML entsprechen 1:1 dem, was `tools/spec_check.py`
-> im SLA als Frame-Position findet.
+22 Einträge gruppiert nach Kategorie. Code lebt in
+`templates/infostand-tent-card-a5-quer/build.py::CONSTRAINTS`.
 
-```yaml
-slots:
-  - anname: "Logo Grüne (cmyk, panel A)"
-    type: ImageFrame
-    x_mm: 12
-    y_mm: 10
-    w_mm: 45
-    h_mm: 14
-    fcolor: ""
-    style_ref: "shared/logos/gruene-cmyk.png"
-    example: ""
-  - anname: "Headline Panel A"
-    type: TextFrame
-    x_mm: 62
-    y_mm: 10
-    w_mm: 223
-    h_mm: 30
-    fcolor: "Dunkelgrün"
-    style_ref: "tent/headline"
-    example: "Klimaschutz konkret."
-  - anname: "Body Panel A"
-    type: TextFrame
-    x_mm: 62
-    y_mm: 44
-    w_mm: 223
-    h_mm: 56
-    fcolor: "Black"
-    style_ref: "tent/body"
-    example: "• Erneuerbare Energie ausbauen\n• Öffis verdoppeln\n• Wärmepumpe statt Gas"
-  - anname: "Hintergrund-Mitmachen"
-    type: ImageFrame
-    x_mm: 12
-    y_mm: 44
-    w_mm: 44
-    h_mm: 33
-    fcolor: ""
-    style_ref: "samples/hintergrund-mitmachen.jpg"
-    example: "Demo Hintergrund (synthetic, watermarked) — optional"
-  - anname: "QR-Code (mitmachen, panel A)"
-    type: ImageFrame
-    x_mm: 12
-    y_mm: 80
-    w_mm: 17
-    h_mm: 17
-    fcolor: ""
-    style_ref: "samples/qr-mitmachen.png"
-    example: "Demo: https://noe.gruene.at/mitmachen/ — endusers replace. Enlarged 2026-05-08 per Issue #11 (D1 module-size: 17/33 ≈ 0.515 mm/module)."
-  - anname: "Falzlinie"
-    type: "Block:TableTentFold"
-    x_mm: 0
-    y_mm: 105
-    w_mm: 297
-    h_mm: 0
-    fcolor: "Falz"
-    style_ref: ""
-    example: "FoldLine auf Falz-Layer y=105"
-  - anname: "Logo Grüne (cmyk, panel B)"
-    type: ImageFrame
-    x_mm: 240
-    y_mm: 196
-    w_mm: 45
-    h_mm: 14
-    fcolor: ""
-    style_ref: "shared/logos/gruene-cmyk.png"
-    example: ""
-  - anname: "Headline Panel B"
-    type: TextFrame
-    x_mm: 12
-    y_mm: 170
-    w_mm: 223
-    h_mm: 30
-    fcolor: "Dunkelgrün"
-    style_ref: "tent/headline"
-    example: "Climate. Concrete."
-  - anname: "Body Panel B"
-    type: TextFrame
-    x_mm: 12
-    y_mm: 113
-    w_mm: 223
-    h_mm: 56
-    fcolor: "Black"
-    style_ref: "tent/body"
-    example: "• Renewables: scale up\n• Public transport: double\n• Heat pump, not gas"
-  - anname: "Impressum (Tent)"
-    type: TextFrame
-    x_mm: 35
-    y_mm: 96
-    w_mm: 257
-    h_mm: 4
-    fcolor: "Black"
-    style_ref: "Impressum"
-    example: "Medieninhaber: Die Grünen NÖ, Daniel-Gran-Straße 48, 3100 St. Pölten."
-```
+### Panel A intra-panel containment (rotation_deg=0; raw bbox math gilt)
 
-## EPS / Image-Embedding-Strategie
+- `inside("Logo Grüne (panel A)", "Hero-Band Panel A")` — Logo sitzt im Hero-Band.
+- `inside("Headline Panel A", "Hero-Band Panel A")` — Headline sitzt im Hero-Band.
+- `inside("Pay-off Panel A", "Hero-Band Panel A")` — Pay-off sitzt im Hero-Band.
+- `inside("Hintergrund-Mitmachen", "Photo-Backing Panel A")` — Foto im Backing.
+- `inside("CTA-Footer Panel A", "Footer-Strip Panel A")` — CTA-URL im Footer.
+- `inside("Impressum (Tent)", "Footer-Strip Panel A")` — Impressum im Footer.
 
-Kein Wahlkreuz im Default-Layout. Optional kann eine Bezirksgruppe die Tent-Card für
-Wahlkampf-Phasen mit Wahlkreuz erweitern; das wäre eine Spec-Variante (D3:
-Spec-Update + Re-Review erforderlich).
+### Panel A intra-panel adjacency
 
-## Background-Color Contract für Wahlkreuz
+- `aligned_below("Photo-Backing Panel A", "Hero-Band Panel A", gap_mm=0.0)` —
+  Photo-Backing schließt direkt unter Hero-Band an.
+- `same_x("Hero-Band Panel A", "Photo-Backing Panel A", "Footer-Strip Panel A")` —
+  Alle drei full-bleed Polygons teilen die linke Kante (x=-3).
+- `same_y("Body Panel A", "Termine Panel A")` — Bullets + Termine teilen die Top-Y-Achse.
+- `same_size("Body Panel A", "Termine Panel A", axis="h")` — gleiche Höhe.
 
-Nicht zutreffend (Default-Layout ohne Wahlkreuz). Falls eine Variante mit Wahlkreuz
-gebaut wird, gilt SCHEMA.md §6 (D12-Pflicht).
+### Panel B intra-panel (nur same-rotation-state Paare)
 
-## Falz / Stanze
+- `same_y("Body Panel B", "Termine Panel B")` — beide ROT=180.
+- `same_size("Body Panel B", "Termine Panel B", axis="h")`.
 
-**Falz:** ja, horizontal bei y=105 mm. **Stanze:** keine.
+(`inside` cross-panel oder zwischen rotated/unrotated Frames ist NICHT erlaubt — raw
+bbox math fails on rotation mismatch. Locked decision #4 in RESEARCH.md.)
 
-### Falz-Layer + Spot-Color
+### Cross-panel Spiegelung an der Apex-Achse y=105 (Polygons, beide ROT=0)
 
-```yaml
-layer_falz:
-  name: "Falz"
-  printable: false       # nicht im Druck
-  flow: false
-  exportable: true       # Druckerei sieht den Pfad
+- `mirrored_y("Hero-Band Panel A", "Hero-Band Panel B", axis_mm=105.0)`.
+- `mirrored_y("Photo-Backing Panel A", "Photo-Backing Panel B", axis_mm=105.0)`.
+- `mirrored_y("Footer-Strip Panel A", "Footer-Strip Panel B", axis_mm=105.0)`.
+- `same_size(<3 Polygon-Paare>)` — gleiche Größe pro Paar.
 
-color_falz:
-  name: "Falz"
-  cmyk: [100, 0, 0, 0]
-  spot: true
-  document_local: true   # NICHT in shared/ci.yml
-```
+### Cross-panel Style-Konsistenz (rotation-invariant)
 
-### Layer-Stack (bottom → top)
+- `same_style` für Headline / Pay-off / Body / Termine / CTA-Footer / Impressum
+  zwischen Panel A und Panel B. Style-Resolver matcht auf den ParaStyle-Namen, der
+  rotation-unabhängig ist.
 
-1. `Hintergrund` (kein Vollbild-Background nötig — weißer Default-Hintergrund)
-2. `Bilder` (Logos, optional QR)
-3. `Text` (Headlines + Body)
-4. `Falz` (gestrichelte horizontale Linie y=105)
+## Brand overrides (post-V1; 4 KEPT)
 
-## Brand-Hierarchy Contract
+| ID | Reason (2026-05-09) |
+|---|---|
+| `brand:line_spacing_0.9` | Body 1.3× und Termine 1.3× und CTA-Footer 1.27× linesp ratios sind intentional Quickguide-body convention; tent/headline at 26/23.4=0.9 IS conformant. |
+| `brand:visual_adjacency_drift` | V1 CONSTRAINTS captures Panel-A and cross-panel adjacencies. Combinatorial intra-Panel-B warnings on rotated text/polygon pairs deferred. |
+| `brand:band_consistency` | Tent-card has no body-pool model; rule no-ops by design. |
+| `brand:image_fills_frame` | Logo asset gruene-weiss.png (3.5:1 wordmark) intentionally letterboxed in 38×30 mm V1 logo frame (1.27:1) — wordmark renders 38×10.86 mm centered. Photo INJECT_MAP fills exactly via LIVE frame dims. Restoring would require commissioning bund-weiss.png 1:1 OR resizing logo frame; both deferred. |
 
-| Schicht | Größe | Font | Farbe |
-|---|---|---|---|
-| Headline (Panel A & B) | **36 pt** | Vollkorn Black Italic | Dunkelgrün |
-| Body (Bullet-Liste) | 14 pt | Gotham Narrow Book | Black |
-| Impressum | 5 pt | Gotham Narrow Book | Black |
+V0-Overrides REMOVED in V1: `brand:logo_size_3M` (38mm passes 3M ± tol),
+`brand:image_text_overlap` (V1 text fully inside polygons).
 
-**Begründung:**
+## Falz-Mechanik
 
-- 36 pt Headline ist 8 pt über dem Tent-Mindest (28 pt). Bei 80 cm Tisch-Distanz und
-  20-Grad-Sehwinkel braucht der Anker visuelle Wucht — 36 pt liefert sie ohne den
-  schmalen 90 mm Höhen-Bereich pro Panel zu sprengen.
-- 14 pt Body × 223 mm Zeilenbreite → ~110 Zeichen/Zeile, hart am Lesbarkeits-Limit.
-  Bullets statt Fließtext halten die Zeilen kurz.
-- Impressum 5 pt knapp über der Falz-Linie auf Panel A (klein, aber pflichtig).
+Die Karte wird **horizontal in der Mitte** (y=105 mm) gefalzt. Panel A oben (DE)
+liest normal, Panel B unten (EN) ist um 180° gedreht — beim Falzen kippt Panel B
+nach hinten und die Schrift steht korrekt aufrecht für eine Person, die das
+Tent von der anderen Seite sieht.
 
-## Print-Hints
+Die Falz-Linie liegt auf einem eigenen **Falz-Layer** (`LAYER=3`) mit der
+Spot-Color „Falz" (CMYK 100/0/0/0). Sie erscheint im Druck nicht (Layer-DRUCKEN=0),
+aber die Druckerei sieht den Pfad als Falz-Anweisung. Die `test_falz_layer_integrity`-
+Smoke-Assertion stellt sicher, dass NUR `Mittelfalz (horizontal)` auf LAYER=3 liegt
+(keine V1-Polygons leaken).
 
-```yaml
-print_hints:
-  bleed_mm: 3
-  fold_mm: [105]
-  cut_layer: ""
-  min_dpi: 300
-  paper_recommendation: "Karton 250–300 g/m² (Steifigkeit für Frei-Stand)"
-  print_method: "Digital oder Offset (≥ 100); Falz-Linie maschinell perforiert ODER
-                 manuelle Falz mit Falzbein"
-  cmyk_only: true
-```
+## Druck-Empfehlung
 
-**Druckerei-Hinweis:** bei 250–300 g/m² ist eine maschinelle Perforation entlang der
-Falz-Linie nicht zwingend; Endnutzer:innen können die Karte mit einem Falzbein
-manuell falten. Bei 350+ g/m² Karton ist Perforation empfohlen.
-
-## Mediengesetz §24
-
-Impressum-Slot vorhanden auf Panel A (knapp vor der Falz-Linie). Default-Text aus
-`tools/sla_lib/builder/blocks.py::DEFAULT_IMPRESSUM`.
-
-## Style-Hygiene
-
-`style_ref` referenziert Template-lokale Styles in `meta.yml.ci_overrides.non_ci_styles`:
-
-- `tent/headline` (Vollkorn Black Italic 36 pt Dunkelgrün)
-- `tent/body` (Gotham Narrow Book 14 pt linesp 18 Black)
-
-`Impressum` ist bestehender Style (Postkarte-Konvention).
-
-## Codex-Demo-Image (D11)
-
-Optional — die Default-Variante ist Text+Bullet-only. Eine Variante mit Hero-Bild
-(z.B. „Solar-Anlage am Gemeindeamt") könnte ein Demo-Bild via Codex bekommen, aber das
-ist Spec-Erweiterung (D3).
+- **Trim:** 297 × 210 mm
+- **Bleed:** 3 mm allseitig
+- **Fold:** y = 105 mm (mittig horizontal)
+- **Papier:** Karton 250–300 g/m² (Steifigkeit für Frei-Stand)
+- **Druck:** Digital oder Offset (≥ 100)
+- **DPI:** 300 für eingebettete Bilder
