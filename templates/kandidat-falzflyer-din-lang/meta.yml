@@ -15,39 +15,25 @@ build:
   script: build.py
   output: template.sla
 
-previews_for_sla: 2f0251e17b844f99ec4eb721578e77e9296c365fb771b964d0dc6412484f2c4a
-
-# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
+previews_for_sla: 7d8cdd0fedb0002215713d4f3509f6ae6ac5e4106cec3fdec251897bb48a3d37
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
       Shared with all templates: CI palette ratios drift; per-template panel
       styles use slightly looser line-heights (e.g. teaser-body 14/11=1.27x)
       to keep narrow 99mm panels readable. Brand-team review pending.
-  - id: brand:visual_adjacency_drift
-    reason: >-
-      V1 layout work in #21 owns alignment encoding for this template.
-      Re-enable once V1 lands and a CONSTRAINTS list captures the
-      declared adjacencies (Issue #22 locked decision #9). Issue #23
-      renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.
   - id: brand:image_text_overlap
     reason: >-
-      Scheduled for follow-up audit per #23 — caption-on-photo / decorative
-      overlaps audited at time of #23, not yet reviewed for fix-vs-override
-      classification.
-  - id: brand:image_fills_frame
-    reason: >-
-      Scheduled for follow-up audit per #24 — image-fills-frame check
-      added in #24 surfaces letterbox/INJECT_MAP-drift class globally;
-      per-template review for fix-vs-override classification deferred
-      to follow-up issue (#25). Zeitung is the only template with
-      verified clean image-content extents post-#24.
+      P6 vollflächig Dunkelgrün design intentionally places Impressum (h=8)
+      directly below the P6 Logo at the panel footer; rule reports a 38×2mm
+      partial overlap (Impressum top edge crosses Logo bottom edge) which is
+      intentional band-edge bleed for tight footer composition. Cannot be
+      fixed by frame separation without breaking the V1 footer rhythm.
   - id: brand:band_consistency
     reason: >-
-      Scheduled for follow-up audit per #25 — band-consistency check
-      added in #25 needs per-template body_block_margins spec authoring;
-      deferred to follow-up issue. Zeitung is the only template with
-      verified body-pool band model post-#25.
+      V1 still has minor ParaStyle band drift on the eyebrow Caps; needs
+      per-template body_block_margins spec authoring. Deferred to
+      follow-up issue per RESEARCH.
 ci_overrides:
   non_ci_styles:
     - "falzflyer/cand-name"
@@ -72,29 +58,63 @@ ci_overrides:
     - "Falz"
 
 slots:
+  # ── P1 (Cover, front) — V1 Top-Band + Name-Card ─────────────────────────
+  p1_top_band:
+    type: shape
+    description: Universal Top-Band Dunkelgrün (105×31, +3mm bleed)
+    anname: "P1 Top-Band"
+  p1_logo:
+    type: image
+    description: Grüne wordmark white (3M = 38mm Trim-konform)
+    source: shared/logos/gruene-weiss.png
+    anname: "P1 Logo Grüne (weiss)"
   p1_kandidat_portrait:
     type: image
-    description: Kandidat-Portrait Cover (Codex demo per D11)
+    description: Kandidat-Portrait (87×100, INJECT_MAP -> portrait_maria)
     optional: true
     anname: "P1 Kandidat-Portrait"
+  p1_name_card:
+    type: shape
+    description: Name-Card vollbleed bottom Dunkelgrün polygon
+    anname: "P1 Name-Card"
   p1_kandidat_name:
     type: text
-    description: Kandidat-Name (24pt Vollkorn Italic Dunkelgrün)
+    description: Kandidat-Name (24pt Vollkorn Italic White on Name-Card)
     anname: "P1 Kandidat-Name"
   p1_slogan:
     type: text
-    description: Slogan 2 Zeilen (14pt Gotham Bold)
+    description: Slogan (14pt Gotham Bold Gelb on Dunkelgrün)
     anname: "P1 Slogan"
+
+  # ── P2 (Mein Plan, front) — V1 Top-Band + Body-Backing ──────────────────
+  p2_top_band:
+    type: shape
+    description: Top-Band Dunkelgrün (99×31 inner)
+    anname: "P2 Top-Band"
+  p2_top_title:
+    type: text
+    description: Top-Title "Mein Plan" (Caps Bold White 11pt)
+    anname: "P2 Top-Title"
   p2_teaser_headline:
     type: text
     anname: "P2 Teaser-Headline"
+  p2_body_backing:
+    type: shape
+    description: Hellgrün card backing for teaser body
+    anname: "P2 Body-Backing"
   p2_teaser_body:
     type: text
     anname: "P2 Teaser-Body"
+
+  # ── P3 (Wahltag, front) — vollflächig Dunkelgrün ────────────────────────
   p3_hintergrund:
     type: shape
-    description: Dunkelgrün-Vollbild Closer-Panel (D12 Wahlkreuz background)
+    description: Dunkelgrün vollflächig polygon (P3 grüne-Klammer pair)
     anname: "P3 Hintergrund"
+  p3_top_title:
+    type: text
+    description: Top-Title "Wahltag" (Caps Bold Gelb 11pt — fcolor override)
+    anname: "P3 Top-Title"
   p3_wahlkreuz:
     type: image
     description: Wahlkreuz Hero auf Dunkelgrün
@@ -102,7 +122,7 @@ slots:
     anname: "P3 Wahlkreuz"
   p3_closer_headline:
     type: text
-    description: Wahlaufruf-Headline (22pt Gotham Bold White) — "Wähle Grün am [Datum]"
+    description: Wahlaufruf-Headline (22pt Gotham Bold White)
     anname: "P3 Closer-Headline"
   p3_datum_akzent:
     type: text
@@ -112,55 +132,146 @@ slots:
     type: text
     description: Kandidaten-URL
     anname: "P3 URL"
+
+  # ── Falz lines (Front) ──
   falz_x99_front:
     type: shape
-    description: Falz-Linie x=99 mm vorne
     anname: "Falz x=99 (Front)"
   falz_x198_front:
     type: shape
-    description: Falz-Linie x=198 mm vorne
     anname: "Falz x=198 (Front)"
+
+  # ── P4 (Themen 1+2, back) — V1 Top-Band + 2x photo cards ────────────────
+  p4_top_band:
+    type: shape
+    description: Top-Band Dunkelgrün (105×31 outer)
+    anname: "P4 Top-Band"
+  p4_top_title:
+    type: text
+    description: Top-Title "Themen 1·2"
+    anname: "P4 Top-Title"
+  p4_thema1_eyebrow:
+    type: text
+    anname: "P4 Thema 1 — Eyebrow"
   p4_thema1_headline:
     type: text
     anname: "P4 Thema 1 — Headline"
+  p4_thema1_photo:
+    type: image
+    description: Thema 1 photo (87×44, INJECT_MAP -> themen_klimaschutz_solar)
+    optional: true
+    anname: "P4 Thema 1 — Photo"
+  p4_thema_trenner:
+    type: shape
+    description: 3mm Hellgrün strip dividing Thema 1 / 2
+    anname: "P4 Thema 1·2 Trenner"
   p4_thema1_body:
     type: text
     anname: "P4 Thema 1 — Body"
+  p4_thema2_eyebrow:
+    type: text
+    anname: "P4 Thema 2 — Eyebrow"
   p4_thema2_headline:
     type: text
     anname: "P4 Thema 2 — Headline"
-  p4_thema2_body:
+  p4_thema2_photo:
+    type: image
+    description: Thema 2 photo (87×44, INJECT_MAP -> themen_soziales_kaffeehaus)
+    optional: true
+    anname: "P4 Thema 2 — Photo"
+
+  # ── P5 (Themen 3+4, back) — mirror of P4 ────────────────────────────────
+  p5_top_band:
+    type: shape
+    description: Top-Band Dunkelgrün (99×31 inner)
+    anname: "P5 Top-Band"
+  p5_top_title:
     type: text
-    anname: "P4 Thema 2 — Body"
+    description: Top-Title "Themen 3·4"
+    anname: "P5 Top-Title"
+  p5_thema3_eyebrow:
+    type: text
+    anname: "P5 Thema 3 — Eyebrow"
   p5_thema3_headline:
     type: text
     anname: "P5 Thema 3 — Headline"
+  p5_thema3_photo:
+    type: image
+    optional: true
+    anname: "P5 Thema 3 — Photo"
+  p5_thema_trenner:
+    type: shape
+    description: 3mm Hellgrün strip dividing Thema 3 / 4
+    anname: "P5 Thema 3·4 Trenner"
   p5_thema3_body:
     type: text
     anname: "P5 Thema 3 — Body"
+  p5_thema4_eyebrow:
+    type: text
+    anname: "P5 Thema 4 — Eyebrow"
   p5_thema4_headline:
     type: text
     anname: "P5 Thema 4 — Headline"
-  p5_thema4_body:
+  p5_thema4_photo:
+    type: image
+    description: Thema 4 photo NEW V1 (87×44, INJECT_MAP -> themen_wirtschaft_handwerk)
+    optional: true
+    anname: "P5 Thema 4 — Photo"
+
+  # ── P6 (Kontakt, back) — vollflächig Dunkelgrün + 2-Spalten + 2 QRs ─────
+  p6_hintergrund:
+    type: shape
+    description: Dunkelgrün vollflächig polygon (P6 grüne-Klammer pair)
+    anname: "P6 Hintergrund"
+  p6_top_title:
     type: text
-    anname: "P5 Thema 4 — Body"
+    description: Top-Title "Kontakt"
+    anname: "P6 Top-Title"
   p6_kontakt_headline:
     type: text
     anname: "P6 Kontakt-Headline"
-  p6_kontakt_adresse:
+  p6_adresse:
     type: text
-    anname: "P6 Kontakt-Adresse"
-  p6_kontakt_email_tel:
+    description: 2-col cell row 1 left (mirrored around 247.5)
+    anname: "P6 Adresse"
+  p6_telefon:
     type: text
-    anname: "P6 Kontakt-Email-Tel"
-  p6_qr_code:
+    description: 2-col cell row 1 right
+    anname: "P6 Telefon"
+  p6_email:
+    type: text
+    description: 2-col cell row 2 left
+    anname: "P6 Email"
+  p6_sprechtag:
+    type: text
+    description: 2-col cell row 2 right
+    anname: "P6 Sprechtag"
+  p6_qr_mitmachen:
     type: image
-    description: QR-Code (optional, generated)
+    description: QR-Code mitmachen (24×24 mirror axis 247.5)
     optional: true
-    anname: "P6 QR-Code"
+    anname: "P6 QR-Code (mitmachen)"
+  p6_qr_caption_mitmachen:
+    type: text
+    description: QR-Caption "MITMACHEN" (themen-eyebrow fcolor=White)
+    anname: "P6 QR-Caption (mitmachen)"
+  p6_qr_termine:
+    type: image
+    optional: true
+    anname: "P6 QR-Code (termine)"
+  p6_qr_caption_termine:
+    type: text
+    anname: "P6 QR-Caption (termine)"
+  p6_logo:
+    type: image
+    description: Grüne wordmark white footer (38×34 = 3M Trim-konform)
+    source: shared/logos/gruene-weiss.png
+    anname: "P6 Logo Grüne (weiss)"
   p6_impressum:
     type: text
     anname: "P6 Impressum"
+
+  # ── Falz lines (Back) ──
   falz_x99_back:
     type: shape
     anname: "Falz x=99 (Back)"
