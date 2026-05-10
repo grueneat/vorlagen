@@ -83,6 +83,19 @@ class ExperimentRenderTest(unittest.TestCase):
             encoding="utf-8",
         )
 
+        # Constraints envelope: required since issue #30. Inherits the
+        # falzflyer-default envelope verbatim with no extra relaxations.
+        (self.exp_dir / "constraints.yml").write_text(
+            yaml.safe_dump({
+                "extends": str(
+                    ROOT / "experiments" / "_constraints"
+                    / "falzflyer-default.yml"
+                ),
+                "tested_axis": "density+form",
+            }),
+            encoding="utf-8",
+        )
+
         # Drop variant builder files for the slugs the test exercises.
         variants_dir = self.exp_dir / "variants"
         variants_dir.mkdir(parents=True, exist_ok=True)

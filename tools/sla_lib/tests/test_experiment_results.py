@@ -254,5 +254,54 @@ class AggregateAndSummaryTest(unittest.TestCase):
             self.assertIn(section, md, f"summary missing section: {section!r}")
 
 
+class DroppedAndCorpusStubTest(unittest.TestCase):
+    """Issue #30 T09: SUMMARY.md surfaces _dropped + dual-section corpus stub."""
+
+    def _agg_with_one_vote(self):
+        votes = [_vote("a", "b", "appeal", "a")]
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "v.json"
+            p.write_text(json.dumps(_payload(votes)), encoding="utf-8")
+            return er.aggregate([p])
+
+    def test_summary_includes_dropped_section(self):
+        agg = self._agg_with_one_vote()
+        dropped = [
+            {
+                "slug": "tiny-body",
+                "reason": "envelope: layer1:body_min_pt: ...",
+                "violations": [
+                    {
+                        "rule_id": "layer1:body_min_pt",
+                        "message": "fontsize=9pt < 10pt",
+                        "severity": "error",
+                        "targets": ["P2 Tiny-Body"],
+                    },
+                ],
+            },
+        ]
+        md = er.render_summary(agg, dropped=dropped)
+        self.assertIn("## Variants dropped during render", md)
+        self.assertIn("`tiny-body`", md)
+        self.assertIn("`layer1:body_min_pt`", md)
+
+    def test_summary_dropped_empty_path(self):
+        agg = self._agg_with_one_vote()
+        md = er.render_summary(agg)
+        self.assertIn("## Variants dropped during render", md)
+        self.assertIn("No variants dropped", md)
+
+    def test_summary_includes_corpus_stub(self):
+        agg = self._agg_with_one_vote()
+        md = er.render_summary(agg)
+        self.assertIn(
+            "## Corpus update stub (to be amended into "
+            "design-guide/gruene-corpus.md)",
+            md,
+        )
+        self.assertIn("### From v1 (envelope necessity)", md)
+        self.assertIn("### From v2 (density+form findings)", md)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,82 @@
+# Default constraint envelope for falzflyer experiments.
+#
+# See design-guide/README.md:24-46 (Layer-1 deterministic rules) and
+# tools/sla_lib/builder/brand_constraints.py:1525-1680 (16 BRAND_CONSTRAINTS).
+# All listed rules are floor; per-experiment constraints.yml MAY relax
+# named rules via the `relax:` list with rationale.
+
+tested_axis: "default"
+
+brand_rules:
+  - brand:color_palette          # hcd #6 / CD-Quickguide
+  - brand:font_family            # hcd #5
+  - brand:line_spacing_0.9       # CD-Quickguide
+  - brand:hl_sl_distance_x2      # CD-Quickguide
+  - brand:logo_size_3M           # CD-Quickguide
+  - brand:text_on_green          # CD-Quickguide §7
+  - brand:bleed_3mm              # CD-Quickguide
+  - brand:wahlkreuz_colored_bg   # CD-Quickguide
+  - brand:inside_page            # issue #14
+  - brand:spine_safety           # issue #22
+  - brand:bleed_coverage         # issue #23
+  - brand:image_text_overlap     # issue #23
+  - brand:cover_extent_match     # issue #23
+  - brand:visual_adjacency_drift # issue #23
+  - brand:image_fills_frame      # issue #24
+  - brand:band_consistency       # issue #25
+
+layer1:
+  body_min_pt: 10                                          # hcd #12 (prefer 11)
+  caption_impressum_min_pt: 8                              # hcd #12
+  body_line_length_chars:                                  # hcd #11
+    min: 45
+    max: 75
+    ideal: 66
+  headline_size_jump_x: 2.5                                # hcd #10
+  headline_max_words: 7                                    # hcd #9 (~35 chars)
+  body_contrast_ratio: 4.5                                 # hcd #13
+  display_contrast_ratio_18pt_plus: 3.0                    # hcd #13
+  type_families_per_panel: 2                               # hcd #5
+  type_sizes_per_panel: 3                                  # hcd #5
+  alignment_systems_per_panel: 2                           # hcd #22
+  negative_space_pct: 30                                   # hcd #3
+  dominant_element_optical_weight_pct: 40                  # hcd #1
+  face_crop_fill_pct: 60                                   # hcd #8
+  ctas_per_panel: 1                                        # hcd #14
+  non_green_accent_colors_per_piece: 2                     # hcd #6
+  forbidden_primary_colors:                                # hcd #6
+    - "SPD-red"
+    - "AfD/CDU-blue"
+    - "FDP-yellow-saturated"
+    - "Linke-magenta"
+  margin_M_formula: "M = 0.06 * short_edge_of_trim"        # CD-Quickguide
+  logo_size_print: "3 * M"                                 # CD-Quickguide
+  logo_size_digital: "2.5 * M"                             # CD-Quickguide
+  logo_clear_space: "1 * M each side"                      # CD-Quickguide
+  type_on_white_plate_forbidden: true                      # CD-Quickguide §7
+  brand_colors_only:                                       # CD-Quickguide
+    - "Dunkelgrün"
+    - "Hellgrün"
+    - "Gelb"
+    - "Magenta"
+
+# Relaxations inherited from templates/kandidat-falzflyer-din-lang/meta.yml::brand_overrides.
+# Experiments use the production scaffold (variant_scaffold.build_variant_front),
+# so the same overrides apply — otherwise every variant fails on the
+# production-side line_spacing/image_text_overlap/band_consistency drift.
+# These are NOT v2's tested-axis relaxations; they are production-mirror.
+relax:
+  - id: brand:line_spacing_0.9
+    rationale: "Production override (meta.yml::brand_overrides) — CI palette panel styles use looser line-heights for narrow 99mm panel readability."
+  - id: brand:image_text_overlap
+    rationale: "Production override (meta.yml::brand_overrides) — P6 footer composition intentionally places Impressum 2mm below Logo band-edge."
+  - id: brand:band_consistency
+    rationale: "Production override (meta.yml::brand_overrides) — V1 ParaStyle band drift on eyebrow caps; deferred to follow-up issue."
+  - id: layer1:negative_space_pct
+    rationale: "Frame-area heuristic over-estimates ink coverage on the production scaffold's tall body frame (h=130mm w=87mm). Metric retained for SUMMARY.md surfacing but not gated; the tested-axis (density+form) explicitly varies whitespace."
+  - id: layer1:body_line_length_chars
+    rationale: "Approximate-chars-from-frame-width heuristic over-estimates on wide body frames; production uses short Schlagwort lines well under the max. Metric retained, not gated."
+
+regeneration:
+  auto_retry_max: 0
+  drop_threshold_pct: 40

@@ -98,6 +98,8 @@ class PromptTemplateTest(unittest.TestCase):
                 "list — five items that read as roughly equal weight, no "
                 "hierarchy, no argument, no entry point."
             ),
+            constraint_envelope="### Brand rules\n- inside_page\n",
+            v1_anti_examples="### v1-test\n- broken\n",
         )
         n = len(rendered)
         self.assertGreaterEqual(
@@ -114,11 +116,17 @@ class PromptTemplateTest(unittest.TestCase):
             self.text,
             subject="my-subject",
             weak_area_quote="Quoted weak area.",
+            constraint_envelope="ENV-MD",
+            v1_anti_examples="ANTI-MD",
         )
         self.assertIn("my-subject", rendered)
         self.assertIn("Quoted weak area.", rendered)
+        self.assertIn("ENV-MD", rendered)
+        self.assertIn("ANTI-MD", rendered)
         self.assertNotIn("{subject}", rendered)
         self.assertNotIn("{weak_area_quote}", rendered)
+        self.assertNotIn("{constraint_envelope}", rendered)
+        self.assertNotIn("{v1_anti_examples}", rendered)
 
 
 if __name__ == "__main__":

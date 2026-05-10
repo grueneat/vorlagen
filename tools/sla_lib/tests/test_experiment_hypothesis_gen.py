@@ -169,13 +169,36 @@ class HypothesisGenTest(unittest.TestCase):
         )
         hg.SCHEMA_PATH = schema_dst / "manifest.schema.yaml"
         # Use the real prompt template (T06 makes it non-empty); for
-        # this test we only need it to render without error.
+        # this test we only need it to render without error. Since
+        # issue #30 the 4 tokens must all appear so render_prompt does
+        # not crash on KeyError.
         prompt = self.tmp_root / "prompt.md"
         prompt.write_text(
-            "Subject: {subject}\n\nWeak area:\n\n{weak_area_quote}\n",
+            "Subject: {subject}\n\nWeak area:\n\n{weak_area_quote}\n\n"
+            "Envelope:\n{constraint_envelope}\n\n"
+            "Anti-examples:\n{v1_anti_examples}\n",
             encoding="utf-8",
         )
         self.prompt_path = prompt
+
+        # constraints.yml is required for envelope loading (issue #30).
+        self.exp_dir.mkdir(parents=True, exist_ok=True)
+        import yaml
+        (self.exp_dir / "constraints.yml").write_text(
+            yaml.safe_dump({
+                "extends": str(
+                    self._orig_root / "experiments" / "_constraints"
+                    / "falzflyer-default.yml"
+                ),
+                "tested_axis": "density+form",
+            }),
+            encoding="utf-8",
+        )
+        # Schema is also needed by the envelope loader (same as manifest).
+        (schema_dst / "constraints.schema.yaml").write_bytes(
+            (self._orig_root / "experiments" / "_schema"
+             / "constraints.schema.yaml").read_bytes()
+        )
 
     def tearDown(self):
         hg.ROOT = self._orig_root
@@ -347,6 +370,32 @@ class JSONExtractorTest(unittest.TestCase):
             "type": "result",
         })
         self.assertEqual(hg.extract_json_block(wrapper), '[{"slug": "x"}]')
+
+
+class TokenWiringTest(unittest.TestCase):
+    """Issue #30 T08: render_prompt now takes 4 tokens; SUBJECT_METADATA has v2."""
+
+    def test_render_prompt_substitutes_all_four_tokens(self):
+        template = (
+            "S=[{subject}]\nW=[{weak_area_quote}]\n"
+            "E=[{constraint_envelope}]\nA=[{v1_anti_examples}]\n"
+        )
+        out = hg.render_prompt(
+            template,
+            subject="MY-SUBJ",
+            weak_area_quote="MY-WEAK",
+            constraint_envelope="MY-ENV",
+            v1_anti_examples="MY-ANTI",
+        )
+        self.assertIn("S=[MY-SUBJ]", out)
+        self.assertIn("W=[MY-WEAK]", out)
+        self.assertIn("E=[MY-ENV]", out)
+        self.assertIn("A=[MY-ANTI]", out)
+
+    def test_subject_metadata_has_v2(self):
+        self.assertIn("falzflyer-p2-mein-plan-v2", hg.SUBJECT_METADATA)
+        v2 = hg.SUBJECT_METADATA["falzflyer-p2-mein-plan-v2"]
+        self.assertIn("§2.2", v2["target_weak_area"])
 
 
 if __name__ == "__main__":

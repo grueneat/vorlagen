@@ -230,8 +230,10 @@ def render_summary(
     aggregated: dict,
     *,
     hypotheses: dict[str, dict] | None = None,
+    dropped: list[dict] | None = None,
 ) -> str:
     hypotheses = hypotheses or {}
+    dropped = dropped or []
     out: list[str] = []
     out.append(f"# Results — {aggregated['experiment_id']}")
     out.append("")
@@ -244,6 +246,54 @@ def render_summary(
         f"{_halo_flag(aggregated['spearman_appeal_transport'])}"
     )
     out.append(f"**Disagreement index:** {aggregated['disagreement_index']:.3f}")
+    out.append("")
+
+    out.append("## Variants dropped during render")
+    out.append("")
+    if not dropped:
+        out.append("_No variants dropped — all hypotheses passed the envelope._")
+    else:
+        for entry in dropped:
+            slug = entry.get("slug", "<unknown>")
+            reason = entry.get("reason", "<no reason>")
+            out.append(f"### `{slug}`")
+            out.append("")
+            out.append(f"- **Reason:** {reason}")
+            violations = entry.get("violations", []) or []
+            if violations:
+                out.append("- **Violations:**")
+                for v in violations:
+                    out.append(
+                        f"  - {v.get('severity', 'error')}: "
+                        f"`{v.get('rule_id', '')}` — {v.get('message', '')}"
+                    )
+            out.append("")
+    out.append("")
+
+    out.append("## Corpus update stub (to be amended into design-guide/gruene-corpus.md)")
+    out.append("")
+    out.append("### From v1 (envelope necessity)")
+    out.append("")
+    out.append(
+        "_v1 (`falzflyer-p2-mein-plan`, 2026-04) revealed that variants "
+        "violated basic spacing/margin rules because the render gate "
+        "enforced only `brand:inside_page`, not the full 16 "
+        "BRAND_CONSTRAINTS + Layer-1 thresholds. v2's gate "
+        "(`tools/experiment_envelope.py::run_envelope`) closes that loop. "
+        "Methodology lesson: every design experiment respects a constraint "
+        "envelope by default; the tested axis is the only declared "
+        "relaxation. See `.claude/skills/experiments/SKILL.md` for the "
+        "corrected process._"
+    )
+    out.append("")
+    out.append("### From v2 (density+form findings)")
+    out.append("")
+    out.append(
+        "_Top-3 (by Bradley-Terry-style win-rate): [VARIANT-1] / "
+        "[VARIANT-2] / [VARIANT-3]. Bottom-3: [...]. Spearman halo flag: "
+        "[...]. To be filled in by the executor of T17 after Flo's voting "
+        "session._"
+    )
     out.append("")
 
     out.append("## Top 5 by appeal")
@@ -343,6 +393,22 @@ def _load_hypotheses(exp_id: str) -> dict[str, dict]:
         return {}
 
 
+def _load_dropped(exp_id: str) -> list[dict]:
+    """Load render-time drop log from manifest.json::_dropped (issue #30).
+
+    Returns empty list when the manifest is missing or has no _dropped key
+    (e.g. an aggregation run before render, or an experiment with 0 drops).
+    """
+    js = ROOT / "experiments" / exp_id / "manifest.json"
+    if not js.exists():
+        return []
+    try:
+        m = json.loads(js.read_text(encoding="utf-8"))
+        return list(m.get("_dropped", []) or [])
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="experiment-results",
@@ -378,7 +444,8 @@ def main(argv: list[str] | None = None) -> int:
         return 3
 
     hyps = _load_hypotheses(exp_id)
-    summary_md = render_summary(agg, hypotheses=hyps)
+    dropped = _load_dropped(exp_id)
+    summary_md = render_summary(agg, hypotheses=hyps, dropped=dropped)
 
     out_dir = ROOT / "experiments" / exp_id / "results"
     out_dir.mkdir(parents=True, exist_ok=True)

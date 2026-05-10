@@ -1,0 +1,74 @@
+[
+  {
+    "slug": "manifesto-single-pledge-v2",
+    "name": "Manifesto single pledge",
+    "axis_commitments": ["density", "typography"],
+    "rationale": "Collapse the peer list into one dominant sentence set in Vollkorn Black Italic, with only a short supporting line in Gotham beneath it. The panel stops behaving like a checklist and instead reads as a single political promise with clear emotional entry.",
+    "expected_outcome": "Likely high appeal through force and memorability, with transport split depending on whether raters prefer focus over coverage.",
+    "wildcard": false
+  },
+  {
+    "slug": "three-pillars-with-explainer",
+    "name": "Three pillars with explainer lines",
+    "axis_commitments": ["density", "hierarchy"],
+    "rationale": "Reduce the five slogans to three priorities and attach one short explanatory sentence to each, keeping body text safely above 10pt. The structure turns abstract claims into a ranked argument and gives each item enough room to mean something.",
+    "expected_outcome": "Likely strongest on transport, with appeal dependent on whether voters reward clarity over punch.",
+    "wildcard": false
+  },
+  {
+    "slug": "editorial-left-column-rules",
+    "name": "Editorial left column with rules",
+    "axis_commitments": ["asymmetry", "whitespace-strategy"],
+    "rationale": "Anchor the content in a left-hand text column with thin Dunkelgrün separators and preserve a deliberately open right side instead of centering everything. The composition creates tension and makes the empty space feel intentional rather than leftover.",
+    "expected_outcome": "Likely higher appeal among design-sensitive raters, with transport improving if the asymmetry helps scanning.",
+    "wildcard": false
+  },
+  {
+    "slug": "ranked-numerals-scale-list",
+    "name": "Ranked numerals with descending scale",
+    "axis_commitments": ["hierarchy", "typography", "accent-strategy"],
+    "rationale": "Keep all five items but make the ranking explicit through oversized numerals that visibly step down from 1 to 5, while one numeral takes the accent color. This preserves breadth yet replaces flat equality with an unmistakable reading order.",
+    "expected_outcome": "Likely balanced on appeal and transport because it keeps information volume while adding a clear entry point.",
+    "wildcard": false
+  },
+  {
+    "slug": "resident-quote-then-pledge",
+    "name": "Resident quote followed by pledge",
+    "axis_commitments": ["voice-formality", "hierarchy"],
+    "rationale": "Open with one short resident-style quote as the problem statement, then answer it with a single candidate pledge and compact support text, all within a two-level structure. The panel shifts from slogan sheet to dialogue, which may make the message feel more grounded and accountable.",
+    "expected_outcome": "Likely stronger on transport and trust, with appeal depending on tolerance for a less slogan-like register.",
+    "wildcard": false
+  },
+  {
+    "slug": "first-person-compact-paragraph",
+    "name": "First-person compact paragraph",
+    "axis_commitments": ["density", "voice-formality"],
+    "rationale": "Replace the list entirely with one short first-person paragraph that reads as a compact commitment rather than five separate claims. The form asks voters to process a coherent stance instead of hopping across equal-weight fragments.",
+    "expected_outcome": "Likely moderate appeal but improved message coherence if raters respond to a more personal contract tone.",
+    "wildcard": false
+  },
+  {
+    "slug": "cornerstone-banner-with-minors",
+    "name": "Cornerstone banner with minor items",
+    "axis_commitments": ["hierarchy", "asymmetry"],
+    "rationale": "Give one priority a full-width top banner and place the remaining items below as smaller supporting lines in a secondary block. The anatomy creates a clear leader-with-supporters structure without forcing the supporting text below minimum size.",
+    "expected_outcome": "Likely strong on transport because the main promise is unmistakable, with appeal helped by the more decisive structure.",
+    "wildcard": false
+  },
+  {
+    "slug": "accent-chip-and-open-field",
+    "name": "Accent chip with open field",
+    "axis_commitments": ["accent-strategy", "whitespace-strategy"],
+    "rationale": "Concentrate visual energy into one compact accent-backed chip for the key phrase and let the rest of the panel breathe with sparse secondary text. The design tests whether one small privileged signal can outperform a fully populated slogan field.",
+    "expected_outcome": "Likely higher appeal through restraint, with transport depending on whether the privileged chip carries enough of the message alone.",
+    "wildcard": false
+  },
+  {
+    "slug": "ballot-cross-text-container",
+    "name": "Ballot cross as text container",
+    "axis_commitments": ["wildcard"],
+    "rationale": "Use the Wahlkreuz not as a small brand sign-off but as the structural text container itself, with the pledge occupying one arm and support lines occupying the other. It is an unusually literal form move that could reveal whether voters respond to a more symbolic, campaign-object composition than the team would normally permit.",
+    "expected_outcome": "Likely polarising on appeal but valuable for signal because it tests a radically different memory structure.",
+    "wildcard": true
+  }
+]

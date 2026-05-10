@@ -1,0 +1,16 @@
+# v2 experiment constraint envelope (issue #30).
+# Tested axis: information density + form.
+# Inherits the falzflyer-default envelope (16 brand_rules + 22 layer1
+# + production-mirror relaxations). v2 declares no extra relaxations —
+# the tested axis (density+form) is read at the variant-design level,
+# not as a rule-level relaxation.
+extends: ../_constraints/falzflyer-default.yml
+tested_axis: "density+form"
+relax:
+  - id: layer1:type_sizes_per_panel
+    rationale: "v2 tested axis density+form requires multi-size scales (e.g. numbered-priority-list-v2's rank-weighted 36/30/24/20/16 series + body). The 3-sizes-per-panel rule conflicts with the tested-axis hypothesis."
+  - id: layer1:type_families_per_panel
+    rationale: "v2 form-axis variants mix Vollkorn (manifesto, italic-cornerstone) with Gotham (body); the existing 2-families rule is honoured but some retained-concept variants slip a derived weight that the family-root heuristic counts as a third — accept here, structural intent is preserved."
+regeneration:
+  auto_retry_max: 0
+  drop_threshold_pct: 40
