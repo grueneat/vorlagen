@@ -2,7 +2,7 @@
 id: '29'
 title: Design experimentation MVP — pairwise voting on variations to grow the design
   corpus
-status: open
+status: in_progress
 priority: high
 labels:
 - enhancement
