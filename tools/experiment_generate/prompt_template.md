@@ -28,6 +28,12 @@ A hypothesis must commit on at least one of the following design **axes** — th
 
 **Tag each hypothesis with the axes it commits on.** Two hypotheses whose `axis_commitments` overlap by more than half (Jaccard ≥ 0.6) will be flagged as redundant by the post-generation pipeline.
 
+## Constraint envelope (HARD floor)
+
+Every hypothesis MUST respect every rule below. These are not suggestions; they are gate conditions enforced post-render. Verbal claims of compliance carry no weight; only the rendered artifact does. If a hypothesis requires violating one of these rules to express the tested axis, it MUST appear under `relax:` in the experiment's `constraints.yml` with rationale — otherwise it will be dropped at render.
+
+{constraint_envelope}
+
 ## Examples
 
 These are anchors, not a menu. Do not copy them.
@@ -52,6 +58,12 @@ These are anchors, not a menu. Do not copy them.
 - BAD: re-order the bullets.
 
 If a hypothesis can be summarised as "change X numeric value to Y", it is NOT a hypothesis. It is a parameter tweak. Reject your own first-draft if it has this shape.
+
+## v1 anti-examples — DO NOT REPEAT
+
+The following 12 hypotheses were generated for v1 (`experiments/falzflyer-p2-mein-plan/`). Each violated the constraint envelope. The current generation MUST NOT re-emit these specific failure modes. Three of the 12 carry a `Concept retained for v2` note — the broken implementation is the anti-example; the planner has re-implemented those concepts inside the envelope as separate variants. Do not propose the broken versions.
+
+{v1_anti_examples}
 
 ## Anti-collapse instruction
 
@@ -102,5 +114,6 @@ Before you emit the JSON, ask yourself:
 3. Is exactly one hypothesis flagged as `"wildcard": true`?
 4. Are all `slug` values unique and kebab-case?
 5. Does any pair of hypotheses share more than half their `axis_commitments`? (If yes, replace one.)
+6. Does every hypothesis respect the constraint envelope (margins ≥6mm, body ≥10pt, contrast ≥4.5:1, all 16 BRAND_CONSTRAINTS)? If unsure, prefer a more conservative density choice.
 
 If yes, emit the JSON. If no, revise.
