@@ -254,17 +254,19 @@ def _para_style_fontsize(doc, style_name: str) -> float | None:
 
 
 def _check_body_min_pt(doc, threshold: float) -> list[Violation]:
-    """body_min_pt: every body-like text frame ≥ threshold pt.
+    """body_min_pt: every body-like P2 text frame ≥ threshold pt.
 
-    Heuristic: a frame's style/anname that contains "body", "schlagwort",
+    Heuristic: a P2 frame's style/anname that contains "body", "schlagwort",
     "text", "item" or "manifesto" classifies as body. The check fires only
-    on those frames; titles/headlines/footers/impressums opt out via the
-    classifier (consistent with hcd #12 phrasing).
+    on P2 panel frames; titles/headlines opt out via the classifier
+    (consistent with hcd #12 phrasing).
     """
     body_markers = ("body", "schlagwort", "text", "item", "manifesto", "numbered/text", "editorial/item")
     out: list[Violation] = []
     for prim in doc.iter_all_primitives() if hasattr(doc, "iter_all_primitives") else []:
         if not isinstance(prim, TextFrame):
+            continue
+        if not (prim.anname or "").startswith("P2 "):
             continue
         identifier = ((prim.style or "") + " " + (prim.anname or "")).lower()
         if not any(m in identifier for m in body_markers):
@@ -284,10 +286,19 @@ def _check_body_min_pt(doc, threshold: float) -> list[Violation]:
 
 
 def _check_caption_impressum_min_pt(doc, threshold: float) -> list[Violation]:
+    """Caption/impressum minimum font size.
+
+    Scoped to P2-panel frames only (the experiment panel under test).
+    Back-panel impressum (P6 Impressum etc.) is out of scope — the
+    experiment varies P2; production-side back-panel sizing is a
+    separate concern handled by structural_check on the template.
+    """
     markers = ("impressum", "caption", "footer", "footnote")
     out: list[Violation] = []
     for prim in doc.iter_all_primitives() if hasattr(doc, "iter_all_primitives") else []:
         if not isinstance(prim, TextFrame):
+            continue
+        if not (prim.anname or "").startswith("P2 "):
             continue
         identifier = ((prim.style or "") + " " + (prim.anname or "")).lower()
         if not any(m in identifier for m in markers):
@@ -456,6 +467,8 @@ def _check_body_line_length_chars(doc, threshold: dict[str, int]) -> list[Violat
     out: list[Violation] = []
     for prim in doc.iter_all_primitives() if hasattr(doc, "iter_all_primitives") else []:
         if not isinstance(prim, TextFrame):
+            continue
+        if not (prim.anname or "").startswith("P2 "):
             continue
         identifier = ((prim.style or "") + " " + (prim.anname or "")).lower()
         if not any(m in identifier for m in body_markers):

@@ -1,4 +1,4 @@
-"""tools/experiment_render.py — variant rendering orchestrator (issue #29).
+"""tools/experiment_render.py — variant rendering orchestrator (issues #29 + #30).
 
 Mirrors the shape of tools/render_pipeline.py. For each hypothesis in
 ``experiments/<exp-id>/manifest.yml``:
@@ -7,11 +7,12 @@ Mirrors the shape of tools/render_pipeline.py. For each hypothesis in
      ``render_p2(doc, page) -> None``).
   2. ``variant_scaffold.build_variant_front(variant.render_p2)`` builds
      the full 2-page Document.
-  3. Constraint check: only ``brand:inside_page`` (per CONTEXT.md
-     resolved uncertainty 4 — variants are research artifacts, brand
-     rules are not enforced; structural fit-on-page is). Variants whose
-     bbox overshoots the page are dropped from the bag with a clear
-     'DROP <slug>: <reason>' log message.
+  3. Constraint check: full envelope (``tools/experiment_envelope.py::run_envelope``
+     over the 16 BRAND_CONSTRAINTS + 22 Layer-1 thresholds + the
+     experiment's declared relaxations). Variants whose rendered
+     artefact violates the envelope are dropped from the voting bag with
+     a structured ``_dropped`` entry. See ``.claude/skills/experiments/SKILL.md``
+     for the methodology.
   4. SLA → PDF via render_sla_to_pdf(); _scrub_pdf_metadata() for
      deterministic output.
   5. Rasterise at preview_dpi (=100 for falzflyer per meta.yml) → page-01.png.
@@ -29,6 +30,8 @@ Exit codes:
   3  brand-fonts gate failed
   4  manifest schema invalid
   5  variant module load error in --only mode
+  6  reserved
+  7  envelope missing (constraints.yml not found in exp dir)
 """
 from __future__ import annotations
 
@@ -36,7 +39,6 @@ import argparse
 import importlib.util
 import json
 import shutil
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -48,12 +50,19 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
+from experiment_envelope import (  # noqa: E402
+    Envelope,
+    EnvelopeValidationError,
+    load_envelope,
+    run_envelope,
+)
 from render_pipeline import (  # noqa: E402
     HIRES_DPI,
     _scrub_pdf_metadata,
     _verify_brand_fonts,
     _zero_pad_pngs,
 )
+from sla_lib.builder.constraints import Violation  # noqa: E402
 from visual_diff import rasterise, render_sla_to_pdf  # noqa: E402
 
 PREVIEW_DPI = 100  # falzflyer per templates/kandidat-falzflyer-din-lang/meta.yml:7
@@ -100,8 +109,6 @@ def _load_variant_module(exp_dir: Path, hypothesis: dict, scaffold_module) -> An
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    # Make the variant_scaffold importable from inside variant modules
-    # without each one repeating the sys.path dance.
     sys.modules[f"_variant_{hypothesis['slug']}"] = module
     spec.loader.exec_module(module)
     if not hasattr(module, "render_p2"):
@@ -124,23 +131,18 @@ def _load_scaffold():
 
 
 # ---------------------------------------------------------------------------
-# inside_page check (the only structural gate variants must clear)
+# Envelope check (the full gate — the v1 failure mode was running only
+# brand:inside_page; v2 runs the full envelope per issue #30).
 # ---------------------------------------------------------------------------
 
-def _inside_page_violations(doc) -> list:
-    """Return any inside_page violations on the doc.
+def _envelope_violations(doc, envelope: Envelope) -> list[Violation]:
+    """Run every envelope rule against the post-build Document, pre-Scribus.
 
-    Pulls the InsidePageRule out of BRAND_CONSTRAINTS by id so we don't
-    re-implement the bbox math. Per CONTEXT.md resolved uncertainty 4
-    no other brand rule runs on variants.
+    Validates the rendered artefact, not the variant module's self-report,
+    so a variant cannot disable a check by claiming compliance. See
+    ``tools/experiment_envelope.py::run_envelope`` for the rule loop.
     """
-    from sla_lib.builder import BRAND_CONSTRAINTS
-
-    rule = next((r for r in BRAND_CONSTRAINTS if r.id == "brand:inside_page"), None)
-    if rule is None:  # pragma: no cover - defensive
-        return []
-    primitives = list(doc.iter_all_primitives()) if hasattr(doc, "iter_all_primitives") else []
-    return [v for v in rule.check(primitives, doc) if v.severity == "error"]
+    return run_envelope(doc, envelope)
 
 
 # ---------------------------------------------------------------------------
@@ -148,9 +150,9 @@ def _inside_page_violations(doc) -> list:
 # ---------------------------------------------------------------------------
 
 def _build_variant_sla(
-    *, hypothesis: dict, exp_dir: Path, scaffold,
-) -> tuple[Path, list]:
-    """Build the variant Document, run inside_page, save SLA. Pre-Scribus
+    *, hypothesis: dict, exp_dir: Path, scaffold, envelope: Envelope,
+) -> tuple[Path, list[Violation]]:
+    """Build the variant Document, run envelope, save SLA. Pre-Scribus
     portion of the pipeline — kept separate so unit tests can exercise it
     without depending on Scribus + xvfb.
 
@@ -162,7 +164,7 @@ def _build_variant_sla(
     variant_module = _load_variant_module(exp_dir, hypothesis, scaffold)
 
     doc = scaffold.build_variant_front(variant_module.render_p2)
-    violations = _inside_page_violations(doc)
+    violations = _envelope_violations(doc, envelope)
     if violations:
         return variant_dir / "template.sla", violations
 
@@ -179,10 +181,6 @@ def _render_variant_pngs(
     render_sla_to_pdf(sla_path, pdf_path)
     _scrub_pdf_metadata(pdf_path)
 
-    # Delete stale PNGs first. _zero_pad_pngs is a one-way rename that
-    # silently no-ops when the zero-padded target already exists from a
-    # previous render — that left re-renders pointing at stale page-1.png
-    # while pdftoppm wrote a fresh page-01.png that was never picked up.
     for stale in variant_dir.glob("page-*.png"):
         stale.unlink()
 
@@ -197,9 +195,6 @@ def _render_variant_pngs(
     if page1_hires.exists() and not final_hires.exists():
         page1_hires.rename(final_hires)
 
-    # Discard page-02 (per CONTEXT.md resolved uncertainty 1 we only
-    # rasterise page-01; the SLA stays 2-page for full-document fidelity
-    # but page-02 of the back side is not part of voting).
     for stale in variant_dir.glob("page-02*.png"):
         stale.unlink()
     for stale in variant_dir.glob("page-hires-02*.png"):
@@ -252,7 +247,7 @@ def run_render(
     ``skip_scribus`` is a unit-test escape hatch: when True, the SLA is
     written but render_sla_to_pdf + rasterise are skipped, so the
     pre-Scribus pipeline (manifest validate + module load + SLA write +
-    inside_page check) is exercised even on hosts without Scribus/xvfb.
+    envelope check) is exercised even on hosts without Scribus/xvfb.
     """
     exp_dir = ROOT / "experiments" / exp_id
     if not exp_dir.exists():
@@ -270,13 +265,22 @@ def run_render(
     if not skip_fonts_check:
         _verify_brand_fonts()
 
+    try:
+        envelope = load_envelope(exp_dir)
+    except FileNotFoundError as e:
+        print(f"FATAL: {e}", file=sys.stderr)
+        return 7
+    except EnvelopeValidationError as e:
+        print(f"FATAL envelope: {e}", file=sys.stderr)
+        return 7
+
     scaffold = _load_scaffold()
 
     public_root = ROOT / "site" / "public" / "experiments" / exp_id
     content_dir = ROOT / "site" / "src" / "content" / "experiments"
 
     rendered: list[dict] = []
-    dropped: list[tuple[str, str]] = []
+    dropped: list[tuple[str, str, list[Violation]]] = []
     started = time.monotonic()
 
     hypotheses = manifest["hypotheses"]
@@ -291,20 +295,21 @@ def run_render(
         try:
             sla_path, violations = _build_variant_sla(
                 hypothesis=h, exp_dir=exp_dir, scaffold=scaffold,
+                envelope=envelope,
             )
         except Exception as e:  # noqa: BLE001 - per-variant tolerance
             print(f"DROP {slug}: build error — {e}", file=sys.stderr)
-            dropped.append((slug, f"build error: {e}"))
+            dropped.append((slug, f"build error: {e}", []))
             continue
         if violations:
-            messages = "; ".join(v.message for v in violations[:3])
-            print(f"DROP {slug}: inside_page — {messages}", file=sys.stderr)
-            dropped.append((slug, f"inside_page: {messages}"))
+            head = "; ".join(
+                f"{v.rule_id}: {v.message}" for v in violations[:3]
+            )
+            print(f"DROP {slug}: envelope — {head}", file=sys.stderr)
+            dropped.append((slug, f"envelope: {head}", violations))
             continue
 
         if skip_scribus:
-            # SLA written, render skipped — used by integration tests on
-            # hosts without Scribus.
             print(f"OK {slug}: SLA written (Scribus skipped)")
             enriched = dict(h)
             enriched["_previews"] = {
@@ -322,7 +327,7 @@ def run_render(
             _mirror_to_public(variant_dir, public_root / slug)
         except Exception as e:  # noqa: BLE001
             print(f"DROP {slug}: scribus/rasterise — {e}", file=sys.stderr)
-            dropped.append((slug, f"render error: {e}"))
+            dropped.append((slug, f"render error: {e}", []))
             continue
 
         enriched = dict(h)
@@ -333,21 +338,30 @@ def run_render(
         rendered.append(enriched)
         print(f"OK {slug}: {page1.relative_to(ROOT)} + hires")
 
-    # Refresh manifest.json with previews on rendered variants only.
     manifest_out = dict(manifest)
     manifest_out["hypotheses"] = rendered
     manifest_out["_dropped"] = [
-        {"slug": s, "reason": r} for (s, r) in dropped
+        {
+            "slug": s,
+            "reason": r,
+            "violations": [
+                {
+                    "rule_id": v.rule_id,
+                    "message": v.message,
+                    "severity": v.severity,
+                    "targets": list(v.targets),
+                }
+                for v in vs
+            ],
+        }
+        for (s, r, vs) in dropped
     ]
     (exp_dir / "manifest.json").write_text(
         json.dumps(manifest_out, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
 
-    # Astro content collection entry — only when not in --only mode (a
-    # partial render shouldn't replace the whole experiment).
     if only is None:
-        # Drop _dropped from the frontmatter; it's noise for the page.
         fm = {k: v for k, v in manifest_out.items() if k != "_dropped"}
         _write_content_md(
             exp_id=exp_id, manifest_with_previews=fm, content_dir=content_dir,
@@ -360,7 +374,7 @@ def run_render(
     )
     if dropped:
         print("dropped:")
-        for slug, reason in dropped:
+        for slug, reason, _vs in dropped:
             print(f"  - {slug}: {reason}")
     return 0
 
@@ -368,7 +382,7 @@ def run_render(
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog="experiment-render",
-        description="Render variant builders into PNG previews (issue #29).",
+        description="Render variant builders into PNG previews (issue #29 + #30).",
     )
     ap.add_argument("exp_id", nargs="?", help="Experiment id (kebab-case).")
     ap.add_argument("--only", help="Only render this slug.")
@@ -392,3 +406,14 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
+
+
+# Backward-compat alias for tools previously calling _inside_page_violations.
+def _inside_page_violations(doc):  # pragma: no cover - back-compat shim
+    """Deprecated: kept for back-compat. New code calls
+    ``_envelope_violations(doc, envelope)`` instead.
+    """
+    raise RuntimeError(
+        "_inside_page_violations is deprecated; load an envelope and call "
+        "_envelope_violations(doc, envelope) instead. See issue #30."
+    )

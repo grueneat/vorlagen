@@ -34,7 +34,13 @@ class LoadEnvelopeTest(unittest.TestCase):
         self.assertEqual(len(env.brand_rules), 16)
         self.assertEqual(len(env.layer1), 22)
         self.assertEqual(env.tested_axis, "default")
-        self.assertEqual(env.relax, ())
+        # falzflyer-default carries 5 production-mirror relaxations (the
+        # brand_overrides in templates/kandidat-falzflyer-din-lang/meta.yml
+        # plus two heuristic-imprecision relaxations on Layer-1 metrics
+        # the production scaffold itself doesn't pass).
+        relax_ids = env.relax_ids()
+        self.assertIn("brand:line_spacing_0.9", relax_ids)
+        self.assertIn("layer1:negative_space_pct", relax_ids)
         self.assertEqual(env.regeneration["auto_retry_max"], 0)
 
     def test_load_envelope_with_extends_and_relax(self):
