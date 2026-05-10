@@ -1,0 +1,185 @@
+id: falzflyer-p2-mein-plan
+subject: falzflyer-p2-mein-plan
+target_weak_area: gruene-corpus.md §6 — even-spaced peer list (P2 'Mein Plan')
+contributing_llms:
+- claude
+- codex
+- gemini
+created: '2026-05-10'
+prompt_version: sha256:003b3b1b799a
+hypotheses:
+- slug: cut-to-three-with-body
+  name: Three items, each with one-sentence body
+  axis_commitments:
+  - density
+  - hierarchy
+  rationale: 'Drop two slogans, give the surviving three an explanatory sentence each.
+    The list stops feeling like a checklist and starts feeling like an argument structure:
+    claim, claim, claim — each with substance.'
+  expected_outcome: Higher transport (clearer reasoning, less hand-wave); slightly
+    lower visual punch but more credibility.
+  sources:
+  - claude
+  builder: variants/cut-to-three-with-body.py
+  wildcard: false
+- slug: yellow-accent-privileged-item
+  name: Single item privileged with Gelb backing
+  axis_commitments:
+  - accent-strategy
+  - hierarchy
+  rationale: One slogan gets a full-bleed Gelb panel; the other four stay on Hellgrün
+    at smaller scale beneath. The brand's accent color does the hierarchy work — the
+    reader sees the privileged item before reading any text, and the rest functions
+    as supporting evidence.
+  expected_outcome: High appeal from accent contrast; transport depends on whether
+    viewers accept the prioritised item as the leading argument.
+  sources:
+  - claude
+  builder: variants/yellow-accent-privileged-item.py
+  wildcard: false
+- slug: vollkorn-italic-cornerstone
+  name: Cornerstone slogan in Vollkorn italic, rest in Gotham
+  axis_commitments:
+  - typography
+  - hierarchy
+  rationale: 'Mixing typefaces creates priority through register rather than color
+    or scale: the cornerstone item (''Klimaplan jetzt.'') is set in Vollkorn italic
+    at 28pt while the remaining four stay in Gotham 14pt. The reader''s eye goes to
+    the editorial voice first, then descends into the supporting list.'
+  expected_outcome: Higher transport (clear entry point, single argument leads); appeal
+    split by readers' affinity for editorial vs. activist register.
+  sources:
+  - claude
+  builder: variants/vollkorn-italic-cornerstone.py
+  wildcard: false
+- slug: asymmetric-editorial-rules
+  name: Left-aligned items separated by thin Dunkelgrün rules
+  axis_commitments:
+  - asymmetry
+  - whitespace-strategy
+  rationale: Items hang on a left-axis grid, occupying the left two-thirds; thin horizontal
+    rules separate them; the right third is intentional whitespace. The composition
+    itself signals editorial seriousness rather than political-flyer flatness.
+  expected_outcome: Higher appeal among design-literate raters; transport benefits
+    from the implicit 'this is considered, not shouted' frame.
+  sources:
+  - claude
+  builder: variants/asymmetric-editorial-rules.py
+  wildcard: false
+- slug: first-person-commitments
+  name: Convert slogans to first-person commitments
+  axis_commitments:
+  - voice-formality
+  rationale: '''Klimaplan jetzt.'' becomes ''Ich verpflichte mich zum Klimaplan.''
+    Each item turns from a slogan into a contract with a named candidate. The voice
+    change reframes the panel from party platform to personal accountability.'
+  expected_outcome: Higher transport via personal stake; appeal may suffer from reduced
+    punchiness (longer phrases, more text to read).
+  sources:
+  - claude
+  builder: variants/first-person-commitments.py
+  wildcard: false
+- slug: numbered-priority-list
+  name: Numbered 1–5 with weighted scale per rank
+  axis_commitments:
+  - hierarchy
+  - typography
+  rationale: 'Items get explicit numerals (1–5) and decreasing type weight: #1 at
+    32pt Bold, #5 at 14pt Regular. The numerical and typographic ladder forces a reading
+    sequence and tells the viewer which item the party considers most important.'
+  expected_outcome: Higher transport (explicit ordering replaces ambiguity); appeal
+    mixed — some readers will resist being told what is most important.
+  sources:
+  - claude
+  builder: variants/numbered-priority-list.py
+  wildcard: false
+- slug: manifesto-single-statement
+  name: Replace the list with one editorial manifesto sentence
+  axis_commitments:
+  - density
+  - typography
+  rationale: Five peer slogans dilute attention; collapsing the panel to a single
+    48pt Vollkorn Black statement ('Ein Plan für Niederösterreich') forces the panel
+    to make one argument instead of five. The reduction is the design — scarcity creates
+    weight where the list created flatness.
+  expected_outcome: Likely higher appeal from stronger identity, with transport split
+    between readers who prefer a singular message and those who want concrete points.
+  sources:
+  - claude
+  - codex
+  builder: variants/manifesto-single-statement.py
+  wildcard: false
+- slug: luxurious-whitespace-two-items
+  name: Two items, panel mostly empty
+  axis_commitments:
+  - whitespace-strategy
+  - density
+  rationale: 'Keep only two slogans, each set at 24pt with at least 60% of the panel
+    as whitespace. Confidence-by-restraint: the panel claims authority through what
+    it leaves out, signalling ''we don''t need to list everything to be serious.'''
+  expected_outcome: Higher appeal from the negative-space confidence; transport mixed
+    — some will read it as bold, others as thin or evasive.
+  sources:
+  - claude
+  builder: variants/luxurious-whitespace-two-items.py
+  wildcard: false
+- slug: weighted-hero-lead
+  name: Privilege one item as hero statement
+  axis_commitments:
+  - hierarchy
+  - accent-strategy
+  rationale: Promotes the first slogan to a dominant font size with a bright yellow
+    (Gelb) background block, forcing it as the primary entry point while the remaining
+    four items are grouped as secondary points below. This replaces the flat 'checklist'
+    feel with a clear visual narrative.
+  expected_outcome: Higher appeal and significantly improved entry point; clearer
+    understanding of the core priority.
+  sources:
+  - gemini
+  builder: variants/weighted-hero-lead.py
+  wildcard: false
+- slug: quote-from-resident
+  name: Single attributed resident quote replaces slogans
+  axis_commitments:
+  - voice-formality
+  - density
+  rationale: 'The slogan list is replaced by one pull-quote from a named NÖ resident
+    (''Maria, 54, Krems: "Mir fehlt eine Partei, die..."''). The argument is now told
+    from outside the party rather than declared from within it.'
+  expected_outcome: Higher transport via third-party credibility; appeal high if quote
+    feels authentic, low if it reads as staged.
+  sources:
+  - claude
+  builder: variants/quote-from-resident.py
+  wildcard: false
+- slug: staggered-block-accent
+  name: Staggered reverse-contrast blocks
+  axis_commitments:
+  - accent-strategy
+  - asymmetry
+  rationale: Each slogan is placed within a Dunkelgrün box with white text. The boxes
+    are of varying widths based on text length and are staggered horizontally across
+    the grid, breaking the rigid verticality and injecting energy into the layout.
+  expected_outcome: High appeal and visual energy; the variation in alignment keeps
+    the reader's eye moving through the list.
+  sources:
+  - gemini
+  builder: variants/staggered-block-accent.py
+  wildcard: false
+- slug: handwritten-protest-aesthetic
+  name: Handwritten marker text on torn-paper background
+  axis_commitments:
+  - wildcard
+  rationale: The five items are rendered in scanned handwritten marker on a torn-paper
+    texture overlay, breaking every brand-typography rule. The panel deliberately
+    abandons the polished party-flyer aesthetic to read as grassroots / protest /
+    unfiltered urgency.
+  expected_outcome: Polarising — strong appeal from voters allergic to political-marketing
+    polish, strong rejection from those expecting institutional credibility; transport
+    spikes for the urgency frame.
+  sources:
+  - claude
+  builder: variants/handwritten-protest-aesthetic.py
+  wildcard: true
+notes: ' | Trimmed from 29 raw to 12 implemented variants for MVP execution (issue
+  #29 T13).'

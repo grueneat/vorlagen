@@ -1,0 +1,129 @@
+id: example-experiment
+subject: falzflyer-p2-mein-plan
+target_weak_area: "gruene-corpus.md §6 — even-spaced peer list"
+contributing_llms:
+  - claude:opus
+  - codex:gpt-5
+created: "2026-05-10"
+prompt_version: "v1.0"
+notes: >
+  Synthetic 10-hypothesis fixture used by manifest schema unit tests.
+  Each entry exercises a different axis_commitments combination.
+
+hypotheses:
+  - slug: cut-to-three-with-body
+    name: Cut to three items, add one-sentence body
+    axis_commitments: [density, hierarchy]
+    rationale: >
+      Drop from five peer slogans to three, give each item a one-sentence
+      explanatory body. Trades breadth for depth.
+    expected_outcome: >
+      Higher transport (clearer message), possibly lower appeal
+      (less visual punch).
+    sources: [claude:opus]
+    builder: variants/cut-to-three-with-body.py
+
+  - slug: privilege-one-yellow-accent
+    name: Privilege one item via Hellgrün to Gelb swap
+    axis_commitments: [accent-strategy, hierarchy]
+    rationale: >
+      Single most-important item gets a Gelb backing while the rest
+      stay on Hellgrün; explicit visual hierarchy replaces flatness.
+    expected_outcome: >
+      Higher transport for the highlighted item; appeal depends on
+      whether the contrast feels harmonious.
+    sources: [claude:opus, codex:gpt-5]
+    builder: variants/privilege-one-yellow-accent.py
+
+  - slug: vollkorn-italic-emphasis
+    name: Vollkorn Italic for emphasized line
+    axis_commitments: [typography, hierarchy]
+    rationale: >
+      Use Vollkorn italic for the cornerstone slogan to introduce
+      typographic contrast rather than relying on color.
+    expected_outcome: >
+      Editorial register; appeals to readers, may reduce immediacy.
+    sources: [codex:gpt-5]
+    builder: variants/vollkorn-italic-emphasis.py
+
+  - slug: asymmetric-not-centered
+    name: Asymmetric balance, items left-aligned with rules
+    axis_commitments: [asymmetry, whitespace-strategy]
+    rationale: >
+      Replace centered list with left-aligned items separated by thin
+      Dunkelgrün rules. Editorial composition.
+    expected_outcome: >
+      Higher appeal for design-literate raters; possibly lower
+      transport at glance distance.
+    sources: [claude:opus]
+    builder: variants/asymmetric-not-centered.py
+
+  - slug: full-bleed-photo-collage
+    name: Replace text panel with photo collage
+    axis_commitments: [photographic-vs-typographic, density]
+    rationale: >
+      Swap the schlagwort list for a 2x2 photo collage of constituents
+      with one-word captions.
+    expected_outcome: >
+      Higher emotional appeal; transport depends on caption legibility.
+    sources: [codex:gpt-5, gemini]
+    builder: variants/full-bleed-photo-collage.py
+
+  - slug: voice-personal-i-statement
+    name: Personal voice — I will, not abstract slogans
+    axis_commitments: [voice-formality]
+    rationale: >
+      Convert bullet slogans to first-person commitments
+      ("Ich werde X tun") with the candidate's signature.
+    expected_outcome: >
+      Higher transport (concrete commitments), could feel earnest or
+      forced depending on register.
+    sources: [claude:opus]
+    builder: variants/voice-personal-i-statement.py
+
+  - slug: numbered-priority-list
+    name: Numbered 1..5 priority list with rule between
+    axis_commitments: [hierarchy, density]
+    rationale: >
+      Number each slogan and add thin Dunkelgrün rules between rows
+      to force a sequence reading.
+    expected_outcome: >
+      Higher transport; reduces appeal for readers averse to lists.
+    sources: [codex:gpt-5]
+    builder: variants/numbered-priority-list.py
+
+  - slug: whitespace-three-line-poem
+    name: Three short lines with massive whitespace
+    axis_commitments: [whitespace-strategy, density]
+    rationale: >
+      Reduce content to three short lines, fill the panel with
+      Hellgrün whitespace, force a slow read.
+    expected_outcome: >
+      Strong appeal; transport depends on whether 3 phrases is enough.
+    sources: [claude:opus]
+    builder: variants/whitespace-three-line-poem.py
+
+  - slug: typographic-poster-not-list
+    name: Typographic poster — one large statement
+    axis_commitments: [typography, density]
+    rationale: >
+      Replace the list with one giant statement set in
+      Vollkorn Black at 48pt. Manifesto register.
+    expected_outcome: >
+      Polarizing — strong appeal or strong rejection.
+    sources: [codex:gpt-5, gemini]
+    builder: variants/typographic-poster-not-list.py
+
+  - slug: handwritten-margin-notes
+    name: Handwritten margin notes alongside printed list
+    axis_commitments: [wildcard]
+    rationale: >
+      Wild-card. Keep the printed list but overlay handwritten margin
+      annotations from the candidate ("Wichtigster Punkt"). Voice +
+      authenticity tension.
+    expected_outcome: >
+      Will polarize; some find it personal, others find it
+      unprofessional. Either way, useful signal.
+    sources: [claude:opus]
+    builder: variants/handwritten-margin-notes.py
+    wildcard: true

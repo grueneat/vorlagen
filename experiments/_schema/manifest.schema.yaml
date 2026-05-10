@@ -1,0 +1,152 @@
+# Experiment manifest schema — JSON Schema (draft-2020-12) expressed in YAML.
+# Mirrors the style of shared/template-spec.schema.yaml.
+#
+# Validate a manifest file:
+#   python3 -c "
+#     import yaml, jsonschema, pathlib
+#     schema = yaml.safe_load(pathlib.Path('experiments/_schema/manifest.schema.yaml').read_text())
+#     m = yaml.safe_load(pathlib.Path('experiments/<id>/manifest.yml').read_text())
+#     jsonschema.Draft202012Validator(schema).validate(m)
+#   "
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://gruene-noe.at/experiments/manifest.schema.yaml"
+title: "Experiment manifest"
+description: >
+  Manifest for one design-experimentation run. Lists the multi-LLM
+  hypothesis pool that variant_render then turns into rendered variants.
+  Hard-required: ≥10 hypotheses and ≥1 wildcard. Issue #29.
+type: object
+additionalProperties: false
+
+required:
+  - id
+  - subject
+  - target_weak_area
+  - contributing_llms
+  - created
+  - prompt_version
+  - hypotheses
+
+properties:
+
+  id:
+    type: string
+    description: "Kebab-case experiment id (e.g. 'falzflyer-p2-mein-plan')."
+    pattern: "^[a-z0-9][a-z0-9-]*$"
+
+  subject:
+    type: string
+    description: >
+      Subject region being varied (e.g. 'falzflyer-p2-mein-plan'). Maps
+      to the variant_scaffold target.
+
+  target_weak_area:
+    type: string
+    description: >
+      Reference into design-guide/gruene-corpus.md (e.g. 'gruene-corpus.md §6')
+      describing the named failure mode being attacked.
+
+  contributing_llms:
+    type: array
+    description: >
+      List of LLM identifiers that contributed hypotheses (e.g.
+      'claude:opus', 'codex:gpt-5', 'gemini'). At least 2 required.
+    minItems: 2
+    items:
+      type: string
+
+  created:
+    type: string
+    description: "ISO 8601 date (YYYY-MM-DD) the manifest was generated."
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  prompt_version:
+    type: string
+    description: >
+      Hash or semver of the prompt template used (lets us correlate
+      prompt-evolution iterations with hypothesis quality).
+
+  notes:
+    type: string
+    description: "Optional free-text notes from the generator pass."
+
+  hypotheses:
+    type: array
+    description: >
+      Hypothesis pool. Must contain at least 10 entries; at least one
+      must declare wildcard: true.
+    minItems: 10
+    contains:
+      type: object
+      properties:
+        wildcard:
+          const: true
+      required: [wildcard]
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - slug
+        - name
+        - axis_commitments
+        - rationale
+        - expected_outcome
+        - sources
+        - builder
+      properties:
+        slug:
+          type: string
+          description: "Kebab-case hypothesis slug; unique within the manifest."
+          pattern: "^[a-z0-9][a-z0-9-]*$"
+        name:
+          type: string
+          description: "Human-readable hypothesis name (sentence-case)."
+        axis_commitments:
+          type: array
+          description: >
+            Controlled-vocabulary tags naming the design axes this
+            hypothesis commits on. At least 1 required.
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum:
+              - density
+              - hierarchy
+              - typography
+              - asymmetry
+              - photographic-vs-typographic
+              - accent-strategy
+              - whitespace-strategy
+              - voice-formality
+              - wildcard
+        rationale:
+          type: string
+          description: "1–3 sentence design rationale."
+        expected_outcome:
+          type: string
+          description: "1 sentence prediction of voter response."
+        sources:
+          type: array
+          description: >
+            LLM(s) that proposed this hypothesis. Used as a confidence
+            signal — overlapping multi-LLM proposals are stronger.
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+        builder:
+          type: string
+          description: >
+            Relative path to the variant builder .py file under
+            experiments/<id>/variants/.
+          pattern: "^variants/[a-z0-9][a-z0-9-]*\\.py$"
+        wildcard:
+          type: boolean
+          default: false
+          description: >
+            True if this hypothesis is the mandatory wild-card (proposes
+            something the role-primed designer would not normally
+            suggest). At least one hypothesis in the manifest MUST set
+            this to true.
