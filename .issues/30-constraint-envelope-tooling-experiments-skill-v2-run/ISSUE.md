@@ -2,7 +2,7 @@
 id: '30'
 title: Encode constraint envelope in experiment tooling + author experiments skill
   (v2 run)
-status: open
+status: in_progress
 priority: high
 labels:
 - enhancement
