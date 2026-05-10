@@ -19,14 +19,75 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
 
   {t.data._previews && t.data._previews.length > 0 && (
     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin: 2rem 0;">
-      {t.data._previews.map(p => (
-        <div style="background: white; padding: 0.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">
-          <img src={url(p.src)} alt={p.label} loading="lazy" style="width: 100%; height: auto; display: block;" />
-          <div style="text-align: center; font-size: 0.8em; margin-top: 0.5rem; color: #666;">{p.label}</div>
-        </div>
-      ))}
+      {t.data._previews.map(p => {
+        // Issue #28: every preview thumbnail clicks through to a hi-res
+        // version rendered at 150 dpi (vs 50–100 dpi for thumbnails).
+        // Hi-res lives next to the thumbnail with `-hires` suffix
+        // (page-01.png → page-01-hires.png) and is mirrored to
+        // site/public/templates/<id>/ by the render pipeline.
+        const hiresSrc = p.src.replace(/\.png$/, '-hires.png');
+        return (
+          <a
+            href={url(hiresSrc)}
+            class="preview-link"
+            data-hires={url(hiresSrc)}
+            data-label={p.label}
+            style="display: block; background: white; padding: 0.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); text-decoration: none; color: inherit; cursor: zoom-in;"
+            aria-label={`Vergrößerte Vorschau öffnen: ${p.label}`}
+          >
+            <img src={url(p.src)} alt={p.label} loading="lazy" style="width: 100%; height: auto; display: block;" />
+            <div style="text-align: center; font-size: 0.8em; margin-top: 0.5rem; color: #666;">{p.label}</div>
+          </a>
+        );
+      })}
     </div>
   )}
+
+  <!-- Lightbox overlay for hi-res preview (Issue #28). Plain HTML +
+       inline JS — keeps the page Astro-static-site without adding
+       framework dependencies. -->
+  <div id="preview-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box;">
+    <button id="preview-close" type="button" aria-label="Schließen" style="position: absolute; top: 1rem; right: 1rem; background: white; color: black; border: none; border-radius: 4px; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; z-index: 1;">Schließen ✕</button>
+    <div id="preview-label" style="position: absolute; top: 1rem; left: 1rem; color: white; font-size: 0.95rem;"></div>
+    <img id="preview-image" src="" alt="" style="max-width: 100%; max-height: 100%; margin: auto; display: block; object-fit: contain;" />
+  </div>
+
+  <script is:inline>
+    (function () {
+      const overlay = document.getElementById('preview-lightbox');
+      const img = document.getElementById('preview-image');
+      const label = document.getElementById('preview-label');
+      const closeBtn = document.getElementById('preview-close');
+      if (!overlay || !img || !label || !closeBtn) return;
+
+      function open(href, text) {
+        img.src = href;
+        img.alt = text || '';
+        label.textContent = text || '';
+        overlay.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+      }
+      function close() {
+        overlay.style.display = 'none';
+        img.src = '';
+        document.body.style.overflow = '';
+      }
+
+      document.querySelectorAll('a.preview-link').forEach(function (a) {
+        a.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          open(a.dataset.hires, a.dataset.label);
+        });
+      });
+      overlay.addEventListener('click', function (ev) {
+        if (ev.target === overlay || ev.target === img) close();
+      });
+      closeBtn.addEventListener('click', close);
+      document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && overlay.style.display === 'block') close();
+      });
+    })();
+  </script>
 
   <h2>Download</h2>
   <ul>
