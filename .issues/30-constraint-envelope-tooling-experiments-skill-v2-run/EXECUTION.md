@@ -1,11 +1,11 @@
 # Execution Log — Constraint Envelope + Experiments Skill + v2 Run
 
-**Status:** complete (T01–T16 done; T17 pending manual handoff to Flo)
+**Status:** complete (T01–T16, T16a, T16b done; T17 pending manual handoff to Flo)
 **Branch:** issue/30-constraint-envelope-tooling-experiments-skill-v2-run
 **Worktree:** .worktrees/30-constraint-envelope-tooling-experiments-skill-v2-run/
 **Started:** 2026-05-10
-**Completed:** 2026-05-10
-**Scope this run:** T01–T16 (T17 = manual Flo voting + corpus update, deferred)
+**Completed:** 2026-05-10 (T01–T16), 2026-05-10 (T16a + T16b — codegen tool + run)
+**Scope this run:** T01–T16, T16a, T16b (T17 = manual Flo voting + corpus update, deferred)
 
 ## Baseline (pre-execution)
 
@@ -32,17 +32,22 @@
 - [x] T14 — author-experiments-skill — `0df9702` — .claude/skills/experiments/SKILL.md, 1310 words, validate.sh passes
 - [x] T15 — generate-v2-hypotheses — `7662875` — 19 LLM (claude+codex) + 3 retained = 22 hypotheses; manifest validates
 - [x] T16 — render-v2-variants-end-to-end — `5544e4c`, `5527405` — 3 retained rendered; 19 LLM-only dropped (no variant code); Astro build passes; production byte-stable
+- [x] T16a — implement-experiment-codegen — `4aa9dfa` — tools/experiment_codegen.py + bin/experiment-codegen shim; multi-LLM (claude + codex) prompt composes envelope + DSL signature + scaffold contract + 3 reference impls; per-slug import + scaffold + envelope validation gate; skip-existing default + --force; 12 unit tests pass; ruff + mypy clean; --help OK
+- [x] T16b — run-codegen-and-render-v2 — `4262df4` — bin/experiment-codegen produced 18 LLM-written builders + 3 retained = 21 total (1 failed: resident-quote-then-pledge — claude returned `false` lowercase, codex used `Hellgrun` instead of `Hellgrün`); bin/experiment-render: 21 OK, 1 dropped (4.5% drop rate, well under 40% threshold); all PNGs + hi-res + site/public mirrors populated; manifest.json schema-valid; Astro build clean; production byte-stable
 - [ ] T17 — Pending: manual handoff to Flo for voting and dual-section corpus update (closes both #30 and #29 T15)
 
 ## Verification status
 
-- All Python unit/integration tests: **PASS** — 853 tests run, 0 failures, 11 skipped (pre-existing skips)
+- All Python unit/integration tests: **PASS** — 865 tests run, 0 failures, 11 skipped (was 853 before T16a; +12 from test_experiment_codegen)
 - `npm --prefix site run build`: **PASS** — 12 pages built including v2 voting page
 - v2 hypothesis manifest generated (T15): **PASS — 22 hypotheses, manifest validates against schema**
-- v2 variants rendered (T16): **PARTIAL — 3 retained rendered, 19 LLM-only dropped (no variant code; see Architectural Finding)**
-- Production falzflyer page-01.png byte-stable: **PASS** — SHA256 unchanged
+- v2 variants rendered (T16 + T16b): **PASS — 21 rendered, 1 dropped (resident-quote-then-pledge: both LLMs failed codegen)**
+  - 3 retained-from-v1: `numbered-priority-list-v2`, `manifesto-single-statement-v2`, `dunkelgrun-rules-between-items-v2`
+  - 18 LLM-codegen (claude or codex): `two-tier-privileged-item`, `paragraph-form-prose-block`, `eyebrow-plus-body-three`, `horizontal-band-tricolor-zones`, `vollkorn-italic-cornerstone-jump`, `caps-eyebrow-categorical-tags`, `two-column-editorial-split`, `two-statement-call-response`, `quote-plus-reply-single-family`, `candidate-portrait-overlay-pact`, `manifesto-single-pledge-v2`, `three-pillars-with-explainer`, `editorial-left-column-rules`, `ranked-numerals-scale-list`, `first-person-compact-paragraph`, `cornerstone-banner-with-minors`, `accent-chip-and-open-field`, `ballot-cross-text-container`
+  - 1 dropped: `resident-quote-then-pledge` — claude rejected for `NameError("name 'false' is not defined")` (lowercase Python `false` in source); codex rejected for `brand:color_palette` violation (emitted `Hellgrun` instead of `Hellgrün`)
+- Production falzflyer page-01.png byte-stable: **PASS** — SHA256 `34730f1e…` unchanged
 - `.claude/skills/experiments/SKILL.md` exists + validates (wc -w ≤ 5000): **PASS — 1310 words**
-- ruff/mypy on new code: **PASS** — `tools/experiment_*.py`, all v2 variants, all new tests clean
+- ruff/mypy on new code: **PASS** — `tools/experiment_*.py` (incl. new `experiment_codegen.py`), all v2 variants, all new tests clean
 
 ## Three retained concepts — visual checks
 
@@ -50,15 +55,9 @@
 - **manifesto-single-statement (v1)**: PNG inspected → renders, but specifies `Vollkorn Black` (NOT in `shared/ci.yml::fonts` — only `Vollkorn Black Italic` registered). v2 corrected by switching to the registered face + dropping the v1 footer. v2 renders within envelope.
 - **asymmetric-editorial-rules (v1)** → **dunkelgrun-rules-between-items-v2**: PNG inspected → 5 rows × 22mm = 110mm packed into 130mm, ~15% whitespace. v2 corrected by reducing to 3 rows (~49% body-area whitespace). v2 renders within envelope.
 
-## Architectural finding (Rule 4 deviation surfaced for Flo)
+## Architectural finding (closed by T16a + T16b)
 
-**Variant codegen is missing from #29's tooling.** `bin/experiment-generate` produces hypothesis manifest entries with a `builder: variants/<slug>.py` field but does NOT create the .py files. T16 dropped 19 LLM-produced hypotheses with `build error: variant builder not found`. Drop rate 86% (19/22), well above the 40% threshold; per PLAN.md R5 + the executor instructions, HALT and surface to Flo without auto-retry.
-
-Two path-forward options for getting to ≥10 rendered variants:
-1. **Author 7+ variant Python modules manually** for the most-promising LLM hypotheses (e.g. `two-tier-privileged-item`, `eyebrow-plus-body-three`, `vollkorn-italic-cornerstone-jump`, `cornerstone-banner-with-minors`, `accent-chip-and-open-field`, `ranked-numerals-scale-list`, `editorial-left-column-rules`).
-2. **Build a `bin/experiment-codegen`** step that turns hypothesis descriptions into render_p2 stubs for hand-tuning (a separate issue scope-wise).
-
-Either path is needed BEFORE T17's voting can be a meaningful merge gate — voting on only 3 variants doesn't cover the density+form axis adequately.
+**Variant codegen gap closed.** The T16 architectural finding noted `bin/experiment-generate` produced hypothesis text but no Python builders, leaving 19/22 v2 hypotheses unrenderable. T16a implemented `bin/experiment-codegen` (mirroring `experiment-generate`'s multi-LLM subprocess pattern: claude + codex, 600s timeout, raw stdouts preserved for audit, per-slug import+scaffold+envelope validation before accepting a builder, fallback to second LLM on rejection). T16b ran it on `falzflyer-p2-mein-plan-v2`, producing 18 new builders + 3 retained = 21 total. The one remaining failure (`resident-quote-then-pledge`) is named in the dropped list with both LLMs' specific rejection reasons; the methodology is right (gate enforced; bad output not silently accepted), the prompt could be tightened for the residual edge cases (claude's lowercase `false`, codex's umlaut-stripping) in a follow-up. The render gate's drop_threshold_pct=40 is satisfied with margin: 1/22 = 4.5% drop rate. T17 voting can now operate on a density+form-balanced pool of 21 variants.
 
 ## Other deviations from plan (auto-fixed Rule 1-3)
 
@@ -71,45 +70,41 @@ Either path is needed BEFORE T17's voting can be a meaningful merge gate — vot
 ## Discovered issues (out of scope, logged for follow-up)
 
 - **`_check_negative_space_pct` is frame-area-based, not ink-area-based.** Production scaffold's body frame is h=130mm but actual text ink occupies far less. The metric over-counts content area. Genuinely measuring optical whitespace would require rasterised analysis. Relaxed in falzflyer-default; future improvement: per-frame ink-area estimation from fontsize × line count.
-- **`bin/experiment-generate` doesn't write variant code.** See Architectural Finding above. This is the principal gap blocking ≥10 variants.
+- **`bin/experiment-generate` doesn't write variant code.** CLOSED by T16a (`bin/experiment-codegen` added) and T16b (codegen ran end-to-end).
+- **Codex `workspace-write` sandbox writes side-effect files into the workspace root.** During T16b, codex emitted `tmp_vollkorn_italic_cornerstone_jump.py` at the workspace root (in addition to its stdout). Cleaned up before commit; future improvement: capture codex stdout in a temp dir and pass `--sandbox read-only` if subprocess prompt-only mode is sufficient.
+- **Two LLM-codegen failure modes are visible in the dropped variant.** (a) Claude emitted Python with `wildcard: false` (lowercase) which raises `NameError`. (b) Codex stripped the umlaut from `Hellgrün` → `Hellgrun`, failing `brand:color_palette`. Both are tightenable in the codegen prompt — add an explicit "use exact brand color names, including umlauts" + "Python booleans are True/False (capitalized)" constraint before the next run.
 - **Existing `tools/sla_lib/tests/test_experiment_render.py` had two tests that needed `constraints.yml` scaffolding.** Updated; not a regression — they now correctly exercise the new envelope-loading path.
 
 ## Handoff to user (T17)
 
-The runbook for Flo to close this issue:
+The runbook for Flo to close this issue (architectural gap closed by T16a + T16b — Flo can vote immediately):
 
-1. Address the Architectural Finding above. Either:
-   - **Option A (recommended for v2-as-shipped):** Author 7+ variant Python modules under `experiments/falzflyer-p2-mein-plan-v2/variants/<slug>.py` for the most-promising LLM hypotheses. Each must export `def render_p2(doc, page) -> None:` (see existing 3 retained-concept variants and the experiment_envelope's smoke tests as templates). Verify each smoke-test passes the envelope before voting.
-   - **Option B (cleaner for the methodology):** Open a follow-up issue scoping `bin/experiment-codegen` (LLM-driven hypothesis-to-variant scaffolding); for v2-as-shipped, hand-author enough variants to get to ≥10 rendered.
+1. Open the Astro voting page: `npm --prefix site run dev` then `http://localhost:4321/experiments/falzflyer-p2-mein-plan-v2/`.
 
-2. After ≥10 variants render cleanly: run `bin/experiment-render falzflyer-p2-mein-plan-v2` once more to refresh `manifest.json::_dropped` and `site/public/experiments/falzflyer-p2-mein-plan-v2/`.
+2. Read the SUMMARY.md stub (after step 4 below) BEFORE voting — verify the variant set is density+form-balanced (check the `axis_commitments` column in `manifest.yml`).
 
-3. Open the Astro voting page: `npm --prefix site run dev` then `http://localhost:4321/experiments/falzflyer-p2-mein-plan-v2/`.
+3. Run a complete pairwise voting session. Aim for full coverage of all C(N, 2) pairs (with N=21, that's 210 pairs × 2 axes = 420 votes; if 420 is impractical, sample a balanced subset per axis).
 
-4. Read the SUMMARY.md stub (after step 6 below) BEFORE voting — verify the variant set is density+form-balanced (check the `axis_commitments` column in `manifest.yml`).
+4. Export results JSON via the Astro page's "Export" button to `experiments/falzflyer-p2-mein-plan-v2/results/flo-2026-05-XX.json`.
 
-5. Run a complete pairwise voting session. Aim for full coverage of all C(N, 2) pairs (with N≈12, that's 66 pairs × 2 axes = 132 votes).
-
-6. Export results JSON via the Astro page's "Export" button to `experiments/falzflyer-p2-mein-plan-v2/results/flo-2026-05-XX.json`.
-
-7. Run `bin/experiment-results falzflyer-p2-mein-plan-v2` to aggregate into `experiments/falzflyer-p2-mein-plan-v2/results/SUMMARY.md`. The SUMMARY now carries:
-   - `## Variants dropped during render` (auto-populated from `manifest.json::_dropped`)
+5. Run `bin/experiment-results falzflyer-p2-mein-plan-v2` to aggregate into `experiments/falzflyer-p2-mein-plan-v2/results/SUMMARY.md`. The SUMMARY now carries:
+   - `## Variants dropped during render` (auto-populated from `manifest.json::_dropped` — currently lists `resident-quote-then-pledge`)
    - `## Corpus update stub` with two pre-labelled subsections: `### From v1 (envelope necessity)` and `### From v2 (density+form findings)`.
 
-8. Amend `design-guide/gruene-corpus.md` with the dual-section corpus update:
+6. Amend `design-guide/gruene-corpus.md` with the dual-section corpus update:
    - **Part 1 (closes #29 T15):** v1 meta-lesson on envelope necessity. Verbatim text already drafted in SUMMARY.md's corpus stub.
    - **Part 2 (closes #30 substantively):** v2 density+form findings. Top-3 by win-rate, bottom-3 by loss-rate, Spearman halo flag if applicable. Provenance: link to `experiments/falzflyer-p2-mein-plan-v2/results/flo-<DATE>.json` and the SUMMARY.md.
 
-9. Commit the results JSON + amended corpus + any new variant Python modules from step 1 as a single commit:
+7. Commit the results JSON + amended corpus as a single commit:
    `30+29: docs(corpus): close envelope-necessity + v2 density+form findings`
 
-10. Run the final acceptance-gate verification (PLAN.md `<verification>` block):
-    ```bash
-    python3 -m unittest discover tools/sla_lib/tests
-    npm --prefix site run build
-    bash /root/.claude/skills/generate-skill/scripts/validate.sh .claude/skills/experiments/
-    grep -q "ARE the constraint envelope for design experiments" design-guide/README.md
-    ! grep -q "no other brand rule runs on variants" tools/experiment_render.py
-    ```
+8. Run the final acceptance-gate verification (PLAN.md `<verification>` block):
+   ```bash
+   python3 -m unittest discover tools/sla_lib/tests
+   npm --prefix site run build
+   bash /root/.claude/skills/generate-skill/scripts/validate.sh .claude/skills/experiments/
+   grep -q "ARE the constraint envelope for design experiments" design-guide/README.md
+   ! grep -q "no other brand rule runs on variants" tools/experiment_render.py
+   ```
 
-11. Open PR. PR description should reference closing both issues — body should say `Closes #30. Closes #29 (T15 carry-over).`
+9. Open PR. PR description should reference closing both issues — body should say `Closes #30. Closes #29 (T15 carry-over).`
