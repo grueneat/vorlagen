@@ -1,13 +1,645 @@
 ---
 import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
 
-// Placeholder dynamic route — implementation lands in T12. Returns a single
-// dummy path so Astro static-site builds without errors before the
-// experiments collection exists.
 export async function getStaticPaths() {
-  return [{ params: { id: 'placeholder' }, props: {} }];
+  const experiments = await getCollection('experiments');
+  if (experiments.length === 0) {
+    // Astro requires at least one path; emit a sentinel so the route
+    // type-checks even before any experiment manifest is rendered.
+    return [{ params: { id: 'placeholder' }, props: { exp: null } }];
+  }
+  return experiments.map((e) => ({
+    params: { id: e.data.id },
+    props: { exp: e },
+  }));
 }
+
+const { exp } = Astro.props;
+
+const BASE = import.meta.env.BASE_URL;
+const url = (p: string) => BASE + p.replace(/^\//, '');
+
+const expId = exp ? exp.data.id : 'placeholder';
+const subject = exp ? exp.data.subject : 'placeholder';
+const hypotheses: any[] = exp && Array.isArray(exp.data.hypotheses)
+  ? exp.data.hypotheses
+  : [];
+const llms: string[] = exp && Array.isArray(exp.data.contributing_llms)
+  ? exp.data.contributing_llms
+  : [];
+const totalPairs = hypotheses.length >= 2
+  ? (hypotheses.length * (hypotheses.length - 1)) / 2
+  : 0;
+
+// Embed the variant data as JSON for the client script. We only need
+// the slug + name + axes + rationale + preview paths.
+const variantsForJs = hypotheses.map((h) => ({
+  slug: h.slug,
+  name: h.name || h.slug,
+  axis_commitments: h.axis_commitments || [],
+  rationale: h.rationale || '',
+  expected_outcome: h.expected_outcome || '',
+  wildcard: !!h.wildcard,
+  thumb: h._previews?.thumb
+    ? url(h._previews.thumb)
+    : url(`/experiments/${expId}/${h.slug}/page-01.png`),
+  hires: h._previews?.hires
+    ? url(h._previews.hires)
+    : url(`/experiments/${expId}/${h.slug}/page-01-hires.png`),
+}));
 ---
-<Base title="experiments — TBD">
-  <h1>experiments — TBD</h1>
+<Base title={`Voting — ${subject}`}>
+  <p><a href={url('experiments/')}>← Alle Experimente</a></p>
+
+  {!exp && (
+    <p>Kein Experiment hier. Lege eines an mit <code>bin/experiment-render</code>.</p>
+  )}
+
+  {exp && (
+    <>
+      <h1>{subject}</h1>
+      <p style="color: #666; font-size: 0.9em;">
+        <code>{expId}</code> · {hypotheses.length} Hypothesen · LLMs: {llms.join(', ')}
+      </p>
+      <p>{exp.data.target_weak_area}</p>
+
+      <div id="exp-banner" style="display: none; background: #ffe4e4; border: 1px solid #c66; padding: 0.75rem 1rem; border-radius: 4px; margin: 1rem 0;">
+        <strong>localStorage nicht persistent.</strong> Dein Browser speichert keine Stimmen
+        zwischen Reloads (Privatmodus o. ä.). Exportiere deine Stimmen häufig über den Export-Knopf.
+      </div>
+
+      <div style="display: flex; gap: 1rem; align-items: center; margin: 1.5rem 0; flex-wrap: wrap;">
+        <label>
+          Rater:
+          <input id="exp-rater" type="text" value="anonymous"
+                 style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; min-width: 12rem;" />
+        </label>
+        <button id="exp-mode-direct" type="button" class="exp-mode-btn"
+                style="padding: 0.4rem 0.9rem;">Direkt-Pick</button>
+        <button id="exp-mode-versus" type="button" class="exp-mode-btn"
+                style="padding: 0.4rem 0.9rem;">Versus</button>
+        <button id="exp-export" type="button"
+                style="padding: 0.4rem 0.9rem; margin-left: auto;">
+          Export JSON
+        </button>
+      </div>
+
+      <details style="margin-bottom: 1rem;">
+        <summary style="cursor: pointer;">Tastatur-Shortcuts (Versus-Mode)</summary>
+        <ul style="font-size: 0.9em; color: #555; margin-top: 0.5rem;">
+          <li><kbd>Q</kbd> / <kbd>W</kbd> — Appeal: links / rechts</li>
+          <li><kbd>O</kbd> / <kbd>P</kbd> — Transport: links / rechts</li>
+          <li><kbd>Space</kbd> — Pair überspringen</li>
+          <li><kbd>E</kbd> — Export JSON</li>
+        </ul>
+      </details>
+
+      <section id="exp-direct" class="exp-mode" style="display: block;">
+        <h2>Direct-Pick</h2>
+        <p style="color: #555;">Klicke den Stern auf einer Variante um sie als Favorit zu markieren.</p>
+        <div id="exp-direct-grid"
+             style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        </div>
+      </section>
+
+      <section id="exp-versus" class="exp-mode" style="display: none;">
+        <h2>Versus</h2>
+        <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem;">
+          <div style="flex: 1; min-width: 240px;">
+            <small>Appeal</small>
+            <progress id="exp-progress-appeal" max="0" value="0"
+                      style="width: 100%; height: 1rem;"></progress>
+            <small id="exp-progress-appeal-label" style="color: #555;">0 / 0</small>
+          </div>
+          <div style="flex: 1; min-width: 240px;">
+            <small>Transport</small>
+            <progress id="exp-progress-transport" max="0" value="0"
+                      style="width: 100%; height: 1rem;"></progress>
+            <small id="exp-progress-transport-label" style="color: #555;">0 / 0</small>
+          </div>
+        </div>
+
+        <div id="exp-pair-area" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+          <div class="exp-card" data-side="left"
+               style="background: white; padding: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); cursor: zoom-in;">
+            <img class="exp-card-img" src="" alt="" loading="lazy"
+                 style="width: 100%; height: auto; display: block;" />
+            <div class="exp-card-name" style="font-size: 0.85em; color: #555; text-align: center; margin-top: 0.5rem;"></div>
+          </div>
+          <div class="exp-card" data-side="right"
+               style="background: white; padding: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); cursor: zoom-in;">
+            <img class="exp-card-img" src="" alt="" loading="lazy"
+                 style="width: 100%; height: auto; display: block;" />
+            <div class="exp-card-name" style="font-size: 0.85em; color: #555; text-align: center; margin-top: 0.5rem;"></div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <p style="margin: 0.25rem 0;"><strong>Welche spricht dich mehr an?</strong> (Appeal)</p>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="exp-appeal-left" class="exp-vote-btn" type="button" data-axis="appeal" data-side="left"
+                    style="flex: 1; padding: 0.5rem;">Q · Links</button>
+            <button id="exp-appeal-right" class="exp-vote-btn" type="button" data-axis="appeal" data-side="right"
+                    style="flex: 1; padding: 0.5rem;">W · Rechts</button>
+          </div>
+        </div>
+        <div style="margin-top: 0.75rem;">
+          <p style="margin: 0.25rem 0;"><strong>Welche transportiert die Botschaft besser?</strong> (Transport)</p>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="exp-transport-left" class="exp-vote-btn" type="button" data-axis="transport" data-side="left"
+                    style="flex: 1; padding: 0.5rem;">O · Links</button>
+            <button id="exp-transport-right" class="exp-vote-btn" type="button" data-axis="transport" data-side="right"
+                    style="flex: 1; padding: 0.5rem;">P · Rechts</button>
+          </div>
+        </div>
+        <div style="margin-top: 0.75rem;">
+          <button id="exp-skip" type="button"
+                  style="width: 100%; padding: 0.5rem;">Space · Skip-Pair</button>
+        </div>
+      </section>
+
+      <!-- Lightbox overlay (mirrors templates/[...id].astro pattern) -->
+      <div id="exp-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box;">
+        <button id="exp-lightbox-close" type="button"
+                style="position: absolute; top: 1rem; right: 1rem; background: white; color: black; border: none; border-radius: 4px; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; z-index: 1;">Schließen ✕</button>
+        <div id="exp-lightbox-label" style="position: absolute; top: 1rem; left: 1rem; color: white; font-size: 0.95rem;"></div>
+        <img id="exp-lightbox-image" src="" alt=""
+             style="max-width: 100%; max-height: 100%; margin: auto; display: block; object-fit: contain;" />
+      </div>
+
+      <script id="exp-data" type="application/json" set:html={JSON.stringify({
+        expId,
+        totalPairs,
+        variants: variantsForJs,
+      })} />
+
+      <script is:inline>
+        (function () {
+          var dataEl = document.getElementById('exp-data');
+          if (!dataEl || !dataEl.textContent) return;
+          var DATA = JSON.parse(dataEl.textContent);
+          var EXP_ID = DATA.expId;
+          var VARIANTS = DATA.variants;
+          var TOTAL_PAIRS = DATA.totalPairs;
+          var STORAGE_KEY = 'experiment:' + EXP_ID + ':session:v1';
+
+          // ---- Storage helpers (with non-persistence detection) ----
+          var storageOK = (function () {
+            try {
+              localStorage.setItem('__exp_test', '1');
+              localStorage.removeItem('__exp_test');
+              return true;
+            } catch (e) { return false; }
+          })();
+          if (!storageOK) {
+            var banner = document.getElementById('exp-banner');
+            if (banner) banner.style.display = 'block';
+          }
+
+          function loadSession() {
+            try {
+              var raw = localStorage.getItem(STORAGE_KEY);
+              if (!raw) return null;
+              return JSON.parse(raw);
+            } catch (e) { return null; }
+          }
+          function saveSession(s) {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+            catch (e) { /* swallow — banner already up */ }
+          }
+
+          var nowISO = function () { return new Date().toISOString(); };
+          var session = loadSession() || {
+            rater: 'anonymous',
+            session_start: nowISO(),
+            votes: [],
+            direct_picks: [],
+          };
+
+          // Rater field
+          var raterInput = document.getElementById('exp-rater');
+          if (raterInput) {
+            raterInput.value = session.rater || 'anonymous';
+            raterInput.addEventListener('change', function () {
+              session.rater = raterInput.value || 'anonymous';
+              saveSession(session);
+            });
+          }
+
+          // ---- Direct-pick rendering ----
+          var directGrid = document.getElementById('exp-direct-grid');
+
+          function renderDirect() {
+            if (!directGrid) return;
+            directGrid.innerHTML = '';
+            VARIANTS.forEach(function (v) {
+              var card = document.createElement('div');
+              card.style.cssText = 'background: white; padding: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.5rem;';
+
+              var img = document.createElement('img');
+              img.src = v.thumb;
+              img.alt = v.name;
+              img.loading = 'lazy';
+              img.style.cssText = 'width: 100%; height: auto; display: block; cursor: zoom-in;';
+              img.addEventListener('click', function () {
+                openLightbox(v.hires, v.name);
+              });
+              card.appendChild(img);
+
+              var title = document.createElement('div');
+              title.style.cssText = 'display: flex; gap: 0.5rem; align-items: baseline;';
+              var star = document.createElement('button');
+              star.type = 'button';
+              var picked = (session.direct_picks || []).indexOf(v.slug) >= 0;
+              star.textContent = picked ? '★' : '☆';
+              star.setAttribute('aria-label', picked ? 'Favorit entfernen' : 'Als Favorit markieren');
+              star.style.cssText = 'background: none; border: none; font-size: 1.4em; cursor: pointer; color: ' + (picked ? '#dca400' : '#888') + ';';
+              star.addEventListener('click', function () {
+                var picks = session.direct_picks || (session.direct_picks = []);
+                var idx = picks.indexOf(v.slug);
+                if (idx >= 0) picks.splice(idx, 1);
+                else picks.push(v.slug);
+                saveSession(session);
+                renderDirect();
+              });
+              title.appendChild(star);
+              var nameEl = document.createElement('strong');
+              nameEl.textContent = v.name;
+              title.appendChild(nameEl);
+              card.appendChild(title);
+
+              if (v.wildcard) {
+                var wild = document.createElement('span');
+                wild.textContent = 'WILDCARD';
+                wild.style.cssText = 'font-size: 0.7em; background: #ffd400; color: #333; padding: 0.1rem 0.4rem; border-radius: 4px; align-self: flex-start;';
+                card.appendChild(wild);
+              }
+
+              if (v.axis_commitments && v.axis_commitments.length) {
+                var axes = document.createElement('div');
+                axes.style.cssText = 'font-size: 0.75em; color: #555;';
+                axes.textContent = v.axis_commitments.join(' · ');
+                card.appendChild(axes);
+              }
+
+              if (v.rationale) {
+                var rat = document.createElement('p');
+                rat.textContent = v.rationale;
+                rat.style.cssText = 'font-size: 0.85em; color: #444; margin: 0;';
+                card.appendChild(rat);
+              }
+
+              directGrid.appendChild(card);
+            });
+          }
+
+          // ---- Versus mode: pair queue + Fisher-Yates shuffle ----
+          function fisherYates(arr) {
+            for (var i = arr.length - 1; i > 0; i--) {
+              var j = Math.floor(Math.random() * (i + 1));
+              var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+            }
+            return arr;
+          }
+          function buildPairs() {
+            var pairs = [];
+            for (var i = 0; i < VARIANTS.length; i++) {
+              for (var j = i + 1; j < VARIANTS.length; j++) {
+                var aFirst = Math.random() < 0.5;
+                pairs.push({
+                  a: aFirst ? VARIANTS[i] : VARIANTS[j],
+                  b: aFirst ? VARIANTS[j] : VARIANTS[i],
+                  // position_a_on_screen — neutralise position bias
+                  position_a_on_screen: Math.random() < 0.5 ? 'left' : 'right',
+                });
+              }
+            }
+            return fisherYates(pairs);
+          }
+
+          var pairQueue = buildPairs();
+          var pairIdx = 0;
+
+          // Pair state — which axes have been voted on for the current pair?
+          var pairState = { appeal: null, transport: null };
+
+          var leftCard = document.querySelector('.exp-card[data-side="left"]');
+          var rightCard = document.querySelector('.exp-card[data-side="right"]');
+          var leftImg = leftCard ? leftCard.querySelector('.exp-card-img') : null;
+          var rightImg = rightCard ? rightCard.querySelector('.exp-card-img') : null;
+          var leftName = leftCard ? leftCard.querySelector('.exp-card-name') : null;
+          var rightName = rightCard ? rightCard.querySelector('.exp-card-name') : null;
+
+          function currentPair() {
+            if (pairIdx >= pairQueue.length) return null;
+            return pairQueue[pairIdx];
+          }
+
+          // For a given side ('left'|'right') return the variant displayed
+          // there given the pair's position_a_on_screen.
+          function variantForSide(pair, side) {
+            if (!pair) return null;
+            var aSide = pair.position_a_on_screen;
+            if (side === aSide) return pair.a;
+            return pair.b;
+          }
+
+          function showPair() {
+            var pair = currentPair();
+            if (!pair) {
+              // All pairs voted; render a friendly "done" state.
+              if (leftImg) leftImg.src = '';
+              if (rightImg) rightImg.src = '';
+              if (leftName) leftName.textContent = 'Fertig.';
+              if (rightName) rightName.textContent = 'Klick Export JSON.';
+              return;
+            }
+            var lv = variantForSide(pair, 'left');
+            var rv = variantForSide(pair, 'right');
+            if (leftImg) {
+              leftImg.src = lv.thumb;
+              leftImg.alt = lv.name;
+              leftImg.dataset.hires = lv.hires;
+              leftImg.dataset.label = lv.name;
+            }
+            if (rightImg) {
+              rightImg.src = rv.thumb;
+              rightImg.alt = rv.name;
+              rightImg.dataset.hires = rv.hires;
+              rightImg.dataset.label = rv.name;
+            }
+            if (leftName) leftName.textContent = lv.name + (lv.wildcard ? ' · WILDCARD' : '');
+            if (rightName) rightName.textContent = rv.name + (rv.wildcard ? ' · WILDCARD' : '');
+            pairState = { appeal: null, transport: null };
+          }
+
+          function recordVote(axis, winnerSlug) {
+            var pair = currentPair();
+            if (!pair) return;
+            session.votes.push({
+              pair: { a: pair.a.slug, b: pair.b.slug },
+              axis: axis,
+              winner: winnerSlug,
+              position_a_on_screen: pair.position_a_on_screen,
+              timestamp: nowISO(),
+            });
+            pairState[axis] = winnerSlug;
+            saveSession(session);
+            advanceIfBothAxesDone();
+            updateProgress();
+          }
+
+          function advanceIfBothAxesDone() {
+            if (pairState.appeal !== null && pairState.transport !== null) {
+              pairIdx += 1;
+              showPair();
+            }
+          }
+
+          function skipPair() {
+            var pair = currentPair();
+            if (!pair) return;
+            ['appeal', 'transport'].forEach(function (axis) {
+              if (pairState[axis] !== null) return;
+              session.votes.push({
+                pair: { a: pair.a.slug, b: pair.b.slug },
+                axis: axis,
+                winner: 'skip',
+                position_a_on_screen: pair.position_a_on_screen,
+                timestamp: nowISO(),
+              });
+            });
+            saveSession(session);
+            pairIdx += 1;
+            showPair();
+            updateProgress();
+          }
+
+          function updateProgress() {
+            var totalDual = TOTAL_PAIRS;
+            var appealCount = 0;
+            var transportCount = 0;
+            session.votes.forEach(function (v) {
+              if (v.axis === 'appeal') appealCount++;
+              else if (v.axis === 'transport') transportCount++;
+            });
+            var pa = document.getElementById('exp-progress-appeal');
+            var pt = document.getElementById('exp-progress-transport');
+            var la = document.getElementById('exp-progress-appeal-label');
+            var lt = document.getElementById('exp-progress-transport-label');
+            if (pa) { pa.max = totalDual; pa.value = appealCount; }
+            if (pt) { pt.max = totalDual; pt.value = transportCount; }
+            if (la) la.textContent = appealCount + ' / ' + totalDual;
+            if (lt) lt.textContent = transportCount + ' / ' + totalDual;
+          }
+
+          // Vote button handlers.
+          document.querySelectorAll('.exp-vote-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var pair = currentPair();
+              if (!pair) return;
+              var side = btn.dataset.side;
+              var axis = btn.dataset.axis;
+              var v = variantForSide(pair, side);
+              if (v) recordVote(axis, v.slug);
+            });
+          });
+          var skipBtn = document.getElementById('exp-skip');
+          if (skipBtn) skipBtn.addEventListener('click', skipPair);
+
+          // Card image click -> lightbox.
+          [leftCard, rightCard].forEach(function (card) {
+            if (!card) return;
+            var img = card.querySelector('.exp-card-img');
+            if (!img) return;
+            img.addEventListener('click', function () {
+              if (img.dataset.hires) openLightbox(img.dataset.hires, img.dataset.label || '');
+            });
+          });
+
+          // ---- Mode toggling ----
+          var directSection = document.getElementById('exp-direct');
+          var versusSection = document.getElementById('exp-versus');
+          function setMode(mode) {
+            if (directSection) directSection.style.display = mode === 'direct' ? 'block' : 'none';
+            if (versusSection) versusSection.style.display = mode === 'versus' ? 'block' : 'none';
+            document.body.dataset.expMode = mode;
+            if (mode === 'versus') {
+              showPair();
+              updateProgress();
+            }
+          }
+          var directBtn = document.getElementById('exp-mode-direct');
+          var versusBtn = document.getElementById('exp-mode-versus');
+          if (directBtn) directBtn.addEventListener('click', function () { setMode('direct'); });
+          if (versusBtn) versusBtn.addEventListener('click', function () { setMode('versus'); });
+
+          // ---- Keyboard ----
+          document.addEventListener('keydown', function (ev) {
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+            if (document.body.dataset.expMode !== 'versus') {
+              if (ev.key.toLowerCase() === 'e') doExport();
+              return;
+            }
+            var pair = currentPair();
+            if (!pair) {
+              if (ev.key.toLowerCase() === 'e') doExport();
+              return;
+            }
+            switch (ev.key.toLowerCase()) {
+              case 'q':
+                recordVote('appeal', variantForSide(pair, 'left').slug); ev.preventDefault(); break;
+              case 'w':
+                recordVote('appeal', variantForSide(pair, 'right').slug); ev.preventDefault(); break;
+              case 'o':
+                recordVote('transport', variantForSide(pair, 'left').slug); ev.preventDefault(); break;
+              case 'p':
+                recordVote('transport', variantForSide(pair, 'right').slug); ev.preventDefault(); break;
+              case ' ':
+                skipPair(); ev.preventDefault(); break;
+              case 'e':
+                doExport(); break;
+            }
+          });
+
+          // ---- Export ----
+          // Aggregator math duplicated client-side — must match
+          // tools/experiment_results.py exactly.
+          function isSkip(w) { return w === null || w === 'skip'; }
+          function winsRatio(votes, axis) {
+            var acc = {};
+            votes.forEach(function (v) {
+              if (v.axis !== axis) return;
+              if (isSkip(v.winner)) return;
+              var a = v.pair.a, b = v.pair.b, w = v.winner;
+              if (w !== a && w !== b) return;
+              if (!acc[a]) acc[a] = { wins: 0, plays: 0 };
+              if (!acc[b]) acc[b] = { wins: 0, plays: 0 };
+              acc[a].plays += 1;
+              acc[b].plays += 1;
+              acc[w].wins += 1;
+            });
+            return acc;
+          }
+          function ranking(wins) {
+            return Object.keys(wins).sort(function (x, y) {
+              var rx = wins[x].plays ? wins[x].wins / wins[x].plays : 0;
+              var ry = wins[y].plays ? wins[y].wins / wins[y].plays : 0;
+              if (rx !== ry) return ry - rx;
+              if (wins[x].plays !== wins[y].plays) return wins[y].plays - wins[x].plays;
+              return x < y ? -1 : (x > y ? 1 : 0);
+            });
+          }
+          function disagreementIndex(votes) {
+            var pairMap = {};
+            votes.forEach(function (v) {
+              if (isSkip(v.winner)) return;
+              var key = [v.pair.a, v.pair.b].sort().join('||');
+              if (!pairMap[key]) pairMap[key] = {};
+              pairMap[key][v.axis] = v.winner;
+            });
+            var dual = 0, disagree = 0;
+            Object.keys(pairMap).forEach(function (k) {
+              var p = pairMap[k];
+              if (p.appeal === undefined || p.transport === undefined) return;
+              dual += 1;
+              if (p.appeal !== p.transport) disagree += 1;
+            });
+            return dual ? disagree / dual : 0;
+          }
+          function spearman(rA, rB) {
+            var common = rA.filter(function (s) { return rB.indexOf(s) >= 0; });
+            if (common.length < 2) return 0;
+            var posA = {}, posB = {};
+            rA.forEach(function (s, i) { if (rB.indexOf(s) >= 0) posA[s] = i; });
+            rB.forEach(function (s, i) { if (rA.indexOf(s) >= 0) posB[s] = i; });
+            var xs = common.map(function (s) { return posA[s]; });
+            var ys = common.map(function (s) { return posB[s]; });
+            var n = xs.length;
+            var mx = xs.reduce(function (a, b) { return a + b; }, 0) / n;
+            var my = ys.reduce(function (a, b) { return a + b; }, 0) / n;
+            var num = 0, dx2 = 0, dy2 = 0;
+            for (var i = 0; i < n; i++) {
+              num += (xs[i] - mx) * (ys[i] - my);
+              dx2 += (xs[i] - mx) * (xs[i] - mx);
+              dy2 += (ys[i] - my) * (ys[i] - my);
+            }
+            return (dx2 && dy2) ? num / Math.sqrt(dx2 * dy2) : 0;
+          }
+
+          function doExport() {
+            session.session_end = nowISO();
+            session.rater = (raterInput && raterInput.value) || session.rater || 'anonymous';
+            var wa = winsRatio(session.votes, 'appeal');
+            var wt = winsRatio(session.votes, 'transport');
+            var ra = ranking(wa);
+            var rt = ranking(wt);
+            var di = disagreementIndex(session.votes);
+            var sp = spearman(ra, rt);
+            var payload = {
+              experiment_id: EXP_ID,
+              rater: session.rater,
+              session_start: session.session_start,
+              session_end: session.session_end,
+              votes: session.votes,
+              direct_picks: session.direct_picks || [],
+              wins_ratio_appeal: wa,
+              wins_ratio_transport: wt,
+              ranking_appeal: ra,
+              ranking_transport: rt,
+              disagreement_index: Number(di.toFixed(6)),
+              spearman_appeal_transport: Number(sp.toFixed(6)),
+            };
+            var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            var href = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = href;
+            var ts = new Date().toISOString().replace(/[:.]/g, '-');
+            a.download = (session.rater || 'anonymous') + '-' + EXP_ID + '-' + ts + '.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(href);
+          }
+          var exportBtn = document.getElementById('exp-export');
+          if (exportBtn) exportBtn.addEventListener('click', doExport);
+
+          // ---- Lightbox ----
+          var lightbox = document.getElementById('exp-lightbox');
+          var lightImg = document.getElementById('exp-lightbox-image');
+          var lightLabel = document.getElementById('exp-lightbox-label');
+          var lightClose = document.getElementById('exp-lightbox-close');
+          function openLightbox(href, text) {
+            if (!lightbox || !lightImg || !lightLabel) return;
+            lightImg.src = href;
+            lightImg.alt = text || '';
+            lightLabel.textContent = text || '';
+            lightbox.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+          }
+          function closeLightbox() {
+            if (!lightbox || !lightImg) return;
+            lightbox.style.display = 'none';
+            lightImg.src = '';
+            document.body.style.overflow = '';
+          }
+          if (lightbox) {
+            lightbox.addEventListener('click', function (ev) {
+              if (ev.target === lightbox || ev.target === lightImg) closeLightbox();
+            });
+          }
+          if (lightClose) lightClose.addEventListener('click', closeLightbox);
+          document.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Escape' && lightbox && lightbox.style.display === 'block') closeLightbox();
+          });
+
+          // ---- Boot ----
+          renderDirect();
+          updateProgress();
+          setMode('direct');
+        })();
+      </script>
+    </>
+  )}
 </Base>
