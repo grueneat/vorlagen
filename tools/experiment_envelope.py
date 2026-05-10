@@ -94,11 +94,15 @@ def _read_yaml(path: Path) -> dict[str, Any]:
 def _shallow_merge(parent: dict[str, Any], child: dict[str, Any]) -> dict[str, Any]:
     """Ansible-style shallow override on top-level keys.
 
-    Child wins on every key it sets. For ``layer1`` we merge inner keys
-    so a child can override a single threshold without re-listing all 22.
-    ``brand_rules`` and ``relax`` follow override semantics: a non-empty
-    child list replaces the parent's list verbatim (so a per-experiment
-    file can either re-list explicitly or inherit by omission).
+    Specifics:
+    - ``layer1``: inner-key merge so a child overrides a single threshold.
+    - ``brand_rules``: non-empty child replaces (re-list explicitly OR
+      inherit by omission). Empty child = inherit.
+    - ``relax``: child entries are APPENDED to parent's. This is intentional —
+      production-mirror relaxations in the parent (`falzflyer-default.yml`)
+      must remain when a per-experiment file declares extra tested-axis
+      relaxations. Dedup by id; child rationale wins on overlap.
+    - all other keys: child wins.
     """
     merged: dict[str, Any] = dict(parent)
     for key, val in child.items():
@@ -106,9 +110,17 @@ def _shallow_merge(parent: dict[str, Any], child: dict[str, Any]) -> dict[str, A
             merged_layer1 = dict(parent["layer1"])
             merged_layer1.update(val)
             merged["layer1"] = merged_layer1
-        elif key in ("brand_rules", "relax") and not val:
-            # Empty child list is inherit-only, not "clear the parent".
+        elif key == "brand_rules" and not val:
             continue
+        elif key == "relax":
+            parent_relax = list(parent.get("relax", []) or [])
+            child_relax = list(val or [])
+            by_id: dict[str, dict] = {}
+            for entry in parent_relax:
+                by_id[entry["id"]] = entry
+            for entry in child_relax:
+                by_id[entry["id"]] = entry
+            merged["relax"] = list(by_id.values())
         else:
             merged[key] = val
     return merged

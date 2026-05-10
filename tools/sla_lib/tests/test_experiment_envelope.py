@@ -61,9 +61,17 @@ class LoadEnvelopeTest(unittest.TestCase):
                 encoding="utf-8",
             )
             env = ee.load_envelope(exp_dir)
-        self.assertEqual(len(env.relax), 1)
-        self.assertEqual(env.relax[0][0], "brand:band_consistency")
+        # Child relax appends to parent's; parent already has 5 entries
+        # (production-mirror) so child's 1 entry yields 6 OR overrides if id
+        # collides. brand:band_consistency exists in parent so child override
+        # wins; total stays at 5 because the id collides with the parent's
+        # production-mirror entry.
+        relax_ids = env.relax_ids()
+        self.assertIn("brand:band_consistency", relax_ids)
         self.assertIn("brand:band_consistency", env.brand_rules)
+        # Child's rationale must win on collision.
+        rationale = dict(env.relax)["brand:band_consistency"]
+        self.assertEqual(rationale, "test")
 
     def test_load_envelope_validation_failure(self):
         """Missing tested_axis triggers EnvelopeValidationError."""
