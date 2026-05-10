@@ -62,9 +62,7 @@ LAYER_FALZ = 3
 INJECT_MAP: dict[str, str] = {
     "P1 Kandidat-Portrait":  "portrait_maria",
     "P4 Thema 1 — Photo":    "themen_klimaschutz_solar",
-    "P4 Thema 2 — Photo":    "themen_soziales_kaffeehaus",
     "P5 Thema 3 — Photo":    "themen_bildung_volksschule",
-    "P5 Thema 4 — Photo":    "themen_wirtschaft_handwerk",
 }
 
 
@@ -285,6 +283,22 @@ def _add_styles(doc):
         language="de",
         linesp_mode=0,
     ))
+    # NEW Issue #27: Schlagworte — short impactful slogans on the
+    # P2 Hellgrün backing (replaces the long Teaser-Body paragraph
+    # per user feedback "mehr schlagworte und nicht wirklich text").
+    # Bold Dunkelgrün on Hellgrün for high contrast.
+    doc.add_para_style(ParaStyle(
+        name="falzflyer/schlagwort",
+        font="Gotham Narrow Bold",
+        fontsize=18,
+        linesp=22,
+        align=1,
+        fcolor="Dunkelgrün",
+        language="de",
+        linesp_mode=0,
+        space_before_pt=8,
+        space_after_pt=8,
+    ))
     # NEW V1 (C): Top-Title — Caps Bold White 11pt for P2/P3/P4/P5/P6
     # Top-Band tags (left-aligned within band per spec L76-80).
     doc.add_para_style(ParaStyle(
@@ -337,23 +351,45 @@ def _add_front(doc, page0):
     # tools/sla_lib/builder/brand_constraints.py (already trim-konsistent);
     # V1 logo dims are 38×22 (P1 cover) and 38×34 (P6 footer) — both match Soll.
     # See shared/brand/DESIGN-SYSTEM-BRIEF.md §"Logo Print-Soll".
-    logo_brand = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-dunkel.png"
-    logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
-    if logo_weiss.exists():
-        lc_data, lc_ext = pack_inline_image(logo_weiss.read_bytes(), "png")
-        page0.add(ImageFrame(
-            x_mm=6, y_mm=4, w_mm=38, h_mm=22,
-            inline_image_data=lc_data, inline_image_ext=lc_ext,
-            scale_type=0, ratio=1,
-            layer=LAYER_BILDER,
-            anname="P1 Logo Grüne (weiss)",
-        ))
-
-    # Kandidat-Portrait — V1: y=28->34, h=105->100 (more breathing under
-    # Top-Band; gives Name-Card more room). Frame dims only — build_preview
-    # injects via INJECT_MAP at LIVE frame dims (post-#24 idiom).
+    # Issue #27: switch from gruene-weiss.png (3.5:1 wordmark "Die Grünen"
+    # — letterboxes inside square-ish frames) to gruene-logo-bund-weiss.png
+    # (1.12:1 G-brushstroke, white version of the brand-primary "Bund"
+    # logo). The bund logo is the actual brand mark per
+    # DESIGN-SYSTEM-BRIEF.md §"Brand logos: G-brushstroke (primary)";
+    # the wordmark was a fallback that read as "just text" at gallery
+    # render dpi. Frame stays 38×34 to honour Print-Soll (3M = 37.8 mm
+    # ≈ 38 mm largest dim) and matches the bund aspect.
+    # Issue #27: hard-required asset (no `.exists()` guard) so missing
+    # asset fails the build loud — guarantees consistent renders.
+    logo_bund_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-weiss.png"
+    if not logo_bund_weiss.exists():
+        raise FileNotFoundError(
+            f"Required brand asset missing: {logo_bund_weiss}"
+        )
+    lc_data, lc_ext = pack_inline_image(
+        logo_bund_weiss.read_bytes(), "png"
+    )
+    # Width 38 mm = 3M Print-Soll (M=12.6 for DIN-lang trim 297×210);
+    # height 30 mm fits inside the 31 mm-tall Top-Band. With bund logo
+    # aspect 1.12:1, the brushstroke G renders at 33.6×30 mm centered
+    # inside the 38×30 frame — clearly visible (vs the 7.6×11 G inside
+    # the gruene-weiss.png wordmark which read as "just Die Grünen text").
     page0.add(ImageFrame(
-        x_mm=6, y_mm=34, w_mm=87, h_mm=100,
+        x_mm=6, y_mm=-2, w_mm=38, h_mm=30,
+        inline_image_data=lc_data, inline_image_ext=lc_ext,
+        scale_type=0, ratio=1,
+        layer=LAYER_BILDER,
+        anname="P1 Logo Grüne (weiss)",
+    ))
+
+    # Kandidat-Portrait — Issue #27: extended to fill the entire panel
+    # width (x=-3 outer-bleed left → 99 fold-right; w=102) and the full
+    # vertical extent between Top-Band end (y=28) and Name-Card start
+    # (y=134). User-cited "profile image still does not fill the whole
+    # width" fix. Frame dims only — build_preview injects via INJECT_MAP
+    # at LIVE frame dims (post-#24 idiom).
+    page0.add(ImageFrame(
+        x_mm=-3, y_mm=28, w_mm=102, h_mm=106,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
@@ -430,21 +466,27 @@ def _add_front(doc, page0):
         anname="P2 Body-Backing",
     ))
 
-    # P2 Teaser-Body — V1: x 105->113 (inset +8mm for breathing inside
-    # Hellgrün card), y 44->72, w 87->73, h 130 (V1 style: fcolor=White
-    # mutation; align=0 KEEP redaktioneller).
+    # P2 Teaser-Body — Issue #27: replaces the long lorem-ipsum-ish
+    # body paragraph with five short Schlagworte on the Hellgrün
+    # backing. User feedback: "mehr schlagworte und nicht wirklich
+    # text". Each slogan is its own paragraph; the schlagwort style
+    # carries top/bottom space + fontsize 18 Dunkelgrün for impact.
     page0.add(TextFrame(
-        x_mm=113, y_mm=72, w_mm=73, h_mm=130,
+        x_mm=105, y_mm=72, w_mm=87, h_mm=130,
         layer=LAYER_TEXT,
-        style="falzflyer/teaser-body",
-        runs=[Run(
-            text=("Mödling hat einen Klimaplan — er muss umgesetzt werden. "
-                  "Ich bringe Erfahrung aus 10 Jahren Energiewende-Beratung mit "
-                  "und will sie für unsere Gemeinde einsetzen.\n\n"
-                  "Drei Schwerpunkte: leistbares Wohnen, lokale Wirtschaft, "
-                  "Bildung vor Ort."),
-            paragraph_style="falzflyer/teaser-body",
-        )],
+        style="falzflyer/schlagwort",
+        runs=[
+            Run(text="Klimaplan jetzt.", separator="para",
+                paragraph_style="falzflyer/schlagwort"),
+            Run(text="Leistbares Wohnen.", separator="para",
+                paragraph_style="falzflyer/schlagwort"),
+            Run(text="Bildung vor Ort.", separator="para",
+                paragraph_style="falzflyer/schlagwort"),
+            Run(text="Lokale Wirtschaft.", separator="para",
+                paragraph_style="falzflyer/schlagwort"),
+            Run(text="Bürgernähe statt Klüngel.",
+                paragraph_style="falzflyer/schlagwort"),
+        ],
         anname="P2 Teaser-Body",
     ))
 
@@ -540,196 +582,112 @@ def _add_back(doc, page1):
     # NEW V1: P4 Top-Band — outer panel, +3mm bleed extension left.
     page1.add(_top_band(3))
 
-    # NEW V1: P4 Top-Title "Themen 1·2" (middle-dot U+00B7 literal)
+    # Issue #27: P4 redesigned — ONE thema per panel (was two with
+    # Trenner). Full-bleed photo + longer explanatory body. User
+    # feedback: "weniger Bilder dafür längere Texte, ein Bild pro
+    # Spalte mit längerem Text der ein Thema erklärt".
     page1.add(TextFrame(
         x_mm=6, y_mm=8, w_mm=87, h_mm=14,
         layer=LAYER_TEXT, style="falzflyer/top-title",
-        runs=[Run(text="Themen 1·2",
+        runs=[Run(text="Hauptthema",
                   paragraph_style="falzflyer/top-title")],
         anname="P4 Top-Title",
     ))
 
-    # NEW V1: P4 Thema 1 Eyebrow + Headline + Photo (h 24->44 = 1.5:1
-    # native aspect; closes today's halb-leer Streifen).
     page1.add(TextFrame(
         x_mm=6, y_mm=38, w_mm=87, h_mm=6,
         layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
-        runs=[Run(text="THEMA 01",
+        runs=[Run(text="THEMA · KLIMASCHUTZ",
                   paragraph_style="falzflyer/themen-eyebrow")],
         anname="P4 Thema 1 — Eyebrow",
     ))
     page1.add(TextFrame(
-        x_mm=6, y_mm=46, w_mm=87, h_mm=14,
+        x_mm=6, y_mm=46, w_mm=87, h_mm=20,
         layer=LAYER_TEXT, style="falzflyer/thema-headline",
-        runs=[Run(text="Klimaplan umsetzen",
+        runs=[Run(text="Klimaplan Mödling. Jetzt.",
                   paragraph_style="falzflyer/thema-headline")],
         anname="P4 Thema 1 — Headline",
     ))
+    # Full-bleed photo: P4 outer-left panel, x=-3 (left bleed) to x=99
+    # (Falz line). Photo "fills the whole width" per user feedback.
     page1.add(ImageFrame(
-        x_mm=6, y_mm=62, w_mm=87, h_mm=44,
+        x_mm=-3, y_mm=70, w_mm=102, h_mm=72,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 1 — Photo",
     ))
-
-    # NEW V1: Thema 1·2 Trenner — 3mm Hellgrün strip dividing the two
-    # themen sub-layouts.
-    page1.add(Polygon(
-        x_mm=-3, y_mm=108, w_mm=105, h_mm=3,
-        fill="Hellgrün",
-        layer=LAYER_HINTERGRUND,
-        anname="P4 Thema 1·2 Trenner",
-    ))
-
-    # P4 Thema 1 Body — V1 mutated style (align=1, 10pt, 13 linesp)
+    # Longer explanatory body (replaces the 3-clause slogan list).
     page1.add(TextFrame(
-        x_mm=6, y_mm=114, w_mm=87, h_mm=26,
+        x_mm=6, y_mm=148, w_mm=87, h_mm=60,
         layer=LAYER_TEXT, style="falzflyer/thema-body",
         runs=[Run(
-            text=("Solar auf jedes Gemeindedach. "
-                  "Heizungstausch fördern. "
-                  "Öffis verdoppeln."),
+            text=("Mödling kann Vorreiter werden. Konkret heißt das: "
+                  "Solar auf jedes Gemeindedach, Heizungstausch "
+                  "fördern, öffentlichen Verkehr verdoppeln. Wir "
+                  "gehen voran mit klaren Zielen — 50 % Erneuerbare "
+                  "bis 2030, ein Klimaticket für die Region, und "
+                  "keine neuen Erdgas-Anschlüsse. Klimaschutz ist "
+                  "Wirtschaftspolitik."),
             paragraph_style="falzflyer/thema-body",
         )],
         anname="P4 Thema 1 — Body",
-    ))
-
-    # P4 Thema 2 Eyebrow + Headline + Photo + Body (Issue #26: Body
-    # restored — user-cited "Thema 02 has no text at all" fix; the
-    # 4-thema panel now has parallel structure across all N).
-    # Photo shrunk h=44->24 to make room for the Body below within the
-    # 210mm panel height. Asymmetric photo size vs Thema 1 is the
-    # trade-off for the symmetric text content.
-    page1.add(TextFrame(
-        x_mm=6, y_mm=144, w_mm=87, h_mm=6,
-        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
-        runs=[Run(text="THEMA 02",
-                  paragraph_style="falzflyer/themen-eyebrow")],
-        anname="P4 Thema 2 — Eyebrow",
-    ))
-    page1.add(TextFrame(
-        x_mm=6, y_mm=152, w_mm=87, h_mm=14,
-        layer=LAYER_TEXT, style="falzflyer/thema-headline",
-        runs=[Run(text="Leistbares Wohnen",
-                  paragraph_style="falzflyer/thema-headline")],
-        anname="P4 Thema 2 — Headline",
-    ))
-    page1.add(ImageFrame(
-        x_mm=6, y_mm=168, w_mm=87, h_mm=24,
-        inline_image_data=None,
-        inline_image_ext=None,
-        scale_type=0, ratio=1,
-        layer=LAYER_BILDER,
-        anname="P4 Thema 2 — Photo",
-    ))
-    page1.add(TextFrame(
-        x_mm=6, y_mm=196, w_mm=87, h_mm=14,
-        layer=LAYER_TEXT, style="falzflyer/thema-body",
-        runs=[Run(
-            text=("Gemeindewohnungen ausbauen. "
-                  "Mietpreisbremse durchsetzen. "
-                  "Sanieren statt versiegeln."),
-            paragraph_style="falzflyer/thema-body",
-        )],
-        anname="P4 Thema 2 — Body",
     ))
 
     # ---- Panel 5 — Themen 3+4 (x=99..198) — V1 mirrors P4 -----
     # NEW V1: P5 Top-Band — inner panel, flush both folds.
     page1.add(_top_band(4))
 
-    # NEW V1: P5 Top-Title "Themen 3·4" (middle-dot U+00B7 literal)
+    # Issue #27: P5 redesigned — ONE thema per panel (was two with
+    # Trenner). Mirror of P4's structure. Full-bleed photo on the
+    # inner-middle panel x=99..198 (no bleed; both edges are Falz).
     page1.add(TextFrame(
         x_mm=105, y_mm=8, w_mm=87, h_mm=14,
         layer=LAYER_TEXT, style="falzflyer/top-title",
-        runs=[Run(text="Themen 3·4",
+        runs=[Run(text="Hauptthema",
                   paragraph_style="falzflyer/top-title")],
         anname="P5 Top-Title",
     ))
 
-    # P5 Thema 3 Eyebrow + Headline + Photo (h=44 V1)
     page1.add(TextFrame(
         x_mm=105, y_mm=38, w_mm=87, h_mm=6,
         layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
-        runs=[Run(text="THEMA 03",
+        runs=[Run(text="THEMA · BILDUNG",
                   paragraph_style="falzflyer/themen-eyebrow")],
         anname="P5 Thema 3 — Eyebrow",
     ))
     page1.add(TextFrame(
-        x_mm=105, y_mm=46, w_mm=87, h_mm=14,
+        x_mm=105, y_mm=46, w_mm=87, h_mm=20,
         layer=LAYER_TEXT, style="falzflyer/thema-headline",
-        runs=[Run(text="Bildung vor Ort",
+        runs=[Run(text="Bildung vor Ort. Stark.",
                   paragraph_style="falzflyer/thema-headline")],
         anname="P5 Thema 3 — Headline",
     ))
+    # Full-bleed photo: P5 inner-middle panel, x=99 (Falz left) to
+    # x=198 (Falz right). No bleed extension (both edges are folds).
     page1.add(ImageFrame(
-        x_mm=105, y_mm=62, w_mm=87, h_mm=44,
+        x_mm=99, y_mm=70, w_mm=99, h_mm=72,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P5 Thema 3 — Photo",
     ))
-
-    # NEW V1: Thema 3·4 Trenner — 3mm Hellgrün strip.
-    page1.add(Polygon(
-        x_mm=99, y_mm=108, w_mm=99, h_mm=3,
-        fill="Hellgrün",
-        layer=LAYER_HINTERGRUND,
-        anname="P5 Thema 3·4 Trenner",
-    ))
-
-    # P5 Thema 3 Body — V1 mutated style
     page1.add(TextFrame(
-        x_mm=105, y_mm=114, w_mm=87, h_mm=26,
+        x_mm=105, y_mm=148, w_mm=87, h_mm=60,
         layer=LAYER_TEXT, style="falzflyer/thema-body",
         runs=[Run(
-            text=("Volksschulen ausbauen. "
-                  "Nachmittagsbetreuung gratis. "
-                  "Schulwege sicher."),
+            text=("Unsere Kinder verdienen die besten "
+                  "Voraussetzungen. Wir bauen die Volksschulen aus, "
+                  "machen die Nachmittagsbetreuung gratis und "
+                  "sichern jeden Schulweg. Lehrkräfte werden besser "
+                  "bezahlt — sie sind das Fundament. "
+                  "Erwachsenenbildung kommt mit Sprach- und "
+                  "Digitalkursen in jeden Bezirk."),
             paragraph_style="falzflyer/thema-body",
         )],
         anname="P5 Thema 3 — Body",
-    ))
-
-    # P5 Thema 4 Eyebrow + Headline + Photo + Body (Issue #26: Body
-    # added — user-cited "Thema 04 has no text at all" fix). Photo
-    # shrunk h=44->24 to make room for the Body. Mirrors the P4
-    # Thema 2 layout for cross-panel consistency.
-    page1.add(TextFrame(
-        x_mm=105, y_mm=144, w_mm=87, h_mm=6,
-        layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
-        runs=[Run(text="THEMA 04",
-                  paragraph_style="falzflyer/themen-eyebrow")],
-        anname="P5 Thema 4 — Eyebrow",
-    ))
-    page1.add(TextFrame(
-        x_mm=105, y_mm=152, w_mm=87, h_mm=14,
-        layer=LAYER_TEXT, style="falzflyer/thema-headline",
-        runs=[Run(text="Lokale Wirtschaft",
-                  paragraph_style="falzflyer/thema-headline")],
-        anname="P5 Thema 4 — Headline",
-    ))
-    page1.add(ImageFrame(
-        x_mm=105, y_mm=168, w_mm=87, h_mm=24,
-        inline_image_data=None,
-        inline_image_ext=None,
-        scale_type=0, ratio=1,
-        layer=LAYER_BILDER,
-        anname="P5 Thema 4 — Photo",
-    ))
-    page1.add(TextFrame(
-        x_mm=105, y_mm=196, w_mm=87, h_mm=14,
-        layer=LAYER_TEXT, style="falzflyer/thema-body",
-        runs=[Run(
-            text=("Regionale Betriebe stärken. "
-                  "Direktvermarktung fördern. "
-                  "Lehrlinge ausbilden."),
-            paragraph_style="falzflyer/thema-body",
-        )],
-        anname="P5 Thema 4 — Body",
     ))
 
     # ---- Panel 6 — Kontakt + Impressum (x=198..297) — V1 vollflächig -----
@@ -804,21 +762,26 @@ def _add_back(doc, page1):
         anname="P6 Sprechtag",
     ))
 
-    # QR codes (Issue #11): two slots, qr-mitmachen + qr-termine. Conditional
-    # inject — empty slots in fresh checkouts. V1: w 30->24, x repositioned
-    # to mirror around AXIS_P6_CENTER_X=247.5.
+    # QR codes (Issue #11): two slots, qr-mitmachen + qr-termine. V1:
+    # w 30->24, x repositioned to mirror around AXIS_P6_CENTER_X=247.5.
+    # Issue #27: hard-required (no `.exists()` guard) so missing asset
+    # fails the build loud — guarantees consistent renders.
     qr_mitmachen_path = HERE / "samples" / "qr-mitmachen.png"
     qr_termine_path = HERE / "samples" / "qr-termine.png"
-    qr_m_data, qr_m_ext = (None, None)
-    qr_t_data, qr_t_ext = (None, None)
-    if qr_mitmachen_path.exists():
-        qr_m_data, qr_m_ext = pack_inline_image(
-            qr_mitmachen_path.read_bytes(), "png"
+    if not qr_mitmachen_path.exists():
+        raise FileNotFoundError(
+            f"Required QR asset missing: {qr_mitmachen_path}"
         )
-    if qr_termine_path.exists():
-        qr_t_data, qr_t_ext = pack_inline_image(
-            qr_termine_path.read_bytes(), "png"
+    if not qr_termine_path.exists():
+        raise FileNotFoundError(
+            f"Required QR asset missing: {qr_termine_path}"
         )
+    qr_m_data, qr_m_ext = pack_inline_image(
+        qr_mitmachen_path.read_bytes(), "png"
+    )
+    qr_t_data, qr_t_ext = pack_inline_image(
+        qr_termine_path.read_bytes(), "png"
+    )
     page1.add(ImageFrame(
         x_mm=218, y_mm=128, w_mm=24, h_mm=24,
         inline_image_data=qr_m_data,
@@ -855,19 +818,29 @@ def _add_back(doc, page1):
         anname="P6 QR-Caption (termine)",
     ))
 
-    # P6 Logo Grüne (weiss). V1: 38×34 mm trim-konform 3M = 37.8 mm soll,
-    # white wordmark on Dunkelgrün vollflächig P6, centered around
-    # AXIS_P6_CENTER_X = 247.5 → x = 247.5 - 38/2 = 228.5 ≈ 228 mm.
-    logo_weiss_p6 = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
-    if logo_weiss_p6.exists():
-        lc6_data, lc6_ext = pack_inline_image(logo_weiss_p6.read_bytes(), "png")
-        page1.add(ImageFrame(
-            x_mm=228, y_mm=168, w_mm=38, h_mm=34,
-            inline_image_data=lc6_data, inline_image_ext=lc6_ext,
-            scale_type=0, ratio=1,
-            layer=LAYER_BILDER,
-            anname="P6 Logo Grüne (weiss)",
-        ))
+    # Issue #27: P6 Logo switched from gruene-weiss.png (3.5:1 wordmark)
+    # to gruene-logo-bund-weiss.png (1.12:1 G-brushstroke, white version
+    # of the brand-primary "Bund" logo). Frame 38×34 already matches the
+    # bund aspect (1.12:1) perfectly — so the logo fills the frame at
+    # Print-Soll 3M = 37.8 mm largest dim. The wordmark previously
+    # letterboxed to 38×11 in this frame, leaving 23mm of empty space
+    # below — the user-cited "only the Text Die Grünen, no actual logo"
+    # bug. Centered around AXIS_P6_CENTER_X = 247.5.
+    logo_bund_weiss_p6 = HERE.parents[1] / "shared" / "logos" / "gruene-logo-bund-weiss.png"
+    if not logo_bund_weiss_p6.exists():
+        raise FileNotFoundError(
+            f"Required brand asset missing: {logo_bund_weiss_p6}"
+        )
+    lc6_data, lc6_ext = pack_inline_image(
+        logo_bund_weiss_p6.read_bytes(), "png"
+    )
+    page1.add(ImageFrame(
+        x_mm=228, y_mm=168, w_mm=38, h_mm=34,
+        inline_image_data=lc6_data, inline_image_ext=lc6_ext,
+        scale_type=0, ratio=1,
+        layer=LAYER_BILDER,
+        anname="P6 Logo Grüne (weiss)",
+    ))
 
     # Impressum (V1: h 60->8, y=200, impressum mutated align=1 fcolor=White)
     page1.add(TextFrame(
@@ -1002,42 +975,25 @@ CONSTRAINTS = [
     # ── P3↔P6 grüne-Klammer (vollflächig pair) ──
     same_size("P3 Hintergrund", "P6 Hintergrund", name="gruene_klammer_p3_p6"),
 
-    # ── P4 themen sub-layout mirror (Thema 1 vs 2 within panel) ──
-    # Issue #26: Thema 2 Photo shrunk to make room for restored Body;
-    # Photos no longer same_size between Thema 1 and Thema 2 — they share
-    # x-axis (left/right edges) and width but not height. same_x covers
-    # this without over-constraining vertical extent.
-    same_x("P4 Thema 1 — Eyebrow", "P4 Thema 2 — Eyebrow",
-           name="p4_eyebrow_x"),
-    same_x("P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
-           name="p4_headline_x"),
-    same_x("P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
-           name="p4_photo_x"),
-    same_x("P4 Thema 1 — Body", "P4 Thema 2 — Body",
-           name="p4_body_x"),
-    aligned_below("P4 Thema 1 — Photo", "P4 Thema 1 — Headline", gap_mm=2.0,
-                  name="p4_t1_photo_anchored"),
-
-    # ── P5 themen sub-layout mirror (Thema 3 vs 4 within panel) ──
-    same_x("P5 Thema 3 — Eyebrow", "P5 Thema 4 — Eyebrow",
-           name="p5_eyebrow_x"),
-    same_x("P5 Thema 3 — Headline", "P5 Thema 4 — Headline",
-           name="p5_headline_x"),
-    same_x("P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
-           name="p5_photo_x"),
-    same_x("P5 Thema 3 — Body", "P5 Thema 4 — Body",
-           name="p5_body_x"),
-    aligned_below("P5 Thema 3 — Photo", "P5 Thema 3 — Headline", gap_mm=2.0,
-                  name="p5_t3_photo_anchored"),
+    # ── P4 + P5 single-thema layout (Issue #27) ──
+    # Each panel has ONE thema (Thema 1 on P4, Thema 3 on P5). The
+    # Trenner polygons + Thema 2 + Thema 4 are removed in favour of
+    # a single full-bleed photo + longer explanatory body per panel.
+    # NOTE: aligned_below would require x-axis alignment between the
+    # full-bleed photo (x=-3 / x=99) and the text frames (x=6 /
+    # x=105) — they intentionally don't share x. Use vertical-only
+    # baseline checks via same_y / same_size instead.
 
     # ── Cross-panel themen Headline-y baseline (P4 ↔ P5) ──
-    # All four themen-headlines share their top-y so the eye-flow across
-    # the spread reads horizontally. Replaces the prior cross-panel
-    # photos_size constraint (Photos now vary in height).
     same_y("P4 Thema 1 — Headline", "P5 Thema 3 — Headline",
-           name="cross_panel_t1_t3_headline_y"),
-    same_y("P4 Thema 2 — Headline", "P5 Thema 4 — Headline",
-           name="cross_panel_t2_t4_headline_y"),
+           name="cross_panel_themen_headline_y"),
+    same_y("P4 Thema 1 — Photo", "P5 Thema 3 — Photo",
+           name="cross_panel_themen_photo_y"),
+    same_y("P4 Thema 1 — Body", "P5 Thema 3 — Body",
+           name="cross_panel_themen_body_y"),
+    # ── Cross-panel themen Photo height uniform ──
+    same_size("P4 Thema 1 — Photo", "P5 Thema 3 — Photo",
+              axis="h", name="cross_panel_themen_photo_h_uniform"),
 
     # ── P6 Kontakt 2-Spalten symmetric around AXIS_P6_CENTER_X = 247.5 ──
     # mirrored_x pairs cover row symmetry; same_y baselines + cells_uniform
@@ -1058,8 +1014,7 @@ CONSTRAINTS = [
 
     # ── Style consistency ──
     same_style(
-        "P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
-        "P5 Thema 3 — Headline", "P5 Thema 4 — Headline",
+        "P4 Thema 1 — Headline", "P5 Thema 3 — Headline",
         name="thema_headline_style_consistent",
     ),
     same_style(

@@ -15,7 +15,7 @@ build:
   script: build.py
   output: template.sla
 
-previews_for_sla: bcc87ffc8c11487eb0c07d4c253386259e40838d61e535a4a10b6348327859f3
+previews_for_sla: af443213101618b58a2fbeb3054b9931db918e8a4a69e412aabde13da49ab30e
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-

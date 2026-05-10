@@ -224,16 +224,19 @@ def build_doc() -> Document:
 
     # Logo (white) on Brand-Bar — V1 (#18): 18.9×5.7 mm = 3×M Quickguide-konform.
     logo_weiss = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
-    if logo_weiss.exists():
-        lw_data, lw_ext = pack_inline_image(logo_weiss.read_bytes(), "png")
-        page0.add(ImageFrame(
-            x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
-            inline_image_data=lw_data, inline_image_ext=lw_ext,
-            scale_type=0, ratio=1,
-            local_scale=(0.130, 0.130),
-            layer=LAYER_BILDER,
-            anname="Logo Grüne (weiss, top)",
-        ))
+    if not logo_weiss.exists():
+        raise FileNotFoundError(
+            f"Required brand asset missing: {logo_weiss}"
+        )
+    lw_data, lw_ext = pack_inline_image(logo_weiss.read_bytes(), "png")
+    page0.add(ImageFrame(
+        x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
+        inline_image_data=lw_data, inline_image_ext=lw_ext,
+        scale_type=0, ratio=1,
+        local_scale=(0.130, 0.130),
+        layer=LAYER_BILDER,
+        anname="Logo Grüne (weiss, top)",
+    ))
 
     # V1 (#18): Hellgrün-Akzent — 4 mm strip directly under Brand-Bar (touches
     # at y=14). Reinforces brand stripe across the hole's top approach.
@@ -367,17 +370,16 @@ def build_doc() -> Document:
     ))
 
     # Logo (white) on Dunkelgrün Brand-Bar (back, top) — V1 (#18): mirrors front
-    # logo geometry (18.9×5.7 mm, local_scale 0.130).
-    if logo_weiss.exists():
-        lw_data2, lw_ext2 = pack_inline_image(logo_weiss.read_bytes(), "png")
-        page1.add(ImageFrame(
-            x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
-            inline_image_data=lw_data2, inline_image_ext=lw_ext2,
-            scale_type=0, ratio=1,
-            local_scale=(0.130, 0.130),
-            layer=LAYER_BILDER,
-            anname="Logo Grüne (weiss, back-band)",
-        ))
+    # logo geometry (18.9×5.7 mm, local_scale 0.130). logo_weiss verified above.
+    lw_data2, lw_ext2 = pack_inline_image(logo_weiss.read_bytes(), "png")
+    page1.add(ImageFrame(
+        x_mm=10, y_mm=8, w_mm=18.9, h_mm=5.7,
+        inline_image_data=lw_data2, inline_image_ext=lw_ext2,
+        scale_type=0, ratio=1,
+        local_scale=(0.130, 0.130),
+        layer=LAYER_BILDER,
+        anname="Logo Grüne (weiss, back-band)",
+    ))
 
     # V1 (#18): the iter-3 second back-logo (kurze-Kante 3×M Bund-dark) was
     # removed — see #18 RESEARCH for the double-logo elimination rationale.
@@ -478,9 +480,9 @@ def build_doc() -> Document:
     # QR-back slot (Issue #11) — V1 (#18): x 65→70, y 200→210, w 30→26, h 30→26.
     # 26 mm / 33 modules ≈ 0.79 mm/module — still above D1's 0.5 mm minimum.
     qr_back_path = HERE / "samples" / "qr-back.png"
-    qr_data, qr_ext = (None, None)
-    if qr_back_path.exists():
-        qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
+    if not qr_back_path.exists():
+        raise FileNotFoundError(f"Required QR asset missing: {qr_back_path}")
+    qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
     page1.add(ImageFrame(
         x_mm=70, y_mm=210, w_mm=26, h_mm=26,
         inline_image_data=qr_data,

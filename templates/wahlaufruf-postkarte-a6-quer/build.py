@@ -199,17 +199,20 @@ def build_doc() -> Document:
     # (was 35×10 with local_scale=0.240; now matches `brand:logo_size_3M`).
     # local_scale recomputed: 5.7mm/(118px*72/25.4/300dpi) ≈ 0.130.
     logo_weiss_path = HERE.parents[1] / "shared" / "logos" / "gruene-weiss.png"
-    if logo_weiss_path.exists():
-        lw_data, lw_ext = pack_inline_image(logo_weiss_path.read_bytes(), "png")
-        page0.add(ImageFrame(
-            x_mm=6, y_mm=6, w_mm=18.9, h_mm=5.7,
-            inline_image_data=lw_data,
-            inline_image_ext=lw_ext,
-            scale_type=0, ratio=1,
-            local_scale=(0.130, 0.130),
-            layer=1,
-            anname="Logo Grüne (weiss)",
-        ))
+    if not logo_weiss_path.exists():
+        raise FileNotFoundError(
+            f"Required brand asset missing: {logo_weiss_path}"
+        )
+    lw_data, lw_ext = pack_inline_image(logo_weiss_path.read_bytes(), "png")
+    page0.add(ImageFrame(
+        x_mm=6, y_mm=6, w_mm=18.9, h_mm=5.7,
+        inline_image_data=lw_data,
+        inline_image_ext=lw_ext,
+        scale_type=0, ratio=1,
+        local_scale=(0.130, 0.130),
+        layer=1,
+        anname="Logo Grüne (weiss)",
+    ))
 
     # V1 (Issue #17): Hellgrün halo polygon — must come BEFORE Wahlkreuz on
     # layer=0 so the symbol sits ABOVE it. Locked decision #3: explicit
@@ -293,17 +296,17 @@ def build_doc() -> Document:
     # `logo_back` (locked decision #4: case-INSENSITIVE \bLogo\b brand rule
     # still matches; new annames added by V1 use snake_case). EXPLICIT
     # local_scale=(0.130, 0.130) — default (1.0, 1.0) renders 5.5× scale.
-    if logo_weiss_path.exists():
-        lb_data, lb_ext = pack_inline_image(logo_weiss_path.read_bytes(), "png")
-        page1.add(ImageFrame(
-            x_mm=96, y_mm=8, w_mm=18.9, h_mm=5.7,
-            inline_image_data=lb_data,
-            inline_image_ext=lb_ext,
-            scale_type=0, ratio=1,
-            local_scale=(0.130, 0.130),
-            layer=1,
-            anname="logo_back",
-        ))
+    # logo_weiss_path verified above (front-side load); reuse same path.
+    lb_data, lb_ext = pack_inline_image(logo_weiss_path.read_bytes(), "png")
+    page1.add(ImageFrame(
+        x_mm=96, y_mm=8, w_mm=18.9, h_mm=5.7,
+        inline_image_data=lb_data,
+        inline_image_ext=lb_ext,
+        scale_type=0, ratio=1,
+        local_scale=(0.130, 0.130),
+        layer=1,
+        anname="logo_back",
+    ))
 
     # V1 (Issue #17): 4-Cells loop replaced by 3 W-Frage stacks
     # (Was/Warum/Wann). Each = headline (yellow) + body (white-on-green),
@@ -379,9 +382,9 @@ def build_doc() -> Document:
         anname="qr_label",
     ))
     qr_back_path = HERE / "samples" / "qr-back.png"
-    qr_data, qr_ext = (None, None)
-    if qr_back_path.exists():
-        qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
+    if not qr_back_path.exists():
+        raise FileNotFoundError(f"Required QR asset missing: {qr_back_path}")
+    qr_data, qr_ext = pack_inline_image(qr_back_path.read_bytes(), "png")
     page1.add(ImageFrame(
         x_mm=96, y_mm=31, w_mm=36, h_mm=36,
         inline_image_data=qr_data,
