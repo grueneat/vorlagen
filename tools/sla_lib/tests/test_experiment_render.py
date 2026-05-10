@@ -160,6 +160,21 @@ class ExperimentRenderTest(unittest.TestCase):
     def test_full_pipeline_with_scribus(self):
         if not shutil.which("scribus") or not shutil.which("xvfb-run"):
             self.skipTest("Scribus / xvfb-run not on PATH")
+        if not shutil.which("fc-list"):
+            self.skipTest("fc-list not on PATH")
+        import subprocess
+        fc = subprocess.run(
+            ["fc-list"], capture_output=True, text=True, check=False,
+        )
+        brand_faces = sum(
+            1 for line in fc.stdout.splitlines()
+            if "gotham narrow" in line.lower() or "vollkorn" in line.lower()
+        )
+        if brand_faces < 5:
+            self.skipTest(
+                f"brand fonts missing (only {brand_faces} faces in fc-list); "
+                "render test is local-only — see shared/fonts/README.md"
+            )
         rc = er.run_render(
             exp_id=self.exp_id,
             only="synthetic-01",
