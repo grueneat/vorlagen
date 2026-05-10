@@ -144,63 +144,101 @@ class KandidatFalzflyerGeometryTests(unittest.TestCase):
         self.assertAlmostEqual(a.w_mm, b.w_mm, delta=TOL_MM)
         self.assertAlmostEqual(a.h_mm, b.h_mm, delta=TOL_MM)
 
-    # ── P4 themen sub-layout mirror (9) ───────────────────────────────────
-    # Issue #26: Thema 2 Photo shrunk to make room for restored Body —
-    # photos no longer same height; share x and w only.
+    # ── Issue #27: 1-thema-per-panel layout ──────────────────────────────
+    # P4 has Thema 1 only; P5 has Thema 3 only. Trenner polygons +
+    # Thema 2 + Thema 4 are removed. Each remaining thema has a full-
+    # bleed photo + longer body text.
 
-    def test_p4_themen_photos_share_x_and_width(self):
+    def test_p4_thema1_photo_full_bleed(self):
+        f = self._f("P4 Thema 1 — Photo")
+        self.assertAlmostEqual(f.x_mm, -3.0, delta=TOL_MM,
+            msg=f"P4 Thema 1 Photo x={f.x_mm} ≠ -3 (outer bleed)")
+        self.assertAlmostEqual(f.x_mm + f.w_mm, 99.0, delta=TOL_MM,
+            msg=f"P4 Thema 1 Photo right={f.x_mm + f.w_mm} ≠ 99 (Falz)")
+
+    def test_p5_thema3_photo_full_panel_width(self):
+        f = self._f("P5 Thema 3 — Photo")
+        self.assertAlmostEqual(f.x_mm, 99.0, delta=TOL_MM,
+            msg=f"P5 Thema 3 Photo x={f.x_mm} ≠ 99 (left Falz)")
+        self.assertAlmostEqual(f.x_mm + f.w_mm, 198.0, delta=TOL_MM,
+            msg=f"P5 Thema 3 Photo right={f.x_mm + f.w_mm} ≠ 198 (right Falz)")
+
+    def test_cross_panel_themen_photos_uniform_height(self):
         a = self._f("P4 Thema 1 — Photo")
-        b = self._f("P4 Thema 2 — Photo")
-        self.assertAlmostEqual(a.x_mm, b.x_mm, delta=TOL_MM)
-        self.assertAlmostEqual(a.w_mm, b.w_mm, delta=TOL_MM)
+        b = self._f("P5 Thema 3 — Photo")
+        self.assertAlmostEqual(a.h_mm, b.h_mm, delta=TOL_MM,
+            msg=f"P4/P5 Thema photos heights differ: {a.h_mm} vs {b.h_mm}")
+        self.assertAlmostEqual(a.y_mm, b.y_mm, delta=TOL_MM,
+            msg="P4/P5 Thema photos y-baseline drifts")
 
-    # ── P5 themen sub-layout mirror (10) ──────────────────────────────────
-
-    def test_p5_themen_photos_share_x_and_width(self):
-        a = self._f("P5 Thema 3 — Photo")
-        b = self._f("P5 Thema 4 — Photo")
-        self.assertAlmostEqual(a.x_mm, b.x_mm, delta=TOL_MM)
-        self.assertAlmostEqual(a.w_mm, b.w_mm, delta=TOL_MM)
-
-    # ── Cross-panel themen photo widths uniform (11) ──────────────────────
-    # Issue #26: heights now vary (Thema 1+3 are h=44 hero; Thema 2+4
-    # h=24 to accommodate Body below). Width stays uniform across the
-    # 4 themen for consistent column rhythm.
-
-    def test_cross_panel_themen_photos_uniform_width(self):
-        for an in (
-            "P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
-            "P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
-        ):
-            f = self._f(an)
-            self.assertAlmostEqual(
-                f.w_mm, THEMEN_PHOTO_W_MM, delta=TOL_MM,
-                msg=f"{an} w_mm={f.w_mm} ≠ {THEMEN_PHOTO_W_MM}",
-            )
-        # Thema 1 + 3 share photo h=44 (the "hero" themen pair).
-        for an in ("P4 Thema 1 — Photo", "P5 Thema 3 — Photo"):
-            f = self._f(an)
-            self.assertAlmostEqual(
-                f.h_mm, THEMEN_PHOTO_H_MM, delta=TOL_MM,
-                msg=f"{an} h_mm={f.h_mm} ≠ {THEMEN_PHOTO_H_MM}",
-            )
-
-    # ── Issue #26: parallel thema-panel structure (12b) ───────────────────
-
-    def test_all_themen_have_body(self):
-        """Every Thema-N must carry an Eyebrow + Headline + Photo + Body
-        (parallel structure across the 4 themen). Issue #26 — Thema 2 +
-        Thema 4 Bodies were missing on the post-#21 ship; this pins them
-        so future regressions fail loud."""
-        for n_str, panel in (("1", "P4"), ("2", "P4"),
-                              ("3", "P5"), ("4", "P5")):
+    def test_p4_p5_themen_have_body(self):
+        """P4 Thema 1 + P5 Thema 3 each carry Eyebrow + Headline + Photo
+        + Body (1-thema-per-panel layout per Issue #27). Pins the
+        single-thema structure so the prior 4-thema asymmetry doesn't
+        regress."""
+        for n_str, panel in (("1", "P4"), ("3", "P5")):
             for suffix in ("Eyebrow", "Headline", "Photo", "Body"):
                 an = f"{panel} Thema {n_str} — {suffix}"
                 self.assertIsNotNone(
                     self._f(an),
-                    msg=f"{an} missing — every Thema-N must carry "
+                    msg=f"{an} missing — single-thema panel must carry "
                         f"Eyebrow + Headline + Photo + Body",
                 )
+
+    def test_thema_2_and_4_removed(self):
+        """Issue #27: Thema 2 + Thema 4 (the second thema per panel)
+        were removed in favour of one richer thema per panel. Pins
+        their absence so future edits don't accidentally reintroduce
+        them as half-empty stubs."""
+        for an in ("P4 Thema 2 — Eyebrow", "P4 Thema 2 — Headline",
+                   "P4 Thema 2 — Photo", "P4 Thema 2 — Body",
+                   "P5 Thema 4 — Eyebrow", "P5 Thema 4 — Headline",
+                   "P5 Thema 4 — Photo", "P5 Thema 4 — Body",
+                   "P4 Thema 1·2 Trenner", "P5 Thema 3·4 Trenner"):
+            self.assertIsNone(
+                self.items_by_anname.get(an),
+                msg=f"{an!r} should be removed (Issue #27 1-thema layout)",
+            )
+
+    def test_p1_kandidat_portrait_full_panel_width(self):
+        """Issue #27: P1 Portrait fills the entire panel between the
+        left bleed and the right Falz. User-cited "profile image still
+        does not fill the whole width" fix."""
+        f = self._f("P1 Kandidat-Portrait")
+        self.assertAlmostEqual(f.x_mm, -3.0, delta=TOL_MM,
+            msg=f"P1 Portrait x={f.x_mm} ≠ -3 (outer bleed)")
+        self.assertAlmostEqual(f.x_mm + f.w_mm, 99.0, delta=TOL_MM,
+            msg=f"P1 Portrait right={f.x_mm + f.w_mm} ≠ 99 (Falz)")
+
+    def test_logos_use_bund_brushstroke_asset(self):
+        """Issue #27: P1 + P6 logos must use gruene-logo-bund-weiss.png
+        (the actual G-brushstroke logo, white version) — not the
+        gruene-weiss.png wordmark which letterboxes and reads as "just
+        Die Grünen text"."""
+        from pathlib import Path
+        expected = (Path(__file__).resolve().parents[3] / "shared" /
+                    "logos" / "gruene-logo-bund-weiss.png")
+        self.assertTrue(expected.exists(),
+            msg=f"Required brand asset missing at {expected}")
+        wordmark = (Path(__file__).resolve().parents[3] / "shared" /
+                    "logos" / "gruene-weiss.png")
+        # Logos are inlined; assert the inlined bytes match the bund
+        # asset, NOT the wordmark.
+        for an in ("P1 Logo Grüne (weiss)", "P6 Logo Grüne (weiss)"):
+            f = self._f(an)
+            self.assertIsNotNone(f, msg=f"{an} missing")
+            from sla_lib.builder.primitives import pack_inline_image
+            expected_data, _ = pack_inline_image(expected.read_bytes(), "png")
+            wordmark_data, _ = pack_inline_image(wordmark.read_bytes(), "png")
+            self.assertEqual(
+                f.inline_image_data, expected_data,
+                msg=f"{an} inline data does not match gruene-logo-bund-weiss.png",
+            )
+            self.assertNotEqual(
+                f.inline_image_data, wordmark_data,
+                msg=f"{an} still uses the gruene-weiss.png wordmark "
+                    f"(should be the brushstroke G).",
+            )
 
     def test_p2_body_backing_extends_to_top_band_and_bleed(self):
         """Issue #26 — P2 Body-Backing extends from y=28 (flush below
@@ -281,15 +319,17 @@ class KandidatFalzflyerGeometryTests(unittest.TestCase):
             "Falz LAYER spillover: only the 4 fold lines may live here",
         )
 
-    # ── ParaStyle existence: 16 falzflyer/* (17) ──────────────────────────
+    # ── ParaStyle existence: 17 falzflyer/* (17) ──────────────────────────
+    # Issue #27 added falzflyer/schlagwort for the P2 Hellgrün backing
+    # slogans (replaces long Teaser-Body paragraph). Count 16 → 17.
 
-    def test_para_style_count_16(self):
+    def test_para_style_count_17(self):
         styles = {s.attrib.get("NAME", "") for s in self.doc_xml.findall("STYLE")}
         falzflyer_styles = {s for s in styles if s.startswith("falzflyer/")}
         self.assertEqual(
-            len(falzflyer_styles), 16,
-            f"V1 expects 16 falzflyer/* styles, got {len(falzflyer_styles)}: "
-            f"{sorted(falzflyer_styles)}",
+            len(falzflyer_styles), 17,
+            f"V1.1 expects 17 falzflyer/* styles, got "
+            f"{len(falzflyer_styles)}: {sorted(falzflyer_styles)}",
         )
         for needed in (
             "falzflyer/cand-name", "falzflyer/slogan",
@@ -300,6 +340,7 @@ class KandidatFalzflyerGeometryTests(unittest.TestCase):
             "falzflyer/closer-headline", "falzflyer/closer-datum",
             "falzflyer/closer-url", "falzflyer/contact-headline",
             "falzflyer/contact-body", "falzflyer/impressum",
+            "falzflyer/schlagwort",
         ):
             self.assertIn(needed, falzflyer_styles,
                           f"missing ParaStyle: {needed}")
@@ -372,17 +413,17 @@ class KandidatFalzflyerGeometryTests(unittest.TestCase):
     # ── INJECT_MAP frame annames + lib_id mapping (21) ────────────────────
 
     def test_inject_map_frame_anname_mapping(self):
+        # Issue #27: 1-thema-per-panel — INJECT_MAP shrinks from 5 to 3
+        # entries (Portrait + P4 Thema 1 + P5 Thema 3).
         expected = {
             "P1 Kandidat-Portrait":  "portrait_maria",
             "P4 Thema 1 — Photo":    "themen_klimaschutz_solar",
-            "P4 Thema 2 — Photo":    "themen_soziales_kaffeehaus",
             "P5 Thema 3 — Photo":    "themen_bildung_volksschule",
-            "P5 Thema 4 — Photo":    "themen_wirtschaft_handwerk",
         }
         self.assertEqual(
             dict(self._mod.INJECT_MAP), expected,
-            "INJECT_MAP must map exactly the 5 V1 photo annames to their "
-            "central library asset ids",
+            "INJECT_MAP must map exactly the 3 V1.1 photo annames to "
+            "their central library asset ids",
         )
         for anname in expected:
             self.assertIn(
