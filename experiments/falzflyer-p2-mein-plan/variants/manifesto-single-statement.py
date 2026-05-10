@@ -15,7 +15,7 @@ def render_p2(doc, page) -> None:
     doc.add_para_style(ParaStyle(
         name="exp/manifesto/statement",
         font="Vollkorn Black",
-        fontsize=44, linesp=48, align=0,
+        fontsize=30, linesp=34, align=0,
         fcolor="Dunkelgrün", language="de",
     ))
     doc.add_para_style(ParaStyle(

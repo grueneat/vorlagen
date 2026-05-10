@@ -179,6 +179,13 @@ def _render_variant_pngs(
     render_sla_to_pdf(sla_path, pdf_path)
     _scrub_pdf_metadata(pdf_path)
 
+    # Delete stale PNGs first. _zero_pad_pngs is a one-way rename that
+    # silently no-ops when the zero-padded target already exists from a
+    # previous render — that left re-renders pointing at stale page-1.png
+    # while pdftoppm wrote a fresh page-01.png that was never picked up.
+    for stale in variant_dir.glob("page-*.png"):
+        stale.unlink()
+
     rasterise(pdf_path, variant_dir / "page", PREVIEW_DPI)
     rasterise(pdf_path, variant_dir / "page-hires", HIRES_DPI)
     _zero_pad_pngs(variant_dir, "page")
