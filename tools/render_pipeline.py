@@ -39,6 +39,11 @@ sys.path.insert(0, str(ROOT / "tools"))
 from visual_diff import render_sla_to_pdf, rasterise  # noqa: E402
 
 DEFAULT_DPI = 50
+# Hi-res rasterise pass for the gallery's click-through preview (Issue #28).
+# 150 dpi = 3× the thumbnail dpi → ~1240×1754 px on A4 portrait. Stored
+# alongside thumbnails as page-NN-hires.png; the Astro template wraps each
+# thumbnail in an anchor pointing at the hires variant.
+HIRES_DPI = 150
 
 # Fixed replacement values — all length-preserving (PDF spec requires fixed widths).
 EPOCH_DATE = b"D:20000101000000Z"   # 16 bytes; same as D:YYYYMMDDhhmmssZ
@@ -373,6 +378,9 @@ def _mirror_to_site_public(tdir: Path, public_dir: Path, *, family: bool) -> Non
             src = tdir / name
             if src.exists():
                 shutil.copy(src, public_dir / name)
+        # Mirror BOTH the thumbnail (page-NN.png) AND the hires
+        # click-through (page-NN-hires.png) variants for the Astro
+        # gallery (Issue #28).
         for src in sorted(tdir.glob("page-*.png")):
             shutil.copy(src, public_dir / src.name)
 
@@ -479,14 +487,26 @@ def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
     print(f"[{tid}] rendering {render_source.name} → preview.pdf …")
     render_sla_to_pdf(render_source, preview_pdf)
     _scrub_pdf_metadata(preview_pdf)
-    print(f"[{tid}] rasterising at {dpi} dpi …")
+    print(f"[{tid}] rasterising at {dpi} dpi (thumbnail) "
+          f"+ {HIRES_DPI} dpi (hires) …")
 
     # Clean stale PNGs before rasterising (removes old single-digit relics too).
     for stale in list(tdir.glob("page-*.png")):
         stale.unlink()
 
+    # Thumbnail pass.
     rasterise(preview_pdf, tdir / "page", dpi)
     _zero_pad_pngs(tdir, "page")
+    # Hi-res pass (Issue #28). Renders into page-NN-hires.png. Same
+    # zero-pad convention as the thumbnails.
+    rasterise(preview_pdf, tdir / "hires", HIRES_DPI)
+    _zero_pad_pngs(tdir, "hires")
+    # Rename `hires-NN.png` → `page-NN-hires.png` for the Astro template's
+    # naming convention (lookup by stripping `.png` and adding `-hires.png`).
+    for src in sorted(tdir.glob("hires-*.png")):
+        suffix = src.name[len("hires-"):]   # NN.png
+        target = tdir / f"page-{suffix.replace('.png', '-hires.png')}"
+        src.rename(target)
 
     rc = _run_sla_diff_strict(tid, tdir, meta)
     if rc != 0:
@@ -502,8 +522,15 @@ def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
         _update_meta_hash(tdir / "meta.yml", h)
         _mirror_to_site_public(tdir, public_dir, family=False)
 
-    pngs = sorted(tdir.glob("page-*.png"))
-    print(f"[{tid}] OK — {len(pngs)} page(s) at {dpi} dpi")
+    # Count only thumbnails (exclude `*-hires.png` so the page total
+    # reflects the document's actual page count, not 2× page count).
+    pngs = sorted(p for p in tdir.glob("page-*.png")
+                  if not p.stem.endswith("-hires"))
+    hires = sorted(tdir.glob("page-*-hires.png"))
+    print(
+        f"[{tid}] OK — {len(pngs)} page(s) at {dpi} dpi (thumbnail) "
+        f"+ {len(hires)} hires at {HIRES_DPI} dpi"
+    )
     return 0
 
 
