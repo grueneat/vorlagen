@@ -32,9 +32,14 @@ Captured before research/planning. Research and planner MUST follow the locked d
 
 ### v1 hypothesis reuse
 
-8. **Fresh hypotheses for v2.** Generate ~12 new hypotheses from scratch for the density+form axis. None of v1's hypothesis slugs are carried forward because v1 had no declared axis — its 12 variants don't map cleanly to v2's single-axis design.
+8. **Three v1 concepts are explicitly retained for v2 as "concept retained, execution re-implemented within envelope":**
+   - **Numbered 1–5 with weighted scale per rank** (descends from v1 `numbered-priority-list`) — numbered list 1–5 where typographic weight/size scales with rank position, so the eye lands on #1 first by design.
+   - **Single editorial manifesto sentence** (descends from v1 `manifesto-single-statement`) — replace the list with one long-form editorial sentence that owns the panel.
+   - **Left-aligned items separated by thin Dunkelgrün rules** (descends loosely from v1 `asymmetric-editorial-rules`) — items stack left-aligned with thin horizontal Dunkelgrün rules as separators, editorial-magazine register.
+   
+   These three are LOCKED retentions per user direction. The remaining ~9 hypotheses for v2 are fresh, generated for the density+form axis. Total target: ~12 variants.
 
-9. **All 12 v1 variants are embedded in the v2 hypothesis-generation prompt as named "do-not-repeat these specific failure modes" anti-examples.** This closes the prompt-evolution loop CONTEXT #6 from issue #29 specified but never executed. Anti-example format per variant: name + the specific envelope-violation that disqualifies it.
+9. **All 12 v1 variants are embedded in the v2 hypothesis-generation prompt as named "do-not-repeat these specific failure modes" anti-examples.** This closes the prompt-evolution loop CONTEXT #6 from issue #29 specified but never executed. Anti-example format per variant: slug + the specific envelope-violation that disqualifies it. **The three retained concepts also appear in the anti-example list** — explicitly tagged "concept retained as a separate retried-with-envelope variant; this anti-example is about the v1 broken IMPLEMENTATION specifically, not the idea." The prompt instructs the generator: "do not repeat the broken implementation; the retained variants will be re-implemented separately by the planner."
 
 ### Skill shape
 
