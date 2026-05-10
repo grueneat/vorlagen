@@ -1,0 +1,155 @@
+# Experiment results schema — JSON Schema (draft-2020-12) expressed in YAML.
+# Validates the JSON file the voting page exports and the results
+# aggregator emits. Issue #29.
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://gruene-noe.at/experiments/results.schema.yaml"
+title: "Experiment results"
+description: >
+  Voting-session results for one rater. Captures every pairwise vote
+  with axis, winner, on-screen position (so we can post-hoc analyse
+  position bias), plus computed wins-ratio + ranking + disagreement
+  index. Per CONTEXT.md decision #10.
+type: object
+additionalProperties: false
+
+required:
+  - experiment_id
+  - rater
+  - session_start
+  - session_end
+  - votes
+  - direct_picks
+  - wins_ratio_appeal
+  - wins_ratio_transport
+  - ranking_appeal
+  - ranking_transport
+  - disagreement_index
+  - spearman_appeal_transport
+
+properties:
+
+  experiment_id:
+    type: string
+    pattern: "^[a-z0-9][a-z0-9-]*$"
+
+  rater:
+    type: string
+    description: "Free-text rater identity. May be 'anonymous'."
+
+  session_start:
+    type: string
+    description: "ISO 8601 timestamp."
+
+  session_end:
+    type: string
+    description: "ISO 8601 timestamp."
+
+  votes:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required:
+        - pair
+        - axis
+        - winner
+        - position_a_on_screen
+        - timestamp
+      properties:
+        pair:
+          type: object
+          additionalProperties: false
+          required: [a, b]
+          properties:
+            a:
+              type: string
+              description: "Slug of variant A in the pair."
+            b:
+              type: string
+              description: "Slug of variant B in the pair."
+        axis:
+          type: string
+          enum: [appeal, transport]
+        winner:
+          oneOf:
+            - type: string
+              description: >
+                Variant slug of the winner, or the literal string "skip"
+                when the rater chose to skip.
+            - type: "null"
+              description: "Equivalent to 'skip' (skipped pair)."
+        position_a_on_screen:
+          type: string
+          enum: [left, right]
+        timestamp:
+          type: string
+          description: "ISO 8601 timestamp."
+
+  direct_picks:
+    type: array
+    description: >
+      Variant slugs the rater starred in direct-pick mode. May be empty.
+    items:
+      type: string
+    uniqueItems: true
+
+  wins_ratio_appeal:
+    type: object
+    description: >
+      Per-variant {wins, plays} accumulator for the appeal axis.
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [wins, plays]
+      properties:
+        wins:
+          type: integer
+          minimum: 0
+        plays:
+          type: integer
+          minimum: 0
+
+  wins_ratio_transport:
+    type: object
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [wins, plays]
+      properties:
+        wins:
+          type: integer
+          minimum: 0
+        plays:
+          type: integer
+          minimum: 0
+
+  ranking_appeal:
+    type: array
+    description: "Variant slugs sorted desc by appeal wins/plays."
+    items:
+      type: string
+
+  ranking_transport:
+    type: array
+    description: "Variant slugs sorted desc by transport wins/plays."
+    items:
+      type: string
+
+  disagreement_index:
+    type: number
+    minimum: 0
+    maximum: 1
+    description: >
+      Fraction of pairs voted on BOTH axes where appeal-winner differs
+      from transport-winner. 0 means full agreement; 1 means they
+      always disagree.
+
+  spearman_appeal_transport:
+    type: number
+    minimum: -1
+    maximum: 1
+    description: >
+      Spearman rank correlation between ranking_appeal and
+      ranking_transport. >0.85 flags halo effect; <0.5 means the two
+      axes are working as independent signals.

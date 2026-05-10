@@ -1,0 +1,58 @@
+{
+  "experiment_id": "example-experiment",
+  "rater": "alice",
+  "session_start": "2026-05-10T14:00:00Z",
+  "session_end": "2026-05-10T14:05:00Z",
+  "votes": [
+    {
+      "pair": {"a": "alpha", "b": "beta"},
+      "axis": "appeal",
+      "winner": "alpha",
+      "position_a_on_screen": "left",
+      "timestamp": "2026-05-10T14:00:30Z"
+    },
+    {
+      "pair": {"a": "alpha", "b": "beta"},
+      "axis": "transport",
+      "winner": "beta",
+      "position_a_on_screen": "left",
+      "timestamp": "2026-05-10T14:00:35Z"
+    },
+    {
+      "pair": {"a": "alpha", "b": "gamma"},
+      "axis": "appeal",
+      "winner": "alpha",
+      "position_a_on_screen": "right",
+      "timestamp": "2026-05-10T14:01:30Z"
+    },
+    {
+      "pair": {"a": "alpha", "b": "gamma"},
+      "axis": "transport",
+      "winner": "alpha",
+      "position_a_on_screen": "right",
+      "timestamp": "2026-05-10T14:01:35Z"
+    },
+    {
+      "pair": {"a": "beta", "b": "gamma"},
+      "axis": "appeal",
+      "winner": "skip",
+      "position_a_on_screen": "left",
+      "timestamp": "2026-05-10T14:02:30Z"
+    }
+  ],
+  "direct_picks": ["alpha"],
+  "wins_ratio_appeal": {
+    "alpha": {"wins": 2, "plays": 2},
+    "beta": {"wins": 0, "plays": 1},
+    "gamma": {"wins": 0, "plays": 1}
+  },
+  "wins_ratio_transport": {
+    "alpha": {"wins": 1, "plays": 1},
+    "beta": {"wins": 1, "plays": 1},
+    "gamma": {"wins": 0, "plays": 1}
+  },
+  "ranking_appeal": ["alpha", "beta", "gamma"],
+  "ranking_transport": ["alpha", "beta", "gamma"],
+  "disagreement_index": 0.5,
+  "spearman_appeal_transport": 1.0
+}
