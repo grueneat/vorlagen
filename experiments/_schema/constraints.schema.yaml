@@ -1,0 +1,241 @@
+# Constraint envelope schema — JSON Schema (draft-2020-12) expressed in YAML.
+# Mirrors the style of experiments/_schema/manifest.schema.yaml.
+#
+# Background:
+#   The "constraint envelope" is the floor every variant in a design
+#   experiment respects. Brand_rules enums come from
+#   tools/sla_lib/builder/brand_constraints.py:1525-1680 (the 16
+#   BRAND_CONSTRAINTS). Layer-1 keys come from
+#   design-guide/README.md:24-46 (the 22-row Layer-1 deterministic
+#   rules table — 16 hcd rows + 6 CD-Quickguide rows).
+#
+# Per CONTEXT.md decision 1 + 2 (issue #30): every variant respects all
+# 16 brand_rules + all 22 layer1 thresholds by default. A per-experiment
+# constraints.yml MAY relax named rules via `relax:` with one-line
+# rationale per relaxation. Implicit relaxations are forbidden.
+#
+# Validate a constraints file:
+#   python3 -c "
+#     import yaml, jsonschema, pathlib
+#     schema = yaml.safe_load(pathlib.Path('experiments/_schema/constraints.schema.yaml').read_text())
+#     c = yaml.safe_load(pathlib.Path('experiments/<id>/constraints.yml').read_text())
+#     jsonschema.Draft202012Validator(schema).validate(c)
+#   "
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://gruene-noe.at/experiments/constraints.schema.yaml"
+title: "Experiment constraint envelope"
+description: >
+  The constraint envelope for one design experiment. Brand_rules enum
+  is the 16 ids from tools/sla_lib/builder/brand_constraints.py:1525-1680.
+  Layer-1 keys are the 22 thresholds from design-guide/README.md:24-46.
+  See `.claude/skills/experiments/SKILL.md` for the three-layer model.
+
+type: object
+additionalProperties: false
+
+required:
+  - tested_axis
+
+properties:
+
+  extends:
+    type: string
+    description: >
+      Optional relative path to a parent envelope (e.g.
+      '../_constraints/falzflyer-default.yml'). The loader merges
+      child values over parent values per Ansible-style shallow
+      override on rule-id maps.
+
+  tested_axis:
+    type: string
+    description: >
+      The single design axis this experiment varies (e.g. 'density+form',
+      'hierarchy'). Everything except this axis is constraint.
+    minLength: 1
+
+  brand_rules:
+    type: array
+    description: >
+      Brand-rule ids enforced as floor. Enum is the 16 BRAND_CONSTRAINTS
+      ids in tools/sla_lib/builder/brand_constraints.py:1525-1680.
+    uniqueItems: true
+    items:
+      type: string
+      enum:
+        - brand:color_palette
+        - brand:font_family
+        - brand:line_spacing_0.9
+        - brand:hl_sl_distance_x2
+        - brand:logo_size_3M
+        - brand:text_on_green
+        - brand:bleed_3mm
+        - brand:wahlkreuz_colored_bg
+        - brand:inside_page
+        - brand:spine_safety
+        - brand:bleed_coverage
+        - brand:image_text_overlap
+        - brand:cover_extent_match
+        - brand:visual_adjacency_drift
+        - brand:image_fills_frame
+        - brand:band_consistency
+
+  layer1:
+    type: object
+    description: >
+      Layer-1 deterministic thresholds — the 22 keys enumerated in
+      design-guide/README.md:24-46. Empty object means inherit-only
+      (used when extending a default envelope).
+    additionalProperties: false
+    properties:
+      body_min_pt:
+        type: number
+        description: "Minimum body text size in pt (hcd #12). Floor: 10."
+      caption_impressum_min_pt:
+        type: number
+        description: "Minimum caption/impressum size in pt (hcd #12). Floor: 8."
+      body_line_length_chars:
+        type: object
+        description: "Body line length in characters (hcd #11)."
+        additionalProperties: false
+        properties:
+          min: {type: integer}
+          max: {type: integer}
+          ideal: {type: integer}
+        required: [min, max]
+      headline_size_jump_x:
+        type: number
+        description: "Headline size jump as multiplier vs body (hcd #10). Floor: 2.5."
+      headline_max_words:
+        type: integer
+        description: "Maximum words in headline (hcd #9). Ceiling: 7."
+      body_contrast_ratio:
+        type: number
+        description: "Body text contrast ratio (hcd #13). Floor: 4.5."
+      display_contrast_ratio_18pt_plus:
+        type: number
+        description: "Display (18pt+) contrast ratio (hcd #13). Floor: 3.0."
+      type_families_per_panel:
+        type: integer
+        description: "Maximum type families per panel (hcd #5). Ceiling: 2."
+      type_sizes_per_panel:
+        type: integer
+        description: "Maximum type sizes per panel (hcd #5). Ceiling: 3."
+      alignment_systems_per_panel:
+        type: integer
+        description: "Maximum alignment systems per panel (hcd #22). Ceiling: 2."
+      negative_space_pct:
+        type: number
+        description: "Minimum negative space pct (hcd #3). Floor: 30."
+      dominant_element_optical_weight_pct:
+        type: number
+        description: "Dominant element optical-weight share (hcd #1). Floor: 40."
+      face_crop_fill_pct:
+        type: number
+        description: "Face crop fill when face is primary (hcd #8). Floor: 60."
+      ctas_per_panel:
+        type: integer
+        description: "CTAs per panel (hcd #14). Exactly 1 if any."
+      non_green_accent_colors_per_piece:
+        type: integer
+        description: "Maximum non-green accent colors per piece (hcd #6). Ceiling: 2."
+      forbidden_primary_colors:
+        type: array
+        description: "Colors forbidden for primary use (hcd #6)."
+        items:
+          type: string
+        uniqueItems: true
+      margin_M_formula:
+        type: string
+        description: "Margin formula (CD-Quickguide). M = 0.06 * short_edge_of_trim."
+      logo_size_print:
+        type: string
+        description: "Logo size formula for print (CD-Quickguide). 3 * M."
+      logo_size_digital:
+        type: string
+        description: "Logo size formula for digital (CD-Quickguide). 2.5 * M."
+      logo_clear_space:
+        type: string
+        description: "Logo clear space formula (CD-Quickguide). 1 * M each side."
+      type_on_white_plate_forbidden:
+        type: boolean
+        description: "Type on white plate forbidden (CD-Quickguide §7)."
+      brand_colors_only:
+        type: array
+        description: "Allowed brand colors (CD-Quickguide)."
+        items:
+          type: string
+        uniqueItems: true
+
+  relax:
+    type: array
+    description: >
+      Named relaxations. Each entry has an `id` (a brand_rules enum
+      value OR a layer1 key prefixed with `layer1:`) plus a one-line
+      rationale. Implicit relaxations are forbidden.
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, rationale]
+      properties:
+        id:
+          type: string
+          enum:
+            - brand:color_palette
+            - brand:font_family
+            - brand:line_spacing_0.9
+            - brand:hl_sl_distance_x2
+            - brand:logo_size_3M
+            - brand:text_on_green
+            - brand:bleed_3mm
+            - brand:wahlkreuz_colored_bg
+            - brand:inside_page
+            - brand:spine_safety
+            - brand:bleed_coverage
+            - brand:image_text_overlap
+            - brand:cover_extent_match
+            - brand:visual_adjacency_drift
+            - brand:image_fills_frame
+            - brand:band_consistency
+            - layer1:body_min_pt
+            - layer1:caption_impressum_min_pt
+            - layer1:body_line_length_chars
+            - layer1:headline_size_jump_x
+            - layer1:headline_max_words
+            - layer1:body_contrast_ratio
+            - layer1:display_contrast_ratio_18pt_plus
+            - layer1:type_families_per_panel
+            - layer1:type_sizes_per_panel
+            - layer1:alignment_systems_per_panel
+            - layer1:negative_space_pct
+            - layer1:dominant_element_optical_weight_pct
+            - layer1:face_crop_fill_pct
+            - layer1:ctas_per_panel
+            - layer1:non_green_accent_colors_per_piece
+            - layer1:forbidden_primary_colors
+            - layer1:margin_M_formula
+            - layer1:logo_size_print
+            - layer1:logo_size_digital
+            - layer1:logo_clear_space
+            - layer1:type_on_white_plate_forbidden
+            - layer1:brand_colors_only
+        rationale:
+          type: string
+          minLength: 1
+
+  regeneration:
+    type: object
+    description: >
+      Drop & regeneration policy. v2 ships with auto_retry_max=0 +
+      drop_threshold_pct=40 per issue #30 PLAN.md R5.
+    additionalProperties: false
+    properties:
+      auto_retry_max:
+        type: integer
+        default: 0
+        minimum: 0
+      drop_threshold_pct:
+        type: number
+        default: 40
+        minimum: 0
+        maximum: 100
