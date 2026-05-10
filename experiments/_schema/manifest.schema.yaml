@@ -71,6 +71,39 @@ properties:
     type: string
     description: "Optional free-text notes from the generator pass."
 
+  _dropped:
+    type: array
+    description: >
+      Render-time drop log written by experiment_render.py. Variants
+      whose built Document violates the envelope (issue #30) appear
+      here with structured violations. Optional — missing or empty
+      means "all variants rendered cleanly".
+    items:
+      type: object
+      required: [slug, reason]
+      additionalProperties: false
+      properties:
+        slug: {type: string}
+        reason: {type: string}
+        violations:
+          type: array
+          description: >
+            Structured envelope violations per dropped variant. Each
+            entry mirrors the sla_lib Violation dataclass shape.
+          items:
+            type: object
+            required: [rule_id, message, severity]
+            additionalProperties: false
+            properties:
+              rule_id: {type: string}
+              message: {type: string}
+              severity:
+                type: string
+                enum: [error, warning]
+              targets:
+                type: array
+                items: {type: string}
+
   hypotheses:
     type: array
     description: >
@@ -150,3 +183,18 @@ properties:
             something the role-primed designer would not normally
             suggest). At least one hypothesis in the manifest MUST set
             this to true.
+        source:
+          type: string
+          description: >
+            Optional provenance tag for retained-from-v1 concepts or
+            other hand-injected hypotheses. Free-form string.
+        _previews:
+          type: object
+          description: >
+            Render-time preview paths written by experiment_render.py.
+            Not present in the input manifest.yml — only in the
+            post-render manifest.json mirror.
+          additionalProperties: false
+          properties:
+            thumb: {type: string}
+            hires: {type: string}
