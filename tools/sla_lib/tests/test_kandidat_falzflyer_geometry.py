@@ -145,26 +145,29 @@ class KandidatFalzflyerGeometryTests(unittest.TestCase):
         self.assertAlmostEqual(a.h_mm, b.h_mm, delta=TOL_MM)
 
     # ── P4 themen sub-layout mirror (9) ───────────────────────────────────
+    # Issue #26: Thema 2 Photo shrunk to make room for restored Body —
+    # photos no longer same height; share x and w only.
 
-    def test_p4_themen_photos_mirror(self):
+    def test_p4_themen_photos_share_x_and_width(self):
         a = self._f("P4 Thema 1 — Photo")
         b = self._f("P4 Thema 2 — Photo")
         self.assertAlmostEqual(a.x_mm, b.x_mm, delta=TOL_MM)
         self.assertAlmostEqual(a.w_mm, b.w_mm, delta=TOL_MM)
-        self.assertAlmostEqual(a.h_mm, b.h_mm, delta=TOL_MM)
 
     # ── P5 themen sub-layout mirror (10) ──────────────────────────────────
 
-    def test_p5_themen_photos_mirror(self):
+    def test_p5_themen_photos_share_x_and_width(self):
         a = self._f("P5 Thema 3 — Photo")
         b = self._f("P5 Thema 4 — Photo")
         self.assertAlmostEqual(a.x_mm, b.x_mm, delta=TOL_MM)
         self.assertAlmostEqual(a.w_mm, b.w_mm, delta=TOL_MM)
-        self.assertAlmostEqual(a.h_mm, b.h_mm, delta=TOL_MM)
 
-    # ── Cross-panel themen photos all 87×44 (11) ──────────────────────────
+    # ── Cross-panel themen photo widths uniform (11) ──────────────────────
+    # Issue #26: heights now vary (Thema 1+3 are h=44 hero; Thema 2+4
+    # h=24 to accommodate Body below). Width stays uniform across the
+    # 4 themen for consistent column rhythm.
 
-    def test_cross_panel_themen_photos_uniform(self):
+    def test_cross_panel_themen_photos_uniform_width(self):
         for an in (
             "P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
             "P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
@@ -174,10 +177,42 @@ class KandidatFalzflyerGeometryTests(unittest.TestCase):
                 f.w_mm, THEMEN_PHOTO_W_MM, delta=TOL_MM,
                 msg=f"{an} w_mm={f.w_mm} ≠ {THEMEN_PHOTO_W_MM}",
             )
+        # Thema 1 + 3 share photo h=44 (the "hero" themen pair).
+        for an in ("P4 Thema 1 — Photo", "P5 Thema 3 — Photo"):
+            f = self._f(an)
             self.assertAlmostEqual(
                 f.h_mm, THEMEN_PHOTO_H_MM, delta=TOL_MM,
                 msg=f"{an} h_mm={f.h_mm} ≠ {THEMEN_PHOTO_H_MM}",
             )
+
+    # ── Issue #26: parallel thema-panel structure (12b) ───────────────────
+
+    def test_all_themen_have_body(self):
+        """Every Thema-N must carry an Eyebrow + Headline + Photo + Body
+        (parallel structure across the 4 themen). Issue #26 — Thema 2 +
+        Thema 4 Bodies were missing on the post-#21 ship; this pins them
+        so future regressions fail loud."""
+        for n_str, panel in (("1", "P4"), ("2", "P4"),
+                              ("3", "P5"), ("4", "P5")):
+            for suffix in ("Eyebrow", "Headline", "Photo", "Body"):
+                an = f"{panel} Thema {n_str} — {suffix}"
+                self.assertIsNotNone(
+                    self._f(an),
+                    msg=f"{an} missing — every Thema-N must carry "
+                        f"Eyebrow + Headline + Photo + Body",
+                )
+
+    def test_p2_body_backing_extends_to_top_band_and_bleed(self):
+        """Issue #26 — P2 Body-Backing extends from y=28 (flush below
+        Top-Band) to y=213 (full bleed bottom). Fixes the user-cited
+        "Hellgrün bar misalignment with everything" by satisfying §7
+        ("Typografie auf Grün") for the Teaser-Headline and matching the
+        vertical extent of P1 Name-Card / P3 Hintergrund."""
+        f = self._f("P2 Body-Backing")
+        self.assertAlmostEqual(f.y_mm, 28.0, delta=TOL_MM,
+            msg=f"P2 Body-Backing y_mm={f.y_mm} ≠ 28")
+        self.assertAlmostEqual(f.y_mm + f.h_mm, 213.0, delta=TOL_MM,
+            msg=f"P2 Body-Backing y_max={f.y_mm + f.h_mm} ≠ 213 (bleed)")
 
     # ── P6 column-symmetry mirrored_x at 247.5 (12) ───────────────────────
 

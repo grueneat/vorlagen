@@ -28,6 +28,7 @@ from sla_lib.builder import (  # noqa: E402
     library,
     # Issue #12 + #21 — constraints
     aligned_below,
+    same_y,
     inside,
     mirrored_x,
     same_size,
@@ -415,9 +416,15 @@ def _add_front(doc, page0):
         anname="P2 Teaser-Headline",
     ))
 
-    # NEW V1: P2 Body-Backing — Hellgrün card backing for the teaser body.
+    # P2 Body-Backing — Hellgrün card backing for the teaser zone.
+    # Issue #26: extend top to y=28 (flush against Top-Band end) so
+    # the Teaser-Headline sits ON Hellgrün — satisfies brand §7
+    # ("Typografie steht IMMER in Kombination mit Grün"). Also extend
+    # bottom to y=213 (full bleed) so the bar matches P1 Name-Card
+    # and P3 Hintergrund's vertical extent — fixes the user-cited
+    # "Hellgrün bar misalignment with everything" bug.
     page0.add(Polygon(
-        x_mm=99, y_mm=66, w_mm=99, h_mm=144,
+        x_mm=99, y_mm=28, w_mm=99, h_mm=185,
         fill="Hellgrün",
         layer=LAYER_HINTERGRUND,
         anname="P2 Body-Backing",
@@ -589,8 +596,12 @@ def _add_back(doc, page1):
         anname="P4 Thema 1 — Body",
     ))
 
-    # NEW V1: P4 Thema 2 Eyebrow + Headline + Photo (NO Body — V1 deletes
-    # Thema 2 Body per ISSUE.md L37; tiefe via QR/headline carries the message)
+    # P4 Thema 2 Eyebrow + Headline + Photo + Body (Issue #26: Body
+    # restored — user-cited "Thema 02 has no text at all" fix; the
+    # 4-thema panel now has parallel structure across all N).
+    # Photo shrunk h=44->24 to make room for the Body below within the
+    # 210mm panel height. Asymmetric photo size vs Thema 1 is the
+    # trade-off for the symmetric text content.
     page1.add(TextFrame(
         x_mm=6, y_mm=144, w_mm=87, h_mm=6,
         layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
@@ -606,12 +617,23 @@ def _add_back(doc, page1):
         anname="P4 Thema 2 — Headline",
     ))
     page1.add(ImageFrame(
-        x_mm=6, y_mm=168, w_mm=87, h_mm=44,
+        x_mm=6, y_mm=168, w_mm=87, h_mm=24,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P4 Thema 2 — Photo",
+    ))
+    page1.add(TextFrame(
+        x_mm=6, y_mm=196, w_mm=87, h_mm=14,
+        layer=LAYER_TEXT, style="falzflyer/thema-body",
+        runs=[Run(
+            text=("Gemeindewohnungen ausbauen. "
+                  "Mietpreisbremse durchsetzen. "
+                  "Sanieren statt versiegeln."),
+            paragraph_style="falzflyer/thema-body",
+        )],
+        anname="P4 Thema 2 — Body",
     ))
 
     # ---- Panel 5 — Themen 3+4 (x=99..198) — V1 mirrors P4 -----
@@ -672,8 +694,10 @@ def _add_back(doc, page1):
         anname="P5 Thema 3 — Body",
     ))
 
-    # P5 Thema 4 Eyebrow + Headline + NEW Photo (V1: photo replaces V0
-    # body-only layout — asset themen_wirtschaft_handwerk in central library)
+    # P5 Thema 4 Eyebrow + Headline + Photo + Body (Issue #26: Body
+    # added — user-cited "Thema 04 has no text at all" fix). Photo
+    # shrunk h=44->24 to make room for the Body. Mirrors the P4
+    # Thema 2 layout for cross-panel consistency.
     page1.add(TextFrame(
         x_mm=105, y_mm=144, w_mm=87, h_mm=6,
         layer=LAYER_TEXT, style="falzflyer/themen-eyebrow",
@@ -689,12 +713,23 @@ def _add_back(doc, page1):
         anname="P5 Thema 4 — Headline",
     ))
     page1.add(ImageFrame(
-        x_mm=105, y_mm=168, w_mm=87, h_mm=44,
+        x_mm=105, y_mm=168, w_mm=87, h_mm=24,
         inline_image_data=None,
         inline_image_ext=None,
         scale_type=0, ratio=1,
         layer=LAYER_BILDER,
         anname="P5 Thema 4 — Photo",
+    ))
+    page1.add(TextFrame(
+        x_mm=105, y_mm=196, w_mm=87, h_mm=14,
+        layer=LAYER_TEXT, style="falzflyer/thema-body",
+        runs=[Run(
+            text=("Regionale Betriebe stärken. "
+                  "Direktvermarktung fördern. "
+                  "Lehrlinge ausbilden."),
+            paragraph_style="falzflyer/thema-body",
+        )],
+        anname="P5 Thema 4 — Body",
     ))
 
     # ---- Panel 6 — Kontakt + Impressum (x=198..297) — V1 vollflächig -----
@@ -968,14 +1003,18 @@ CONSTRAINTS = [
     same_size("P3 Hintergrund", "P6 Hintergrund", name="gruene_klammer_p3_p6"),
 
     # ── P4 themen sub-layout mirror (Thema 1 vs 2 within panel) ──
+    # Issue #26: Thema 2 Photo shrunk to make room for restored Body;
+    # Photos no longer same_size between Thema 1 and Thema 2 — they share
+    # x-axis (left/right edges) and width but not height. same_x covers
+    # this without over-constraining vertical extent.
     same_x("P4 Thema 1 — Eyebrow", "P4 Thema 2 — Eyebrow",
            name="p4_eyebrow_x"),
     same_x("P4 Thema 1 — Headline", "P4 Thema 2 — Headline",
            name="p4_headline_x"),
     same_x("P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
            name="p4_photo_x"),
-    same_size("P4 Thema 1 — Photo", "P4 Thema 2 — Photo",
-              name="p4_photos_size"),
+    same_x("P4 Thema 1 — Body", "P4 Thema 2 — Body",
+           name="p4_body_x"),
     aligned_below("P4 Thema 1 — Photo", "P4 Thema 1 — Headline", gap_mm=2.0,
                   name="p4_t1_photo_anchored"),
 
@@ -986,14 +1025,19 @@ CONSTRAINTS = [
            name="p5_headline_x"),
     same_x("P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
            name="p5_photo_x"),
-    same_size("P5 Thema 3 — Photo", "P5 Thema 4 — Photo",
-              name="p5_photos_size"),
+    same_x("P5 Thema 3 — Body", "P5 Thema 4 — Body",
+           name="p5_body_x"),
     aligned_below("P5 Thema 3 — Photo", "P5 Thema 3 — Headline", gap_mm=2.0,
                   name="p5_t3_photo_anchored"),
 
-    # ── Cross-panel themen photo size match ──
-    same_size("P4 Thema 1 — Photo", "P5 Thema 3 — Photo",
-              name="cross_panel_themen_photos_size"),
+    # ── Cross-panel themen Headline-y baseline (P4 ↔ P5) ──
+    # All four themen-headlines share their top-y so the eye-flow across
+    # the spread reads horizontally. Replaces the prior cross-panel
+    # photos_size constraint (Photos now vary in height).
+    same_y("P4 Thema 1 — Headline", "P5 Thema 3 — Headline",
+           name="cross_panel_t1_t3_headline_y"),
+    same_y("P4 Thema 2 — Headline", "P5 Thema 4 — Headline",
+           name="cross_panel_t2_t4_headline_y"),
 
     # ── P6 Kontakt 2-Spalten symmetric around AXIS_P6_CENTER_X = 247.5 ──
     # mirrored_x pairs cover row symmetry; same_y baselines + cells_uniform
