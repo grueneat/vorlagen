@@ -46,7 +46,7 @@ The proposed solution: a design experimentation system that industrialises taste
 - **Sonnet** generates the variations: cheap to crank out renders once specs are precise enough not to require taste judgement.
 - This keeps judgement spending where it pays off (experiment design) and execution cheap.
 
-## Acceptance criteria for MVP
+## Acceptance Criteria
 
 - [ ] One experiment subject implemented end-to-end: the falzflyer P2 "Mein Plan" panel
 - [ ] 8–12 variations, each anchored to a named hypothesis from corpus / HCD principles, with a one-line rationale per variation in a manifest
