@@ -1,0 +1,35 @@
+{
+  "id": "falzflyer-p2-mein-plan",
+  "subject": "falzflyer-p2-mein-plan",
+  "target_weak_area": "gruene-corpus.md §6 — even-spaced peer list (P2 'Mein Plan')",
+  "contributing_llms": [
+    "claude",
+    "codex",
+    "gemini"
+  ],
+  "created": "2026-05-10",
+  "prompt_version": "sha256:003b3b1b799a",
+  "hypotheses": [
+    {
+      "slug": "cut-to-three-with-body",
+      "name": "Three items, each with one-sentence body",
+      "axis_commitments": [
+        "density",
+        "hierarchy"
+      ],
+      "rationale": "Drop two slogans, give the surviving three an explanatory sentence each. The list stops feeling like a checklist and starts feeling like an argument structure: claim, claim, claim — each with substance.",
+      "expected_outcome": "Higher transport (clearer reasoning, less hand-wave); slightly lower visual punch but more credibility.",
+      "sources": [
+        "claude"
+      ],
+      "builder": "variants/cut-to-three-with-body.py",
+      "wildcard": false,
+      "_previews": {
+        "thumb": "/experiments/falzflyer-p2-mein-plan/cut-to-three-with-body/page-01.png",
+        "hires": "/experiments/falzflyer-p2-mein-plan/cut-to-three-with-body/page-01-hires.png"
+      }
+    }
+  ],
+  "notes": " | Trimmed from 29 raw to 12 implemented variants for MVP execution (issue #29 T13).",
+  "_dropped": []
+}

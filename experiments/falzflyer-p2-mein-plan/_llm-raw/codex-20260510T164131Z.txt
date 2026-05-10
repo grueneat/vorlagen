@@ -1,0 +1,74 @@
+[
+  {
+    "slug": "three-pillars-with-explainer",
+    "name": "Reduce to three pillars with short explainer text",
+    "axis_commitments": ["density", "hierarchy"],
+    "rationale": "The five-peer list becomes three grouped priorities, each supported by a brief explanatory line. This creates a readable top-to-bottom argument instead of a flat checklist and gives the eye an immediate first, second, and third stop.",
+    "expected_outcome": "Likely higher transport because the message reads as a coherent plan, with mixed appeal depending on whether voters value clarity over breadth.",
+    "wildcard": false
+  },
+  {
+    "slug": "hero-promise-with-supporting-list",
+    "name": "Make one hero promise and demote the rest to support",
+    "axis_commitments": ["accent-strategy", "hierarchy"],
+    "rationale": "One core promise is enlarged and visually privileged, while the remaining four points become secondary proof points. The panel stops asking the reader to weigh five equal claims and instead tells them what matters most.",
+    "expected_outcome": "Likely higher appeal and higher transport if the chosen hero line aligns with voter priorities, but more polarising if it does not.",
+    "wildcard": false
+  },
+  {
+    "slug": "editorial-manifesto-sentence",
+    "name": "Replace the list with one editorial manifesto sentence",
+    "axis_commitments": ["density", "typography"],
+    "rationale": "Five short slogans are collapsed into a single large typographic statement in a more literary register. The structural bet is that memorability and emotional cohesion will outperform informational completeness.",
+    "expected_outcome": "Likely higher appeal from stronger identity, with transport split between readers who prefer a singular message and those who want concrete points.",
+    "wildcard": false
+  },
+  {
+    "slug": "left-column-rules-open-field",
+    "name": "Concentrate content in a left column and leave the rest open",
+    "axis_commitments": ["asymmetry", "whitespace-strategy"],
+    "rationale": "All content is pulled into an intentionally narrow left-side composition, separated by thin rules, while the remaining area is left quiet. The design commitment is editorial asymmetry: hierarchy emerges from placement and breathing room rather than from louder styling.",
+    "expected_outcome": "Likely higher appeal among design-sensitive voters and moderate transport gains from improved scanning.",
+    "wildcard": false
+  },
+  {
+    "slug": "portrait-plus-single-commitment",
+    "name": "Use a portrait and keep only one verbal commitment",
+    "axis_commitments": ["photographic-vs-typographic", "density"],
+    "rationale": "Most of the panel is handed over to image presence, with the text reduced to one commitment line rather than a list. This tests whether human presence and a singular verbal anchor communicate trust better than five abstract slogans.",
+    "expected_outcome": "Likely higher appeal through warmth and recognisability, with transport depending on whether voters infer the broader agenda from minimal copy.",
+    "wildcard": false
+  },
+  {
+    "slug": "citizen-quote-testimonial-panel",
+    "name": "Turn the panel into a citizen quote with attribution",
+    "axis_commitments": ["voice-formality", "photographic-vs-typographic"],
+    "rationale": "The policy list is reframed as a short quoted statement from a resident, optionally paired with a small portrait or attribution. This shifts the voice from institutional sloganing to lived experience and tests whether social proof carries the message more credibly.",
+    "expected_outcome": "Likely higher appeal through relatability, with transport improving if the quote feels specific rather than generic.",
+    "wildcard": false
+  },
+  {
+    "slug": "serif-priority-ladder",
+    "name": "Build a typographic ladder with mixed registers",
+    "axis_commitments": ["typography", "hierarchy"],
+    "rationale": "The panel keeps multiple ideas but differentiates them through a deliberate type system: one line in an expressive serif or italic register, others in restrained sans. Hierarchy is created by tone and texture rather than by color blocks or boxes.",
+    "expected_outcome": "Likely moderate appeal gains from a more distinctive voice, with transport improving if the priority line clearly frames the rest.",
+    "wildcard": false
+  },
+  {
+    "slug": "spacious-two-step-reading",
+    "name": "Use extreme whitespace to force a two-step read",
+    "axis_commitments": ["whitespace-strategy", "accent-strategy"],
+    "rationale": "A short lead line sits alone with large surrounding space, and the remaining points appear as a delayed secondary cluster. The structural move is to create pause and anticipation so the reader encounters the content in stages rather than all at once.",
+    "expected_outcome": "Likely higher appeal from calm confidence, with transport improving for attentive readers and dropping for hurried ones.",
+    "wildcard": false
+  },
+  {
+    "slug": "handwritten-neighborhood-map",
+    "name": "Turn the panel into a handwritten neighborhood map",
+    "axis_commitments": ["wildcard"],
+    "rationale": "Instead of slogans, the panel becomes a rough local map annotated with hand-drawn notes pointing to housing, schools, climate, business, and civic access. This breaks brand discipline on purpose and tests whether situated specificity beats formal party messaging in both attention and comprehension.",
+    "expected_outcome": "Likely highly polarising: strong appeal and transport for some voters because it feels immediate and local, strong rejection from others because it departs from expected political design.",
+    "wildcard": true
+  }
+]

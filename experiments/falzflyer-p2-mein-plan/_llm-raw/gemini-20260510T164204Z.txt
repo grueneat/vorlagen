@@ -1,0 +1,84 @@
+```json
+[
+  {
+    "slug": "weighted-hero-lead",
+    "name": "Privilege one item as hero statement",
+    "axis_commitments": ["hierarchy", "accent-strategy"],
+    "rationale": "Promotes the first slogan to a dominant font size with a bright yellow (Gelb) background block, forcing it as the primary entry point while the remaining four items are grouped as secondary points below. This replaces the flat 'checklist' feel with a clear visual narrative.",
+    "expected_outcome": "Higher appeal and significantly improved entry point; clearer understanding of the core priority.",
+    "wildcard": false
+  },
+  {
+    "slug": "editorial-asymmetric-rules",
+    "name": "Asymmetric editorial grid with horizontal rules",
+    "axis_commitments": ["asymmetry", "whitespace-strategy"],
+    "rationale": "Items are left-aligned on a 1/3-2/3 vertical split, separated by thin Dunkelgrün horizontal rules. The right third of the panel is preserved as intentional whitespace, creating a high-end editorial composition that suggests sophistication rather than a dense list.",
+    "expected_outcome": "High visual appeal and perceived professionalism; likely viewed as more 'serious' content.",
+    "wildcard": false
+  },
+  {
+    "slug": "manifesto-one-statement",
+    "name": "Single-statement manifesto block",
+    "axis_commitments": ["density", "typography"],
+    "rationale": "Collapse the five slogans into a single, high-impact manifesto paragraph set in 48pt Vollkorn Black. This trades the breadth of a checklist for the depth and power of a singular political vision.",
+    "expected_outcome": "High message transport for the core argument, though potentially polarizing appeal due to the lack of itemized details.",
+    "wildcard": false
+  },
+  {
+    "slug": "personal-contract-voice",
+    "name": "First-person commitment voice",
+    "axis_commitments": ["voice-formality", "density"],
+    "rationale": "Rephrase slogans as direct first-person 'I' statements (e.g., 'Ich kämpfe für...' / 'Mein Plan für...') and reduce the count to the three most critical items. This transforms the page from an abstract list of goals into a personal contract with the voter.",
+    "expected_outcome": "Significant increase in message transport and voter trust; feels more authentic and less corporate.",
+    "wildcard": false
+  },
+  {
+    "slug": "typographic-scale-cascade",
+    "name": "Scale-based cascade of importance",
+    "axis_commitments": ["hierarchy", "typography"],
+    "rationale": "Uses a dramatic descending scale of font sizes (from 60pt down to 14pt) for the five items. This creates a forced reading order and suggests a 'foundation-to-detail' logic that the current even spacing lacks.",
+    "expected_outcome": "Strongest possible hierarchy; voters will clearly identify the primary starting point of the argument.",
+    "wildcard": false
+  },
+  {
+    "slug": "photographic-impact-cut",
+    "name": "Photographic anchor with reduced list",
+    "axis_commitments": ["photographic-vs-typographic", "density"],
+    "rationale": "A large, high-contrast photo occupies the top half of the panel to ground the text emotionally. The list is reduced to the three most visual slogans, placed in semi-transparent boxes over the image.",
+    "expected_outcome": "Maximum visual appeal; uses emotional resonance to drive interest even if information density is lower.",
+    "wildcard": false
+  },
+  {
+    "slug": "staggered-block-accent",
+    "name": "Staggered reverse-contrast blocks",
+    "axis_commitments": ["accent-strategy", "asymmetry"],
+    "rationale": "Each slogan is placed within a Dunkelgrün box with white text. The boxes are of varying widths based on text length and are staggered horizontally across the grid, breaking the rigid verticality and injecting energy into the layout.",
+    "expected_outcome": "High appeal and visual energy; the variation in alignment keeps the reader's eye moving through the list.",
+    "wildcard": false
+  },
+  {
+    "slug": "dialogue-eyebrow-form",
+    "name": "Question-and-answer eyebrow hierarchy",
+    "axis_commitments": ["hierarchy", "voice-formality"],
+    "rationale": "Adds a small 'eyebrow' question in Vollkorn Italic above each slogan (e.g., 'Wie schützen wir unsere Natur?' -> 'Klimaplan jetzt.'). This framing uses a dialogue structure to make the slogans feel like solutions rather than just labels.",
+    "expected_outcome": "Much higher message transport as the 'why' is explicitly stated alongside the 'what'.",
+    "wildcard": false
+  },
+  {
+    "slug": "minimalist-dual-focus",
+    "name": "Luxurious whitespace with dual focus",
+    "axis_commitments": ["whitespace-strategy", "density"],
+    "rationale": "Drastically cut the content to only two primary pillars, centered on the page with 60% of the area left empty. Rejects the 'cluttered' nature of the list to project a sense of confidence, clarity, and importance.",
+    "expected_outcome": "High appeal and clarity; creates a 'must-read' aura through minimalist scarcity.",
+    "wildcard": false
+  },
+  {
+    "slug": "wildcard-marginalia-sketch",
+    "name": "Handwritten marginalia and sketch aesthetic",
+    "axis_commitments": ["wildcard", "asymmetry"],
+    "rationale": "The slogans are set in a font that mimics handwriting and are placed 'off-grid' as if they were notes or annotations on the side of a more formal document. It breaks all brand 'polish' to suggest urgency, authenticity, and a 'work-in-progress' for the people.",
+    "expected_outcome": "High authenticity signal; likely to be the most memorable but potentially controversial for traditional voters.",
+    "wildcard": true
+  }
+]
+```

@@ -141,7 +141,11 @@ def build_variant_front(
         A fully-built ``Document``. The caller saves the SLA via
         ``doc.save(<path>)``.
     """
-    doc = _falzflyer_build.build_template()
+    # Use build_preview() so INJECT_MAP populates the production
+    # portrait/photo frames; without it the P1 Kandidat-Portrait,
+    # P4 Klima-Photo and P5 Bildung-Photo render as empty boxes and
+    # P1 looks gutted in the variant preview.
+    doc = _falzflyer_build.build_preview()
     page0 = doc.pages[0]
     _strip_p2_items(page0)
     p2_render_fn(doc, page0)
