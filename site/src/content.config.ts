@@ -23,4 +23,20 @@ const templates = defineCollection({
   }),
 });
 
-export const collections = { templates };
+// Issue #29 — design-experimentation MVP. Auto-populated by
+// tools/experiment_render.py from experiments/<id>/manifest.yml.
+const experiments = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/experiments' }),
+  schema: z.object({
+    id: z.string(),
+    subject: z.string(),
+    target_weak_area: z.string(),
+    contributing_llms: z.array(z.string()),
+    created: z.string(),
+    prompt_version: z.string().optional(),
+    notes: z.string().optional(),
+    hypotheses: z.array(z.any()),
+  }),
+});
+
+export const collections = { templates, experiments };
