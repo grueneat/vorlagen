@@ -1,0 +1,19 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+// Placeholder collection lookup — schema is registered in T10. Until then
+// this page uses a permissive empty array so the site builds cleanly.
+const experiments: Array<{ data: { id: string; subject?: string } }> = [];
+try {
+  // @ts-expect-error — collection registration lands in T10
+  const found = await getCollection('experiments');
+  for (const e of found) experiments.push(e);
+} catch {
+  // collection not yet registered
+}
+---
+<Base title="Experimente">
+  <h1>experiments — TBD</h1>
+  <p>{experiments.length} Experimente.</p>
+</Base>

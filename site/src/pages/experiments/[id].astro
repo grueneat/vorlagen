@@ -1,0 +1,13 @@
+---
+import Base from '../../layouts/Base.astro';
+
+// Placeholder dynamic route — implementation lands in T12. Returns a single
+// dummy path so Astro static-site builds without errors before the
+// experiments collection exists.
+export async function getStaticPaths() {
+  return [{ params: { id: 'placeholder' }, props: {} }];
+}
+---
+<Base title="experiments — TBD">
+  <h1>experiments — TBD</h1>
+</Base>
