@@ -74,6 +74,21 @@ SUBJECT_METADATA: dict[str, dict[str, str]] = {
             "design strategy — not 'tweak the bullet spacing'."
         ),
     },
+    "falzflyer-p2-mein-plan-v2": {
+        "target_weak_area": "gruene-corpus.md §2.2 — Information density discipline",
+        "weak_area_quote": (
+            "P2 currently presents five short slogans as an even-spaced peer "
+            "list. v1 (2026-04) tested hypotheses against this failure mode "
+            "but the render gate enforced only brand:inside_page, so the v1 "
+            "outcome was inconclusive (every variant violated the envelope). "
+            "v2's tested axis is information density + form (1-item manifesto "
+            "/ 3-item list with body / 5-item sparse / quote / paragraph-form "
+            "/ numbered with weighted scale / two-tier privileged item / "
+            "etc.). Everything except density+form is constraint. Hypotheses "
+            "MUST respect the full envelope (16 BRAND_CONSTRAINTS + 22 "
+            "Layer-1 thresholds) — the tested axis is the ONLY relaxation."
+        ),
+    },
 }
 
 
@@ -81,18 +96,36 @@ SUBJECT_METADATA: dict[str, dict[str, str]] = {
 # Prompt rendering
 # ---------------------------------------------------------------------------
 
-def render_prompt(template: str, subject: str, weak_area_quote: str) -> str:
-    """Substitute {subject} and {weak_area_quote} into the prompt template.
+def render_prompt(
+    template: str,
+    subject: str,
+    weak_area_quote: str,
+    constraint_envelope: str,
+    v1_anti_examples: str,
+) -> str:
+    """Substitute the four named tokens into the prompt template.
+
+    Tokens (since issue #30):
+      - {subject}
+      - {weak_area_quote}
+      - {constraint_envelope}   — Markdown rendering of experiments/<exp>/constraints.yml
+      - {v1_anti_examples}      — full text of tools/experiment_generate/v1_anti_examples.md
 
     Other literal braces in the template are preserved by escaping ``{`` /
     ``}`` to ``{{`` / ``}}`` inside non-token regions before ``str.format``.
+    All four tokens are required parameters; a missing envelope is a
+    programming error and surfaces loudly.
     """
-    # Two-step escape: protect literal braces, restore the named tokens.
-    tokens = ("subject", "weak_area_quote")
+    tokens = ("subject", "weak_area_quote", "constraint_envelope", "v1_anti_examples")
     safe = template.replace("{", "{{").replace("}", "}}")
     for tok in tokens:
         safe = safe.replace("{{" + tok + "}}", "{" + tok + "}")
-    return safe.format(subject=subject, weak_area_quote=weak_area_quote)
+    return safe.format(
+        subject=subject,
+        weak_area_quote=weak_area_quote,
+        constraint_envelope=constraint_envelope,
+        v1_anti_examples=v1_anti_examples,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -470,8 +503,24 @@ def _resolve_llms(requested: Iterable[str], no_gemini: bool) -> list[str]:
     return out
 
 
+ANTI_EXAMPLES_PATH = ROOT / "tools" / "experiment_generate" / "v1_anti_examples.md"
+
+
 def _prompt_version(prompt_text: str) -> str:
-    return "sha256:" + hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()[:12]
+    """Hash the template + envelope-renderable + anti-examples together.
+
+    Any change to falzflyer-default.yml or v1_anti_examples.md bumps the
+    version so corpus-update provenance correlates with prompt iteration.
+    The envelope-renderable is read from the anti-examples file directly
+    (envelope text is per-experiment, but anti-examples is a stable
+    file shared across experiments) — sufficient to bust the cache.
+    """
+    extras = b""
+    if ANTI_EXAMPLES_PATH.exists():
+        extras += b"\n--anti--\n" + ANTI_EXAMPLES_PATH.read_bytes()
+    return "sha256:" + hashlib.sha256(
+        prompt_text.encode("utf-8") + extras,
+    ).hexdigest()[:12]
 
 
 def run_generation(
@@ -504,8 +553,22 @@ def run_generation(
     )
 
     template = prompt_path.read_text(encoding="utf-8")
-    base_prompt = render_prompt(template, subject=subject,
-                                weak_area_quote=weak_area_quote)
+
+    from experiment_envelope import format_envelope_markdown, load_envelope
+    envelope = load_envelope(exp_dir)
+    envelope_md = format_envelope_markdown(envelope)
+    v1_anti_examples = (
+        ANTI_EXAMPLES_PATH.read_text(encoding="utf-8")
+        if ANTI_EXAMPLES_PATH.exists() else ""
+    )
+
+    base_prompt = render_prompt(
+        template,
+        subject=subject,
+        weak_area_quote=weak_area_quote,
+        constraint_envelope=envelope_md,
+        v1_anti_examples=v1_anti_examples,
+    )
     pv = _prompt_version(template)
 
     if runner_overrides:
