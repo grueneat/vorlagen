@@ -343,9 +343,9 @@ def build_template() -> Document:
     # 53.46 mm Logo. Placed top-right corner. 35 mm at QR version 4 still
     # well above D1's 0.5 mm/module minimum.
     qr_path = HERE / "samples" / "qr-quelle.png"
-    qr_data, qr_ext = (None, None)
-    if qr_path.exists():
-        qr_data, qr_ext = pack_inline_image(qr_path.read_bytes(), "png")
+    if not qr_path.exists():
+        raise FileNotFoundError(f"Required QR asset missing: {qr_path}")
+    qr_data, qr_ext = pack_inline_image(qr_path.read_bytes(), "png")
     page.add(ImageFrame(
         x_mm=370, y_mm=8, w_mm=35, h_mm=35,
         inline_image_data=qr_data,
