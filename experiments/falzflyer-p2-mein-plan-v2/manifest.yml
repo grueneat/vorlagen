@@ -1,0 +1,352 @@
+id: falzflyer-p2-mein-plan-v2
+subject: falzflyer-p2-mein-plan-v2
+target_weak_area: gruene-corpus.md §2.2 — Information density discipline
+contributing_llms:
+- claude
+- codex
+- retained-from-v1
+created: '2026-05-10'
+prompt_version: sha256:2cfe3d7e12f7
+hypotheses:
+- slug: numbered-priority-list-v2
+  name: Numbered 1..5 with rank-weighted typographic scale
+  axis_commitments:
+  - density
+  - hierarchy
+  rationale: 'Retained concept from v1 numbered-priority-list. v1 used constant 28pt
+    for all 5 numerals — no rank scaling, no hierarchy delivered. v2 corrects: rank-weighted
+    scale 36/30/24/20/16pt (geometric series, smallest 16pt clears the 10pt body floor).'
+  expected_outcome: 'Higher transport — eye lands on #1 first by design.'
+  sources:
+  - retained-from-v1
+  builder: variants/numbered-priority-list-v2.py
+  wildcard: false
+  source: retained-from-v1
+- slug: manifesto-single-statement-v2
+  name: Manifesto single statement in registered Vollkorn Italic
+  axis_commitments:
+  - density
+  - typography
+  rationale: Retained concept from v1 manifesto-single-statement. v1 specified Vollkorn
+    Black (non-italic) which is NOT in shared/ci.yml::fonts — only Vollkorn Black
+    Italic is. v2 uses the registered italic face and drops the v1 footer that contradicted
+    single-statement ownership.
+  expected_outcome: Polarising — the reader either reads the whole panel or skips
+    it entirely.
+  sources:
+  - retained-from-v1
+  builder: variants/manifesto-single-statement-v2.py
+  wildcard: false
+  source: retained-from-v1
+- slug: dunkelgrun-rules-between-items-v2
+  name: Three items separated by thin Dunkelgrün rules
+  axis_commitments:
+  - density
+  - asymmetry
+  rationale: 'Retained concept from v1 asymmetric-editorial-rules. v1 used 5 rows
+    × 22mm = 110mm packed into 130mm panel (~15% whitespace, below the hcd #3 30%
+    floor). v2 reduces to 3 items, leaving ~49% body-area whitespace while preserving
+    the thin-rule separator and intentional right-third whitespace.'
+  expected_outcome: Higher appeal among design-literate raters; editorial composition.
+  sources:
+  - retained-from-v1
+  builder: variants/dunkelgrun-rules-between-items-v2.py
+  wildcard: false
+  source: retained-from-v1
+- slug: two-tier-privileged-item
+  name: Two-tier hierarchy with one privileged item on Dunkelgrün block
+  axis_commitments:
+  - hierarchy
+  - accent-strategy
+  rationale: The five even-weight slogans are flat; the eye lands nowhere. Privilege
+    one cornerstone slogan by setting it on a full-width Dunkelgrün block in white
+    reverse contrast at display size, leaving three peer slogans below in Dunkelgrün-on-Hellgrün
+    at body weight. The accent is the brand's own text-on-green pairing, not Gelb,
+    so the move stays inside the envelope.
+  expected_outcome: Higher transport (clear primary message), polarising appeal (some
+    readers will resent the implied ranking).
+  sources:
+  - claude
+  builder: variants/two-tier-privileged-item.py
+  wildcard: false
+- slug: paragraph-form-prose-block
+  name: Replace list with one cohesive prose paragraph
+  axis_commitments:
+  - density
+  - voice-formality
+  rationale: A list invites scanning and dismissal; prose forces a reading commitment.
+    Set one continuous 11pt Gotham paragraph that argues for the candidate's plan
+    as connected reasoning, not as bullets. Trades scannability for narrative pull
+    and a more adult register.
+  expected_outcome: Lower appeal among quick-scanners, higher transport among readers
+    who actually engage — and a clearer signal about whether Schlagwort lists are
+    doing the work the team thinks they are.
+  sources:
+  - claude
+  builder: variants/paragraph-form-prose-block.py
+  wildcard: false
+- slug: eyebrow-plus-body-three
+  name: Three items with categorical eyebrow above each
+  axis_commitments:
+  - density
+  - hierarchy
+  rationale: Cut to three items but signpost each with a small Gotham Bold all-caps
+    eyebrow (KLIMA / WOHNEN / BILDUNG) sitting above a single short body sentence.
+    The eyebrow turns each item from slogan into a labelled commitment; body stays
+    at 10pt minimum to respect the floor. Hierarchy now operates inside each row,
+    not just between rows.
+  expected_outcome: Higher transport thanks to topical labels giving non-engaged readers
+    an entry point; appeal trade depends on whether the categorical framing reads
+    bureaucratic.
+  sources:
+  - claude
+  builder: variants/eyebrow-plus-body-three.py
+  wildcard: false
+- slug: horizontal-band-tricolor-zones
+  name: Three horizontal bands, central Dunkelgrün privileges cornerstone
+  axis_commitments:
+  - asymmetry
+  - accent-strategy
+  rationale: Stack three full-width horizontal bands — Hellgrün top, Dunkelgrün centre,
+    Hellgrün bottom — each carrying one slogan. The central Dunkelgrün band reverses
+    contrast (white display text on Dunkelgrün, brand-compliant) and is given roughly
+    1.6× the height of its neighbours, making it the optical anchor without using
+    Gelb or breaking text_on_green.
+  expected_outcome: Higher appeal (rhythmic, confident composition), mixed transport
+    — readers may absorb the central message but skip the supporting bands.
+  sources:
+  - claude
+  builder: variants/horizontal-band-tricolor-zones.py
+  wildcard: false
+- slug: vollkorn-italic-cornerstone-jump
+  name: Vollkorn Black Italic cornerstone with a real 2.5× jump
+  axis_commitments:
+  - typography
+  - voice-formality
+  rationale: One cornerstone phrase set in registered Vollkorn Black Italic at 36pt;
+    three supporting items in Gotham at 14pt — a clean 2.57× headline-jump that satisfies
+    the floor instead of fudging it. The italic cornerstone shifts the panel from
+    political-slogan register into editorial / personal commitment.
+  expected_outcome: Higher appeal with design-literate readers (editorial register
+    reads thoughtful), risk that voters experience italic display as soft or insufficiently
+    emphatic.
+  sources:
+  - claude
+  builder: variants/vollkorn-italic-cornerstone-jump.py
+  wildcard: false
+- slug: caps-eyebrow-categorical-tags
+  name: Each of three slogans tagged with caps category eyebrow
+  axis_commitments:
+  - hierarchy
+  - typography
+  rationale: Three slogans each preceded by a 9pt Gotham Bold all-caps category tag
+    in Dunkelgrün, sitting flush-left above the slogan with 4mm baseline gap. Hierarchy
+    operates by typographic weight and case, not colour or scale jump, so the panel
+    stays quiet but legible at distance and the category framing aids transport.
+  expected_outcome: Higher transport for cold readers (categories give them a frame),
+    middling appeal — the move is informational rather than emotive.
+  sources:
+  - claude
+  builder: variants/caps-eyebrow-categorical-tags.py
+  wildcard: false
+- slug: two-column-editorial-split
+  name: 60/40 editorial column split — promises left, identity right
+  axis_commitments:
+  - asymmetry
+  - hierarchy
+  rationale: Break the panel into a 60/40 vertical split. Left column holds three
+    promises stacked with generous baseline rhythm; right column carries the candidate's
+    name + role on a flush-top Dunkelgrün rule, then drops to whitespace. The asymmetric
+    grid borrows newspaper-spread logic and forces the eye through promises before
+    identity.
+  expected_outcome: Higher appeal for readers who value editorial polish, lower for
+    readers who expect symmetric political layouts; transport rises if the role label
+    gives the promises authorship.
+  sources:
+  - claude
+  builder: variants/two-column-editorial-split.py
+  wildcard: false
+- slug: two-statement-call-response
+  name: Two display statements as call-and-response
+  axis_commitments:
+  - density
+  - typography
+  rationale: 'Replace the list with two statements arranged as dialogue: an upper
+    statement at display size posing the stakes (e.g. "Wie weiter im Kreis?") and
+    a lower statement, separated by a 4mm Dunkelgrün rule, delivering the answer (e.g.
+    "Mit klarem Kurs."). Density drops from five to two, and the second statement
+    carries the commitment via call-and-response rhythm rather than bullet-list parity.'
+  expected_outcome: Higher appeal (rhythm, confident pause), lower transport on detail
+    (only one promise lands, the rest is implied).
+  sources:
+  - claude
+  builder: variants/two-statement-call-response.py
+  wildcard: false
+- slug: quote-plus-reply-single-family
+  name: Resident quote + candidate reply, single type family
+  axis_commitments:
+  - voice-formality
+  - hierarchy
+  rationale: Open with a verbatim resident quote in Gotham Italic at body size, then
+    a candidate reply in Gotham Bold at 1.4× body — both inside the Gotham family
+    so the panel stays within the 2-family floor. The quote-then-reply structure reframes
+    the candidate as listener-first; the family-restraint avoids v1's third-family
+    violation.
+  expected_outcome: Higher appeal among reader-empathy voters; transport hinges on
+    whether the chosen quote does diagnostic work or reads like a prop.
+  sources:
+  - claude
+  builder: variants/quote-plus-reply-single-family.py
+  wildcard: false
+- slug: candidate-portrait-overlay-pact
+  name: Portrait fills panel, single hand-set commitment overlays in Dunkelgrün block
+  axis_commitments:
+  - wildcard
+  - photographic-vs-typographic
+  rationale: 'Wildcard: drop the Schlagwort list entirely. The panel becomes a face_crop
+    ≥60% portrait of the candidate; a single short commitment phrase sits in a Dunkelgrün
+    rectangular plate anchored to the lower third (text_on_green compliant, plate
+    avoids partial-overlap of the face frame). The piece stops being a list of promises
+    and becomes a face attached to one sentence — directions the team historically
+    resists for being too personality-driven.'
+  expected_outcome: Polarising on appeal (high among voters who respond to candidates
+    as people, low among programmatic voters), strong transport for the single attached
+    commitment, near-zero transport for everything else.
+  sources:
+  - claude
+  builder: variants/candidate-portrait-overlay-pact.py
+  wildcard: true
+- slug: manifesto-single-pledge-v2
+  name: Manifesto single pledge
+  axis_commitments:
+  - density
+  - typography
+  rationale: Collapse the peer list into one dominant sentence set in Vollkorn Black
+    Italic, with only a short supporting line in Gotham beneath it. The panel stops
+    behaving like a checklist and instead reads as a single political promise with
+    clear emotional entry.
+  expected_outcome: Likely high appeal through force and memorability, with transport
+    split depending on whether raters prefer focus over coverage.
+  sources:
+  - codex
+  builder: variants/manifesto-single-pledge-v2.py
+  wildcard: false
+- slug: three-pillars-with-explainer
+  name: Three pillars with explainer lines
+  axis_commitments:
+  - density
+  - hierarchy
+  rationale: Reduce the five slogans to three priorities and attach one short explanatory
+    sentence to each, keeping body text safely above 10pt. The structure turns abstract
+    claims into a ranked argument and gives each item enough room to mean something.
+  expected_outcome: Likely strongest on transport, with appeal dependent on whether
+    voters reward clarity over punch.
+  sources:
+  - codex
+  builder: variants/three-pillars-with-explainer.py
+  wildcard: false
+- slug: editorial-left-column-rules
+  name: Editorial left column with rules
+  axis_commitments:
+  - asymmetry
+  - whitespace-strategy
+  rationale: Anchor the content in a left-hand text column with thin Dunkelgrün separators
+    and preserve a deliberately open right side instead of centering everything. The
+    composition creates tension and makes the empty space feel intentional rather
+    than leftover.
+  expected_outcome: Likely higher appeal among design-sensitive raters, with transport
+    improving if the asymmetry helps scanning.
+  sources:
+  - codex
+  builder: variants/editorial-left-column-rules.py
+  wildcard: false
+- slug: ranked-numerals-scale-list
+  name: Ranked numerals with descending scale
+  axis_commitments:
+  - hierarchy
+  - typography
+  - accent-strategy
+  rationale: Keep all five items but make the ranking explicit through oversized numerals
+    that visibly step down from 1 to 5, while one numeral takes the accent color.
+    This preserves breadth yet replaces flat equality with an unmistakable reading
+    order.
+  expected_outcome: Likely balanced on appeal and transport because it keeps information
+    volume while adding a clear entry point.
+  sources:
+  - codex
+  builder: variants/ranked-numerals-scale-list.py
+  wildcard: false
+- slug: resident-quote-then-pledge
+  name: Resident quote followed by pledge
+  axis_commitments:
+  - voice-formality
+  - hierarchy
+  rationale: Open with one short resident-style quote as the problem statement, then
+    answer it with a single candidate pledge and compact support text, all within
+    a two-level structure. The panel shifts from slogan sheet to dialogue, which may
+    make the message feel more grounded and accountable.
+  expected_outcome: Likely stronger on transport and trust, with appeal depending
+    on tolerance for a less slogan-like register.
+  sources:
+  - codex
+  builder: variants/resident-quote-then-pledge.py
+  wildcard: false
+- slug: first-person-compact-paragraph
+  name: First-person compact paragraph
+  axis_commitments:
+  - density
+  - voice-formality
+  rationale: Replace the list entirely with one short first-person paragraph that
+    reads as a compact commitment rather than five separate claims. The form asks
+    voters to process a coherent stance instead of hopping across equal-weight fragments.
+  expected_outcome: Likely moderate appeal but improved message coherence if raters
+    respond to a more personal contract tone.
+  sources:
+  - codex
+  builder: variants/first-person-compact-paragraph.py
+  wildcard: false
+- slug: cornerstone-banner-with-minors
+  name: Cornerstone banner with minor items
+  axis_commitments:
+  - hierarchy
+  - asymmetry
+  rationale: Give one priority a full-width top banner and place the remaining items
+    below as smaller supporting lines in a secondary block. The anatomy creates a
+    clear leader-with-supporters structure without forcing the supporting text below
+    minimum size.
+  expected_outcome: Likely strong on transport because the main promise is unmistakable,
+    with appeal helped by the more decisive structure.
+  sources:
+  - codex
+  builder: variants/cornerstone-banner-with-minors.py
+  wildcard: false
+- slug: accent-chip-and-open-field
+  name: Accent chip with open field
+  axis_commitments:
+  - accent-strategy
+  - whitespace-strategy
+  rationale: Concentrate visual energy into one compact accent-backed chip for the
+    key phrase and let the rest of the panel breathe with sparse secondary text. The
+    design tests whether one small privileged signal can outperform a fully populated
+    slogan field.
+  expected_outcome: Likely higher appeal through restraint, with transport depending
+    on whether the privileged chip carries enough of the message alone.
+  sources:
+  - codex
+  builder: variants/accent-chip-and-open-field.py
+  wildcard: false
+- slug: ballot-cross-text-container
+  name: Ballot cross as text container
+  axis_commitments:
+  - wildcard
+  rationale: Use the Wahlkreuz not as a small brand sign-off but as the structural
+    text container itself, with the pledge occupying one arm and support lines occupying
+    the other. It is an unusually literal form move that could reveal whether voters
+    respond to a more symbolic, campaign-object composition than the team would normally
+    permit.
+  expected_outcome: Likely polarising on appeal but valuable for signal because it
+    tests a radically different memory structure.
+  sources:
+  - codex
+  builder: variants/ballot-cross-text-container.py
+  wildcard: true
