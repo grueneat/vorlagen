@@ -1,7 +1,7 @@
 ---
 id: '36'
 title: Visual-diff bbox extractor with slot attribution
-status: open
+status: done
 priority: medium
 labels:
 - visual-qa
