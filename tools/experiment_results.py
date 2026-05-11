@@ -14,7 +14,8 @@ Outputs:
 
 The aggregator consumes the rank shape (linear Borda position scores)
 and a direct-pick fallback shape (1.0 per selection, None otherwise).
-Pairwise / versus mode is gone; see issue #31 for the schema bump.
+Legacy v1 result files are no longer processable; see issue #31 for
+the schema bump.
 """
 
 from __future__ import annotations

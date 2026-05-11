@@ -2,8 +2,8 @@
 # Validates the JSON the voting page exports and the results aggregator
 # consumes. Two shapes coexist via a top-level oneOf discriminating on
 # `mode.const`: "rank" (ordered list of slugs) and "direct-pick" (an
-# unordered set of selected slugs). Pairwise / versus mode is deleted
-# entirely; v1 result files are no longer processable (issue #31).
+# unordered set of selected slugs). v1 result files are no longer
+# processable; the schema bump is intentional (issue #31).
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://gruene-noe.at/experiments/results.schema.yaml"
@@ -11,7 +11,7 @@ title: "Experiment results"
 description: >
   Voting-session results for one rater. Captures either an ordered ranking
   of variant slugs (rank mode) or a flat set of selections (direct-pick
-  fallback). Per CONTEXT.md decision #9 (issue #31) the pairwise shape is
+  fallback). Per CONTEXT.md decision #9 (issue #31) the legacy v1 shape is
   removed; the schema bump is intentional and no migration tool ships.
 type: object
 
