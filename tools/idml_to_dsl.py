@@ -1231,6 +1231,14 @@ def _emit_pageitem(
     w_mm = w_pt * PT_TO_MM
     h_mm = h_pt * PT_TO_MM
 
+    # The raw (pre-ItemTransform) top-left anchor of this frame, used by
+    # _extract_content_local_params to compute image/PDF local offset.
+    # Image/PDF child ItemTransforms use the same rect-local coordinate space
+    # as the PathPointArray anchors (both are BEFORE the rect's ItemTransform).
+    raw_xs = [p[0] for p in anchors]
+    raw_ys = [p[1] for p in anchors]
+    frame_tl_anchor: tuple[float, float] = (min(raw_xs), min(raw_ys))
+
     # Detect nested vector logos (<PDF>) — defer per locked decision #2.
     pdf_children = item.findall(".//PDF")
     image_children = item.findall(".//Image")
@@ -1253,10 +1261,25 @@ def _emit_pageitem(
             if mapped is None and ctx.logo_map:
                 mapped = ctx.logo_map.get(basename)
             if mapped:
+                # Resolve relative asset_map paths to absolute.
+                abs_mapped = (
+                    str(Path(mapped).resolve())
+                    if not Path(mapped).is_absolute()
+                    else mapped
+                )
+                # Extract per-PDF placement params from the PDF child's ItemTransform.
+                pdf_transform_str = pdf.get("ItemTransform", "")
+                pdf_local_scale: Optional[tuple[float, float]] = None
+                pdf_local_offset: Optional[tuple[float, float]] = None
+                if pdf_transform_str:
+                    pdf_local_scale, pdf_local_offset = _extract_content_local_params(
+                        pdf_transform_str, frame_tl_anchor
+                    )
                 # Use the mapped PNG for the entire enclosing frame.
                 _emit_image_frame_call(
                     out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
-                    image_path=mapped, ctx=ctx,
+                    image_path=abs_mapped, ctx=ctx,
+                    local_scale=pdf_local_scale, local_offset_pt=pdf_local_offset,
                 )
                 return
             ctx.unmapped_logos.append((pdf.get("Self", "?"), basename or uri))
@@ -1266,7 +1289,7 @@ def _emit_pageitem(
         # Use the first <Image> child as the visual content.
         img = image_children[0]
         _emit_image_content(out, item, img, x_mm, y_mm, w_mm, h_mm, rot,
-                            self_id, layer_idx, ctx)
+                            self_id, layer_idx, ctx, frame_tl_anchor=frame_tl_anchor)
         return
 
     if tag == "TextFrame":
@@ -1385,6 +1408,44 @@ def _basename_from_uri(uri: str) -> str:
     return unicodedata.normalize("NFC", Path(raw_path).name)
 
 
+def _extract_content_local_params(
+    content_transform_str: str,
+    frame_tl_anchor: tuple[float, float],
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Derive (local_scale, local_offset_pt) from a content child's ItemTransform.
+
+    IDML stores Image/PDF children with an ItemTransform whose (tx, ty) is the
+    content origin in the **same coordinate space as the enclosing Rectangle's
+    anchors** (spread-local).  Scribus LOCALX/LOCALY is the delta from the
+    frame's top-left corner to the content origin, measured in points.
+
+    Args:
+        content_transform_str: the ``ItemTransform`` attribute of the ``<Image>``
+            or ``<PDF>`` element (e.g. "0.491 0 0 0.491 -299.62 1296.99").
+        frame_tl_anchor: the ``(x, y)`` of the Rectangle frame's top-left
+            PathPointType anchor in the same spread-local coordinate space
+            (min-x, min-y of the rectangle's PathPointArray).
+
+    Returns:
+        ``(local_scale, local_offset_pt)`` where *local_scale* is a
+        ``(scx, scy)`` tuple and *local_offset_pt* is the ``(dx, dy)``
+        translation from frame TL to content origin in points.
+    """
+    parts = content_transform_str.split()
+    if len(parts) != 6:
+        # Malformed transform — fall back to identity.
+        return ((1.0, 1.0), (0.0, 0.0))
+    try:
+        a, _b, _c, d, tx, ty = (float(p) for p in parts)
+    except ValueError:
+        return ((1.0, 1.0), (0.0, 0.0))
+    scx = a  # scale-x (diagonal element; shear/rotation not expected here)
+    scy = d  # scale-y
+    offset_x_pt = tx - frame_tl_anchor[0]
+    offset_y_pt = ty - frame_tl_anchor[1]
+    return ((scx, scy), (offset_x_pt, offset_y_pt))
+
+
 def _emit_image_frame_call(
     out: PythonRepr,
     x_mm: float,
@@ -1398,6 +1459,8 @@ def _emit_image_frame_call(
     ctx: _Ctx,
     inline_data: Optional[str] = None,
     inline_ext: Optional[str] = None,
+    local_scale: Optional[tuple[float, float]] = None,
+    local_offset_pt: Optional[tuple[float, float]] = None,
 ) -> None:
     """Append a page.add(ImageFrame(...)) call to ctx.out."""
     kwargs: dict[str, Any] = {
@@ -1415,6 +1478,19 @@ def _emit_image_frame_call(
     if inline_data is not None and inline_ext is not None:
         kwargs["inline_image_data"] = inline_data
         kwargs["inline_image_ext"] = inline_ext
+    # Emit content placement params when they deviate meaningfully from defaults.
+    # Scribus default: local_scale=(1,1), local_offset=(0,0).
+    if local_scale is not None:
+        scx, scy = local_scale
+        if abs(scx - 1.0) > 1e-4 or abs(scy - 1.0) > 1e-4:
+            kwargs["local_scale"] = (round(scx, 6), round(scy, 6))
+    if local_offset_pt is not None:
+        ox_pt, oy_pt = local_offset_pt
+        # Convert pt → mm for the DSL parameter (primitives.py multiplies back).
+        ox_mm = ox_pt * PT_TO_MM
+        oy_mm = oy_pt * PT_TO_MM
+        if abs(ox_mm) > 0.01 or abs(oy_mm) > 0.01:
+            kwargs["local_offset_mm"] = (round(ox_mm, 4), round(oy_mm, 4))
     page_var = ctx.layer_id_to_idx  # unused; emit call always uses receiver via outer scope
     # The receiver is the page variable (e.g. "page0"); the outer _emit_pageitem
     # passes ctx.out and the page_var explicitly. For simplicity here we emit
@@ -1439,6 +1515,7 @@ def _emit_image_content(
     self_id: str,
     layer_idx: int,
     ctx: _Ctx,
+    frame_tl_anchor: Optional[tuple[float, float]] = None,
 ) -> None:
     """Emit a raster Image as an ImageFrame, resolving the file: URI.
 
@@ -1453,6 +1530,13 @@ def _emit_image_content(
          no ``--asset-map`` was supplied. We still reject extensions Scribus
          cannot render (``.psd``, ``.ai``, etc.) so the failure is loud
          instead of a blank preview.
+
+    Args:
+        frame_tl_anchor: the ``(x, y)`` of the Rectangle's top-left
+            PathPointType anchor in spread-local coordinates. When supplied,
+            the Image's ``ItemTransform`` is used to derive ``local_scale``
+            and ``local_offset_pt`` so Scribus positions the content correctly
+            inside the frame (matching InDesign's image placement).
     """
     link = img.find(".//Link")
     uri = link.get("LinkResourceURI", "") if link is not None else ""
@@ -1464,13 +1548,28 @@ def _emit_image_content(
             f"(extend tools/idml_to_dsl.py:_emit_image_content)"
         )
 
+    # Extract per-image placement params from the Image child's ItemTransform.
+    # The IDML Image element's ItemTransform encodes the content scale and
+    # its origin offset within the frame (see _extract_content_local_params).
+    local_scale: Optional[tuple[float, float]] = None
+    local_offset_pt: Optional[tuple[float, float]] = None
+    img_transform_str = img.get("ItemTransform", "")
+    if img_transform_str and frame_tl_anchor is not None:
+        local_scale, local_offset_pt = _extract_content_local_params(
+            img_transform_str, frame_tl_anchor
+        )
+
     # 1. Asset-map lookup (Phase 2 path).
     if ctx.asset_map:
         mapped = ctx.asset_map.get(basename)
         if mapped:
+            # Resolve relative asset_map paths to absolute so Scribus finds
+            # the file regardless of the working directory at render time.
+            abs_mapped = str(Path(mapped).resolve()) if not Path(mapped).is_absolute() else mapped
             _emit_image_frame_call(
                 ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
-                self_id, layer_idx, image_path=mapped, ctx=ctx,
+                self_id, layer_idx, image_path=abs_mapped, ctx=ctx,
+                local_scale=local_scale, local_offset_pt=local_offset_pt,
             )
             return
         # asset_map is populated but this basename is missing → strict raise.
@@ -1495,8 +1594,10 @@ def _emit_image_content(
         # Decision #3: defer missing-asset raise to end-of-conversion.
         ctx.missing_assets.append(str(asset_path))
         return
-    # Repo-relative path for the emitted build.py.
+    # Absolute path so Scribus resolves the file at render time regardless of cwd.
+    emit_path = str(asset_path.resolve())
     try:
+        # Also try repo-relative for human readability in the emitted source.
         rel_path = asset_path.resolve().relative_to(ROOT)
         emit_path = str(rel_path).replace("\\", "/")
     except ValueError:
@@ -1506,6 +1607,7 @@ def _emit_image_content(
     _emit_image_frame_call(
         ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
         self_id, layer_idx, image_path=emit_path, ctx=ctx,
+        local_scale=local_scale, local_offset_pt=local_offset_pt,
     )
 
 
@@ -1786,6 +1888,17 @@ def _emit_pages(ctx: _Ctx) -> None:
         ctx.out.indent += 1
         ctx.out.w(f'"""Auto-generated page-items for page {i + 1} (Spread {sp_path})."""')
 
+        # Page dimensions for the out-of-page guard below.
+        page_gb_y1, page_gb_x1, page_gb_y2, page_gb_x2 = page_gb
+        page_w_pt = page_gb_x2 - page_gb_x1
+        page_h_pt = page_gb_y2 - page_gb_y1
+        # Items more than this many mm outside the page+bleed area are treated
+        # as InDesign design artifacts (e.g. guide markers on printable layers)
+        # that InDesign does not export to PDF.  Bleed is typically ≤3 mm so
+        # a 20 mm guard safely excludes true out-of-page artifacts.
+        _OUT_OF_PAGE_GUARD_MM = 20.0
+        _guard_pt = _OUT_OF_PAGE_GUARD_MM / PT_TO_MM
+
         emit_count = 0
         for child in spread_node:
             if not isinstance(child.tag, str):
@@ -1809,6 +1922,36 @@ def _emit_pages(ctx: _Ctx) -> None:
                     f"layer {item_layer!r} not handled "
                     f"(extend tools/idml_to_dsl.py:_emit_pages)"
                 )
+            # Out-of-page guard: skip items that lie entirely outside the page
+            # bounds by more than _guard_pt. These are InDesign design artifacts
+            # (guides, registration marks) that InDesign excludes from PDF export
+            # even when placed on a printable layer.
+            child_t = child.get("ItemTransform", "1 0 0 1 0 0")
+            try:
+                child_anchors = _extract_anchors(child)
+                child_x_pt, child_y_pt, child_w_pt, child_h_pt, _ = _compute_page_local_bbox_pt(
+                    child_t, child_anchors, [], spread_t, page_t, page_gb
+                )
+                if (
+                    child_x_pt + child_w_pt < -_guard_pt
+                    or child_x_pt > page_w_pt + _guard_pt
+                    or child_y_pt + child_h_pt < -_guard_pt
+                    or child_y_pt > page_h_pt + _guard_pt
+                ):
+                    sid = child.get("Self", "?")
+                    print(
+                        f"  [skip] {tag} Self={sid!r}: entirely outside page "
+                        f"bounds (x={child_x_pt * PT_TO_MM:.1f}mm "
+                        f"y={child_y_pt * PT_TO_MM:.1f}mm "
+                        f"w={child_w_pt * PT_TO_MM:.1f}mm "
+                        f"h={child_h_pt * PT_TO_MM:.1f}mm) — "
+                        f"InDesign design artifact, not emitted",
+                        file=sys.stderr,
+                    )
+                    continue
+            except UnhandledElement:
+                # If anchor extraction fails (e.g. for Groups), skip the guard.
+                pass
             layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
             _emit_pageitem(ctx.out, child, [], spread_t, page_t, page_gb,
                            page_var, ctx, layer_idx)
@@ -1943,6 +2086,16 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
         out.w(f"DocumentLayer({body}),")
     out.indent -= 1
     out.w("],")
+    # Disable crop/bleed marks so the exported PDF MediaBox matches the
+    # InDesign baseline (trim-only, no marks area).  Brand default has
+    # these on; IDML DocumentPrintingPreference has them off for this
+    # template, so override here.
+    out.w("extra_pdf_attrs={")
+    out.indent += 1
+    out.w("'cropMarks': '0',")
+    out.w("'bleedMarks': '0',")
+    out.indent -= 1
+    out.w("},")
     out.indent -= 1
     out.w(")")
     out.w("")
