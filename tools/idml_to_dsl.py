@@ -63,8 +63,10 @@ import argparse
 import math
 import re
 import sys
+import unicodedata
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import unquote, urlparse
 
 from lxml import etree
@@ -339,18 +341,445 @@ def _pt_to_mm(value_pt: float) -> float:
 
 
 # ---------------------------------------------------------------------------
-def convert(source: Path, output: Path, template_id: str, assets_dir: Path) -> None:
-    """Open the IDML and (for task 1) print a one-line summary.
+# Code-emitter primitives — mirror tools/sla_to_dsl.py:140-195 verbatim in
+# spirit (4-space indent, double-quoted strings, repr() for floats for
+# byte-stable round-trip).
+# ---------------------------------------------------------------------------
+class PythonRepr:
+    """Lightweight code-emitter. Tracks indentation."""
 
-    Later tasks fill in the 7 phases:
-        A. doc meta (Resources/Preferences.xml)
-        B. layers (designmap.xml)
-        C. master-spread emptiness check
-        D. header + Document scaffold emit
-        E. add_master / add_page emit
-        F. colors (Resources/Graphic.xml)
-        G. styles (Resources/Styles.xml)
-        H. page items (Spreads/*.xml + Stories/*.xml)
+    def __init__(self) -> None:
+        self.lines: list[str] = []
+        self.indent = 0
+
+    def w(self, s: str = "") -> None:
+        if s:
+            self.lines.append("    " * self.indent + s)
+        else:
+            self.lines.append("")
+
+    def render(self) -> str:
+        return "\n".join(self.lines).rstrip() + "\n"
+
+
+def _py_value(v: Any) -> str:
+    """Format a Python literal the way Black would.
+
+    Floats use ``repr()`` so the emitted build.py is round-trip-stable.
+    Mirrors ``sla_to_dsl.py:_py_value``.
+    """
+    if v is None:
+        return "None"
+    if isinstance(v, bool):
+        return "True" if v else "False"
+    if isinstance(v, int):
+        return str(v)
+    if isinstance(v, float):
+        if v.is_integer():
+            return str(int(v))
+        return repr(v)
+    if isinstance(v, str):
+        # Prefer double quotes when no double quotes inside.
+        if '"' not in v and "'" in v:
+            return '"' + v + '"'
+        return repr(v)
+    if isinstance(v, tuple):
+        body = ", ".join(_py_value(x) for x in v)
+        if len(v) == 1:
+            body += ","
+        return "(" + body + ")"
+    if isinstance(v, list):
+        return "[" + ", ".join(_py_value(x) for x in v) + "]"
+    if isinstance(v, dict):
+        return "{" + ", ".join(f"{_py_value(k)}: {_py_value(val)}" for k, val in v.items()) + "}"
+    raise TypeError(f"Cannot serialise {v!r}")
+
+
+def _emit_call(
+    out: PythonRepr,
+    cls_name: str,
+    kwargs: dict[str, Any],
+    *,
+    receiver: Optional[str] = None,
+    multiline: bool = True,
+    drop_none: bool = True,
+) -> None:
+    """Emit ``Cls(k1=v1, k2=v2, ...)`` (or ``receiver.add(Cls(...))``).
+
+    Kwargs with ``None`` values are dropped unless ``drop_none=False``.
+    ``multiline=True`` puts each kwarg on its own line for readability.
+    """
+    if drop_none:
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+    prefix = f"{receiver}.add(" if receiver else ""
+    suffix = ")" if receiver else ""
+    if not multiline or len(kwargs) <= 1:
+        body = ", ".join(f"{k}={_py_value(v)}" for k, v in kwargs.items())
+        out.w(f"{prefix}{cls_name}({body}){suffix}")
+        return
+    out.w(f"{prefix}{cls_name}(")
+    out.indent += 1
+    for k, v in kwargs.items():
+        out.w(f"{k}={_py_value(v)},")
+    out.indent -= 1
+    out.w(f"){suffix}")
+
+
+# ---------------------------------------------------------------------------
+# Converter context — passed through the 7-phase pipeline so each phase can
+# read shared state (the open IDML package, the resolved color map, the
+# paragraph-style slug map, the deferred logo list, etc.) without globals.
+# ---------------------------------------------------------------------------
+@dataclass
+class _Ctx:
+    pkg: Any  # IDMLPackage (avoiding the import-time annotation cost)
+    template_id: str
+    assets_dir: Path
+    out: PythonRepr = field(default_factory=PythonRepr)
+    # Filled by Phase A
+    doc_prefs: dict[str, Any] = field(default_factory=dict)
+    # Filled by Phase B
+    layers: list[dict[str, Any]] = field(default_factory=list)
+    layer_id_to_idx: dict[str, int] = field(default_factory=dict)
+    printable_layer_ids: set[str] = field(default_factory=set)
+    # Filled by Phase F (task 4)
+    color_map: dict[str, str] = field(default_factory=dict)
+    # Filled by Phase G (task 5)
+    paragraph_style_map: dict[str, str] = field(default_factory=dict)
+    paragraph_styles: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Filled by Phase H (tasks 6-7)
+    unmapped_logos: list[tuple[str, str]] = field(default_factory=list)
+    missing_assets: list[str] = field(default_factory=list)
+    logo_map: dict[str, str] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Phase A — Document preferences (Resources/Preferences.xml)
+# ---------------------------------------------------------------------------
+def _read_doc_preferences(pkg: Any) -> dict[str, Any]:
+    """Extract page width/height + uniform bleed from DocumentPreference.
+
+    Raises if the four bleed offsets are non-uniform (v1 only supports the
+    common case; the target IDML has all four at 5.669292 pt = 2 mm).
+    """
+    prefs_xml = pkg.open("Resources/Preferences.xml").read()
+    root = etree.fromstring(prefs_xml, parser=_SECURE_XMLPARSER)
+    dp = root.find(".//DocumentPreference")
+    if dp is None:
+        raise UnhandledElement(
+            "Resources/Preferences.xml has no DocumentPreference "
+            "(extend tools/idml_to_dsl.py:_read_doc_preferences)"
+        )
+    d = {
+        "page_width_pt": float(dp.get("PageWidth", "0")),
+        "page_height_pt": float(dp.get("PageHeight", "0")),
+        "bleed_top_pt": float(dp.get("DocumentBleedTopOffset", "0")),
+        "bleed_bottom_pt": float(dp.get("DocumentBleedBottomOffset", "0")),
+        "bleed_inside_pt": float(dp.get("DocumentBleedInsideOrLeftOffset", "0")),
+        "bleed_outside_pt": float(dp.get("DocumentBleedOutsideOrRightOffset", "0")),
+        "facing_pages": dp.get("FacingPages", "false").lower() == "true",
+    }
+    bleeds = (
+        d["bleed_top_pt"],
+        d["bleed_bottom_pt"],
+        d["bleed_inside_pt"],
+        d["bleed_outside_pt"],
+    )
+    if max(bleeds) - min(bleeds) > 0.1:
+        raise UnhandledElement(
+            f"DocumentPreference has non-uniform bleeds {bleeds!r}; "
+            f"v1 only supports uniform bleed "
+            f"(extend tools/idml_to_dsl.py:_read_doc_preferences)"
+        )
+    return d
+
+
+# ---------------------------------------------------------------------------
+# Phase B — Layers (designmap.xml)
+# ---------------------------------------------------------------------------
+def _read_layers(pkg: Any) -> list[dict[str, Any]]:
+    """Return ordered [{self_id, name, visible, printable, locked}, ...].
+
+    Order matches designmap.xml order; layer index in the emitted Document
+    follows this list (idx 0 = first layer).
+    """
+    designmap_xml = pkg.open("designmap.xml").read()
+    root = etree.fromstring(designmap_xml, parser=_SECURE_XMLPARSER)
+    layers: list[dict[str, Any]] = []
+    for L in root.findall(".//Layer"):
+        layers.append(
+            {
+                "self_id": L.get("Self"),
+                "name": L.get("Name", ""),
+                "visible": L.get("Visible", "true").lower() == "true",
+                "printable": L.get("Printable", "true").lower() == "true",
+                "locked": L.get("Locked", "false").lower() == "true",
+            }
+        )
+    if not layers:
+        raise UnhandledElement(
+            "designmap.xml has no <Layer> elements "
+            "(extend tools/idml_to_dsl.py:_read_layers)"
+        )
+    return layers
+
+
+# ---------------------------------------------------------------------------
+# Phase C — MasterSpread emptiness check (locked decision: master must be empty)
+# ---------------------------------------------------------------------------
+_MASTER_PAGEITEM_TAGS = (
+    "Rectangle",
+    "Polygon",
+    "Oval",
+    "TextFrame",
+    "Image",
+    "Group",
+    "PDF",
+    "EPS",
+    "GraphicLine",
+)
+
+
+def _check_masters_empty(pkg: Any) -> None:
+    """Raise if any MasterSpread file contains PageItem-shaped children.
+
+    The target IDML has a single empty MasterSpread (`MasterSpread_ubb.xml`),
+    so this is a defensive guard rather than active feature coverage.
+    """
+    for member in pkg.namelist():
+        if not member.startswith("MasterSpreads/"):
+            continue
+        if not member.endswith(".xml"):
+            continue
+        xml = pkg.open(member).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        for tag in _MASTER_PAGEITEM_TAGS:
+            found = root.findall(f".//{tag}")
+            if found:
+                raise UnhandledElement(
+                    f"MasterSpread {member} contains <{tag}> page items "
+                    f"(v1 only supports empty masters; "
+                    f"extend tools/idml_to_dsl.py:_check_masters_empty)"
+                )
+
+
+# ---------------------------------------------------------------------------
+# Phase D/E — emit build.py header + Document + add_master + add_page calls
+# ---------------------------------------------------------------------------
+def _emit_header(out: PythonRepr, template_id: str, idml_name: str) -> None:
+    """Emit module docstring + imports + INJECT_MAP placeholder."""
+    out.w(f'"""{template_id} — DSL build entry point.')
+    out.w("")
+    out.w(f"Auto-generated from {idml_name} by tools/idml_to_dsl.py.")
+    out.w("Hand-edit thereafter; this file is the source of truth.")
+    out.w("")
+    out.w("NOTE: bleed_mm=2.0 below matches the IDML verbatim. Brand standard")
+    out.w("is 3.0 mm; coerce only after team review.")
+    out.w("")
+    out.w("Falz lines are NOT emitted by the converter — add manually post-bootstrap")
+    out.w("matching templates/kandidat-falzflyer-din-lang/build.py: import FoldLine")
+    out.w("from sla_lib.builder.blocks and instantiate at panel boundaries x=99/198 mm.")
+    out.w('"""')
+    out.w("from __future__ import annotations")
+    out.w("")
+    out.w("import sys")
+    out.w("from pathlib import Path")
+    out.w("")
+    out.w("HERE = Path(__file__).resolve().parent")
+    out.w('sys.path.insert(0, str(HERE.parents[1] / "tools"))')
+    out.w("")
+    out.w("from sla_lib.builder import (  # noqa: E402")
+    out.w("    Brand,")
+    out.w("    Document,")
+    out.w("    DocumentLayer,")
+    out.w("    TextFrame,")
+    out.w("    ImageFrame,")
+    out.w("    Polygon,")
+    out.w("    Run,")
+    out.w("    ParaStyle,")
+    out.w("    Anchor,")
+    out.w("    pack_inline_image,")
+    out.w(")")
+    out.w("")
+    out.w("INJECT_MAP: dict[str, str] = {}")
+    out.w("")
+
+
+def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
+    """Emit build_template(): Document() + add_master + add_page calls."""
+    prefs = ctx.doc_prefs
+    trim_w_mm = prefs["page_width_pt"] * PT_TO_MM
+    trim_h_mm = prefs["page_height_pt"] * PT_TO_MM
+    bleed_mm = prefs["bleed_top_pt"] * PT_TO_MM
+
+    out.w("def build_template() -> Document:")
+    out.indent += 1
+    out.w('"""Return a clean Document with all frames defined.')
+    out.w("")
+    out.w("Emitted by tools/idml_to_dsl.py from the source IDML; hand-edit as needed.")
+    out.w('"""')
+    out.w("doc = Document(")
+    out.indent += 1
+    out.w(f"brand=Brand.gruene_noe(),")
+    out.w(f"title={_py_value(ctx.template_id)},")
+    out.w(f"template_id={_py_value(ctx.template_id)},")
+    out.w('author="Die Grünen Niederösterreich",')
+    out.w(f"facing_pages={_py_value(prefs['facing_pages'])},")
+    out.w("layers=[")
+    out.indent += 1
+    for lyr in ctx.layers:
+        kwargs: dict[str, Any] = {"name": lyr["name"]}
+        if not lyr["visible"]:
+            kwargs["visible"] = False
+        if not lyr["printable"]:
+            kwargs["printable"] = False
+        # The 'editable' DSL field maps to "not locked" in IDML.
+        if lyr["locked"]:
+            kwargs["editable"] = False
+        body = ", ".join(f"{k}={_py_value(v)}" for k, v in kwargs.items())
+        out.w(f"DocumentLayer({body}),")
+    out.indent -= 1
+    out.w("],")
+    out.indent -= 1
+    out.w(")")
+    out.w("")
+    out.w("# add_styles(doc) - paragraph styles (Phase G, task 5)")
+    out.w("_add_styles(doc)")
+    out.w("")
+    out.w(f"doc.add_master(")
+    out.indent += 1
+    out.w('name="Normal",')
+    out.w(f"size=({_py_value(trim_w_mm)}, {_py_value(trim_h_mm)}),")
+    out.w(f"bleed_mm={_py_value(bleed_mm)},")
+    out.w("margins_mm=(0.0, 0.0, 0.0, 0.0),")
+    out.indent -= 1
+    out.w(")")
+    out.w("")
+    # One add_page per page in pkg.pages
+    page_count = len(list(ctx.pkg.pages))
+    for i in range(page_count):
+        out.w(f"page{i} = doc.add_page(")
+        out.indent += 1
+        out.w(f"size=({_py_value(trim_w_mm)}, {_py_value(trim_h_mm)}),")
+        out.w(f"bleed_mm={_py_value(bleed_mm)},")
+        out.w("margins_mm=(0.0, 0.0, 0.0, 0.0),")
+        out.w('master="Normal",')
+        out.indent -= 1
+        out.w(")")
+    out.w("")
+    for i in range(page_count):
+        out.w(f"_add_page_{i}(doc, page{i})")
+    out.w("")
+    out.w("return doc")
+    out.indent -= 1
+    out.w("")
+
+
+def _emit_styles_stub(out: PythonRepr, ctx: _Ctx) -> None:
+    """Task 3 stub: emit an empty _add_styles function. Task 5 fills it."""
+    out.w("def _add_styles(doc: Document) -> None:")
+    out.indent += 1
+    out.w('"""Paragraph styles — populated by tools/idml_to_dsl.py Phase G."""')
+    out.w("# (no paragraph styles in this task-3 skeleton)")
+    out.w("return None")
+    out.indent -= 1
+    out.w("")
+
+
+def _emit_page_stubs(out: PythonRepr, ctx: _Ctx) -> None:
+    """Task 3 stub: emit empty _add_page_<i> functions. Task 6+7 fill them."""
+    page_count = len(list(ctx.pkg.pages))
+    for i in range(page_count):
+        out.w(f"def _add_page_{i}(doc: Document, page) -> None:")
+        out.indent += 1
+        out.w(f'"""Page {i + 1} page items — populated by tools/idml_to_dsl.py Phase H."""')
+        out.w("# (no page items in this task-3 skeleton)")
+        out.w("return None")
+        out.indent -= 1
+        out.w("")
+
+
+def _emit_footer(out: PythonRepr) -> None:
+    """Emit build_preview, build_doc alias, build(out_path), and __main__."""
+    out.w("def build_preview() -> Document:")
+    out.indent += 1
+    out.w('"""Inject demo library images for gallery PNG render (#24 idiom).')
+    out.w("")
+    out.w("Pre-crops each library image to LIVE frame dimensions via")
+    out.w("library.inject_into_frame. INJECT_MAP starts empty; humans wire it up.")
+    out.w('"""')
+    out.w("doc = build_template()")
+    out.w("if not INJECT_MAP:")
+    out.indent += 1
+    out.w("return doc")
+    out.indent -= 1
+    out.w("from sla_lib.builder import library  # noqa: E402")
+    out.w("for page in doc.pages:")
+    out.indent += 1
+    out.w("for item in page.items:")
+    out.indent += 1
+    out.w("if not isinstance(item, ImageFrame):")
+    out.indent += 1
+    out.w("continue")
+    out.indent -= 1
+    out.w("lib_id = INJECT_MAP.get(item.anname)")
+    out.w("if not lib_id:")
+    out.indent += 1
+    out.w("continue")
+    out.indent -= 1
+    out.w("img = library.load(lib_id, optional=True)")
+    out.w("if img is None:")
+    out.indent += 1
+    out.w("continue")
+    out.indent -= 1
+    out.w("library.inject_into_frame(")
+    out.indent += 1
+    out.w("item, img,")
+    out.w("target_w_mm=item.w_mm,")
+    out.w("target_h_mm=item.h_mm,")
+    out.indent -= 1
+    out.w(")")
+    out.indent -= 1
+    out.indent -= 1
+    out.w("return doc")
+    out.indent -= 1
+    out.w("")
+    out.w("")
+    out.w("# Alias for audit_alignment.py / spec_check (they expect build_doc).")
+    out.w("build_doc = build_template")
+    out.w("")
+    out.w("")
+    out.w('def build(out_path: str | Path = HERE / "template.sla") -> Path:')
+    out.indent += 1
+    out.w("doc = build_preview()")
+    out.w("out_path = Path(out_path)")
+    out.w("doc.save(out_path)")
+    out.w("return out_path")
+    out.indent -= 1
+    out.w("")
+    out.w("")
+    out.w('if __name__ == "__main__":')
+    out.indent += 1
+    out.w("path = build()")
+    out.w('print(f"OK: saved {path}")')
+    out.indent -= 1
+    out.w("")
+
+
+# ---------------------------------------------------------------------------
+def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
+            logo_map_path: Optional[Path] = None) -> None:
+    """Strict 7-phase IDML → DSL build.py converter.
+
+    Phases:
+        A. Document preferences (page size, bleed)
+        B. Layers (designmap.xml)
+        C. MasterSpread emptiness check
+        D/E. Document scaffold emit (header + Document() + add_master + add_page)
+        F. Colors (task 4)
+        G. Styles (task 5)
+        H. Page items (tasks 6-7)
+        Final emit: assemble + write to output (task 8)
     """
     if not source.exists():
         raise UnhandledElement(f"Source IDML not found: {source}")
@@ -363,7 +792,43 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path) -> N
             f"If this is a .indd, re-export from InDesign: "
             f"File > Export > InDesign Markup (IDML)."
         )
+    if assets_dir is not None and not assets_dir.exists():
+        # Defer this until task 8's logo handling lands. For task 3 we don't
+        # actually consume the assets dir yet; only warn.
+        print(
+            f"WARN: --assets-dir {assets_dir} does not exist (raster assets will fail in task 6)",
+            file=sys.stderr,
+        )
+
     with IDMLPackage(str(source)) as pkg:
+        ctx = _Ctx(pkg=pkg, template_id=template_id, assets_dir=assets_dir)
+
+        # Phase A
+        ctx.doc_prefs = _read_doc_preferences(pkg)
+        # Phase B
+        ctx.layers = _read_layers(pkg)
+        ctx.layer_id_to_idx = {lyr["self_id"]: idx for idx, lyr in enumerate(ctx.layers)}
+        ctx.printable_layer_ids = {
+            lyr["self_id"] for lyr in ctx.layers if lyr["printable"]
+        }
+        # Phase C
+        _check_masters_empty(pkg)
+
+        # Phase D — header
+        _emit_header(ctx.out, template_id, source.name)
+        # Phase G stub — _add_styles (filled in task 5)
+        _emit_styles_stub(ctx.out, ctx)
+        # Phase H stub — _add_page_<i> (filled in tasks 6-7)
+        _emit_page_stubs(ctx.out, ctx)
+        # Phase E — build_template (Document + master + pages)
+        _emit_document_scaffold(ctx.out, ctx)
+        # Footer (build_preview / build / main)
+        _emit_footer(ctx.out)
+
+        # Write emitted Python source
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(ctx.out.render(), encoding="utf-8")
+        print(f"OK: wrote {output}", file=sys.stderr)
         print(
             f"OK: opened {source.name} — "
             f"{len(pkg.spreads_objects)} spreads, "
