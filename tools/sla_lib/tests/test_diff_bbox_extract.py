@@ -22,7 +22,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import diff_bbox_extract  # noqa: E402
 from diff_bbox_extract import (  # noqa: E402
-    DiffBBoxError, extract_bboxes_px, load_dpi, px_to_mm_bbox,
+    DiffBBoxError, extract_bboxes_px, load_dpi, load_template_slots,
+    px_to_mm_bbox,
 )
 
 
@@ -139,6 +140,37 @@ class DpiAndUnitsTests(unittest.TestCase):
         scale = 96.0 / 150.0
         for k in ("x", "y", "w", "h"):
             self.assertAlmostEqual(b150[k], b96[k] * scale, delta=0.15)
+
+
+class SlotLoaderTests(unittest.TestCase):
+    """Tests for ``load_template_slots`` (Issue #36 task 4)."""
+
+    def test_load_slots_postkarte(self) -> None:
+        slots = load_template_slots("postkarte-a6-kampagne")
+        # postkarte-a6-kampagne has 2 pages; both have at least the
+        # background slot, so both indices should appear.
+        self.assertIn(0, slots)
+        self.assertIn(1, slots)
+        # Every slot bbox is a dict with float x/y/w/h.
+        for page_idx, page_slots in slots.items():
+            self.assertTrue(page_slots, f"page {page_idx} has no slots")
+            for anname, bbox in page_slots.items():
+                self.assertEqual(set(bbox.keys()), {"x", "y", "w", "h"})
+                for k, v in bbox.items():
+                    self.assertIsInstance(
+                        v, float, f"page {page_idx} slot {anname!r} key {k} is {type(v)}",
+                    )
+
+    def test_load_slots_unknown_template_warns_and_returns_empty(self) -> None:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = load_template_slots("definitely-does-not-exist")
+        self.assertEqual(result, {})
+        self.assertGreaterEqual(len(caught), 1)
+        self.assertTrue(
+            any("attribution skipped" in str(w.message) for w in caught),
+            f"no skip-warning in captured: {[str(w.message) for w in caught]}",
+        )
 
 
 if __name__ == "__main__":

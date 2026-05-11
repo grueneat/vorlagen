@@ -46,6 +46,7 @@ import argparse
 import json
 import re
 import subprocess
+import warnings
 from pathlib import Path
 from typing import Optional
 
@@ -182,6 +183,75 @@ def load_dpi(out_dir: Path) -> int:
             f"visual_diff.json missing 'dpi' field at {vd_path}"
         )
     return int(payload["dpi"])
+
+
+def load_template_slots(template_slug: str) -> dict[int, dict[str, dict]]:
+    """For each page index, return ``{anname: {x, y, w, h} mm}``.
+
+    Mirrors ``tools/audit_alignment.py``'s build-and-iterate idiom verbatim
+    (the canonical slot enumerator for this repo). Returns an empty dict
+    if the template build fails for any reason: this is the soft-warn path
+    (post-processor, not a CI gate) — diff bboxes are still emitted with
+    ``attributed_slot: null``.
+
+    Page-index convention: keys are 0-indexed page integers, matching
+    ``visual_diff.json``'s ``page`` field. NOTE: the file naming
+    (``diff-page-01.png``) is 1-indexed via ``f"{idx+1:02d}"`` at
+    ``tools/visual_diff.py:231``. File names = 1-based; JSON / slot keys
+    = 0-based. Don't conflate.
+
+    Limitation (inherited from ``frame_bbox_mm``): templates that use
+    verbatim-pt overrides (``xpos_pt`` / ``width_pt`` etc.) will get
+    slightly off bbox coordinates; attribution will still work in most
+    cases via the top-3 candidates list (decision 4).
+    """
+    # Lazy imports — keep this module importable even if the build path
+    # is broken in some weird CI environment.
+    try:
+        from sla_lib.builder.template_loader import load_build_module
+        from sla_lib.builder.bbox import frame_bbox_mm
+    except Exception as exc:  # pragma: no cover - import failure is exotic
+        warnings.warn(
+            f"diff_bbox_extract: cannot import slot-loader helpers ({exc!r}); "
+            "attribution disabled",
+            stacklevel=2,
+        )
+        return {}
+
+    repo_root = Path(__file__).resolve().parent.parent
+    try:
+        mod = load_build_module(template_slug, repo_root)
+        doc = mod.build_preview() if hasattr(mod, "build_preview") else mod.build_doc()
+    except Exception as exc:
+        warnings.warn(
+            f"diff_bbox_extract: template '{template_slug}' build failed "
+            f"({exc!r}); attribution skipped",
+            stacklevel=2,
+        )
+        return {}
+
+    slots: dict[int, dict[str, dict]] = {}
+    for idx, page in enumerate(doc.pages):
+        if getattr(page, "is_master", False):
+            continue
+        page_slots: dict[str, dict] = {}
+        for item in page.items:
+            anname = getattr(item, "anname", None) or ""
+            if not anname:
+                continue
+            b4 = frame_bbox_mm(item, page)  # (min_x, min_y, max_x, max_y) mm or None
+            if b4 is None:
+                continue
+            min_x, min_y, max_x, max_y = b4
+            page_slots[anname] = {
+                "x": round(min_x, 1),
+                "y": round(min_y, 1),
+                "w": round(max_x - min_x, 1),
+                "h": round(max_y - min_y, 1),
+            }
+        if page_slots:
+            slots[idx] = page_slots
+    return slots
 
 
 def px_to_mm_bbox(bbox_px: dict, dpi: int) -> dict:
