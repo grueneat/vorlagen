@@ -63,6 +63,13 @@ def build_template() -> Document:
             DocumentLayer(name='Gestaltung'),
             DocumentLayer(name='Info', printable=False, editable=False),
         ],
+        # Disable crop/bleed marks so the exported PDF MediaBox matches the
+        # InDesign baseline (297×210 mm trim-only, no marks area).
+        extra_pdf_attrs={
+            'cropMarks': '0',
+            'bleedMarks': '0',
+            'useDocBleeds': '0',
+        },
     )
 
     # add_styles(doc) - paragraph styles (Phase G, task 5)
@@ -71,19 +78,19 @@ def build_template() -> Document:
     doc.add_master(
         name="Normal",
         size=(297, 210),
-        bleed_mm=2,
+        bleed_mm=0,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
     )
 
     page0 = doc.add_page(
         size=(297, 210),
-        bleed_mm=2,
+        bleed_mm=0,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
         master="Normal",
     )
     page1 = doc.add_page(
         size=(297, 210),
-        bleed_mm=2,
+        bleed_mm=0,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
         master="Normal",
     )
