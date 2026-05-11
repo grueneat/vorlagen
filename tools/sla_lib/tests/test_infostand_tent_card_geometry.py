@@ -277,24 +277,31 @@ class InfostandTentCardGeometryTests(unittest.TestCase):
             self.assertAlmostEqual(f.rotation_deg, 0.0, delta=0.1,
                                    msg=f"{an} rotation_deg={f.rotation_deg} ≠ 0")
 
-    def test_panel_b_text_image_rotation_180(self):
+    def test_panel_b_text_image_rotation_zero(self):
+        """Issue #32 follow-up: Panel B text/image frames carry ROT=0.
+
+        Panel B does NOT flip during the tent fold (only Panel A does), so its
+        content reads in the natural flat-sheet direction from the viewer's
+        perspective — no per-frame rotation needed.
+        """
         for an in ("Logo Grüne (panel B)", "Headline Panel B",
                    "Pay-off Panel B", "Hintergrund-Mitmachen Panel B",
                    "QR-Code (mitmachen, panel B)", "Body Panel B",
                    "Termine Panel B", "CTA-Footer Panel B",
                    "Impressum (Tent, panel B)"):
             f = self._f(an)
-            self.assertAlmostEqual(f.rotation_deg, 180.0, delta=0.1,
-                                   msg=f"{an} rotation_deg={f.rotation_deg} ≠ 180")
+            self.assertAlmostEqual(f.rotation_deg, 0.0, delta=0.1,
+                                   msg=f"{an} rotation_deg={f.rotation_deg} ≠ 0")
 
     def test_panel_a_text_image_rotation_180(self):
-        """Issue #32: Panel A text/image frames carry ROT=180 (matching Panel B).
+        """Issue #32: Panel A text/image frames carry ROT=180.
 
         When the flat sheet is folded into a tent (apex up at y=105), Panel A's
         face is viewed with y=105 at the apex and y=0 at the table — INVERTED
         from the flat-sheet reading direction. Rotating each frame's content
         180° around its center compensates so content reads right-side-up on
-        the assembled tent.
+        the assembled tent. Panel B does NOT flip and uses ROT=0; only Panel A
+        carries the rotation.
         """
         for an in ("Logo Grüne (panel A)", "Headline Panel A",
                    "Pay-off Panel A", "Hintergrund-Mitmachen",
