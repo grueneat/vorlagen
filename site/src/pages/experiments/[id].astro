@@ -72,6 +72,8 @@ const variantsForJs = hypotheses.map((h) => ({
           <input id="exp-rater" type="text" value="anonymous"
                  style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; min-width: 12rem;" />
         </label>
+        <button id="exp-mode-rank" type="button" class="exp-mode-btn"
+                style="padding: 0.4rem 0.9rem;">Rank</button>
         <button id="exp-mode-direct" type="button" class="exp-mode-btn"
                 style="padding: 0.4rem 0.9rem;">Direkt-Pick</button>
         <button id="exp-export" type="button"
@@ -80,13 +82,49 @@ const variantsForJs = hypotheses.map((h) => ({
         </button>
       </div>
 
-      <section id="exp-direct" class="exp-mode" style="display: block;">
+      <section id="exp-rank" class="exp-mode" style="display: none;">
+        <h2>Rank</h2>
+        <p style="color: #555;">
+          Klicke das Häkchen oben rechts auf einer Variante, um sie der Rangliste hinzuzufügen.
+          Sortiere die Rangliste mit Drag-Drop (Griff <code>⋮⋮</code>) oder den Pfeiltasten ▲/▼.
+          Bild-Klick öffnet weiterhin das Lightbox.
+        </p>
+        <!--
+          Variant-card markup (JS-rendered; the literal shape is below for
+          grep/audit visibility):
+
+          <div class="variant-card" data-slug="<slug>">
+            <img src="<thumb>" />
+            <button class="checkmark" aria-label="Select <slug>" aria-pressed="false" type="button">
+              <span class="checkmark-visual" aria-hidden="true"></span>
+              <span class="position-badge" aria-hidden="true" hidden></span>
+            </button>
+            <strong>title</strong>
+          </div>
+        -->
+        <div id="exp-rank-grid"
+             style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        </div>
+
+        <h3 style="margin-top: 2rem;">Deine Rangliste</h3>
+        <ol id="ranked-list" aria-label="Your ranked choices"></ol>
+        <p class="rank-empty" id="rank-empty">
+          Noch keine Variante in der Rangliste — klicke ein Häkchen, um zu starten.
+        </p>
+        <button id="export-rank" type="button" style="margin-top: 0.75rem; padding: 0.4rem 0.9rem;">
+          Export ranking JSON
+        </button>
+      </section>
+
+      <section id="exp-direct" class="exp-mode" style="display: none;">
         <h2>Direct-Pick</h2>
         <p style="color: #555;">Klicke den Stern auf einer Variante um sie als Favorit zu markieren.</p>
         <div id="exp-direct-grid"
              style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
         </div>
       </section>
+
+      <div id="rank-live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
       <!-- Lightbox overlay (mirrors templates/[...id].astro pattern) -->
       <div id="exp-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box;">
@@ -221,13 +259,19 @@ const variantsForJs = hypotheses.map((h) => ({
           }
 
           // ---- Mode toggling ----
+          // Note: rank-mode JS lives in a separate bundled <script> block;
+          // this is-inline block only owns the direct-pick path.
           var directSection = document.getElementById('exp-direct');
+          var rankSection = document.getElementById('exp-rank');
           function setMode(mode) {
             if (directSection) directSection.style.display = mode === 'direct' ? 'block' : 'none';
+            if (rankSection) rankSection.style.display = mode === 'rank' ? 'block' : 'none';
             document.body.dataset.expMode = mode;
           }
           var directBtn = document.getElementById('exp-mode-direct');
           if (directBtn) directBtn.addEventListener('click', function () { setMode('direct'); });
+          var rankBtn = document.getElementById('exp-mode-rank');
+          if (rankBtn) rankBtn.addEventListener('click', function () { setMode('rank'); });
 
           // ---- Keyboard ----
           document.addEventListener('keydown', function (ev) {
@@ -292,8 +336,106 @@ const variantsForJs = hypotheses.map((h) => ({
           });
 
           // ---- Boot ----
+          // Default to rank mode when ≥3 variants (CONTEXT decision 2);
+          // direct-pick otherwise (rank doesn't add value with <3 cards).
           renderDirect();
-          setMode('direct');
+          var defaultMode = VARIANTS.length >= 3 ? 'rank' : 'direct';
+          setMode(defaultMode);
+        })();
+      </script>
+
+      <!--
+        Rank-mode rendering lives in a bundled <script> block so it can
+        `import Sortable from 'sortablejs'` (T08+). Astro/Vite bundles
+        only the non-inline block; the lightbox + direct-pick blocks
+        above stay as is:inline IIFEs.
+      -->
+      <script>
+        import Sortable from 'sortablejs';
+
+        (function rankMode() {
+          var dataEl = document.getElementById('exp-data');
+          if (!dataEl || !dataEl.textContent) return;
+          var DATA = JSON.parse(dataEl.textContent);
+          var EXP_ID = DATA.expId;
+          var VARIANTS = DATA.variants;
+          var STORAGE_KEY = 'experiment:' + EXP_ID + ':session:v2:rank';
+          var grid = document.getElementById('exp-rank-grid');
+          var rankedList = document.getElementById('ranked-list');
+          var rankEmpty = document.getElementById('rank-empty');
+          var liveRegion = document.getElementById('rank-live-region');
+          var exportBtn = document.getElementById('export-rank');
+
+          // T06 — markup-only stub. T08 fills in selection state +
+          // checkmark/arrow/drag handlers; T10 wires export.
+          function renderRank() {
+            if (!grid) return;
+            grid.innerHTML = '';
+            VARIANTS.forEach(function (v) {
+              var card = document.createElement('div');
+              card.className = 'variant-card';
+              card.dataset.slug = v.slug;
+
+              var img = document.createElement('img');
+              img.src = v.thumb;
+              img.alt = v.name;
+              img.loading = 'lazy';
+              img.addEventListener('click', function () {
+                // Defer to the lightbox helper already attached by the
+                // inline block — we just navigate via the global hires
+                // pattern. The image-click handler is the only listener
+                // attached to <img>; sibling checkmark <button> doesn't
+                // bubble through (pitfall #1; safe-by-structure).
+                var hires = v.hires;
+                var label = v.name;
+                var lightbox = document.getElementById('exp-lightbox');
+                var lightImg = document.getElementById('exp-lightbox-image');
+                var lightLabel = document.getElementById('exp-lightbox-label');
+                if (!lightbox || !lightImg || !lightLabel) return;
+                lightImg.src = hires;
+                lightImg.alt = label || '';
+                lightLabel.textContent = label || '';
+                lightbox.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+              });
+              card.appendChild(img);
+
+              var title = document.createElement('strong');
+              title.textContent = v.name;
+              title.style.display = 'block';
+              title.style.marginTop = '0.5rem';
+              card.appendChild(title);
+
+              var checkmark = document.createElement('button');
+              checkmark.type = 'button';
+              checkmark.className = 'checkmark';
+              checkmark.setAttribute('aria-label', 'Select ' + v.slug);
+              checkmark.setAttribute('aria-pressed', 'false');
+
+              var checkVisual = document.createElement('span');
+              checkVisual.className = 'checkmark-visual';
+              checkVisual.setAttribute('aria-hidden', 'true');
+              checkmark.appendChild(checkVisual);
+
+              var positionBadge = document.createElement('span');
+              positionBadge.className = 'position-badge';
+              positionBadge.setAttribute('aria-hidden', 'true');
+              positionBadge.hidden = true;
+              checkmark.appendChild(positionBadge);
+
+              card.appendChild(checkmark);
+              grid.appendChild(card);
+            });
+          }
+
+          renderRank();
+          // Silence the unused-Sortable warning until T09 wires init.
+          void Sortable;
+          void rankedList;
+          void rankEmpty;
+          void liveRegion;
+          void exportBtn;
+          void STORAGE_KEY;
         })();
       </script>
     </>
