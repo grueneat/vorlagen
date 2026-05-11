@@ -431,6 +431,97 @@ class ExtractAllPipelineTests(unittest.TestCase):
         self.assertEqual(set(bbox["bbox_mm"].keys()), {"x", "y", "w", "h"})
 
 
+class VisualDiffWiringTests(unittest.TestCase):
+    """Tests that tools/visual_diff.py's --extract-bboxes flag merges the
+    extractor's per-page bboxes into visual_diff.json without breaking the
+    existing schema (Issue #36 task 9)."""
+
+    def setUp(self) -> None:
+        self.tmpdir = Path(tempfile.mkdtemp(prefix="vd_wiring_"))
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_visual_diff_no_flag_default(self) -> None:
+        # Import the visual_diff module + parse a minimal arg list; assert
+        # extract_bboxes is False by default and template_slug is None.
+        import visual_diff  # noqa: E402 — sys.path was prepped at module load
+        ap = visual_diff.main.__wrapped__ if hasattr(visual_diff.main, "__wrapped__") else None
+        _ = ap  # not used; we inspect via argparse directly below
+        # Smoke: --help should mention extract-bboxes
+        # (We don't run main() — that would require scribus.)
+        # Instead, instantiate the parser the same way main() does:
+        # since visual_diff.main doesn't expose its parser, we do a
+        # subprocess --help check.
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "visual_diff.py"), "--help"],
+            capture_output=True, text=True, check=True,
+        )
+        self.assertIn("--extract-bboxes", result.stdout)
+        self.assertIn("--template-slug", result.stdout)
+
+    def test_merge_function_adds_bboxes_field(self) -> None:
+        # Synthesise a minimal visual_diff output + delta PNG, then call
+        # the merge helper directly. Verify pages[0]["bboxes"] is now
+        # populated and existing keys are preserved.
+        _draw_delta(self.tmpdir / "diff-page-01.png", (200, 200),
+                    [(50, 60, 30, 20)])
+        vd = {
+            "dpi": 96,
+            "pages": [{
+                "page": 0,
+                "delta_png": "diff-page-01.png",
+                "mismatch_pixels": 600,
+                "total_pixels": 40000,
+            }],
+        }
+        (self.tmpdir / "visual_diff.json").write_text(
+            json.dumps(vd), encoding="utf-8",
+        )
+        import visual_diff  # noqa: E402
+        visual_diff._merge_bboxes_into_visual_diff(self.tmpdir, None)
+        merged = json.loads(
+            (self.tmpdir / "visual_diff.json").read_text(encoding="utf-8"),
+        )
+        # Existing keys preserved
+        self.assertEqual(merged["pages"][0]["page"], 0)
+        self.assertEqual(merged["pages"][0]["delta_png"], "diff-page-01.png")
+        self.assertEqual(merged["pages"][0]["mismatch_pixels"], 600)
+        # New bboxes field present and non-empty
+        self.assertIsInstance(merged["pages"][0]["bboxes"], list)
+        self.assertGreaterEqual(len(merged["pages"][0]["bboxes"]), 1)
+        # Standalone diff_bboxes.json also written
+        self.assertTrue((self.tmpdir / "diff_bboxes.json").exists())
+
+    def test_merge_unknown_template_slug_warns_no_raise(self) -> None:
+        # Template slug pointing at a non-existent template emits a warning
+        # internally but still completes successfully; bboxes are written
+        # with attributed_slot=None.
+        _draw_delta(self.tmpdir / "diff-page-01.png", (200, 200),
+                    [(50, 60, 30, 20)])
+        vd = {
+            "dpi": 96,
+            "pages": [{
+                "page": 0,
+                "delta_png": "diff-page-01.png",
+            }],
+        }
+        (self.tmpdir / "visual_diff.json").write_text(
+            json.dumps(vd), encoding="utf-8",
+        )
+        import visual_diff  # noqa: E402
+        # Should not raise; subprocess stderr will contain the warning but
+        # _run() only raises on non-zero returncode.
+        visual_diff._merge_bboxes_into_visual_diff(
+            self.tmpdir, "definitely-does-not-exist",
+        )
+        merged = json.loads(
+            (self.tmpdir / "visual_diff.json").read_text(encoding="utf-8"),
+        )
+        for bbox in merged["pages"][0]["bboxes"]:
+            self.assertIsNone(bbox["attributed_slot"])
+
+
 _INTEGRATION_REQUIRES = (
     shutil.which("scribus") is not None
     and shutil.which("pdftoppm") is not None
