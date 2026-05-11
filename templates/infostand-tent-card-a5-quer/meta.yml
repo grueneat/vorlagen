@@ -15,11 +15,7 @@ build:
   script: build.py
   output: template.sla
 
-previews_for_sla: e0a779de42096f2a63f2c2f17407203ef2a27f43d38478af111a2fb72e7d920c
-# Issue #20 — brand_overrides cleanup post-V1 (REMOVE 3, KEEP 3, locked decision #10).
-# Empirical verification: each candidate removal validated via structural_check
-# (V1 logo at 38mm computes 38/12.6=3.02M ✓; V1 text fully inside polygons;
-# inject_into_frame fills exactly via LIVE frame dims). Reasons updated 2026-05-09.
+previews_for_sla: 88a1ddfa18ef8494ec070580600a57d99284f284bc01ed6e30d52f772b112cc6
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-

@@ -16,7 +16,30 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../plakat-a1-hochformat-original.sla
-previews_for_sla: 5c9a04ed876a8bdfad9ed7bb1851fbe4e39fd6119db1469f18b06f1c07bad48c
+previews_for_sla: b3024d3249bcdcaac923ed4c77c9446f6905c5f87ef93c2ac068743de2889b76
+brand_overrides:
+- id: brand:line_spacing_0.9
+  reason: Production template auto-generated from plakat-a1-hochformat-original.sla;
+    the original Plakat carries Headlineweiß linesp=150/fontsize=160 (0.94x) and Impressum
+    linesp=20/fontsize=20 (1.0x). Round-trip diff (tools/sla_ diff.py --strict) is
+    the byte-stable contract; modifying linesp would break round-trip.
+- id: brand:visual_adjacency_drift
+  reason: 'Per-template alignment encoding scheduled for the #22 follow-up. Spine-safety
+    is a no-op (single-page template) and the new rule infrastructure ships globally
+    in #22; CONSTRAINTS encoding for this template is deferred (Issue #22 locked decision
+    #12). Issue #23 renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.'
+- id: brand:image_text_overlap
+  reason: 'Scheduled for follow-up audit per #23 — caption-on-photo / decorative overlaps
+    audited at time of #23, not yet reviewed for fix-vs-override classification.'
+- id: brand:image_fills_frame
+  reason: 'Scheduled for follow-up audit per #24 — image-fills-frame check added in
+    #24 surfaces letterbox/INJECT_MAP-drift class globally; per-template review for
+    fix-vs-override classification deferred to follow-up issue (#25). Zeitung is the
+    only template with verified clean image-content extents post-#24.'
+- id: brand:band_consistency
+  reason: 'Scheduled for follow-up audit per #25 — band-consistency check added in
+    #25 needs per-template body_block_margins spec authoring; deferred to follow-up
+    issue. Zeitung is the only template with verified body-pool band model post-#25.'
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style

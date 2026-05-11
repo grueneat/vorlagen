@@ -15,6 +15,16 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
 <Base title="Vorlagen-Galerie">
   <h1>Vorlagen-Galerie</h1>
   <p>Skelett-Vorlagen für Postkarten, Plakate und Zeitungen. Datei runterladen, in Scribus öffnen, eigene Inhalte einsetzen.</p>
+  <a
+    href={url('experiments/')}
+    style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; padding: 1rem 1.25rem; background: var(--gruen-dunkel); color: white; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
+  >
+    <div>
+      <strong style="display: block; font-size: 1.05rem;">Design-Experimente</strong>
+      <span style="font-size: 0.9em; opacity: 0.9;">Click-to-rank Voting auf Layout-Varianten — Hypothesen von mehreren LLMs.</span>
+    </div>
+    <span style="font-size: 0.9em; padding: 0.4rem 0.8rem; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; white-space: nowrap;">Ansehen →</span>
+  </a>
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
     {templates.map(t => (
       <a href={url(`templates/${t.id}/`)} style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;">

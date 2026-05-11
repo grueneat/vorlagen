@@ -88,7 +88,12 @@ def process_template(tdir: Path) -> dict | None:
     else:
         sla = tdir / "template.sla"
         pdf = tdir / "preview.pdf"
-        page_pngs = sorted(tdir.glob("page-*.png"))
+        # Exclude *-hires.png variants (added in #28 for lightbox click-through).
+        # The hi-res file shares the page-*.png prefix; without this filter every
+        # template page gets enumerated twice in _previews. See issue #32.
+        page_pngs = sorted(
+            p for p in tdir.glob("page-*.png") if not p.stem.endswith("-hires")
+        )
         if not (sla.exists() and pdf.exists() and page_pngs):
             _fail_missing(tid, sla, pdf, page_pngs)
         shutil.copy(sla, public_dir / "template.sla")
