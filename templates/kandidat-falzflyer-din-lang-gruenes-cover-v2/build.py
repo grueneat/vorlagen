@@ -312,7 +312,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     """Auto-generated page-items for page 2 (Spread Spreads/Spread_u108.xml)."""
     page1.add(TextFrame(
         x_mm=16.8913,
-        y_mm=-260.1,
+        y_mm=17.4,
         w_mm=65.2174,
         h_mm=17.9915,
         anname='u24e',
@@ -322,7 +322,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=16.8913,
-        y_mm=-235.8085,
+        y_mm=41.6915,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u265',
@@ -332,7 +332,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=115.3913,
-        y_mm=-229.5085,
+        y_mm=47.9915,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u295',
@@ -342,7 +342,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=99.1764,
-        y_mm=-277.5,
+        y_mm=0,
         w_mm=99,
         h_mm=41.6915,
         anname='u2cd',
@@ -351,7 +351,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=110.5,
-        y_mm=-260.1,
+        y_mm=17.4,
         w_mm=75,
         h_mm=17.9915,
         anname='u2d5',
@@ -361,7 +361,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(Polygon(
         x_mm=-17.3,
-        y_mm=-242.1085,
+        y_mm=35.3915,
         w_mm=6.3,
         h_mm=6.3,
         anname='u2ef',
@@ -370,7 +370,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(Polygon(
         x_mm=-21.8,
-        y_mm=-235.8085,
+        y_mm=41.6915,
         w_mm=6.3,
         h_mm=6.3,
         anname='u2f0',
@@ -379,7 +379,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(Polygon(
         x_mm=16.8913,
-        y_mm=-132.0032,
+        y_mm=145.4968,
         w_mm=65.2174,
         h_mm=47.1032,
         anname='u346',
@@ -388,7 +388,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=188,
-        y_mm=-138.3,
+        y_mm=139.2,
         w_mm=10,
         h_mm=53.4,
         anname='u347',
@@ -399,7 +399,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=21.8196,
-        y_mm=-114.4833,
+        y_mm=163.0167,
         w_mm=52.6804,
         h_mm=23.2833,
         anname='u35f',
@@ -409,7 +409,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=21.6413,
-        y_mm=-125.7032,
+        y_mm=151.7968,
         w_mm=52.6804,
         h_mm=7.6199,
         anname='u376',
@@ -419,7 +419,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(Polygon(
         x_mm=-15.75,
-        y_mm=-91.2,
+        y_mm=186.3,
         w_mm=6.3,
         h_mm=6.3,
         anname='u394',
@@ -428,7 +428,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(Polygon(
         x_mm=-14.125,
-        y_mm=-132.0032,
+        y_mm=145.4968,
         w_mm=6.3,
         h_mm=6.3,
         anname='u397',
@@ -437,7 +437,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(Polygon(
         x_mm=-14.4,
-        y_mm=-118.0833,
+        y_mm=159.4167,
         w_mm=3.6,
         h_mm=3.6,
         anname='u398',
@@ -446,7 +446,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=198,
-        y_mm=-277.6874,
+        y_mm=-0.1874,
         w_mm=99,
         h_mm=210.3748,
         anname='u3a0',
@@ -455,7 +455,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=203.88,
-        y_mm=-180.0191,
+        y_mm=97.4809,
         w_mm=87.24,
         h_mm=22.0927,
         anname='u3a2',
@@ -465,7 +465,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=226.6686,
-        y_mm=-154.3264,
+        y_mm=123.1736,
         w_mm=41.6629,
         h_mm=3.1044,
         anname='u3ba',
@@ -475,7 +475,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(Polygon(
         x_mm=241.2825,
-        y_mm=-193.6457,
+        y_mm=83.8543,
         w_mm=12.4619,
         h_mm=9.9219,
         anname='u3d1',
@@ -486,7 +486,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=-91.5306,
+        y_mm=185.9694,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3e7',
@@ -495,7 +495,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=-91.4333,
+        y_mm=186.0667,
         w_mm=26.5209,
         h_mm=3.1044,
         anname='u40c',
@@ -505,7 +505,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=-85.89,
+        y_mm=191.61,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3f0',
@@ -514,7 +514,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=-85.8414,
+        y_mm=191.6586,
         w_mm=29.1209,
         h_mm=3.2017,
         anname='u412',
@@ -524,7 +524,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=-80.1742,
+        y_mm=197.3258,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3f5',
@@ -533,7 +533,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=-80.2008,
+        y_mm=197.2992,
         w_mm=36.0209,
         h_mm=3.3522,
         anname='u45b',
@@ -543,7 +543,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=-91.5306,
+        y_mm=185.9694,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u477',
@@ -552,7 +552,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=-91.4333,
+        y_mm=186.0667,
         w_mm=26.4583,
         h_mm=3.1044,
         anname='u47b',
@@ -562,7 +562,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=-85.89,
+        y_mm=191.61,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u4a2',
@@ -571,7 +571,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=-85.7927,
+        y_mm=191.7073,
         w_mm=27.74,
         h_mm=3.1044,
         anname='u4a6',
@@ -581,7 +581,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=-80.1742,
+        y_mm=197.3258,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u4da',
@@ -590,7 +590,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=-80.0769,
+        y_mm=197.4231,
         w_mm=27.74,
         h_mm=3.1044,
         anname='u4df',

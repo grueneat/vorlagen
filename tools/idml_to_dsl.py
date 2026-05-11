@@ -315,14 +315,18 @@ def _compute_page_local_bbox_pt(
             f"(extend tools/idml_to_dsl.py:_compute_page_local_bbox_pt)"
         )
 
-    # Apply to anchors → spread-coordinate-space points.
-    spread_pts = [_apply_matrix(item_to_spread, x, y) for (x, y) in anchors]
-
-    # Subtract spread origin (pasteboard → spread-local). Most spreads are
-    # identity; spread u108 in the target IDML carries a y-offset of 786.61 pt
-    # (the second spread stacked below the first in the pasteboard).
-    spread_origin = _apply_matrix(spread_M, 0.0, 0.0)
-    spread_local = [(px - spread_origin[0], py - spread_origin[1]) for (px, py) in spread_pts]
+    # Apply to anchors → spread-local-coordinate-space points.
+    #
+    # IMPORTANT: items inside Spreads/<id>.xml store their ItemTransform in
+    # the spread's OWN local coordinate space. The Spread's own ItemTransform
+    # (which carries e.g. ty=786.61 for the second stacked spread in the
+    # pasteboard) only describes where the SPREAD itself sits in pasteboard
+    # for the UI; it does NOT shift the items. Therefore we DO NOT subtract
+    # spread origin here. `spread_M` is kept in the signature for symmetry
+    # and for future facing-pages support where the spread's transform may
+    # rotate or scale items, but for v1 we treat it as informational.
+    _ = spread_M  # currently unused; see comment above.
+    spread_local = [_apply_matrix(item_to_spread, x, y) for (x, y) in anchors]
 
     # Subtract page origin in spread coords. The page's true top-left in
     # spread coords is (page_tx + page_x1, page_ty + page_y1), where (x1, y1)
