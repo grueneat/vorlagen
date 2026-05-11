@@ -20,11 +20,22 @@ Locked decisions (see PLAN.md §"Locked Decisions" for rationale):
 1. Color policy — exact-CMYK match against ``shared/ci.yml`` brand palette;
    auto-rename to brand names (``Dunkelgrün``, ``Gelb``, ``Magenta``,
    ``Hellgrün``, ``Black``, ``White``). Raise on any other printable swatch.
-2. Vector logos — collect every nested ``<PDF>`` reference, raise once at
-   end-of-run with the full list. Humans stage pre-rasterised PNGs under
-   ``shared/logos/`` (or similar) and re-run.
-3. Raster assets — ``--assets-dir`` flag resolves ``file:`` URI basenames.
-   Missing files surface at end-of-run alongside unmapped logos.
+2. Assets — Phase 2: ``--asset-map <path/to/links_export.yml>`` accepts the
+   manifest produced by ``tools/links_export.py`` (which converts the IDML's
+   sibling ``Links/`` directory to ``shared/assets/<idml-slug>/``). The
+   manifest covers every linked asset (.ai → PNG, .psd → flattened PNG,
+   raster passthrough). When ``--asset-map`` is omitted AND a sibling
+   ``Links/`` directory is found next to the input IDML, the converter
+   auto-invokes ``tools/links_export.py`` to produce one.
+
+   Legacy ``--logo-map`` (basename → PNG, vector only) is still accepted for
+   backward compatibility; ``--asset-map`` takes precedence when both are
+   supplied. Any unmapped ``<PDF>``/``<Image>`` reference whose basename
+   isn't in the manifest raises ``UnhandledElement`` at end-of-run.
+3. Raster ``Links/`` fallback — when neither ``--asset-map`` nor
+   ``--logo-map`` covers a ``<Image>``'s file: URI basename, the converter
+   falls back to ``--assets-dir`` and emits the raw file path (legacy
+   behaviour). Use ``--asset-map`` instead for new templates.
 4. Bleed — keep IDML's 2 mm verbatim (target IDML); a one-line comment in
    the emitted build.py notes the deviation from brand-standard 3 mm.
 5. Falz lines — converter does NOT emit ``FoldLine``. Humans add them
@@ -48,12 +59,22 @@ noqa: NEVER import ``simple_idml.indesign`` — that submodule pulls in the
 LGPL ``suds-py3`` SOAP stack for InDesign Server integration, which is
 unrelated to IDML file parsing. We only need ``simple_idml.idml`` (BSD-3).
 
-Usage:
+Usage (preferred — auto-invokes tools/links_export.py if --asset-map omitted):
     python3 tools/idml_to_dsl.py \\
         "originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2.idml" \\
         templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/build.py \\
-        --template-id kandidat-falzflyer-din-lang-gruenes-cover-v2 \\
-        --assets-dir "originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/Links" \\
+        --template-id kandidat-falzflyer-din-lang-gruenes-cover-v2
+
+Usage (explicit asset map):
+    python3 tools/links_export.py "originals/<bundle>/Links" --idml-name <idml>
+    python3 tools/idml_to_dsl.py <idml> <out.py> \\
+        --template-id <slug> \\
+        --asset-map shared/assets/<slug>/links_export.yml
+
+Legacy (deprecated, kept for backward-compat):
+    python3 tools/idml_to_dsl.py <idml> <out.py> \\
+        --template-id <slug> \\
+        --assets-dir "<bundle>/Links" \\
         --logo-map shared/logos/26-03-leporello-logo-map.yml
 """
 # License: BSD (matches repo convention).
@@ -494,6 +515,11 @@ class _Ctx:
     unmapped_logos: list[tuple[str, str]] = field(default_factory=list)
     missing_assets: list[str] = field(default_factory=list)
     logo_map: dict[str, str] = field(default_factory=dict)
+    # Phase 2 — superset of logo_map. Keyed by the original basename
+    # (NFC-normalised). When populated, the converter prefers this over
+    # logo_map for both <PDF> (vector) and <Image> (raster) references.
+    asset_map: dict[str, str] = field(default_factory=dict)
+    unmapped_assets: list[tuple[str, str]] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -1216,12 +1242,16 @@ def _emit_pageitem(
         )
     if pdf_children:
         # Collect: each <PDF> + its Link's LinkResourceURI basename.
+        # Resolution order: --asset-map (Phase 2 manifest) → --logo-map
+        # (legacy). Either covers the vector-to-raster mapping; the manifest
+        # additionally carries kind metadata for downstream tooling.
         for pdf in pdf_children:
             link = pdf.find(".//Link")
             uri = link.get("LinkResourceURI", "") if link is not None else ""
             basename = _basename_from_uri(uri)
-            # Logo-map override (task 8 wires this); for v1 always defer.
-            mapped = ctx.logo_map.get(basename) if ctx.logo_map else None
+            mapped = ctx.asset_map.get(basename) if ctx.asset_map else None
+            if mapped is None and ctx.logo_map:
+                mapped = ctx.logo_map.get(basename)
             if mapped:
                 # Use the mapped PNG for the entire enclosing frame.
                 _emit_image_frame_call(
@@ -1394,6 +1424,9 @@ def _emit_image_frame_call(
     _emit_call(ctx.out, "ImageFrame", kwargs, receiver=receiver, multiline=True)
 
 
+_SCRIBUS_FRIENDLY_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
+
+
 def _emit_image_content(
     out: PythonRepr,
     rect: Any,
@@ -1407,7 +1440,20 @@ def _emit_image_content(
     layer_idx: int,
     ctx: _Ctx,
 ) -> None:
-    """Emit a raster Image as an ImageFrame, resolving the file: URI."""
+    """Emit a raster Image as an ImageFrame, resolving the file: URI.
+
+    Resolution order:
+      1. ``ctx.asset_map`` (Phase 2 manifest) by basename. If populated and
+         the basename is missing, defer to ``unmapped_assets`` — strict mode
+         raises at end-of-run. This is the path that catches a `<Image>`
+         pointing at a `.psd` whose pre-converted PNG isn't in the manifest
+         (previously these silently emitted the raw .psd path, which Scribus
+         can't render).
+      2. ``ctx.assets_dir / basename`` (legacy fallback). Used only when
+         no ``--asset-map`` was supplied. We still reject extensions Scribus
+         cannot render (``.psd``, ``.ai``, etc.) so the failure is loud
+         instead of a blank preview.
+    """
     link = img.find(".//Link")
     uri = link.get("LinkResourceURI", "") if link is not None else ""
     basename = _basename_from_uri(uri)
@@ -1417,6 +1463,33 @@ def _emit_image_content(
             f"unparseable LinkResourceURI {uri!r} "
             f"(extend tools/idml_to_dsl.py:_emit_image_content)"
         )
+
+    # 1. Asset-map lookup (Phase 2 path).
+    if ctx.asset_map:
+        mapped = ctx.asset_map.get(basename)
+        if mapped:
+            _emit_image_frame_call(
+                ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
+                self_id, layer_idx, image_path=mapped, ctx=ctx,
+            )
+            return
+        # asset_map is populated but this basename is missing → strict raise.
+        # Surfaces at end-of-run via _final_strictness_gates.
+        ctx.unmapped_assets.append((img.get("Self", "?") or self_id, basename))
+        return
+
+    # 2. Legacy --assets-dir fallback. Reject extensions Scribus can't
+    # render so missing converter coverage shows up loudly.
+    ext = Path(basename).suffix.lower()
+    if ext and ext not in _SCRIBUS_FRIENDLY_IMAGE_EXTS:
+        raise UnhandledElement(
+            f"<Image Self={img.get('Self')!r}> inside Rectangle Self={self_id!r} "
+            f"references {basename!r} ({ext}) but no --asset-map entry exists. "
+            f"Run tools/links_export.py to produce a manifest, or extend the "
+            f"_SCRIBUS_FRIENDLY_IMAGE_EXTS allow-list "
+            f"(extend tools/idml_to_dsl.py:_emit_image_content)"
+        )
+
     asset_path = ctx.assets_dir / basename
     if not asset_path.exists():
         # Decision #3: defer missing-asset raise to end-of-conversion.
@@ -1774,6 +1847,21 @@ def _final_strictness_gates(ctx: _Ctx) -> None:
             f"Missing raster assets ({len(ctx.missing_assets)}):\n  {m_list}\n"
             f"Place files under --assets-dir (or extend the resolver)."
         )
+    if ctx.unmapped_assets:
+        seen_a: set[str] = set()
+        unique_assets: list[tuple[str, str]] = []
+        for sid, basename in ctx.unmapped_assets:
+            if basename in seen_a:
+                continue
+            seen_a.add(basename)
+            unique_assets.append((sid, basename))
+        a_list = "\n  ".join(f"- {sid}: {bn}" for sid, bn in unique_assets)
+        msgs.append(
+            f"Unmapped assets in --asset-map ({len(unique_assets)} unique):"
+            f"\n  {a_list}\n"
+            f"Re-run tools/links_export.py against the Links/ directory to "
+            f"regenerate the manifest, then re-run this converter."
+        )
     if msgs:
         raise UnhandledElement("\n\n".join(msgs))
 
@@ -1983,7 +2071,8 @@ def _emit_footer(out: PythonRepr) -> None:
 
 # ---------------------------------------------------------------------------
 def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
-            logo_map_path: Optional[Path] = None) -> None:
+            logo_map_path: Optional[Path] = None,
+            asset_map_path: Optional[Path] = None) -> None:
     """Strict 7-phase IDML → DSL build.py converter.
 
     Phases:
@@ -2013,8 +2102,8 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             f"(extend tools/idml_to_dsl.py:convert or pass a different directory)"
         )
 
-    # Load the logo map (locked decision #2). NFC-normalise the keys to match
-    # the URI-basename normalisation in _basename_from_uri.
+    # Load the logo map (legacy, locked decision #2). NFC-normalise keys to
+    # match _basename_from_uri.
     logo_map: dict[str, str] = {}
     if logo_map_path is not None:
         if not logo_map_path.exists():
@@ -2022,7 +2111,7 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
                 f"--logo-map {logo_map_path} does not exist "
                 f"(extend tools/idml_to_dsl.py:convert)"
             )
-        import yaml  # local import: yaml not needed when --logo-map omitted
+        import yaml  # local import: yaml not needed when both maps omitted
         raw = yaml.safe_load(logo_map_path.read_text(encoding="utf-8")) or {}
         if not isinstance(raw, dict):
             raise UnhandledElement(
@@ -2032,9 +2121,53 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         for k, v in raw.items():
             logo_map[unicodedata.normalize("NFC", str(k))] = str(v)
 
+    # Load the asset map (Phase 2). Schema:
+    #   assets:
+    #     "<original basename>":
+    #       output: <repo-relative path>
+    #       kind: <vector_ai|raster_psd|raster_jpg|raster_png>
+    #       recipe: <description>
+    # The converter only consumes the ``output`` field; ``kind``/``recipe`` are
+    # provenance for human reviewers + future tooling.
+    asset_map: dict[str, str] = {}
+    if asset_map_path is not None:
+        if not asset_map_path.exists():
+            raise UnhandledElement(
+                f"--asset-map {asset_map_path} does not exist "
+                f"(run tools/links_export.py to produce it)"
+            )
+        import yaml  # local import: yaml not needed when both maps omitted
+        raw_doc = yaml.safe_load(asset_map_path.read_text(encoding="utf-8")) or {}
+        if not isinstance(raw_doc, dict):
+            raise UnhandledElement(
+                f"--asset-map YAML must be a mapping at the top level, got {type(raw_doc).__name__} "
+                f"(extend tools/idml_to_dsl.py:convert)"
+            )
+        assets_block = raw_doc.get("assets", raw_doc)
+        if not isinstance(assets_block, dict):
+            raise UnhandledElement(
+                f"--asset-map YAML's 'assets:' block must be a mapping, got "
+                f"{type(assets_block).__name__} "
+                f"(extend tools/idml_to_dsl.py:convert)"
+            )
+        for k, v in assets_block.items():
+            key = unicodedata.normalize("NFC", str(k))
+            if isinstance(v, dict):
+                out_path = v.get("output")
+                if not out_path:
+                    raise UnhandledElement(
+                        f"--asset-map entry {key!r} is missing required 'output:' field "
+                        f"(extend tools/idml_to_dsl.py:convert)"
+                    )
+                asset_map[key] = str(out_path)
+            else:
+                # Tolerate the flat {basename: output_path} shape for back-compat.
+                asset_map[key] = str(v)
+
     with IDMLPackage(str(source)) as pkg:
         ctx = _Ctx(pkg=pkg, template_id=template_id, assets_dir=assets_dir)
         ctx.logo_map = logo_map
+        ctx.asset_map = asset_map
 
         # Phase A
         ctx.doc_prefs = _read_doc_preferences(pkg)
@@ -2078,6 +2211,43 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
 
 
 # ---------------------------------------------------------------------------
+def _auto_invoke_links_export(source: Path) -> Optional[Path]:
+    """Run tools/links_export.py against the IDML's sibling Links/ directory.
+
+    Returns the path to the produced ``links_export.yml``, or ``None`` if no
+    sibling Links/ directory exists (caller falls back to legacy --logo-map +
+    --assets-dir behaviour).
+
+    Determinism: links_export.py is itself deterministic, and we pass
+    ``--idml-name`` so the output directory is auto-derived to
+    ``shared/assets/<slug>/``.
+    """
+    links_dir = source.parent / "Links"
+    if not links_dir.is_dir():
+        return None
+    here = Path(__file__).resolve().parent
+    cmd = [
+        sys.executable,
+        str(here / "links_export.py"),
+        str(links_dir),
+        "--idml-name", str(source),
+    ]
+    import subprocess  # local import; rarely used from this entry point
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise UnhandledElement(
+            f"auto-invoke of tools/links_export.py failed "
+            f"(rc={result.returncode}): {' '.join(cmd)}\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    print(result.stderr, file=sys.stderr, end="")
+    # Re-derive the manifest path the same way links_export.py does.
+    # We import the helper rather than re-implementing the slugifier here.
+    sys.path.insert(0, str(here))
+    from links_export import derive_out_dir  # type: ignore[import-not-found]  # local sibling
+    return derive_out_dir(source) / "links_export.yml"
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(
         description="Strict IDML→DSL converter (one-shot bootstrap)."
@@ -2090,6 +2260,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Slug baked into Document(template_id=...).",
     )
     ap.add_argument(
+        "--asset-map",
+        type=Path,
+        required=False,
+        default=None,
+        help=(
+            "Phase 2 manifest produced by tools/links_export.py. "
+            "Maps each Links/ basename (e.g. 'BlueSky weiss.ai', "
+            "'Plakat dunkel für Flyer.psd') to a converted asset under "
+            "shared/assets/<idml-slug>/. If omitted AND a sibling Links/ "
+            "directory exists next to the IDML, the converter auto-invokes "
+            "tools/links_export.py."
+        ),
+    )
+    ap.add_argument(
         "--assets-dir",
         type=Path,
         required=False,
@@ -2097,8 +2281,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             "originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/Links"
         ),
         help=(
-            "Directory containing the IDML's linked raster assets "
-            "(resolves file: URIs by basename)."
+            "Legacy: directory containing the IDML's linked raster assets "
+            "(resolves file: URIs by basename). Used when --asset-map is "
+            "not supplied. Prefer --asset-map for new templates."
         ),
     )
     ap.add_argument(
@@ -2107,16 +2292,36 @@ def main(argv: Optional[list[str]] = None) -> int:
         required=False,
         default=None,
         help=(
-            "Path to a YAML file mapping IDML vector-logo basenames "
-            "(e.g. 'BlueSky weiss.ai') to pre-rasterised PNG paths under "
-            "shared/logos/. Without this, every <PDF>-nested logo surfaces "
-            "in the end-of-run UnhandledElement list."
+            "Legacy: YAML mapping IDML vector-logo basenames to pre-rasterised "
+            "PNG paths. Superseded by --asset-map (which covers both vector "
+            "and raster). Kept for backward-compat; --asset-map wins when "
+            "both are supplied."
         ),
     )
     args = ap.parse_args(argv)
+
+    # Auto-invoke fallback: no --asset-map AND no --logo-map AND a sibling
+    # Links/ directory exists → run tools/links_export.py to produce one.
+    # The auto-invoke is intentionally skipped when --logo-map IS supplied
+    # so legacy flows that don't want the new shared/assets/ tree stay
+    # backward-compatible.
+    asset_map_path = args.asset_map
+    if asset_map_path is None and args.logo_map is None and args.source.exists():
+        try:
+            asset_map_path = _auto_invoke_links_export(args.source)
+        except UnhandledElement as e:
+            print(f"UnhandledElement: {e}", file=sys.stderr)
+            return 2
+        if asset_map_path is not None:
+            print(
+                f"OK: auto-invoked tools/links_export.py → {asset_map_path}",
+                file=sys.stderr,
+            )
+
     try:
         convert(args.source, args.output, args.template_id, args.assets_dir,
-                logo_map_path=args.logo_map)
+                logo_map_path=args.logo_map,
+                asset_map_path=asset_map_path)
     except UnhandledElement as e:
         print(f"UnhandledElement: {e}", file=sys.stderr)
         return 2

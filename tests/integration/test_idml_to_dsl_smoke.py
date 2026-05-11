@@ -5,11 +5,16 @@ Runs the converter against the bundled target IDML and verifies:
 - Emitted build.py imports clean.
 - Emitted build.py exposes >=30 emitted page items across 2 pages.
 - meta.yml parses, has 2 pages and bleed_mm=2.
+
+Phase 2 (asset export): the converter is now invoked via the auto-invoke
+fallback — no ``--logo-map`` or ``--assets-dir``. The sibling ``Links/``
+directory triggers ``tools/links_export.py`` automatically, producing
+``shared/assets/<idml-slug>/links_export.yml``. Strict mode raises if the
+manifest is missing a basename.
 """
 from __future__ import annotations
 
 import importlib.util
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -23,13 +28,6 @@ IDML = (
     / "26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner"
     / "26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2.idml"
 )
-ASSETS = (
-    ROOT
-    / "originals"
-    / "26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner"
-    / "Links"
-)
-LOGO_MAP = ROOT / "shared" / "logos" / "26-03-leporello-logo-map.yml"
 
 
 pytestmark = pytest.mark.skipif(
@@ -39,6 +37,11 @@ pytestmark = pytest.mark.skipif(
 
 
 def _run_converter(out_py: Path) -> subprocess.CompletedProcess:
+    """Invoke the converter via the Phase 2 auto-invoke flow.
+
+    No --asset-map, no --logo-map: the converter shells out to
+    tools/links_export.py against the IDML's sibling Links/ directory.
+    """
     return subprocess.run(
         [
             sys.executable,
@@ -47,10 +50,6 @@ def _run_converter(out_py: Path) -> subprocess.CompletedProcess:
             str(out_py),
             "--template-id",
             "kandidat-falzflyer-din-lang-gruenes-cover-v2",
-            "--assets-dir",
-            str(ASSETS),
-            "--logo-map",
-            str(LOGO_MAP),
         ],
         capture_output=True,
         text=True,
