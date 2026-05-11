@@ -166,7 +166,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=15.6052,
         anname='u141',
         layer=0,
-        image='shared/logos/gruene-logo-bund-weiss-cmyk.png',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.png',
     ))
     page0.add(Polygon(
         x_mm=198.3236,
@@ -347,7 +347,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=41.6915,
         anname='u2cd',
         layer=0,
-        image='/root/workspace/originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/Links/green-pine-trees-covered-with-fog.jpg',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/green-pine-trees-covered-with-fog.jpg',
     ))
     page1.add(TextFrame(
         x_mm=110.5,
@@ -451,7 +451,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=210.3748,
         anname='u3a0',
         layer=0,
-        image='/root/workspace/originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/Links/Plakat dunkel für Flyer.psd',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png',
     ))
     page1.add(TextFrame(
         x_mm=203.88,
@@ -491,7 +491,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        image='shared/logos/social-media-icons-weiss.png',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -510,7 +510,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        image='shared/logos/social-media-icons-weiss.png',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -529,7 +529,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        image='shared/logos/social-media-icons-weiss.png',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -548,7 +548,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u477',
         layer=0,
-        image='shared/logos/bluesky-weiss.png',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -567,7 +567,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4a2',
         layer=0,
-        image='shared/logos/website-weiss.png',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -586,7 +586,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4da',
         layer=0,
-        image='shared/logos/mail-weiss.png',
+        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
     ))
     page1.add(TextFrame(
         x_mm=263.26,
