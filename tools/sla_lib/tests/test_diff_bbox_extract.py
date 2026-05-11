@@ -431,6 +431,109 @@ class ExtractAllPipelineTests(unittest.TestCase):
         self.assertEqual(set(bbox["bbox_mm"].keys()), {"x", "y", "w", "h"})
 
 
+class StrictModeUXTests(unittest.TestCase):
+    """Strict-mode raises + soft warnings (Issue #36 task 10)."""
+
+    def setUp(self) -> None:
+        self.tmpdir = Path(tempfile.mkdtemp(prefix="diff_bbox_strict_"))
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_missing_delta_referenced_by_json_raises(self) -> None:
+        # visual_diff.json points at a file that doesn't exist on disk.
+        (self.tmpdir / "visual_diff.json").write_text(
+            json.dumps({
+                "dpi": 96,
+                "pages": [{"page": 0, "delta_png": "nope.png"}],
+            }), encoding="utf-8",
+        )
+        # main() must return non-zero and print to stderr (no traceback).
+        # We invoke as a subprocess to capture stderr cleanly.
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "tools" / "diff_bbox_extract.py"),
+             str(self.tmpdir)],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("missing delta PNG", result.stderr)
+        self.assertIn("nope.png", result.stderr)
+        # Output JSON not written on failure
+        self.assertFalse((self.tmpdir / "diff_bboxes.json").exists())
+
+    def test_im_failure_raises_diffbboxerror(self) -> None:
+        # Feed an empty file ending in .png so IM `convert` fails.
+        bad = self.tmpdir / "diff-page-01.png"
+        bad.write_bytes(b"")
+        (self.tmpdir / "visual_diff.json").write_text(
+            json.dumps({
+                "dpi": 96,
+                "pages": [{"page": 0, "delta_png": "diff-page-01.png"}],
+            }), encoding="utf-8",
+        )
+        with self.assertRaises(DiffBBoxError) as ctx:
+            extract_all(self.tmpdir)
+        msg = str(ctx.exception)
+        self.assertIn("ImageMagick", msg)
+        self.assertIn("diff-page-01.png", msg)
+
+    def test_template_build_failure_emits_warning_not_raise(self) -> None:
+        # template_slug points at a non-existent slug => build fails, but
+        # extract_all completes successfully and bboxes have
+        # attributed_slot=None.
+        _draw_delta(self.tmpdir / "diff-page-01.png", (200, 200),
+                    [(50, 60, 30, 20)])
+        (self.tmpdir / "visual_diff.json").write_text(
+            json.dumps({
+                "dpi": 96,
+                "pages": [{"page": 0, "delta_png": "diff-page-01.png"}],
+            }), encoding="utf-8",
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            payload = extract_all(
+                self.tmpdir,
+                template_slug="definitely-broken-slug",
+                min_area_px=10,
+            )
+        # At least one warning was emitted by load_template_slots
+        self.assertTrue(
+            any("attribution skipped" in str(w.message) for w in caught),
+            f"no skip-warning in {[str(w.message) for w in caught]}",
+        )
+        # Every bbox has attributed_slot=None (no slots loaded)
+        for page in payload["pages"]:
+            for bbox in page["bboxes"]:
+                self.assertIsNone(bbox["attributed_slot"])
+                self.assertEqual(bbox["attribution_candidates"], [])
+
+    def test_template_with_no_slots_unattributed_silent(self) -> None:
+        # No --template-slug at all => attribution silently disabled, no
+        # warnings (warning is reserved for "you ASKED for attribution
+        # but we couldn't deliver" cases).
+        _draw_delta(self.tmpdir / "diff-page-01.png", (200, 200),
+                    [(50, 60, 30, 20)])
+        (self.tmpdir / "visual_diff.json").write_text(
+            json.dumps({
+                "dpi": 96,
+                "pages": [{"page": 0, "delta_png": "diff-page-01.png"}],
+            }), encoding="utf-8",
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            payload = extract_all(self.tmpdir, template_slug=None,
+                                  min_area_px=10)
+        # No skip-warnings (could have unrelated DeprecationWarnings from
+        # other modules during import, so filter for our specific message):
+        self.assertFalse(
+            any("attribution skipped" in str(w.message) for w in caught),
+            f"unexpected skip-warning: {[str(w.message) for w in caught]}",
+        )
+        for page in payload["pages"]:
+            for bbox in page["bboxes"]:
+                self.assertIsNone(bbox["attributed_slot"])
+
+
 class VisualDiffWiringTests(unittest.TestCase):
     """Tests that tools/visual_diff.py's --extract-bboxes flag merges the
     extractor's per-page bboxes into visual_diff.json without breaking the

@@ -46,6 +46,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 import warnings
 from pathlib import Path
 from typing import Optional
@@ -557,14 +558,21 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = ap.parse_args(argv)
     out_dir: Path = args.out_dir
     json_out: Path = args.json_out or (out_dir / "diff_bboxes.json")
-    payload = extract_all(
-        out_dir,
-        template_slug=args.template_slug,
-        threshold=args.threshold,
-        min_area_px=args.min_area_px,
-        coverage_threshold=args.coverage_threshold,
-        overlay_out=args.overlay_out,
-    )
+    try:
+        payload = extract_all(
+            out_dir,
+            template_slug=args.template_slug,
+            threshold=args.threshold,
+            min_area_px=args.min_area_px,
+            coverage_threshold=args.coverage_threshold,
+            overlay_out=args.overlay_out,
+        )
+    except DiffBBoxError as exc:
+        # Strict-mode raise — print a clean error and return non-zero so
+        # the caller (e.g. visual_diff.py --extract-bboxes) sees failure.
+        # Stack-trace would obscure the actionable path in the message.
+        print(f"diff_bbox_extract: {exc}", file=sys.stderr)
+        return 1
     write_json(payload, json_out)
     n_pages = len(payload.get("pages", []))
     n_bboxes = sum(len(p["bboxes"]) for p in payload.get("pages", []))
