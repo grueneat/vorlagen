@@ -311,17 +311,8 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
         runs=[Run(text='\t•\t'), Run(text='Scim rem ', font='Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Tissi iuntem ressiti ', font='Black'), Run(text='orerovi tectotmusaqui tota nis quam.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Uaerum ium ', font='Black'), Run(text='verior alicide liquuntio. '), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='vello modi ', font='Black'), Run(text='aceprate pem ssi iuntem ilis'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='moditatque', font='Black'), Run(text=' nimil maxim voluptur.'), Run(text='', separator='breakline'), Run(text='\t'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
     ))
-    page0.add(Polygon(
-        x_mm=123.5071,
-        y_mm=127.9561,
-        w_mm=48.9858,
-        h_mm=59.48,
-        anname='u2b0',
-        layer=0,
-        fill='None',
-        line_color='Gelb',
-        line_width_pt=4.203916263369494,
-    ))
+    # u2b0 omitted: yellow-outline guide marker present in IDML Gestaltung layer
+    # but not emitted in the InDesign PDF export (design artifact, not content).
 
 
 def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
