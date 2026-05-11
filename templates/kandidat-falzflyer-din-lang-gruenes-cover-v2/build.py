@@ -33,6 +33,15 @@ from sla_lib.builder import (  # noqa: E402
 
 INJECT_MAP: dict[str, str] = {}
 
+# Repo-root-relative asset directory; images are referenced by absolute path so
+# Scribus can resolve them regardless of where the SLA file sits on disk.
+_ASSETS = HERE.parents[1] / "shared" / "assets" / "26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2"
+
+
+def _asset(name: str) -> str:
+    """Return absolute path to a shared asset file."""
+    return str(_ASSETS / name)
+
 def _add_styles(doc: Document) -> None:
     """Paragraph styles — populated by tools/idml_to_dsl.py Phase G."""
     # (no paragraph styles in this task-3 skeleton)
@@ -173,7 +182,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=15.6052,
         anname='u141',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.png',
+        image=_asset('gruene-logo-bund-weiss-cmyk.png'),
     ))
     page0.add(Polygon(
         x_mm=198.3236,
@@ -354,7 +363,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=41.6915,
         anname='u2cd',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/green-pine-trees-covered-with-fog.jpg',
+        image=_asset('green-pine-trees-covered-with-fog.jpg'),
     ))
     page1.add(TextFrame(
         x_mm=110.5,
@@ -458,7 +467,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=210.3748,
         anname='u3a0',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png',
+        image=_asset('plakat-dunkel-fuer-flyer.png'),
     ))
     page1.add(TextFrame(
         x_mm=203.88,
@@ -498,7 +507,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        image=_asset('social-media-icons-weiss.png'),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -517,7 +526,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        image=_asset('social-media-icons-weiss.png'),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -536,7 +545,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        image=_asset('social-media-icons-weiss.png'),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -555,7 +564,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u477',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
+        image=_asset('bluesky-weiss.png'),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -574,7 +583,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4a2',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
+        image=_asset('website-weiss.png'),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -593,7 +602,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4da',
         layer=0,
-        image='shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
+        image=_asset('mail-weiss.png'),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
