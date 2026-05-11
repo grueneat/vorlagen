@@ -95,6 +95,37 @@ class NonFamilySuccessTests(unittest.TestCase):
             result = process_template(tdir)
             self.assertIsNone(result)
 
+    def test_non_family_excludes_hires_variants_from_previews(self):
+        """Issue #32: page-*.png glob must NOT enumerate page-*-hires.png.
+
+        Hi-res variants were added in #28 for the lightbox click-through and
+        share the page-* prefix on disk. Without an explicit stem-suffix
+        filter the gallery double-counts each page.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td) / "postkarte-hires"
+            tdir.mkdir()
+            site_public = Path(td) / "public"
+            _make_non_family_template(tdir, page_count=2)
+            # Add hi-res companions for both pages (the bug condition).
+            (tdir / "page-01-hires.png").write_bytes(b"PNG-HI")
+            (tdir / "page-02-hires.png").write_bytes(b"PNG-HI")
+            with unittest.mock.patch.object(gallery_build, "SITE_PUBLIC", site_public):
+                result = process_template(tdir)
+            self.assertIsNotNone(result)
+            # Must be exactly 2 — not 4 (regular + hires).
+            self.assertEqual(
+                len(result["_previews"]), 2,
+                f"_previews must exclude -hires variants; got "
+                f"{[p['src'] for p in result['_previews']]}",
+            )
+            preview_srcs = [p["src"] for p in result["_previews"]]
+            for src in preview_srcs:
+                self.assertNotIn(
+                    "-hires.png", src,
+                    f"_previews src must not reference -hires variant: {src}",
+                )
+
 
 class NonFamilyFailureTests(unittest.TestCase):
     """Tests for the non-family copy-only branch (failure paths)."""
