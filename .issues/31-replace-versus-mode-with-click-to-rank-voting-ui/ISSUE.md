@@ -1,7 +1,7 @@
 ---
 id: '31'
 title: Replace versus mode with click-to-rank voting UI
-status: open
+status: in_progress
 priority: high
 labels:
 - enhancement
