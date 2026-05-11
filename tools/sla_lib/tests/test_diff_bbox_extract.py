@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -428,6 +429,110 @@ class ExtractAllPipelineTests(unittest.TestCase):
         })
         self.assertEqual(set(bbox["bbox_px"].keys()), {"x", "y", "w", "h"})
         self.assertEqual(set(bbox["bbox_mm"].keys()), {"x", "y", "w", "h"})
+
+
+_INTEGRATION_REQUIRES = (
+    shutil.which("scribus") is not None
+    and shutil.which("pdftoppm") is not None
+    and shutil.which("convert") is not None
+)
+
+
+@unittest.skipUnless(
+    _INTEGRATION_REQUIRES,
+    "integration test requires scribus + pdftoppm + ImageMagick on PATH",
+)
+class DiffBBoxIntegrationTests(unittest.TestCase):
+    """End-to-end test against the postkarte-a6-kampagne fixture.
+
+    Slow — runs scribus + pdftoppm + ImageMagick `compare` once in
+    ``setUpClass`` to produce a real ``visual_diff.py`` output directory,
+    then exercises the extractor against it. Per Issue #36 task 8.
+    """
+
+    tmpdir: Path
+    vd_dir: Path
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.tmpdir = Path(tempfile.mkdtemp(prefix="diff_bbox_integration_"))
+        cls.vd_dir = cls.tmpdir / "vd"
+        template_dir = ROOT / "templates" / "postkarte-a6-kampagne"
+        subprocess.run(
+            [
+                sys.executable, str(ROOT / "tools" / "visual_diff.py"),
+                str(template_dir / "template.sla"),
+                "--baseline", str(template_dir / "baseline.pdf"),
+                "--tolerance", str(template_dir / "diff.yml"),
+                "--ci",
+                "--out", str(cls.vd_dir),
+            ],
+            check=False,  # exits 1 on tolerance violation; artifacts still written
+            capture_output=True,
+        )
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        shutil.rmtree(cls.tmpdir, ignore_errors=True)
+
+    def test_runs_against_real_output_dir_writes_json(self) -> None:
+        rc = diff_bbox_extract.main([
+            str(self.vd_dir),
+            "--template-slug", "postkarte-a6-kampagne",
+        ])
+        self.assertEqual(rc, 0)
+        json_path = self.vd_dir / "diff_bboxes.json"
+        self.assertTrue(json_path.exists())
+        payload = json.loads(json_path.read_text(encoding="utf-8"))
+        self.assertEqual(set(payload.keys()), {"dpi", "template_slug", "pages"})
+        # Page count matches visual_diff.json's pages length
+        vd = json.loads((self.vd_dir / "visual_diff.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(payload["pages"]), len(vd["pages"]))
+
+    def test_deterministic_on_real_dir(self) -> None:
+        path_a = self.tmpdir / "a.json"
+        path_b = self.tmpdir / "b.json"
+        diff_bbox_extract.main([
+            str(self.vd_dir),
+            "--template-slug", "postkarte-a6-kampagne",
+            "--json-out", str(path_a),
+        ])
+        diff_bbox_extract.main([
+            str(self.vd_dir),
+            "--template-slug", "postkarte-a6-kampagne",
+            "--json-out", str(path_b),
+        ])
+        self.assertEqual(
+            path_a.read_bytes(), path_b.read_bytes(),
+            "Real-fixture diff_bboxes.json must be byte-identical across runs",
+        )
+
+    def test_overlay_files_produced(self) -> None:
+        diff_bbox_extract.main([
+            str(self.vd_dir),
+            "--template-slug", "postkarte-a6-kampagne",
+            "--overlay-out",
+        ])
+        self.assertTrue((self.vd_dir / "diff-page-01-overlay.png").exists())
+        self.assertTrue((self.vd_dir / "diff-page-02-overlay.png").exists())
+
+    def test_at_least_one_attributed_bbox(self) -> None:
+        diff_bbox_extract.main([
+            str(self.vd_dir),
+            "--template-slug", "postkarte-a6-kampagne",
+        ])
+        payload = json.loads(
+            (self.vd_dir / "diff_bboxes.json").read_text(encoding="utf-8"),
+        )
+        attributed = [
+            b for p in payload["pages"]
+            for b in p["bboxes"]
+            if b["attributed_slot"] is not None
+        ]
+        self.assertGreater(
+            len(attributed), 0,
+            "expected at least one attributed bbox on postkarte-a6-kampagne",
+        )
 
 
 if __name__ == "__main__":
