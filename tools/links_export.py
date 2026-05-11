@@ -221,26 +221,61 @@ def _convert_ai(src: Path, out_path: Path) -> None:
 
 
 def _convert_psd(src: Path, out_path: Path) -> None:
-    """``.psd`` → flattened PNG via ImageMagick ``convert -flatten``.
+    """``.psd`` → ICC-profile-aware flattened PNG via Pillow.
 
-    Determinism: ImageMagick embeds ``date:create`` + ``date:modify``
-    derived from filesystem mtime into the PNG metadata on every run,
-    which breaks byte-equality of re-runs. ``+set date:create +set
-    date:modify`` suppresses those fields (pixel data + source EXIF/XMP
-    are unaffected because they come from the PSD, not the run clock).
+    CMYK PSD files from print workflows embed ICC profiles (e.g. Coated
+    FOGRA39).  ImageMagick's ``convert -flatten`` ignores these profiles,
+    producing near-white pixels where the CMYK values are close to zero ink
+    (i.e. a white paper assumption).  Pillow's ``ImageCms`` transforms the
+    CMYK data using the embedded source ICC profile to sRGB, matching how
+    InDesign and Acrobat render the image.
+
+    For non-CMYK PSDs (RGB, RGBA, Grayscale) the ICC correction path is
+    skipped and the image is saved directly as sRGB PNG.
+
+    Determinism: Pillow's PNG encoder does not embed filesystem timestamps,
+    so byte-equal output is expected for identical inputs.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    _run([
-        "convert", str(src), "-flatten",
-        "+set", "date:create",
-        "+set", "date:modify",
-        "+set", "date:timestamp",
-        str(out_path),
-    ])
-    if not out_path.exists():  # pragma: no cover — defensive
+    try:
+        from PIL import Image, ImageCms  # type: ignore[import-untyped]
+    except ImportError as e:  # pragma: no cover
         raise RuntimeError(
-            f"ImageMagick convert did not produce {out_path} from {src}"
-        )
+            "Pillow is required to convert PSD files: "
+            "pip install Pillow  (extend tools/links_export.py:_convert_psd)"
+        ) from e
+
+    img = Image.open(str(src))
+    # Flatten all layers by converting to the base mode (Pillow flattens
+    # on open for PSDs — the mode reflects the composite).
+    if img.mode == "CMYK":
+        # Apply the embedded ICC profile for a perceptually correct sRGB render.
+        # Fall back to a naïve inversion (1 - C/255) if no profile is embedded.
+        icc_bytes = img.info.get("icc_profile")
+        if icc_bytes:
+            src_profile = ImageCms.ImageCmsProfile(
+                __import__("io").BytesIO(icc_bytes)
+            )
+            dst_profile = ImageCms.createProfile("sRGB")
+            transform = ImageCms.buildTransformFromOpenProfiles(
+                src_profile, dst_profile,
+                img.mode, "RGB",
+            )
+            img = ImageCms.applyTransform(img, transform)
+        else:
+            # No embedded profile — naïve CMYK→RGB inversion.
+            import numpy as np  # type: ignore[import-untyped]
+            arr = np.array(img, dtype=float) / 255.0
+            c, m, y, k = arr[..., 0], arr[..., 1], arr[..., 2], arr[..., 3]
+            r = (1 - c) * (1 - k)
+            g = (1 - m) * (1 - k)
+            b = (1 - y) * (1 - k)
+            rgb = (np.stack([r, g, b], axis=-1) * 255).clip(0, 255).astype("uint8")
+            img = Image.fromarray(rgb, mode="RGB")
+    elif img.mode not in ("RGB", "RGBA", "L", "LA"):
+        img = img.convert("RGB")
+
+    img.save(str(out_path), format="PNG")
 
 
 def _passthrough_copy(src: Path, out_path: Path) -> None:
