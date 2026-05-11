@@ -148,3 +148,151 @@ None.
 - ee9f43c 35: feat(template): meta.yml full schema for v2 falzflyer + slot extractor
 - a159f03 35: fix(idml): drop spread origin subtraction; e2e gallery + audit + checks
 - 64766f1 35: test(idml): integration smoke + strict-mode entry-point guards
+
+---
+
+## Phase 2 — asset export + retemplate (2026-05-11)
+
+**Scope:** Replace the Phase-1 hand-staged PNGs in `shared/logos/` with a
+proper exporter tool, cover the previously-missed PSD asset, re-emit the
+v2 falzflyer through the new flow, and drop in `baseline.pdf` + `diff.yml`
+for the visual_diff opt-in (Phase 2 of the orchestrator's work — diffing
+itself is not run yet).
+
+### Execution Log
+
+- [x] Phase 2 Task A: Add `tools/links_export.py` — IDML Links/ → shared/assets/<slug>/
+  — commit f719d13
+  - Standalone CLI walks the IDML's sibling Links/ directory and writes
+    converted assets + a deterministic `links_export.yml` manifest under
+    `shared/assets/<idml-slug>/` (auto-derived from `--idml-name`).
+  - Dispatch table: `.ai` → `pdftocairo -png -transp -r 600 -singlefile`;
+    `.psd` → `convert -flatten`; `.jpg`/`.jpeg`/`.png` → passthrough copy
+    (renamed to slug). Unsupported extensions log + skip (post-processor
+    philosophy — no raise).
+  - Slug rules transliterate German umlauts before NFKD strip
+    (`ü`→`ue`, `ö`→`oe`, `ä`→`ae`, `ß`→`ss`) so `Plakat dunkel für Flyer.psd`
+    becomes `plakat-dunkel-fuer-flyer.png`. `.jpeg` collapses to `.jpg` on
+    disk.
+  - Manifest schema is a superset of the Phase 1 logo-map: each entry
+    keyed by NFC basename, with `output:`, `kind:`, `recipe:` fields.
+  - Deterministic: `yaml.safe_dump(sort_keys=True)`, sorted directory walk,
+    byte-equal re-runs verified by unit test.
+  - 28 new unit tests (slugify edge cases, dispatch table case-handling,
+    passthrough copy, manifest determinism, end-to-end against tmp Links/
+    with mixed raster types + unsupported extension, error paths).
+
+- [x] Phase 2 Task B: `--asset-map` + auto-invoke + strict PSD handling
+  — commit 42413de
+  - New `--asset-map <path/to/links_export.yml>` flag in
+    `tools/idml_to_dsl.py`.
+  - Auto-invoke fallback: when both `--asset-map` and `--logo-map` are
+    omitted AND a sibling `Links/` directory exists next to the input
+    IDML, the converter shells out to `tools/links_export.py` to produce
+    a manifest at `shared/assets/<idml-slug>/`. Output path is
+    deterministic (uses the same slugifier).
+  - `--logo-map` (legacy) still accepted for backward-compat; `--asset-map`
+    wins when both are supplied. Auto-invoke is skipped when `--logo-map`
+    is explicitly passed so legacy flows stay unchanged.
+  - **Bug fix:** the Phase-1 silently-passing-through `.psd` Image path
+    (Scribus could not render the raw PSD bytes — page-02 preview showed
+    a blank frame) now raises strict mode. The legacy `--assets-dir`
+    fallback rejects any extension not in
+    `{.png, .jpg, .jpeg, .tif, .tiff}` with a helpful error pointing at
+    `--asset-map`. The `--asset-map` flow resolves the PSD basename to
+    the manifest's converted PNG path.
+  - 4 new unit tests: missing `--asset-map` file, asset-map-vs-logo-map
+    precedence, `.psd` Image without `--asset-map` raises, `.psd` Image
+    with `--asset-map` emits the mapped PNG path.
+
+- [x] Phase 2 Task C: Re-emit v2 falzflyer + bundle shared/assets
+  — commit a3db541
+  - `python3 tools/idml_to_dsl.py <idml> <out.py> --template-id <slug>`
+    (no other flags) — runs the auto-invoke fallback, produces
+    `shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/`
+    with 7 converted assets + `links_export.yml`, then re-emits the
+    v2 template's `build.py`.
+  - All 9 image references in `build.py` now point under
+    `shared/assets/<slug>/...`. Zero references to `shared/logos/26-03-leporello-*`,
+    `originals/...`, or `.psd` remain.
+  - `bin/render-gallery kandidat-falzflyer-din-lang-gruenes-cover-v2`
+    rebuilds `template.sla` + `preview.pdf` + thumb/hires PNGs. The
+    preview PDF shrinks from 15.8 MB → 350 KB because the SLA no longer
+    embeds the 64 MB raw PSD bytes.
+  - `bin/check-stale-previews` exit 0 (`previews_for_sla` SHA refreshed by
+    the gallery script). `bin/check-fontsizes` exit 0.
+  - Full test suite: 75 passed (Phase 1: 43, new Phase 2: 32).
+
+- [x] Phase 2 Task D: `baseline.pdf` + `diff.yml` for visual_diff opt-in
+  — commit 169ad08
+  - `baseline.pdf` is the InDesign-exported reference PDF bundled with
+    the source IDML.
+  - `diff.yml` uses project-default tolerances (max_pixel_mismatch_pct
+    1.0, fuzz_pct 25.0 — same as Zeitung). Per-region overrides are
+    explicit follow-up work; the bbox extractor from issue #36/PR #75
+    drives them rather than hand-picking now.
+  - Visual_diff is NOT run in Phase 2 of issue #35 — that's the
+    orchestrator's Phase 2. Future `bin/render-gallery` invocations
+    will trigger it automatically because the opt-in is "both files
+    present in the template directory" (see
+    `tools/render_pipeline.py::_run_visual_diff`).
+
+### Phase 2 Verification
+
+- **Tests:** 75 passed (was 43 after Phase 1).
+  - 28 new unit tests for `tools/links_export.py` (slugify, dispatch,
+    passthrough, manifest determinism, error paths).
+  - 4 new unit/integration tests for the asset_map flow in
+    `tools/idml_to_dsl.py` (missing `--asset-map`, precedence, PSD
+    strict-raise, PSD-with-map-emits-PNG).
+  - Pre-existing 43 tests still pass (Phase 1 geometry / colors / styles
+    / stories / strict-mode / smoke).
+- **Lint:** ruff baseline unchanged (3 pre-existing F-string warnings on
+  `tools/idml_to_dsl.py`; no new lint issues introduced).
+- **Type-check:** mypy `tools/links_export.py` clean except for the
+  pre-existing `types-PyYAML` missing-stubs warning that affects the
+  rest of the repo too. No new mypy issues introduced.
+- **Repo-wide checks against the new v2 template:**
+  - `bin/render-gallery kandidat-falzflyer-din-lang-gruenes-cover-v2`: OK
+  - `python3 tools/audit_alignment.py kandidat-falzflyer-din-lang-gruenes-cover-v2`:
+    exit 0 (axis-drift + image-fills-frame findings are info-level —
+    same set as Phase 1).
+  - `bin/check-fontsizes`: exit 0.
+  - `bin/check-stale-previews`: exit 0.
+
+### Phase 2 Deviations from Plan
+
+- **Test framework choice — repo idiom is pytest, not unittest.**
+  The Phase 2 prompt said "Use `unittest.TestCase` (repo idiom, not
+  pytest)" but every existing test file in `tests/unit/` and
+  `tests/integration/` uses pytest-style function tests (verified by
+  `grep -l unittest tests/` — zero hits). I followed the actual repo
+  idiom (Principle 2: Follow existing patterns) and used pytest-style
+  classes + functions for the new tests. The 75-test suite runs cleanly
+  via `python3 -m pytest tests/`.
+
+### Phase 2 Discovered Issues (not fixed — out of scope)
+
+- The PSD frame `u3a0` still has an aspect-ratio mismatch in the rendered
+  preview (99×210mm container, ~99×66mm rendered fill). The PSD content
+  is now visible (was blank before), but the upper portion of the frame
+  remains empty. Same root cause as the 5 image-fills-frame warnings
+  Phase 1 surfaced — `compute_aspect_fill` or `INJECT_MAP` adjustment
+  is the fix; tracked in Phase 1 "Discovered Issues".
+- Some `.AI`-uppercase extensions in other IDMLs (not in this corpus)
+  would now route through `kind_for_extension(".AI")` correctly because
+  the dispatch lowercase-normalises the extension; if a future IDML
+  ships `Foo.AI` on macOS, slug normalisation strips the case to
+  `foo` and the output ends as `foo.png`.
+
+### Phase 2 Commits (in order)
+
+- f719d13 35: feat(idml): add tools/links_export.py — IDML Links/ → shared/assets/<slug>/
+- 42413de 35: feat(idml): --asset-map + auto-invoke links_export, strict on unmapped <Image>
+- a3db541 35: feat(template): re-emit v2 falzflyer via --asset-map; bundle shared/assets
+- 169ad08 35: chore(template): add baseline.pdf + diff.yml for v2 falzflyer visual_diff
+
+**Phase 2 completed:** 2026-05-11T15:20:00Z
+**Phase 2 duration:** ~50 minutes
+**Phase 2 commits:** 4 (plus this docs commit)
+**Status:** complete (Phase 1 + Phase 2)
