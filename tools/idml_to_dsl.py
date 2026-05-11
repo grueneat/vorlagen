@@ -721,6 +721,298 @@ def _emit_colors(ctx: _Ctx) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Phase G — Paragraph styles (Resources/Styles.xml) per RESEARCH §"Styles".
+#
+# IDML Justification → Scribus ParaStyle.align int.
+# (0=left, 1=center, 2=right, 3=block, per tools/sla_lib/builder/styles.py)
+# ---------------------------------------------------------------------------
+JUSTIFICATION_MAP = {
+    "LeftAlign": 0,
+    "CenterAlign": 1,
+    "RightAlign": 2,
+    "FullyJustified": 3,
+    "LeftJustified": 3,
+    "RightJustified": 3,
+    "CenterJustified": 3,
+}
+
+# Brand-recognised Scribus font family+style combinations. The converter
+# does NOT raise on unrecognised fonts (Scribus's fontconfig will fall back),
+# but having the list lets future emitters reason about font availability.
+BRAND_FONTS = {
+    "Gotham Narrow Book",
+    "Gotham Narrow Bold",
+    "Gotham Narrow Black",
+    "Gotham Narrow Ultra",
+    "Vollkorn Black Italic",
+}
+
+# Cached translation table for ASCII-fold + slug.
+_SLUG_TRANSLATIONS = {
+    "ä": "ae",
+    "ö": "oe",
+    "ü": "ue",
+    "Ä": "ae",
+    "Ö": "oe",
+    "Ü": "ue",
+    "ß": "ss",
+}
+
+
+def _idml_style_slug(name: str) -> str:
+    """Slugify an IDML style name into an ``idml/<slug>`` DSL ParaStyle name.
+
+    Rules: strip ``$ID/`` prefix, lowercase, fold German umlauts (ü→ue etc),
+    replace runs of non-alphanum with single ``-``, prefix with ``idml/``.
+    """
+    s = name
+    # Strip InDesign internal prefix.
+    if s.startswith("$ID/"):
+        s = s[len("$ID/"):]
+    # ASCII-fold German umlauts BEFORE lowercasing (preserve mapping).
+    for ch, repl in _SLUG_TRANSLATIONS.items():
+        s = s.replace(ch, repl)
+    s = s.lower()
+    # Normalise any remaining accents via NFKD.
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    # Replace runs of non-alphanum with single hyphen.
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return f"idml/{s}" if s else "idml/_"
+
+
+def _make_font_name(family: Optional[str], style: Optional[str], *, ctx_self_id: str) -> Optional[str]:
+    """Concatenate family + style into a Scribus font name.
+
+    Returns None if neither family nor style is set. Brand-font membership
+    is informational only — we never raise; fontconfig handles fallback.
+    """
+    if family and style:
+        return f"{family} {style}"
+    if family:
+        return family
+    if style:
+        return style
+    return None
+
+
+def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, Any]]:
+    """Parse Resources/Styles.xml and return {self_id: style_dict, ...}.
+
+    Each style_dict carries: self_id, name, based_on_self (or None),
+    point_size (float|None), leading (float|None, or "Auto"-string), fill_color,
+    font_style, justification, applied_font.
+
+    Raises UnhandledElement if a non-empty RootCharacterStyleGroup contains
+    any CharacterStyle other than [No character style] (corpus has none;
+    extending this would require a new CharStyle emit path).
+    """
+    root = etree.fromstring(styles_xml, parser=_SECURE_XMLPARSER)
+
+    # Defensive: confirm no real CharacterStyles to support.
+    cs_group = root.find(".//RootCharacterStyleGroup")
+    if cs_group is not None:
+        for cs in cs_group.findall(".//CharacterStyle"):
+            cs_name = cs.get("Name", "")
+            if cs_name != "$ID/[No character style]":
+                raise UnhandledElement(
+                    f"CharacterStyle {cs.get('Self')!r} Name={cs_name!r}: "
+                    f"only [No character style] is supported in v1 "
+                    f"(extend tools/idml_to_dsl.py:_read_paragraph_styles_from_xml)"
+                )
+
+    styles: dict[str, dict[str, Any]] = {}
+    ps_group = root.find(".//RootParagraphStyleGroup")
+    if ps_group is None:
+        return styles
+    for ps in ps_group.findall(".//ParagraphStyle"):
+        self_id = ps.get("Self", "")
+        name = ps.get("Name", "")
+        props = ps.find("Properties")
+        based_on: Optional[str] = None
+        applied_font: Optional[str] = None
+        leading: Optional[str] = None
+        if props is not None:
+            bo = props.find("BasedOn")
+            if bo is not None and bo.text:
+                bo_text = bo.text.strip()
+                # BasedOn may be a Self-ID like "ParagraphStyle/Foo" or a bare
+                # name like "$ID/[No paragraph style]"; normalise to a Self-ID.
+                if bo_text.startswith("ParagraphStyle/"):
+                    based_on = bo_text
+                else:
+                    based_on = f"ParagraphStyle/{bo_text}"
+            af = props.find("AppliedFont")
+            if af is not None and af.text:
+                applied_font = af.text.strip()
+            ld = props.find("Leading")
+            if ld is not None and ld.text:
+                leading = ld.text.strip()
+
+        # Avoid self-referential BasedOn (e.g. root style referring to itself).
+        if based_on == self_id:
+            based_on = None
+
+        point_size = ps.get("PointSize")
+        fill_color = ps.get("FillColor")
+        font_style = ps.get("FontStyle")
+        justification = ps.get("Justification")
+        styles[self_id] = {
+            "self_id": self_id,
+            "name": name,
+            "based_on_self": based_on,
+            "point_size": float(point_size) if point_size is not None else None,
+            "leading": leading,
+            "fill_color": fill_color,
+            "font_style": font_style,
+            "justification": justification,
+            "applied_font": applied_font,
+        }
+    return styles
+
+
+def _resolve_paragraph_style(
+    style: dict[str, Any], all_styles: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Walk the BasedOn chain upward; for each None attribute, inherit from parent.
+
+    Cycle-safe: stops if a Self-ID is revisited.
+    """
+    resolved = dict(style)
+    visited = {style["self_id"]}
+    parent_self = resolved.get("based_on_self")
+    while parent_self and parent_self in all_styles and parent_self not in visited:
+        visited.add(parent_self)
+        parent = all_styles[parent_self]
+        for k in ("point_size", "leading", "fill_color", "font_style",
+                  "justification", "applied_font"):
+            if resolved.get(k) is None:
+                resolved[k] = parent.get(k)
+        parent_self = parent.get("based_on_self")
+    return resolved
+
+
+def _emit_paragraph_styles(out: PythonRepr, ctx: _Ctx) -> dict[str, str]:
+    """Phase G driver. Populates ctx.paragraph_styles + ctx.paragraph_style_map
+    AND emits doc.add_para_style(ParaStyle(...)) calls into the _add_styles
+    function in the generated build.py.
+
+    Returns ``{ParagraphStyle/Foo: idml/<slug>}`` map.
+    """
+    styles_xml = ctx.pkg.open("Resources/Styles.xml").read()
+    styles = _read_paragraph_styles_from_xml(styles_xml)
+    ctx.paragraph_styles = styles
+
+    # Build slug map (Self-ID → idml/<slug>).
+    slug_map: dict[str, str] = {}
+    for self_id, st in styles.items():
+        slug_map[self_id] = _idml_style_slug(st["name"])
+    ctx.paragraph_style_map = slug_map
+
+    # Find styles referenced in any Story; emit only those (plus their
+    # BasedOn parents, so PARENT references resolve at SLA load time).
+    used: set[str] = set()
+    for st_path in ctx.pkg.stories:
+        xml = ctx.pkg.open(st_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        for psr in root.findall(".//ParagraphStyleRange"):
+            ap = psr.get("AppliedParagraphStyle")
+            if ap:
+                used.add(ap)
+    # Include BasedOn parents transitively.
+    to_walk = list(used)
+    while to_walk:
+        s = to_walk.pop()
+        st = styles.get(s)
+        if not st:
+            continue
+        parent = st.get("based_on_self")
+        if parent and parent in styles and parent not in used:
+            used.add(parent)
+            to_walk.append(parent)
+
+    return _emit_paragraph_styles_to_function(out, ctx, used, styles, slug_map)
+
+
+def _emit_paragraph_styles_to_function(
+    out: PythonRepr,
+    ctx: _Ctx,
+    used: set[str],
+    styles: dict[str, dict[str, Any]],
+    slug_map: dict[str, str],
+) -> dict[str, str]:
+    """Append a second ``_add_styles(doc)`` definition to ctx.out that
+    overrides the task-3 stub (last def wins in Python). Emits one
+    ``doc.add_para_style(ParaStyle(...))`` call per used style, ordered
+    parents-before-children so PARENT references resolve.
+    """
+    def _depth(s_id: str) -> int:
+        """Depth from root in the BasedOn chain (cycle-safe)."""
+        d = 0
+        cur = styles.get(s_id, {}).get("based_on_self")
+        seen = {s_id}
+        while cur and cur in styles and cur not in seen:
+            d += 1
+            seen.add(cur)
+            cur = styles[cur].get("based_on_self")
+        return d
+
+    ctx.out.w("")
+    ctx.out.w("def _add_styles(doc: Document) -> None:  # overrides task-3 stub")
+    ctx.out.indent += 1
+    if not used:
+        ctx.out.w('"""No paragraph styles referenced — overrides the empty stub."""')
+        ctx.out.w("return None")
+    else:
+        ctx.out.w('"""Auto-generated paragraph styles from the source IDML."""')
+        for s_id in sorted(used, key=lambda x: (_depth(x), slug_map[x])):
+            st = styles[s_id]
+            resolved = _resolve_paragraph_style(st, styles)
+            slug = slug_map[s_id]
+            kwargs: dict[str, Any] = {"name": slug}
+            parent_self = st.get("based_on_self")
+            if parent_self and parent_self in used:
+                kwargs["parent"] = slug_map[parent_self]
+            font = _make_font_name(
+                resolved.get("applied_font"),
+                resolved.get("font_style"),
+                ctx_self_id=s_id,
+            )
+            if font is not None:
+                kwargs["font"] = font
+            if resolved.get("point_size") is not None:
+                kwargs["fontsize"] = resolved["point_size"]
+            just = resolved.get("justification")
+            if just is not None:
+                if just not in JUSTIFICATION_MAP:
+                    raise UnhandledElement(
+                        f"ParagraphStyle {s_id!r} Justification={just!r} unknown "
+                        f"(extend tools/idml_to_dsl.py:JUSTIFICATION_MAP)"
+                    )
+                kwargs["align"] = JUSTIFICATION_MAP[just]
+            fc = resolved.get("fill_color")
+            if fc and fc in ctx.color_map:
+                kwargs["fcolor"] = ctx.color_map[fc]
+            ld = resolved.get("leading")
+            if ld and ld != "Auto":
+                try:
+                    kwargs["linesp"] = float(ld)
+                except ValueError:
+                    pass
+            ctx.out.w("doc.add_para_style(ParaStyle(")
+            ctx.out.indent += 1
+            for k, v in kwargs.items():
+                ctx.out.w(f"{k}={_py_value(v)},")
+            ctx.out.indent -= 1
+            ctx.out.w("))")
+        ctx.out.w("return None")
+    ctx.out.indent -= 1
+    ctx.out.w("")
+
+    return slug_map
+
+
+# ---------------------------------------------------------------------------
 # Phase D/E — emit build.py header + Document + add_master + add_page calls
 # ---------------------------------------------------------------------------
 def _emit_header(out: PythonRepr, template_id: str, idml_name: str) -> None:
@@ -981,6 +1273,8 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         _emit_page_stubs(ctx.out, ctx)
         # Phase E — build_template (Document + master + pages)
         _emit_document_scaffold(ctx.out, ctx)
+        # Phase G — paragraph styles (overrides the task-3 stub)
+        _emit_paragraph_styles(ctx.out, ctx)
         # Footer (build_preview / build / main)
         _emit_footer(ctx.out)
 
