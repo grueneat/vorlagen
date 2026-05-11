@@ -279,5 +279,214 @@ class DroppedAndCorpusStubTest(unittest.TestCase):
         self.assertIn("### From v2 (density+form findings)", md)
 
 
+class EmailImportTest(unittest.TestCase):
+    """Issue #33 T05: --from-emails <dir> parser coverage.
+
+    The aggregator's email path extracts JSON between
+    VOTE-JSON-START/END markers from .eml or .txt files, validates each
+    block against results.schema.yaml, and feeds payloads into
+    aggregate_payloads. These tests pin the parser's tolerance for real
+    inbox shapes (quoted-reply prefixes, multiple votes per file, mixed
+    file extensions) and its hard-error behaviour on malformed input.
+    """
+
+    @staticmethod
+    def _vote_block(rater: str = "flo", ranking: list[str] | None = None) -> str:
+        """Build the exact body shape the voting page emits."""
+        payload = {
+            "experiment_id": "example-experiment",
+            "rater": rater,
+            "started_at": "2026-05-11T09:00:00Z",
+            "exported_at": "2026-05-11T09:18:00Z",
+            "mode": "rank",
+            "ranking": ranking or ["alpha", "beta", "gamma"],
+        }
+        lines = [
+            "Hi Flo,",
+            "",
+            "Here's my ranking for example-experiment:",
+            "",
+            " 1. alpha  (alpha)",
+            " 2. beta   (beta)",
+            " 3. gamma  (gamma)",
+            "",
+            f"— {rater}",
+            "2026-05-11T09:18:00Z",
+            "",
+            "──────────  machine-readable, please don't edit  ──────────",
+            "VOTE-JSON-START",
+            json.dumps(payload),
+            "VOTE-JSON-END",
+        ]
+        return "\n".join(lines)
+
+    def test_extract_vote_blocks_single(self):
+        body = self._vote_block()
+        blocks = er.extract_vote_blocks(body)
+        self.assertEqual(len(blocks), 1)
+        parsed = json.loads(blocks[0])
+        self.assertEqual(parsed["rater"], "flo")
+        self.assertEqual(parsed["mode"], "rank")
+
+    def test_extract_vote_blocks_zero_when_no_markers(self):
+        self.assertEqual(er.extract_vote_blocks("Hi, no markers here."), [])
+
+    def test_valid_file_with_one_vote(self):
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "flo.txt").write_text(self._vote_block(), encoding="utf-8")
+            payloads = er.payloads_from_email_dir(Path(td))
+        self.assertEqual(len(payloads), 1)
+        self.assertEqual(payloads[0]["rater"], "flo")
+
+    def test_valid_file_with_two_votes_concatenated(self):
+        # Simulate a forwarded chain where two raters' bodies sit in one file.
+        combined = (
+            self._vote_block(rater="alice")
+            + "\n\n----- Forwarded message -----\n\n"
+            + self._vote_block(rater="bob", ranking=["beta", "alpha", "gamma"])
+        )
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "chain.txt").write_text(combined, encoding="utf-8")
+            payloads = er.payloads_from_email_dir(Path(td))
+        self.assertEqual(len(payloads), 2)
+        raters = sorted(p["rater"] for p in payloads)
+        self.assertEqual(raters, ["alice", "bob"])
+
+    def test_file_missing_markers_emits_warning_and_skips(self):
+        warnings: list[str] = []
+        errors: list[str] = []
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "unrelated.txt").write_text(
+                "Hi Flo,\n\nNo vote here, just a note.\n",
+                encoding="utf-8",
+            )
+            payloads = er.payloads_from_email_dir(
+                Path(td),
+                on_warning=warnings.append,
+                on_error=errors.append,
+            )
+        self.assertEqual(payloads, [])
+        self.assertEqual(len(warnings), 1, f"expected 1 warning, got: {warnings}")
+        self.assertIn("no VOTE-JSON-START/END markers", warnings[0])
+        self.assertIn("unrelated.txt", warnings[0])
+        self.assertEqual(errors, [])
+
+    def test_file_with_malformed_json_emits_error_and_skips(self):
+        warnings: list[str] = []
+        errors: list[str] = []
+        bad = (
+            "VOTE-JSON-START\n"
+            "{not real json, definitely broken,\n"
+            "VOTE-JSON-END\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "bad.txt").write_text(bad, encoding="utf-8")
+            payloads = er.payloads_from_email_dir(
+                Path(td),
+                on_warning=warnings.append,
+                on_error=errors.append,
+            )
+        self.assertEqual(payloads, [])
+        self.assertEqual(warnings, [])
+        self.assertEqual(len(errors), 1, f"expected 1 error, got: {errors}")
+        self.assertIn("bad.txt", errors[0])
+        self.assertIn("JSON parse failed", errors[0])
+
+    def test_file_with_schema_invalid_json_emits_error_and_skips(self):
+        errors: list[str] = []
+        # Strip required `mode` field → schema rejects.
+        payload = {
+            "experiment_id": "example-experiment",
+            "rater": "alice",
+            "started_at": "2026-05-11T09:00:00Z",
+            "exported_at": "2026-05-11T09:18:00Z",
+            "ranking": ["a", "b"],
+        }
+        body = (
+            "Hi,\n\nVOTE-JSON-START\n"
+            + json.dumps(payload)
+            + "\nVOTE-JSON-END\n"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "x.txt").write_text(body, encoding="utf-8")
+            payloads = er.payloads_from_email_dir(
+                Path(td),
+                on_warning=lambda _m: None,
+                on_error=errors.append,
+            )
+        self.assertEqual(payloads, [])
+        self.assertEqual(len(errors), 1)
+        self.assertIn("schema invalid", errors[0])
+
+    def test_mixed_eml_and_txt_extensions_both_parsed(self):
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "alice.eml").write_text(
+                "From: alice@example.com\nSubject: [vote] example-experiment\n\n"
+                + self._vote_block(rater="alice"),
+                encoding="utf-8",
+            )
+            (Path(td) / "bob.txt").write_text(
+                self._vote_block(rater="bob"),
+                encoding="utf-8",
+            )
+            payloads = er.payloads_from_email_dir(Path(td))
+        self.assertEqual(len(payloads), 2)
+        self.assertEqual(
+            sorted(p["rater"] for p in payloads),
+            ["alice", "bob"],
+        )
+
+    def test_quoted_reply_prefixes_stripped_before_scan(self):
+        # Apple Mail / Gmail prefix forwarded bodies with `> `.
+        body = self._vote_block(rater="flo")
+        quoted = "\n".join("> " + line for line in body.split("\n"))
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "reply.txt").write_text(quoted, encoding="utf-8")
+            payloads = er.payloads_from_email_dir(Path(td))
+        self.assertEqual(len(payloads), 1)
+        self.assertEqual(payloads[0]["rater"], "flo")
+
+    def test_non_eml_txt_files_ignored(self):
+        # Operators may have other files in the folder (e.g. README, attachments).
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "flo.txt").write_text(self._vote_block(), encoding="utf-8")
+            (Path(td) / "README.md").write_text("# Notes\n", encoding="utf-8")
+            (Path(td) / "photo.jpg").write_text("binaryish", encoding="utf-8")
+            payloads = er.payloads_from_email_dir(Path(td))
+        self.assertEqual(len(payloads), 1)
+
+    def test_empty_directory_returns_empty_list(self):
+        with tempfile.TemporaryDirectory() as td:
+            payloads = er.payloads_from_email_dir(Path(td))
+        self.assertEqual(payloads, [])
+
+    def test_not_a_directory_raises(self):
+        with tempfile.NamedTemporaryFile() as tf:
+            with self.assertRaises(ValueError):
+                er.payloads_from_email_dir(Path(tf.name))
+
+    def test_aggregate_payloads_end_to_end_from_emails(self):
+        # Wire-up test: extracted email payloads flow through
+        # aggregate_payloads identically to JSON-file payloads.
+        with tempfile.TemporaryDirectory() as td:
+            (Path(td) / "alice.txt").write_text(
+                self._vote_block(rater="alice", ranking=["alpha", "beta", "gamma"]),
+                encoding="utf-8",
+            )
+            (Path(td) / "bob.txt").write_text(
+                self._vote_block(rater="bob", ranking=["gamma", "beta", "alpha"]),
+                encoding="utf-8",
+            )
+            payloads = er.payloads_from_email_dir(Path(td))
+            agg = er.aggregate_payloads(payloads)
+        # alpha + gamma cross-cancel; beta stays mid → all 0.5 mean.
+        for slug in ("alpha", "beta", "gamma"):
+            self.assertAlmostEqual(
+                agg["per_slug"][slug]["mean_score"], 0.5, places=9
+            )
+            self.assertEqual(agg["per_slug"][slug]["n_raters"], 2)
+        self.assertEqual(sorted(agg["raters"]), ["alice", "bob"])
+
+
 if __name__ == "__main__":
     unittest.main()

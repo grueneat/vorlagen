@@ -134,13 +134,40 @@ the rendered artefact decides.
 
 To aggregate a voting session, do:
 
-1. Verify the user has voted: `experiments/<id>/results/*.json` exists. Each results
-   file MUST validate against `experiments/_schema/results.schema.yaml` and carry one
-   of the two modes:
+1. Verify the operator has collected vote submissions. The voting page (issue #33) gives
+   raters three submission paths, all sharing one body string:
+   - **Per E-Mail senden** — opens `mailto:florian.motlik@gruene.at` with subject
+     `[vote] <experiment-id> — <rater>` and the full body pre-filled. Tap Send.
+   - **In Zwischenablage kopieren** — copies the same body for paste into WhatsApp /
+     Signal / Telegram / iMessage.
+   - **Stimme als Text ansehen** — inline read-only `<pre>` for screenshot or
+     manual select+copy.
+
+   The operator's job is to gather these bodies into a single directory. Two equivalent
+   inputs:
+   - **Email path (primary):** in your inbox, select all `[vote] <id> ...` messages,
+     save each body to `experiments/<id>/results/emails/<rater>-<date>.txt` (or `.eml`).
+   - **JSON path (legacy + `?dev=1`):** if the rater used the `?dev=1` download button
+     instead, drop the JSON into `experiments/<id>/results/`.
+
+   Both feed the same aggregator. Each vote (email body or JSON file) MUST validate
+   against `experiments/_schema/results.schema.yaml` and carry one mode:
    - **rank** — ordered slug list (`"mode": "rank"`, `"ranking": ["slug1", ...]`).
    - **direct-pick** — unordered selection set (`"mode": "direct-pick"`, `"selections": [...]`).
-2. Run `bin/experiment-results <id>`. This writes
-   `experiments/<id>/results/SUMMARY.md` with:
+2. Run the aggregator. Pick the path matching the rater submissions:
+   - **From emails (primary):**
+     `bin/experiment-results <id> --from-emails experiments/<id>/results/emails/`
+     Walks the directory for `.eml`/`.txt`, extracts JSON between `VOTE-JSON-START`
+     and `VOTE-JSON-END` markers in each body, validates each, aggregates.
+     Files without markers are skipped with a warning (operator may have saved an
+     unrelated email); malformed JSON is logged as an error with filename + parse
+     position and skipped.
+   - **From JSON files (legacy):** `bin/experiment-results <id>` (default globs
+     `experiments/<id>/results/*.json`).
+   - **Both:** the flags compose — pass JSON paths AND `--from-emails` in the same
+     run to merge sources.
+
+   The command writes `experiments/<id>/results/SUMMARY.md` with:
    - Top-3 / Bottom-3 by mean linear Borda position score across raters.
    - Per-slug score + rater count.
    - `## Variants dropped during render` block (rendered from `manifest.json::_dropped`).
@@ -149,8 +176,34 @@ To aggregate a voting session, do:
 3. Display the corpus stub to the user and prompt them to amend
    `design-guide/gruene-corpus.md` with both sections. The dual structure is the merge
    gate: every experiment closes BOTH a methodology lesson AND a substantive finding.
-4. Once the user confirms the corpus is updated, prompt them to commit the results JSON
-   + the amended corpus together: `<issue-id>: docs(corpus): close <experiment-name>`.
+4. Once the user confirms the corpus is updated, prompt them to commit the saved
+   vote files (`results/emails/*.txt` or `results/*.json`) + the amended corpus
+   together: `<issue-id>: docs(corpus): close <experiment-name>`.
+
+### Vote body format (issue #33)
+
+The mailto body the voting page produces:
+
+```
+Hi Flo,
+
+Here's my ranking for falzflyer-p2-mein-plan-v2:
+
+  1. Numbered Priority List  (numbered-priority-list-v2)
+  2. Manifesto Single Statement  (manifesto-single-statement-v2)
+  3. Dunkelgrün Rules Between Items  (dunkelgrun-rules-between-items-v2)
+
+— flo
+2026-05-11T09:18:00Z
+
+──────────  machine-readable, please don't edit  ──────────
+VOTE-JSON-START
+{"experiment_id":"falzflyer-p2-mein-plan-v2","rater":"flo","started_at":"...","exported_at":"...","mode":"rank","ranking":[...]}
+VOTE-JSON-END
+```
+
+The JSON between markers is the canonical schema payload. The human-readable list
+is for the operator's eyeball-check; the aggregator only reads the JSON block.
 
 ### Results JSON shape (rank, primary)
 
@@ -203,8 +256,10 @@ the non-None per-slug scores; the SUMMARY surfaces top-3 and bottom-3 by mean.
 ## Corpus-update merge gate
 
 No experiment merges without:
-1. A complete Flo voting session (`experiments/<id>/results/flo-<DATE>.json`) in rank
-   mode (or direct-pick for <3-variant runs).
+1. A complete Flo voting session saved as either an email body
+   (`experiments/<id>/results/emails/flo-<DATE>.txt`, primary path per issue #33)
+   or a JSON file (`experiments/<id>/results/flo-<DATE>.json`, legacy `?dev=1`
+   download path) in rank mode (or direct-pick for <3-variant runs).
 2. A dual-section corpus amendment in `design-guide/gruene-corpus.md`:
    - **Part 1** — methodology lesson (e.g. "envelope necessity", "rank-mode adoption
      and what it changed", "axis-commitment dedup").
@@ -221,7 +276,7 @@ methodology lesson is anecdotal; a methodology lesson without a finding is theor
 | `new`      | `experiments/_constraints/falzflyer-default.yml` exists; `tools/experiment_envelope.py` importable; `<id>` not already used |
 | `generate` | `experiments/<id>/constraints.yml` exists; `tested_axis` not the default placeholder; ≥ 2 LLMs on PATH (`claude`/`codex`/`gemini`) |
 | `render`   | brand fonts on PATH (`fc-list | grep -i gruene` ≥ 30); `experiments/<id>/manifest.yml` exists and validates |
-| `capture`  | `experiments/<id>/results/*.json` exists with at least one rater session; each file validates against `experiments/_schema/results.schema.yaml` |
+| `capture`  | either `experiments/<id>/results/*.json` OR `experiments/<id>/results/emails/*.{eml,txt}` exists with at least one rater session; each validates against `experiments/_schema/results.schema.yaml` |
 
 Halt loudly on any precondition failure. Do NOT attempt to repair from the skill —
 surface the missing piece to the user so the failure mode is visible.

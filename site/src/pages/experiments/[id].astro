@@ -76,9 +76,18 @@ const variantsForJs = hypotheses.map((h) => ({
                 style="padding: 0.4rem 0.9rem;">Rank</button>
         <button id="exp-mode-direct" type="button" class="exp-mode-btn"
                 style="padding: 0.4rem 0.9rem;">Direkt-Pick</button>
+        <!--
+          Issue #33: the legacy "Export JSON" toolbar button was the only
+          submission path in v1 of the voting page. Phone review showed no
+          casual voter would download a file and email it back, so it was
+          replaced by the email + copy + inline-view trio below. The
+          download button is retained ONLY behind `?dev=1` for debugging
+          (raw JSON inspection, schema testing). Production raters see the
+          three submission paths in the rank section.
+        -->
         <button id="exp-export" type="button"
-                style="padding: 0.4rem 0.9rem; margin-left: auto;">
-          Export JSON
+                style="padding: 0.4rem 0.9rem; margin-left: auto; display: none;">
+          Export JSON (dev)
         </button>
       </div>
 
@@ -111,8 +120,43 @@ const variantsForJs = hypotheses.map((h) => ({
         <p class="rank-empty" id="rank-empty">
           Noch keine Variante in der Rangliste — klicke ein Häkchen, um zu starten.
         </p>
-        <button id="export-rank" type="button" style="margin-top: 0.75rem; padding: 0.4rem 0.9rem;">
-          Export ranking JSON
+
+        <!--
+          Issue #33: three submission paths sharing one body string built
+          once per session. `#vote-email` opens the rater's email client
+          via `mailto:` (works on iOS Safari + Android Chrome). `#vote-copy`
+          copies the same body to clipboard for paste-into-anything
+          (WhatsApp, Signal, iMessage). `#vote-body-display` is the
+          inline read-only view (rater can screenshot or copy by hand).
+          All three are populated by `buildVoteBody(session)` defined in
+          the rank-mode bundled script below.
+
+          The legacy `#export-rank` JSON-download button is retained but
+          hidden by default; toggled visible by `?dev=1` URL param.
+        -->
+        <div class="vote-submission" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button id="vote-email" type="button"
+                    style="padding: 0.6rem 1.1rem; background: var(--gruen-hell, #c9d400); color: #222; border: 2px solid var(--gruen-dunkel, #1a4d2e); border-radius: 4px; font-weight: 600; cursor: pointer; min-height: 44px;">
+              Per E-Mail senden
+            </button>
+            <button id="vote-copy" type="button"
+                    style="padding: 0.6rem 1.1rem; background: white; color: var(--gruen-dunkel, #1a4d2e); border: 2px solid var(--gruen-dunkel, #1a4d2e); border-radius: 4px; font-weight: 600; cursor: pointer; min-height: 44px;">
+              In Zwischenablage kopieren
+            </button>
+          </div>
+          <details style="background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem 0.75rem;">
+            <summary style="cursor: pointer; font-size: 0.9em; color: #444;">Stimme als Text ansehen</summary>
+            <pre id="vote-body-display" readonly aria-readonly="true"
+                 style="margin-top: 0.5rem; white-space: pre-wrap; word-break: break-word; font-size: 0.85em; background: white; padding: 0.6rem; border: 1px solid #ccc; border-radius: 3px; max-height: 300px; overflow: auto; user-select: text;"></pre>
+          </details>
+          <div id="vote-toast" role="status" aria-live="polite"
+               style="display: none; padding: 0.5rem 0.75rem; border-radius: 4px; font-size: 0.9em;"></div>
+        </div>
+
+        <button id="export-rank" type="button"
+                style="margin-top: 0.75rem; padding: 0.4rem 0.9rem; display: none;">
+          Export ranking JSON (dev)
         </button>
       </section>
 
@@ -592,6 +636,29 @@ const variantsForJs = hypotheses.map((h) => ({
           var exportBtn = document.getElementById('export-rank');
           var raterInput = document.getElementById('exp-rater');
 
+          // Issue #33: email/copy/inline-view controls (rank mode only).
+          var emailBtn = document.getElementById('vote-email');
+          var copyBtn = document.getElementById('vote-copy');
+          var bodyDisplay = document.getElementById('vote-body-display');
+          var toastEl = document.getElementById('vote-toast');
+
+          // ---- Submission constants (issue #33) -----------------------
+          // Hardcoded recipient per ISSUE.md; could later be overridden
+          // per-experiment via `manifest.yml::submission.email_to`.
+          var EMAIL_RECIPIENT = 'florian.motlik@gruene.at';
+
+          // ---- ?dev=1 unhides legacy JSON-download buttons ------------
+          (function applyDevMode() {
+            try {
+              var qs = new URLSearchParams(window.location.search);
+              if (qs.get('dev') === '1') {
+                if (exportBtn) exportBtn.style.display = '';
+                var toolbarExport = document.getElementById('exp-export');
+                if (toolbarExport) toolbarExport.style.display = '';
+              }
+            } catch (e) { /* old browsers w/o URLSearchParams — skip */ }
+          })();
+
           // ---- State ---------------------------------------------------
           var ranking = [];           // ordered slug array
           var startedAt = null;       // ISO timestamp on first interaction
@@ -848,6 +915,11 @@ const variantsForJs = hypotheses.map((h) => ({
             // (the <ol> rows are a brand-new DOM each refresh). Choice
             // documented in EXECUTION.md.
             attachSortable();
+
+            // Issue #33: keep the inline body view in sync with the
+            // ranking. Called on every change (toggle, move, remove,
+            // drag-drop). Cheap — just a stringify.
+            refreshBodyDisplay();
           }
 
           // ---- Arrow-button reorder ------------------------------------
@@ -907,7 +979,165 @@ const variantsForJs = hypotheses.map((h) => ({
             });
           }
 
-          // ---- Export --------------------------------------------------
+          // ---- Body-string builder (issue #33) -------------------------
+          // Single source of truth for what every submission path sends:
+          // human-readable numbered ranking + identity + ISO timestamp +
+          // machine-readable JSON between VOTE-JSON-START/VOTE-JSON-END
+          // markers. The JSON shape is BYTE-IDENTICAL to what the legacy
+          // download button produces, so the aggregator's email parser
+          // (tools/experiment_results.py --from-emails) can validate
+          // each extracted block against results.schema.yaml.
+          //
+          // `slugMap` is `slugToVariant` from the enclosing scope; we
+          // pass it explicitly so the function reads as a pure builder.
+          function buildVoteBody(sess, slugMap) {
+            var rater = sess.rater || 'anonym';
+            var when = sess.exported_at || new Date().toISOString();
+            var ranking = sess.ranking || [];
+
+            var lines = [];
+            lines.push('Hi Flo,');
+            lines.push('');
+            lines.push("Here's my ranking for " + EXP_ID + ':');
+            lines.push('');
+            if (ranking.length === 0) {
+              lines.push('  (no variants ranked yet)');
+            } else {
+              ranking.forEach(function (slug, i) {
+                var v = slugMap[slug];
+                var label = (v && v.name) ? v.name : slug;
+                // pad rank to 2 chars so list aligns visually
+                var rank = String(i + 1);
+                if (rank.length < 2) rank = ' ' + rank;
+                lines.push(' ' + rank + '. ' + label + '  (' + slug + ')');
+              });
+            }
+            lines.push('');
+            lines.push('— ' + rater);
+            lines.push(when);
+            lines.push('');
+            lines.push('──────────  machine-readable, please don\'t edit  ──────────');
+            lines.push('VOTE-JSON-START');
+            // Same JSON shape doExportRank() produces; kept in sync below.
+            var payload = {
+              experiment_id: EXP_ID,
+              rater: rater,
+              started_at: sess.started_at || startedAt,
+              exported_at: when,
+              mode: 'rank',
+              ranking: ranking,
+            };
+            lines.push(JSON.stringify(payload));
+            lines.push('VOTE-JSON-END');
+            return lines.join('\n');
+          }
+
+          function currentSession() {
+            var raterRaw = (raterInput && raterInput.value) || 'anonymous';
+            var rater = sanitizeRater(raterRaw) || 'anonymous';
+            return {
+              rater: rater,
+              started_at: startedAt,
+              exported_at: new Date().toISOString(),
+              ranking: ranking,
+            };
+          }
+
+          function refreshBodyDisplay() {
+            if (!bodyDisplay) return;
+            bodyDisplay.textContent = buildVoteBody(currentSession(), slugToVariant);
+          }
+
+          // ---- Toast helper --------------------------------------------
+          var toastTimer = null;
+          function showToast(msg, kind) {
+            if (!toastEl) return;
+            toastEl.textContent = msg;
+            // Brand-aware colors: success = light green bg, error = soft red.
+            if (kind === 'error') {
+              toastEl.style.background = '#ffe4e4';
+              toastEl.style.border = '1px solid #c66';
+              toastEl.style.color = '#700';
+            } else {
+              toastEl.style.background = '#e7f5d4';
+              toastEl.style.border = '1px solid #6a8b2c';
+              toastEl.style.color = '#234';
+            }
+            toastEl.style.display = 'block';
+            if (toastTimer) window.clearTimeout(toastTimer);
+            toastTimer = window.setTimeout(function () {
+              toastEl.style.display = 'none';
+            }, 4000);
+          }
+
+          // ---- Email submission (mailto:) ------------------------------
+          // iOS Safari quirk: `window.location.href = mailto:...` is the
+          // reliable trigger; `window.open` hits popup blockers on some
+          // configs. encodeURIComponent is mandatory on both subject and
+          // body — raw newlines + special chars break the mailto URI.
+          function doEmail() {
+            var sess = currentSession();
+            var body = buildVoteBody(sess, slugToVariant);
+            var subject = '[vote] ' + EXP_ID + ' — ' + (sess.rater || 'anonym');
+            var url = 'mailto:' + EMAIL_RECIPIENT +
+              '?subject=' + encodeURIComponent(subject) +
+              '&body=' + encodeURIComponent(body);
+            try {
+              window.location.href = url;
+              showToast('E-Mail-Client geöffnet — bitte Senden tippen.', 'ok');
+            } catch (e) {
+              showToast('E-Mail-Client konnte nicht geöffnet werden. Nutze die Kopier-Funktion stattdessen.', 'error');
+            }
+          }
+
+          // ---- Clipboard submission ------------------------------------
+          // Prefer modern Clipboard API (HTTPS/localhost only); fall back
+          // to hidden-textarea + execCommand for old browsers + file://
+          // local dev. If neither works (rare), surface a clear toast
+          // instructing manual select+copy from the inline view.
+          function doCopy() {
+            var sess = currentSession();
+            var body = buildVoteBody(sess, slugToVariant);
+
+            function legacyCopy() {
+              var ta = document.createElement('textarea');
+              ta.value = body;
+              ta.style.position = 'fixed';
+              ta.style.opacity = '0';
+              ta.style.left = '-9999px';
+              document.body.appendChild(ta);
+              ta.focus();
+              ta.select();
+              var ok = false;
+              try { ok = document.execCommand('copy'); }
+              catch (e) { ok = false; }
+              document.body.removeChild(ta);
+              return ok;
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(body).then(
+                function () { showToast('Stimme in Zwischenablage kopiert.', 'ok'); },
+                function () {
+                  // Permission denied / not HTTPS / iframe sandbox — try legacy
+                  if (legacyCopy()) {
+                    showToast('Stimme in Zwischenablage kopiert.', 'ok');
+                  } else {
+                    showToast('Kopieren fehlgeschlagen — markiere den Text unten manuell und kopiere ihn.', 'error');
+                  }
+                }
+              );
+            } else if (legacyCopy()) {
+              showToast('Stimme in Zwischenablage kopiert.', 'ok');
+            } else {
+              showToast('Kopieren fehlgeschlagen — markiere den Text unten manuell und kopiere ihn.', 'error');
+            }
+          }
+
+          if (emailBtn) emailBtn.addEventListener('click', doEmail);
+          if (copyBtn) copyBtn.addEventListener('click', doCopy);
+
+          // ---- Export (legacy, ?dev=1 only) ----------------------------
           function doExportRank() {
             var raterRaw = (raterInput && raterInput.value) || 'anonymous';
             var rater = sanitizeRater(raterRaw);
@@ -946,9 +1176,18 @@ const variantsForJs = hypotheses.map((h) => ({
 
           if (exportBtn) exportBtn.addEventListener('click', doExportRank);
 
+          // Issue #33: rater-name edits should re-render the body view
+          // (the salutation includes the rater). The inline IIFE block
+          // above ALSO listens on this input for direct-pick session
+          // persistence; both handlers fire independently.
+          if (raterInput) {
+            raterInput.addEventListener('input', refreshBodyDisplay);
+          }
+
           // ---- Boot ----------------------------------------------------
           renderRankGrid();
           refreshRankUI();
+          refreshBodyDisplay();
         })();
       </script>
     </>
