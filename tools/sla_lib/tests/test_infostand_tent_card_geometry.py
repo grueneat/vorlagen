@@ -4,16 +4,20 @@ Per #18 / #19 / #23 pattern: pin RELATIONSHIPS not absolute COORDINATES.
 SLA round-trip is float-imprecise; these tests survive any future legitimate
 retuning that preserves V1 design intent.
 
-Coverage (≥12 required by plan T08; 21 implemented):
+Coverage (≥12 required by plan T08; 22 implemented):
   Cross-panel mirror at apex y=105 (Hero-Band, Photo-Backing, Footer-Strip)
   Cross-panel same-size (3 Polygon pairs)
-  Panel A intra-panel containment (6 inside checks)
+  Panel A intra-panel containment (6 visual-bbox inside checks; rotation-aware
+    after #32 — raw bbox math fails because Panel A text/image frames now
+    carry rotation_deg=180 like Panel B)
   Panel A bullets/Termine baseline + height
   Logo width = 38 mm (3M ± tol; brand:logo_size_3M conformant)
   ParaStyle existence (6 V1 styles present, V0 tent/cta absent)
   Logo asset identity (gruene-weiss.png)
   Falz layer integrity (LAYER=3 exclusive to Mittelfalz)
   Panel A polygons rotation_deg=0
+  Panel A Text/Image rotation_deg=180 (added in #32 — fixes tent-fold panel
+    orientation so content reads right-side-up after folding)
   Panel B polygons rotation_deg=0 (rectangles need no visual rotation)
   Panel B Text/Image rotation_deg=180
 
@@ -86,6 +90,20 @@ class InfostandTentCardGeometryTests(unittest.TestCase):
     def _bottom(self, item):
         return item.y_mm + item.h_mm
 
+    def _visual_bbox(self, item):
+        """Return (x, y, w, h) of the frame's VISUAL bbox (pre-rotation area).
+
+        For frames with rotation_deg=180 the SLA anchor sits at the bottom-
+        right corner of the visual area; subtract w/h to recover the visual
+        top-left. Polygons (and frames with rotation_deg=0) report their
+        stored coords verbatim.
+        """
+        rot = getattr(item, "rotation_deg", 0.0) or 0.0
+        if abs(rot - 180.0) < 0.5:
+            return (item.x_mm - item.w_mm, item.y_mm - item.h_mm,
+                    item.w_mm, item.h_mm)
+        return (item.x_mm, item.y_mm, item.w_mm, item.h_mm)
+
     # ── Cross-panel mirror around apex y=105 ──
 
     def test_hero_bands_mirror_around_apex(self):
@@ -129,19 +147,28 @@ class InfostandTentCardGeometryTests(unittest.TestCase):
         self.assertAlmostEqual(a.w_mm, b.w_mm, delta=TOL_MM)
         self.assertAlmostEqual(a.h_mm, b.h_mm, delta=TOL_MM)
 
-    # ── Panel A intra-panel containment (rotation_deg=0 throughout) ──
+    # ── Panel A intra-panel containment (visual-bbox; rotation-aware) ──
 
     def _assert_inside(self, child_an, parent_an):
+        """Assert child's VISUAL bbox is inside parent's VISUAL bbox.
+
+        After #32 Panel A text/image frames carry rotation_deg=180 (SLA anchor
+        at the bottom-right of the visual area). Raw x_mm/y_mm comparisons
+        produce false negatives — use the visual bbox helper which subtracts
+        w/h for rotated frames.
+        """
         c = self._f(child_an)
         p = self._f(parent_an)
-        self.assertGreaterEqual(c.x_mm, p.x_mm - TOL_MM,
-                                f"{child_an}.x={c.x_mm} < {parent_an}.x={p.x_mm}")
-        self.assertGreaterEqual(c.y_mm, p.y_mm - TOL_MM,
-                                f"{child_an}.y={c.y_mm} < {parent_an}.y={p.y_mm}")
-        self.assertLessEqual(self._right(c), self._right(p) + TOL_MM,
-                             f"{child_an} right > {parent_an} right")
-        self.assertLessEqual(self._bottom(c), self._bottom(p) + TOL_MM,
-                             f"{child_an} bottom > {parent_an} bottom")
+        cx, cy, cw, ch = self._visual_bbox(c)
+        px, py, pw, ph = self._visual_bbox(p)
+        self.assertGreaterEqual(cx, px - TOL_MM,
+                                f"{child_an}.visual_x={cx} < {parent_an}.visual_x={px}")
+        self.assertGreaterEqual(cy, py - TOL_MM,
+                                f"{child_an}.visual_y={cy} < {parent_an}.visual_y={py}")
+        self.assertLessEqual(cx + cw, px + pw + TOL_MM,
+                             f"{child_an} visual right > {parent_an} visual right")
+        self.assertLessEqual(cy + ch, py + ph + TOL_MM,
+                             f"{child_an} visual bottom > {parent_an} visual bottom")
 
     def test_logo_panel_a_inside_hero_band_a(self):
         self._assert_inside("Logo Grüne (panel A)", "Hero-Band Panel A")
@@ -256,6 +283,24 @@ class InfostandTentCardGeometryTests(unittest.TestCase):
                    "QR-Code (mitmachen, panel B)", "Body Panel B",
                    "Termine Panel B", "CTA-Footer Panel B",
                    "Impressum (Tent, panel B)"):
+            f = self._f(an)
+            self.assertAlmostEqual(f.rotation_deg, 180.0, delta=0.1,
+                                   msg=f"{an} rotation_deg={f.rotation_deg} ≠ 180")
+
+    def test_panel_a_text_image_rotation_180(self):
+        """Issue #32: Panel A text/image frames carry ROT=180 (matching Panel B).
+
+        When the flat sheet is folded into a tent (apex up at y=105), Panel A's
+        face is viewed with y=105 at the apex and y=0 at the table — INVERTED
+        from the flat-sheet reading direction. Rotating each frame's content
+        180° around its center compensates so content reads right-side-up on
+        the assembled tent.
+        """
+        for an in ("Logo Grüne (panel A)", "Headline Panel A",
+                   "Pay-off Panel A", "Hintergrund-Mitmachen",
+                   "QR-Code (mitmachen, panel A)", "Body Panel A",
+                   "Termine Panel A", "CTA-Footer Panel A",
+                   "Impressum (Tent)"):
             f = self._f(an)
             self.assertAlmostEqual(f.rotation_deg, 180.0, delta=0.1,
                                    msg=f"{an} rotation_deg={f.rotation_deg} ≠ 180")

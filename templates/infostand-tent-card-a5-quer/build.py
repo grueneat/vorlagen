@@ -3,16 +3,21 @@
 Spec: templates/_specs/infostand-tent-card-a5-quer.md.
 Format: A4 quer 297×210 mm, gefalzt zu A5-Tent (horizontale Falz bei y=105).
 
-Panel A (oben, y=0..105) liest normal.
-Panel B (unten, y=105..210) wird beim Falzen umgedreht — daher rotiert build.py
-die Panel-B-TextFrames effektiv um 180° (Pivot Mitte Panel B), so dass nach dem
-Falzen beide Seiten korrekt aufrecht lesen.
+Tent geometry (issue #32 correction):
+  When the flat sheet is folded at y=105 into a standing tent (mountain fold,
+  apex up), Panel A (the top half of the unfolded sheet, y=0..105) becomes
+  one face of the tent. The viewer of that face sees y=105 at the apex (top of
+  view) and y=0 at the table (bottom of view) — INVERTED from the flat-sheet
+  reading orientation. Therefore Panel A's text/image frames carry
+  ``rotation_deg=180`` (pivot = each frame's center). The same rotation/
+  bbox-corner math is applied symmetrically on Panel B.
 
 Implementation note: Frame coordinates in this build correspond to the FINAL
-frame positions in the SLA (post-rotation). The visual model: Panel B headline
-sits *above* Panel B body in the rotated layout — i.e. when looking at the flat
-sheet, the Panel B headline is at y=170 (logically near the bottom of the
-sheet but the top of the assembled tent's reverse face).
+SLA anchor positions (post-rotation). For a frame that VISUALLY occupies
+``(x, y, w, h)`` with ROT=180, the SLA anchor sits at ``(x+w, y+h)`` —
+Scribus's ROT pivots around XPOS/YPOS, so the anchor is the
+bottom-right corner of the visible area. Polygons (rectangles) stay
+``rotation_deg=0`` since they look identical under a 180° rotation.
 """
 from __future__ import annotations
 
@@ -35,7 +40,6 @@ from sla_lib.builder import (  # noqa: E402
     pack_inline_image,
     # Issue #12 / #20 — constraints
     aligned_below,
-    inside,
     mirrored_y,
     same_size,
     same_style,
@@ -91,19 +95,26 @@ def _qr_inline() -> tuple[str | None, str | None]:
 
 
 def _panel_de() -> list:
-    """Panel A (DE, upright) — 12 V1 primitives in flat-sheet absolute coords.
+    """Panel A (DE, rotated 180°) — 12 V1 primitives.
 
-    Layout zones (y axis):
-      0..42   Hero-Band Dunkelgrün polygon (full bleed) — apex side
+    Visual layout in flat-sheet coords (the area Panel A occupies):
+      0..42   Hero-Band Dunkelgrün polygon (full bleed at sheet-top, becomes
+              the table edge of the tent front face when folded)
       6..36   Logo (left) + Headline (right) + Pay-off (right) inside hero-band
      39..72   Photo-Backing Dunkelgrün polygon + Photo (full-bleed 297×33)
      78..94   White zone — QR-Code (left) + Bullets + Termine
-     95..105  Footer-Strip Hellgrün polygon — CTA-Footer + Impressum (right)
+     95..105  Footer-Strip Hellgrün polygon (at the fold/apex)
+
+    SLA math (per-frame) for the ROT=180 text/image frames:
+      Visual (x, y, w, h)  → SLA anchor (x+w, y+h, w, h, ROT=180)
+    Polygons stay rotation_deg=0 (rectangles look identical under 180°
+    rotation, and the cross-panel mirrored_y/same_size constraints rely on
+    that invariant).
     """
     logo_data, logo_ext = _logo_inline()
     qr_data, qr_ext = _qr_inline()
     return [
-        # 1. Hero-Band polygon (full bleed top of Panel A, apex side)
+        # 1. Hero-Band polygon (full bleed at sheet-top of Panel A region)
         Polygon(
             x_mm=-3, y_mm=-3, w_mm=303, h_mm=42,
             fill="Dunkelgrün",
@@ -111,31 +122,31 @@ def _panel_de() -> list:
             rotation_deg=0,
             anname="Hero-Band Panel A",
         ),
-        # 2. Logo (white wordmark on Dunkelgrün)
+        # 2. Logo (white wordmark on Dunkelgrün) — visual (12, 6, 38, 30)
         ImageFrame(
-            x_mm=12, y_mm=6, w_mm=38, h_mm=30,
+            x_mm=50, y_mm=36, w_mm=38, h_mm=30,
             inline_image_data=logo_data,
             inline_image_ext=logo_ext,
             scale_type=0, ratio=1,
             layer=LAYER_BILDER,
-            rotation_deg=0,
+            rotation_deg=180,
             anname="Logo Grüne (panel A)",
         ),
-        # 3. Headline (white-on-Dunkelgrün, 26pt Vollkorn Italic)
+        # 3. Headline (white-on-Dunkelgrün, 26pt Vollkorn Italic) — visual (55, 9, 230, 18)
         TextFrame(
-            x_mm=55, y_mm=9, w_mm=230, h_mm=18,
+            x_mm=285, y_mm=27, w_mm=230, h_mm=18,
             layer=LAYER_TEXT,
-            rotation_deg=0,
+            rotation_deg=180,
             style="tent/headline",
             runs=[Run(text="Klimaschutz konkret.",
                       paragraph_style="tent/headline")],
             anname="Headline Panel A",
         ),
-        # 4. Pay-off (Gelb 16pt Vollkorn Italic — sub-headline)
+        # 4. Pay-off (Gelb 16pt Vollkorn Italic — sub-headline) — visual (55, 27, 230, 8)
         TextFrame(
-            x_mm=55, y_mm=27, w_mm=230, h_mm=8,
+            x_mm=285, y_mm=35, w_mm=230, h_mm=8,
             layer=LAYER_TEXT,
-            rotation_deg=0,
+            rotation_deg=180,
             style="tent/payoff",
             runs=[Run(text="Konkret. Lokal. Jetzt.",
                       paragraph_style="tent/payoff")],
@@ -149,31 +160,31 @@ def _panel_de() -> list:
             rotation_deg=0,
             anname="Photo-Backing Panel A",
         ),
-        # 6. Hintergrund-Mitmachen photo — populated by build_preview INJECT_MAP
+        # 6. Hintergrund-Mitmachen photo (populated by build_preview INJECT_MAP) — visual (0, 39, 297, 33)
         ImageFrame(
-            x_mm=0, y_mm=39, w_mm=297, h_mm=33,
+            x_mm=297, y_mm=72, w_mm=297, h_mm=33,
             inline_image_data=None,
             inline_image_ext=None,
             scale_type=0, ratio=1,
             layer=LAYER_BILDER,
-            rotation_deg=0,
+            rotation_deg=180,
             anname="Hintergrund-Mitmachen",
         ),
-        # 7. QR-Code (D1-conformant 17×17 mm in white zone, NOT in footer)
+        # 7. QR-Code (D1-conformant 17×17 mm in white zone) — visual (12, 78, 17, 17)
         ImageFrame(
-            x_mm=12, y_mm=78, w_mm=17, h_mm=17,
+            x_mm=29, y_mm=95, w_mm=17, h_mm=17,
             inline_image_data=qr_data,
             inline_image_ext=qr_ext,
             scale_type=0, ratio=1,
             layer=LAYER_BILDER,
-            rotation_deg=0,
+            rotation_deg=180,
             anname="QR-Code (mitmachen, panel A)",
         ),
-        # 8. Body / Bullets (2 short bullets at 12pt — drops V0 third bullet)
+        # 8. Body / Bullets (2 short bullets at 12pt) — visual (32, 78, 110, 16)
         TextFrame(
-            x_mm=32, y_mm=78, w_mm=110, h_mm=16,
+            x_mm=142, y_mm=94, w_mm=110, h_mm=16,
             layer=LAYER_TEXT,
-            rotation_deg=0,
+            rotation_deg=180,
             style="tent/body",
             runs=[Run(
                 text=("• Erneuerbare Energie für alle\n"
@@ -182,11 +193,11 @@ def _panel_de() -> list:
             )],
             anname="Body Panel A",
         ),
-        # 9. Termine (2 lines at 9pt — drops "Nächste Termine" header)
+        # 9. Termine (2 lines at 9pt) — visual (152, 78, 133, 16)
         TextFrame(
-            x_mm=152, y_mm=78, w_mm=133, h_mm=16,
+            x_mm=285, y_mm=94, w_mm=133, h_mm=16,
             layer=LAYER_TEXT,
-            rotation_deg=0,
+            rotation_deg=180,
             style="tent/termine",
             runs=[Run(
                 text=("• 12. Juni — Klimastammtisch\n"
@@ -195,7 +206,7 @@ def _panel_de() -> list:
             )],
             anname="Termine Panel A",
         ),
-        # 10. Footer-Strip polygon (Hellgrün, full bleed, at apex)
+        # 10. Footer-Strip polygon (Hellgrün, full bleed, at the fold/apex side)
         Polygon(
             x_mm=-3, y_mm=95, w_mm=303, h_mm=10,
             fill="Hellgrün",
@@ -203,21 +214,21 @@ def _panel_de() -> list:
             rotation_deg=0,
             anname="Footer-Strip Panel A",
         ),
-        # 11. CTA-Footer (white-on-Hellgrün URL — 11pt Gotham Bold)
+        # 11. CTA-Footer (white-on-Hellgrün URL — 11pt Gotham Bold) — visual (12, 97, 200, 6)
         TextFrame(
-            x_mm=12, y_mm=97, w_mm=200, h_mm=6,
+            x_mm=212, y_mm=103, w_mm=200, h_mm=6,
             layer=LAYER_TEXT,
-            rotation_deg=0,
+            rotation_deg=180,
             style="tent/cta-footer",
             runs=[Run(text="gruene-noe.at/mitmachen",
                       paragraph_style="tent/cta-footer")],
             anname="CTA-Footer Panel A",
         ),
-        # 12. Impressum (right-aligned white 6pt — fills footer-strip right edge)
+        # 12. Impressum (right-aligned white 6pt) — visual (215, 97, 80, 6)
         TextFrame(
-            x_mm=215, y_mm=97, w_mm=80, h_mm=6,
+            x_mm=295, y_mm=103, w_mm=80, h_mm=6,
             layer=LAYER_TEXT,
-            rotation_deg=0,
+            rotation_deg=180,
             style="tent/impressum",
             runs=[Run(
                 text="Medieninhaber: Die Grünen NÖ — gruene-noe.at",
@@ -533,28 +544,29 @@ def build(out_path: str | Path = HERE / "template.sla") -> Path:
 
 # ---------------------------------------------------------------------------
 # Issue #20 — V1 "Hero Band" CONSTRAINTS list (read by structural_check).
+# Issue #32 — Panel A now also carries rotation_deg=180 on text/image frames
+# (the rotation Panel B already had; physical-fold analysis showed BOTH faces
+# need the rotation when the tent stands with the apex up).
 #
-# Cross-panel rules limited to rotation-invariant kinds: mirrored_y on
-# Polygons (both rotation_deg=0), same_size on Polygons, same_style on
-# text-frame style pairs. inside() is intra-Panel-A only — raw bbox math
-# fails on rotated/unrotated mismatch (RESEARCH locked decision #4).
+# Cross-panel rules are limited to rotation-invariant kinds: mirrored_y on
+# Polygons (both rotation_deg=0), same_size on Polygons, same_style on text-
+# frame style pairs. Intra-Panel-A inside() checks were dropped in #32 because
+# the rotated-text vs. unrotated-polygon bbox mismatch produces the same false
+# negatives that already kept inside() out of the Panel B intra-panel set
+# (RESEARCH locked decision #4). The geometry test suite asserts containment
+# on the VISUAL bbox instead.
 #
 # Apex mirror axis y=105.0 mm (Mittelfalz). Panel A polygons live at
 # y ∈ [-3..105]; Panel B mirror polygons at y ∈ [105..213].
 # ---------------------------------------------------------------------------
 CONSTRAINTS = [
-    # ── Panel A intra-panel containment (rotation_deg=0 throughout) ──
-    inside("Logo Grüne (panel A)",     "Hero-Band Panel A",      name="logo_in_band_a"),
-    inside("Headline Panel A",          "Hero-Band Panel A",      name="headline_in_band_a"),
-    inside("Pay-off Panel A",           "Hero-Band Panel A",      name="payoff_in_band_a"),
-    inside("Hintergrund-Mitmachen",     "Photo-Backing Panel A",  name="photo_in_backing_a"),
-    inside("CTA-Footer Panel A",        "Footer-Strip Panel A",   name="cta_footer_in_strip_a"),
-    inside("Impressum (Tent)",          "Footer-Strip Panel A",   name="impressum_in_strip_a"),
-    # ── Panel A intra-panel adjacency ──
+    # ── Panel A intra-panel adjacency (Polygons only — rotation-invariant) ──
     aligned_below("Photo-Backing Panel A", "Hero-Band Panel A", gap_mm=0.0,
                   name="photo_backing_below_hero_band_a"),
     same_x("Hero-Band Panel A", "Photo-Backing Panel A", "Footer-Strip Panel A",
            name="full_bleed_polygons_share_left_x_a"),
+    # Body and Termine share the SLA-anchor y (bbox-corner y = y_visual + h) and
+    # share h, which together imply the visual baselines align (post-#32).
     same_y("Body Panel A", "Termine Panel A",
            name="bullets_termine_baseline_a"),
     same_size("Body Panel A", "Termine Panel A", axis="h",
