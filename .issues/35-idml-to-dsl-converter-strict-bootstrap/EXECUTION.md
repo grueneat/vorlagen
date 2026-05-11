@@ -291,8 +291,27 @@ itself is not run yet).
 - 42413de 35: feat(idml): --asset-map + auto-invoke links_export, strict on unmapped <Image>
 - a3db541 35: feat(template): re-emit v2 falzflyer via --asset-map; bundle shared/assets
 - 169ad08 35: chore(template): add baseline.pdf + diff.yml for v2 falzflyer visual_diff
+- 8c48e67 35: docs(35): append Phase 2 (asset export + retemplate) to EXECUTION.md
+- af7610c 35: fix(idml): suppress non-deterministic PNG timestamps in PSD conversion
 
-**Phase 2 completed:** 2026-05-11T15:20:00Z
-**Phase 2 duration:** ~50 minutes
-**Phase 2 commits:** 4 (plus this docs commit)
+### Phase 2 Auto-fixed Deviations (Rules 1-3)
+
+1. **[Rule 1 - Bug] ImageMagick `convert -flatten` was not byte-deterministic.**
+   - Found during: post-Phase-2-Task-D self-check (re-running the converter
+     produced a different md5 for `plakat-dunkel-fuer-flyer.png` despite
+     identical PSD input).
+   - Root cause: `convert` embeds `date:create`, `date:modify`,
+     `date:timestamp` PNG metadata fields derived from filesystem mtime
+     on every invocation. Pixel data + source EXIF/XMP (Photoshop fields)
+     were stable; only the run-clock fields differed.
+   - Fix: pass `+set date:create +set date:modify +set date:timestamp` to
+     suppress those fields. Verified two consecutive runs produce
+     byte-identical output (md5 60d36212...). pdftocairo was already
+     byte-deterministic (no fix needed).
+   - Files: tools/links_export.py, shared/assets/.../plakat-dunkel-fuer-flyer.png
+   - Commit: af7610c
+
+**Phase 2 completed:** 2026-05-11T15:25:00Z
+**Phase 2 duration:** ~55 minutes
+**Phase 2 commits:** 6
 **Status:** complete (Phase 1 + Phase 2)
