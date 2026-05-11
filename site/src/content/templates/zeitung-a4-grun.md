@@ -17,7 +17,47 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: f8d1744d980925e9034469d59ec4e9f1a7ed4c5e788d451e071356f9f364e8a4
+previews_for_sla: 984e6ee59b104941eb404aa3148e2455ade83443f8aa10b0146878e5f85c79c0
+sla_diff_strict: false
+brand_overrides:
+- id: brand:line_spacing_0.9
+  reason: Production template auto-generated from gruene-zeitung-vorlage-original
+    .sla; multiple per-template para-styles drift from Quickguide 0.9 factor (e.g.
+    Titelseite Header 46/55=0.84, Bildunterschrift weiß 12/10=1.2x). The Zeitung uses
+    journalism conventions (tighter headline leading, looser caption leading) that
+    differ from the unified-Quickguide rule. Round- trip diff is the byte-stable contract.
+- id: brand:image_text_overlap
+  reason: 'Caption-on-photo intentional design pattern: several text frames (page-1
+    cover headline u2989 over u2950 band, page-3/page-7 caption text inside u6ad/Kopie-von-u6ad
+    polygons, page-14 captions on P13 Hero) extend slightly beyond their containing
+    colored polygons. The page-10 Polygon `Kopie von u1529` overlap with text columns
+    `Kopie von u2d5c (13)`/`(16)` was the documented bug — FIXED in Issue #23 T07
+    by shrinking the columns'' h_mm to end above the green card. Remaining 9 cases
+    are caption-on-photo design intent; tightening text frames to match polygon edges
+    exactly would change the visual layout. Out of scope for #23; revisit per follow-up
+    audit.'
+body_block_margins:
+  bands:
+    header:
+      y_top_mm: 20.0
+      y_bottom_mm: 49.0
+    footer:
+      y_top_mm: 283.0
+      y_bottom_mm: 297.0
+  margins:
+    left:
+      outer_mm: 20.0
+      inner_mm: 20.0
+    right:
+      outer_mm: 20.0
+      inner_mm: 20.0
+  background_decoration:
+    fills:
+    - Dunkelgrün
+    - Hellgrün
+    - Magenta
+    - Gelb
+    - White
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style
@@ -166,6 +206,32 @@ python3 templates/zeitung-a4-grun/build.py
 ```
 
 Wer das Layout strukturell ändern will (z.B. neue Beispielseite, Master-Page-Anpassung) editiert `build.py` und re-generiert. Wer nur Inhalte ändert oder eine konkrete Ausgabe baut, arbeitet direkt in Scribus an der `template.sla`.
+
+## Bekannte Abweichungen vom Original-SLA
+
+`gruene-zeitung-vorlage-original.sla` enthält zwei Bildrahmen, die der
+Scribus-Autor versehentlich um 210 mm nach rechts (auf den Off-Page-
+Scratch-Canvas) plaziert hat — sie rendern im Original-PDF nichts
+Sichtbares (verifiziert via `pdfimages -list`):
+
+- `P9 Spread` (build.py:1802, war `x_mm=210` auf `page9`) → korrigiert
+  auf `x_mm=0` auf derselben Seite. `anname` bleibt erhalten, damit
+  `INJECT_MAP` und `CONSTRAINTS` weiter aufgelöst werden. Issue #16.
+- Unbenannter Vollseiten-Dunkelgrün-Rahmen (build.py:2061, war
+  `page11.add(...)` mit `x_mm=210`) → verschoben zu `page12.add(...)`
+  mit `x_mm=0` (gedruckte Seite 13, dem ursprünglich gemeinten Ziel).
+  Issue #16.
+
+Daher weicht `template.sla` an diesen zwei Stellen bewusst vom
+Original-SLA ab. Der Round-Trip-Check `tools/sla_diff.py --strict`
+ist für diese Vorlage entsprechend deaktiviert
+(`meta.yml::sla_diff_strict: false`); `tools/render_pipeline.py`
+überspringt den Strict-Diff für Templates mit diesem Flag.
+
+Eine dritte, davon unabhängige Überfüllung — der gedrehte
+Cover-Polygon `u2950` (build.py:246-256, ~4.17 mm Bottom-Overshoot) —
+bleibt vorerst durch den `brand_overrides[brand:inside_page]`-Eintrag
+abgedeckt und wird in GH #39 separat behoben.
 
 ## Brand
 

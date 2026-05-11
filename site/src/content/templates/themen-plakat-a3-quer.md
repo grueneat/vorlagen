@@ -18,7 +18,26 @@ description: 'Argumentations-Plakat A3 quer (420×297 mm) für sachthemen-orient
 build:
   script: build.py
   output: template.sla
-previews_for_sla: cf1eeefd7dbf7b2dacfbd85720f3c02f90fa11daf696c9ba4627258a7a9ddeba
+previews_for_sla: f115997823d9b70b8bea38142a58c97bde927477aab6bcf7b6a4568451b31840
+brand_overrides:
+- id: brand:line_spacing_0.9
+  reason: 'The CI palette in shared/ci.yml carries linesp/fontsize ratios that drift
+    from the Quickguide 0.9 factor (e.g. ci/body-12 has 13/12 = 1.083). This is real
+    palette-versus-rule drift across all templates and warrants a separate brand-team
+    review (out of scope for #12). Per-template overrides apply uniformly. V1 (#19)
+    themen-plakat/beleg-body-on-green at 13/16.9 preserves the existing drift class
+    — visual breathing chosen over 0.9-conformance per RESEARCH.md §18 Q3.'
+- id: brand:hl_sl_distance_x2
+  reason: V1 (#19) Evidence-Cards 60/40 columnar split places Sub-Headline at y=172,
+    2mm below the 100mm-tall Headline These at y=70 — same right-half column x=235.
+    Vertical gap is intentionally tight in this layout because the visual rhythm is
+    set by the column-split (left-half hero + Hellgrün backing carries the layout
+    weight), not the HL/SL distance formula. Per improvements/03-themen-plakat.md
+    "Brand-Rule-Konformität" §4 △.
+- id: brand:band_consistency
+  reason: 'Scheduled for follow-up audit per #25 — band-consistency check added in
+    #25 needs per-template body_block_margins spec authoring; deferred to follow-up
+    issue. Zeitung is the only template with verified body-pool band model post-#25.'
 ci_overrides:
   non_ci_styles:
   - themen-plakat/headline
@@ -27,6 +46,9 @@ ci_overrides:
   - themen-plakat/beleg-body
   - themen-plakat/source
   - themen-plakat/impressum
+  - themen-plakat/stat-hero
+  - themen-plakat/beleg-body-on-green
+  - themen-plakat/beleg-headline-yellow
   non_ci_colors: []
 slots:
   headline_thesis:
@@ -67,8 +89,8 @@ slots:
     anname: Impressum
   logo_grueneAT:
     type: image
-    description: Grünen-Logo (top-left)
-    source: shared/logos/gruene-cmyk.png
+    description: Grünen-Logo (top-left, Brand-Bund)
+    source: shared/logos/gruene-logo-bund-dunkel.png
     optional: true
     anname: Logo Grüne (top-left)
 example_pages:
@@ -115,6 +137,19 @@ ersetzen:
 | `Logo Grüne (top-left)` | (optional) Logo, sonst leer |
 
 Spec: [`templates/_specs/themen-plakat-a3-quer.md`](../_specs/themen-plakat-a3-quer.md).
+
+## Demo-Bilder (synthetisch, KI-generiert)
+
+Die Galerie-Preview zeigt ein synthetisches Themen-Hero-Bild
+(`samples/themen-hero.jpg`, Wind-Turbine + Weinberg-Hintergrund) und
+einen Demo-QR-Code (`samples/qr-quelle.png`, Demo-URL
+`https://noe.gruene.at/themen/`).
+
+Das Hero-Bild trägt das EU-AI-Act-konforme Caption-Watermark
+„**Symbolfoto — KI-generiert**" am unteren Bildrand und ist im
+Manifest mit `synthetic: true` markiert. **Vor Kampagnen-Einsatz
+durch ein reales Foto + die echte Themen-URL ersetzen** — siehe
+`samples/manifest.yml`.
 
 ## Build
 

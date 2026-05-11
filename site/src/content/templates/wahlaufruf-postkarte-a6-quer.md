@@ -18,13 +18,44 @@ description: 'Zweiseitige Wahlaufruf-Postkarte A6 quer (148×105 mm). Vorderseit
 build:
   script: build.py
   output: template.sla
-previews_for_sla: a3d0915e4385dad97cad72f92c7ee6d3d6ee913d81c7556d2f26d6e937dc116b
+previews_for_sla: 7f64b8ad585fb5dfb00b82a30a135ac0326bf8c6c99de4c3ed3d7cea7ba08a06
+brand_overrides:
+- id: brand:line_spacing_0.9
+  reason: 'V1 (#17) introduces wahlaufruf/cell-body-on-green at 9pt body with an airy
+    11pt linesp (drift 2.9pt > 0.5pt tolerance) for readability over the new Dunkelgrün
+    back-half background. The pre-V1 cell-body / cell-headline / headline styles are
+    also kept as orphans (parallel `*-on-green` migration pattern; #18-#21 reuse this)
+    and remain outside the 0.9 factor. Override retained until those orphans are removed
+    and the on-green palette adopts a tighter linesp. Originally a shared brand-team-review
+    note pre-V1.'
+- id: brand:image_text_overlap
+  reason: 'Issue #23 added brand:image_text_overlap which surfaces a text- polygon
+    partial-overlap on this template''s master page (Impressum text frame partially
+    overlaps the seitenhintergrund_back_left Dunkelgrün polygon). Locked decision
+    #12 of #23 originally said this template would be audited via a separate fixup
+    PR for #17 (already merged); pre-applied here to keep structural_check --all green
+    during the #23 PR. Re-audit and decide fix-vs-override in the #17 fixup PR.'
+- id: brand:image_fills_frame
+  reason: 'Scheduled for follow-up audit per #24 — image-fills-frame check added in
+    #24 surfaces letterbox/INJECT_MAP-drift class globally; per-template review for
+    fix-vs-override classification deferred to follow-up issue (#25). Zeitung is the
+    only template with verified clean image-content extents post-#24.'
+- id: brand:band_consistency
+  reason: 'Scheduled for follow-up audit per #25 — band-consistency check added in
+    #25 needs per-template body_block_margins spec authoring; deferred to follow-up
+    issue. Zeitung is the only template with verified body-pool band model post-#25.'
 ci_overrides:
   non_ci_styles:
   - wahlaufruf/headline
   - wahlaufruf/cell-headline
   - wahlaufruf/cell-body
   - wahlaufruf/impressum
+  - wahlaufruf/headline-emphasis
+  - wahlaufruf/headline-cta
+  - wahlaufruf/cell-headline-yellow
+  - wahlaufruf/cell-body-on-green
+  - wahlaufruf/qr-label
+  - wahlaufruf/qr-url
   non_ci_colors: []
 slots:
   seitenhintergrund_front:

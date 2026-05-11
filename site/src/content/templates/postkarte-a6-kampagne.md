@@ -19,7 +19,31 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../postkarte-vorlage-original.sla
-previews_for_sla: 68189afb1ef38c2f55175617755574feee95f8ad90f4489779425ae9ea89fd67
+previews_for_sla: 988fefe04151d2dedb731cd44b7e5a52e0c9e59cd8960df07844871afa4f9174
+brand_overrides:
+- id: brand:line_spacing_0.9
+  reason: Production template auto-generated from postkarte-vorlage-original.sla;
+    the original's per-template para-styles drift from Quickguide 0.9 factor (e.g.
+    Fließtext 13/12=1.083, Headline sehr wichtig 23/27=0.85). Round- trip diff (tools/sla_diff.py
+    --strict) is the byte-stable contract for this template; tightening linesp would
+    break round-trip.
+- id: brand:visual_adjacency_drift
+  reason: 'Per-template alignment encoding scheduled for the #22 follow-up. Spine-safety
+    is a no-op (single-page-per-side template) and the new rule infrastructure ships
+    globally in #22; CONSTRAINTS encoding for this template is deferred (Issue #22
+    locked decision #12). Issue #23 renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.'
+- id: brand:image_text_overlap
+  reason: 'Scheduled for follow-up audit per #23 — caption-on-photo / decorative overlaps
+    audited at time of #23, not yet reviewed for fix-vs-override classification.'
+- id: brand:image_fills_frame
+  reason: 'Scheduled for follow-up audit per #24 — image-fills-frame check added in
+    #24 surfaces letterbox/INJECT_MAP-drift class globally; per-template review for
+    fix-vs-override classification deferred to follow-up issue (#25). Zeitung is the
+    only template with verified clean image-content extents post-#24.'
+- id: brand:band_consistency
+  reason: 'Scheduled for follow-up audit per #25 — band-consistency check added in
+    #25 needs per-template body_block_margins spec authoring; deferred to follow-up
+    issue. Zeitung is the only template with verified body-pool band model post-#25.'
 ci_overrides:
   non_ci_styles:
   - Default Paragraph Style

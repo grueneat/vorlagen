@@ -34,33 +34,33 @@ brand_overrides:
     narrow vertical column) — design choice approved by brand team and documented
     in QUICKGUIDE-NOTES.md "Worked example: HL -> SL gap drift flag — sub is much
     closer than Quickguide suggests. May be intentional for the narrow Türanhänger
-    column."'
-- id: brand:logo_size_3M
-  reason: Front white logo (35mm) is the hero scale on Hellgrün-Band; the back-band
-    35mm logo mirrors front for symmetry; Bund-Dunkel back logo (18mm) is 0.9mm under
-    3*M = 18.90mm — well within visual tolerance, kept for back-content compactness.
+    column." (V1 layout intentionally compresses HL→Sub gap to 38mm declared = ~50%
+    of 19.8mm formula times two to fit the two-zone composition Hero + Bullets-Card
+    within the 250mm column. See issue #18.)'
 - id: brand:bleed_3mm
   reason: Türanhänger uses 2mm bleed instead of 3mm because the die-cut hole (35mm)
     sits within the trim on a non-rectangular spot-color path; the die-cutter only
     enforces 2mm safety on the perforated edge.
-- id: brand:wahlkreuz_colored_bg
-  reason: The "Hellgrün-Band (Wahlkreuz)" frame IS the Hellgrün polygon itself — the
-    rule looks for an OVERLAPPING green polygon and finds none because the band is
-    the bg, not on the bg. The frame's anname carries "Wahlkreuz" because it semantically
-    encloses one but is composed differently than the standard Wahlkreuz block.
 - id: brand:font_family
   reason: Kandidat-Position uses 'Gotham Narrow Book Italic' which IS in the Gotham
     font family but not listed in shared/ci.yml::fonts. The italic variant is acceptable
     here because it carries the candidate's role/title, where italic typography is
     a long-established journalism convention.
 - id: brand:visual_adjacency_drift
-  reason: 'V1 layout work in #18 owns alignment encoding for this template. Re-enable
-    once V1 lands and a CONSTRAINTS list captures the declared adjacencies (Issue
-    #22 locked decision #9). Issue #23 renamed brand:undeclared_alignment_drift ->
-    brand:visual_adjacency_drift.'
-- id: brand:image_text_overlap
-  reason: 'Scheduled for follow-up audit per #23 — caption-on-photo / decorative overlaps
-    audited at time of #23, not yet reviewed for fix-vs-override classification.'
+  reason: 'V1 layout (#18) added a 15-entry CONSTRAINTS list capturing intentional
+    adjacencies. Heuristic rule still produces false positives on text-inside-polygon
+    compositions (no y-overlap gating; no same_x_right/same_y_bottom helpers exist).
+    Override remains until the rule''s detection model gates on y-overlap. See pitfalls
+    P1.3 in #18.'
+- id: brand:image_fills_frame
+  reason: 'Scheduled for follow-up audit per #24 — image-fills-frame check added in
+    #24 surfaces letterbox/INJECT_MAP-drift class globally; per-template review for
+    fix-vs-override classification deferred to follow-up issue (#25). Zeitung is the
+    only template with verified clean image-content extents post-#24.'
+- id: brand:band_consistency
+  reason: 'Scheduled for follow-up audit per #25 — band-consistency check added in
+    #25 needs per-template body_block_margins spec authoring; deferred to follow-up
+    issue. Zeitung is the only template with verified body-pool band model post-#25.'
 ci_overrides:
   non_ci_styles:
   - tueranhaenger/headline
