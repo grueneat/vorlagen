@@ -465,13 +465,56 @@ def write_json(payload: dict, json_path: Path) -> None:
     )
 
 
-def _write_overlays(out_dir: Path, pages_out: list[dict]) -> None:
-    """Placeholder hook for the overlay writer (task 7). For now a no-op
-    so the API surface is stable; task 7 implements the Pillow drawing.
+def write_overlay_png(
+    src_png: Path, bboxes_px: list[dict], dst_png: Path,
+) -> None:
+    """Draw red rectangle outlines (no fill, 2-px stroke) for each px bbox
+    on a copy of ``src_png``; save to ``dst_png``. Mode is preserved as
+    RGBA for downstream tooling.
+
+    Pillow is imported lazily so the module stays importable in
+    environments that only need the bbox JSON (no overlays).
     """
-    # Implemented in task 7. Intentionally empty here so task 6's
-    # determinism tests can pass without depending on Pillow round-trips.
-    _ = out_dir, pages_out
+    from PIL import Image, ImageDraw  # lazy import
+    img = Image.open(src_png).convert("RGBA")
+    draw = ImageDraw.Draw(img)
+    for b in bboxes_px:
+        x, y = b["x_px"], b["y_px"]
+        w, h = b["w_px"], b["h_px"]
+        draw.rectangle(
+            [x, y, x + w, y + h],
+            outline=(255, 0, 0, 255), width=2,
+        )
+    dst_png.parent.mkdir(parents=True, exist_ok=True)
+    img.save(dst_png, format="PNG")
+
+
+def _write_overlays(out_dir: Path, pages_out: list[dict]) -> None:
+    """For each page in ``pages_out``, locate the corresponding
+    ``dsl-page-N.png`` (variable-padded — pdftoppm picks 1-digit for <=9
+    pages, 2-digit otherwise) and write a sibling
+    ``diff-page-NN-overlay.png`` with the page's px bboxes outlined in red.
+
+    Silent no-op if a page's dsl PNG is missing — overlay is a convenience
+    output, not a contract.
+    """
+    for page in pages_out:
+        idx = int(page["page"])
+        bboxes_px = page.get("_bboxes_px_internal", [])
+        if not bboxes_px:
+            continue  # nothing to outline
+        # Try the unpadded form first (matches pdftoppm output for <=9 pages),
+        # then 2-digit zero-padded. visual_diff.py's diff-page-NN files are
+        # always 2-digit, but dsl-page-N follows pdftoppm's variable padding.
+        candidates = [
+            out_dir / f"dsl-page-{idx + 1}.png",
+            out_dir / f"dsl-page-{idx + 1:02d}.png",
+        ]
+        src = next((c for c in candidates if c.exists()), None)
+        if src is None:
+            continue
+        dst = out_dir / f"diff-page-{idx + 1:02d}-overlay.png"
+        write_overlay_png(src, bboxes_px, dst)
 
 
 def _build_argparser() -> argparse.ArgumentParser:

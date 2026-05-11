@@ -24,19 +24,24 @@ import diff_bbox_extract  # noqa: E402
 from diff_bbox_extract import (  # noqa: E402
     DiffBBoxError, attribute_diff_bbox, coverage_of_diff_inside_slot,
     extract_all, extract_bboxes_px, load_dpi, load_template_slots,
-    px_to_mm_bbox, write_json,
+    px_to_mm_bbox, write_json, write_overlay_png,
 )
 
 
 def _build_synthetic_out_dir(
     tmpdir: Path, page_rects: list[list[tuple[int, int, int, int]]],
     *, dpi: int = 96, delta_filenames: list[str] | None = None,
+    with_dsl_pngs: bool = False, dsl_size: tuple[int, int] = (200, 200),
 ) -> Path:
     """Build a fake visual_diff.py output directory in ``tmpdir``.
 
     ``page_rects`` is a list (one entry per page) of rectangles
     ``(x, y, w, h)`` in pixels to draw red on the delta PNG. Returns the
     tmpdir path for convenience.
+
+    When ``with_dsl_pngs=True``, also writes a plain-white
+    ``dsl-page-{idx+1}.png`` (unpadded — matches pdftoppm's behaviour for
+    <=9-page documents) per page so the overlay writer has a source.
     """
     pages_meta = []
     for idx, rects in enumerate(page_rects):
@@ -45,6 +50,9 @@ def _build_synthetic_out_dir(
             else f"diff-page-{idx + 1:02d}.png"
         )
         _draw_delta(tmpdir / fname, (200, 200), rects)
+        if with_dsl_pngs:
+            dsl_img = Image.new("RGBA", dsl_size, (255, 255, 255, 255))
+            dsl_img.save(tmpdir / f"dsl-page-{idx + 1}.png", format="PNG")
         pages_meta.append({"page": idx, "delta_png": fname})
     (tmpdir / "visual_diff.json").write_text(
         json.dumps({"dpi": dpi, "pages": pages_meta}, indent=2),
@@ -348,6 +356,58 @@ class ExtractAllPipelineTests(unittest.TestCase):
             payload["pages"][0]["delta_png"], "diff-page-99.png",
         )
         self.assertEqual(len(payload["pages"][0]["bboxes"]), 1)
+
+    def test_overlay_writes_png_with_correct_dimensions(self) -> None:
+        # Create a 400x300 plain-white DSL page and call write_overlay_png
+        # with one bbox at (10, 20, 30, 40). The output PNG should be RGBA,
+        # same dimensions, with at least one fully-red pixel on the outline.
+        src = self.tmpdir / "src.png"
+        dst = self.tmpdir / "out.png"
+        Image.new("RGBA", (400, 300), (255, 255, 255, 255)).save(src, "PNG")
+        write_overlay_png(src, [{
+            "x_px": 10, "y_px": 20, "w_px": 30, "h_px": 40,
+        }], dst)
+        with Image.open(dst) as out_img:
+            self.assertEqual(out_img.mode, "RGBA")
+            self.assertEqual(out_img.size, (400, 300))
+            # Outline must contain a fully-saturated red pixel somewhere
+            # within the rectangle's bounding box.
+            found_red = False
+            for px in range(10, 41):
+                for py in range(20, 61):
+                    if out_img.getpixel((px, py)) == (255, 0, 0, 255):
+                        found_red = True
+                        break
+                if found_red:
+                    break
+            self.assertTrue(found_red, "no red outline pixel found in overlay")
+
+    def test_extract_all_overlay_off_by_default(self) -> None:
+        out_dir = _build_synthetic_out_dir(
+            self.tmpdir / "vd",
+            page_rects=[[(50, 60, 30, 20)]],
+            with_dsl_pngs=True,
+        )
+        extract_all(out_dir, min_area_px=10)  # overlay_out=False
+        overlay = out_dir / "diff-page-01-overlay.png"
+        self.assertFalse(overlay.exists())
+
+    def test_extract_all_overlay_on_creates_files(self) -> None:
+        out_dir = _build_synthetic_out_dir(
+            self.tmpdir / "vd",
+            page_rects=[
+                [(50, 60, 30, 20)],
+                [(20, 30, 40, 40)],
+            ],
+            with_dsl_pngs=True,
+        )
+        extract_all(out_dir, min_area_px=10, overlay_out=True)
+        for n in (1, 2):
+            overlay = out_dir / f"diff-page-{n:02d}-overlay.png"
+            self.assertTrue(overlay.exists(), f"missing {overlay}")
+            # Dimensions match the source dsl page
+            with Image.open(overlay) as im:
+                self.assertEqual(im.size, (200, 200))
 
     def test_extract_all_schema_keys(self) -> None:
         out_dir = _build_synthetic_out_dir(
