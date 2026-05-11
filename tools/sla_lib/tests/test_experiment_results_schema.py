@@ -7,6 +7,7 @@ schema must catch:
   - missing `mode` discriminator
   - unknown `mode` value (e.g. legacy "versus")
 """
+
 from __future__ import annotations
 
 import copy
@@ -59,10 +60,10 @@ class ResultsSchemaTest(unittest.TestCase):
 
     def test_example_validates(self):
         example = _load_example()
-        errors = sorted(self.validator.iter_errors(example),
-                        key=lambda e: list(e.path))
+        errors = sorted(self.validator.iter_errors(example), key=lambda e: list(e.path))
         self.assertEqual(
-            errors, [],
+            errors,
+            [],
             f"example must validate; got: {[e.message for e in errors]}",
         )
 
