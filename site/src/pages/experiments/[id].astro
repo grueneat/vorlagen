@@ -500,10 +500,14 @@ const variantsForJs = hypotheses.map((h) => ({
           });
 
           // ---- Export ----
+          // Direct-pick branch only; rank-mode export lives in the
+          // bundled <script> (it owns its own button, #export-rank).
+          // Mode-aware: if the user is currently in direct-pick mode,
+          // this exports direct-pick selections. Rank exports go
+          // through the bundled handler.
           function doExport() {
             session.session_end = nowISO();
             session.rater = (raterInput && raterInput.value) || session.rater || 'anonymous';
-            // TODO: rank mode wires in here at T10
             var payload = {
               experiment_id: EXP_ID,
               rater: session.rater,
@@ -580,15 +584,91 @@ const variantsForJs = hypotheses.map((h) => ({
           var EXP_ID = DATA.expId;
           var VARIANTS = DATA.variants;
           var STORAGE_KEY = 'experiment:' + EXP_ID + ':session:v2:rank';
+
           var grid = document.getElementById('exp-rank-grid');
           var rankedList = document.getElementById('ranked-list');
           var rankEmpty = document.getElementById('rank-empty');
           var liveRegion = document.getElementById('rank-live-region');
           var exportBtn = document.getElementById('export-rank');
+          var raterInput = document.getElementById('exp-rater');
 
-          // T06 — markup-only stub. T08 fills in selection state +
-          // checkmark/arrow/drag handlers; T10 wires export.
-          function renderRank() {
+          // ---- State ---------------------------------------------------
+          var ranking = [];           // ordered slug array
+          var startedAt = null;       // ISO timestamp on first interaction
+          var sortableInstance = null;
+
+          var slugToVariant = {};
+          VARIANTS.forEach(function (v) { slugToVariant[v.slug] = v; });
+
+          // ---- localStorage --------------------------------------------
+          // v1 cleanup: scan for stale `experiment:*:session:v1:*` keys,
+          // log once, delete. Silent migration per CONTEXT decision 14.
+          (function clearV1Keys() {
+            try {
+              var toRemove = [];
+              for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (!k) continue;
+                if (/^experiment:.+:session:v1(:.+)?$/.test(k)) {
+                  toRemove.push(k);
+                }
+              }
+              toRemove.forEach(function (k) {
+                console.log('Migrating from v1 schema — clearing stale key:', k);
+                localStorage.removeItem(k);
+              });
+            } catch (e) { /* localStorage may be blocked; banner handled in inline block */ }
+          })();
+
+          function loadStored() {
+            try {
+              var raw = localStorage.getItem(STORAGE_KEY);
+              if (!raw) return null;
+              return JSON.parse(raw);
+            } catch (e) { return null; }
+          }
+
+          function persistRanking() {
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                started_at: startedAt,
+                ranking: ranking,
+              }));
+            } catch (e) { /* swallow — banner already up */ }
+          }
+
+          var stored = loadStored();
+          if (stored && Array.isArray(stored.ranking)) {
+            // Keep only slugs we still know about; drop anything stale.
+            ranking = stored.ranking.filter(function (s) {
+              return Object.prototype.hasOwnProperty.call(slugToVariant, s);
+            });
+            startedAt = stored.started_at || new Date().toISOString();
+          }
+          if (!startedAt) startedAt = new Date().toISOString();
+
+          // ---- Rater-name sanitization (mirrors export filename rule) -
+          function sanitizeRater(name) {
+            var trimmed = (name || '').toLowerCase();
+            // Allowlist [a-z0-9_-]; map anything else to '-'.
+            return trimmed.replace(/[^a-z0-9_-]/g, '-');
+          }
+
+          // ---- Live region announcement helper -------------------------
+          function announce(text) {
+            if (!liveRegion) return;
+            liveRegion.textContent = text;
+          }
+
+          function announceMove(slug, oldIndex, newIndex, total) {
+            announce(
+              "Moved '" + slug + "' from position " + (oldIndex + 1) +
+              " to " + (newIndex + 1) + " of " + total
+            );
+          }
+
+          // ---- Render variant grid (with checkmark buttons) ------------
+          function renderRankGrid() {
             if (!grid) return;
             grid.innerHTML = '';
             VARIANTS.forEach(function (v) {
@@ -601,20 +681,14 @@ const variantsForJs = hypotheses.map((h) => ({
               img.alt = v.name;
               img.loading = 'lazy';
               img.addEventListener('click', function () {
-                // Defer to the lightbox helper already attached by the
-                // inline block — we just navigate via the global hires
-                // pattern. The image-click handler is the only listener
-                // attached to <img>; sibling checkmark <button> doesn't
-                // bubble through (pitfall #1; safe-by-structure).
-                var hires = v.hires;
-                var label = v.name;
+                // Image-click opens lightbox (parity with direct-pick block).
                 var lightbox = document.getElementById('exp-lightbox');
                 var lightImg = document.getElementById('exp-lightbox-image');
                 var lightLabel = document.getElementById('exp-lightbox-label');
                 if (!lightbox || !lightImg || !lightLabel) return;
-                lightImg.src = hires;
-                lightImg.alt = label || '';
-                lightLabel.textContent = label || '';
+                lightImg.src = v.hires;
+                lightImg.alt = v.name || '';
+                lightLabel.textContent = v.name || '';
                 lightbox.style.display = 'block';
                 document.body.style.overflow = 'hidden';
               });
@@ -643,19 +717,238 @@ const variantsForJs = hypotheses.map((h) => ({
               positionBadge.hidden = true;
               checkmark.appendChild(positionBadge);
 
+              // Defensive stopPropagation — the click listener is attached
+              // to the sibling <img>, not a parent, so bubble-through is
+              // architecturally impossible (pitfall #1) but we still call
+              // stopPropagation for belt-and-suspenders.
+              checkmark.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                toggleSlug(v.slug);
+              });
+
               card.appendChild(checkmark);
               grid.appendChild(card);
             });
           }
 
-          renderRank();
-          // Silence the unused-Sortable warning until T09 wires init.
-          void Sortable;
-          void rankedList;
-          void rankEmpty;
-          void liveRegion;
-          void exportBtn;
-          void STORAGE_KEY;
+          function toggleSlug(slug) {
+            var idx = ranking.indexOf(slug);
+            if (idx >= 0) {
+              ranking.splice(idx, 1);
+              announce("Removed '" + slug + "' from ranking");
+            } else {
+              ranking.push(slug);
+              announce("Added '" + slug + "' to ranking at position " + ranking.length);
+            }
+            refreshRankUI();
+            persistRanking();
+          }
+
+          // ---- Ranked-list rendering -----------------------------------
+          function buildRankedRow(slug, idx, total) {
+            var v = slugToVariant[slug];
+            var li = document.createElement('li');
+            li.className = 'ranked-row';
+            li.dataset.slug = slug;
+
+            var dragHandle = document.createElement('span');
+            dragHandle.className = 'drag-handle';
+            dragHandle.setAttribute('aria-hidden', 'true');
+            dragHandle.textContent = '⋮⋮';
+            li.appendChild(dragHandle);
+
+            var arrowUp = document.createElement('button');
+            arrowUp.type = 'button';
+            arrowUp.className = 'arrow-up';
+            arrowUp.setAttribute('aria-label', "Move '" + slug + "' up");
+            arrowUp.textContent = '▲';
+            arrowUp.disabled = idx === 0;
+            arrowUp.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              moveSlug(slug, -1);
+            });
+            li.appendChild(arrowUp);
+
+            var arrowDown = document.createElement('button');
+            arrowDown.type = 'button';
+            arrowDown.className = 'arrow-down';
+            arrowDown.setAttribute('aria-label', "Move '" + slug + "' down");
+            arrowDown.textContent = '▼';
+            arrowDown.disabled = idx === total - 1;
+            arrowDown.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              moveSlug(slug, +1);
+            });
+            li.appendChild(arrowDown);
+
+            var thumb = document.createElement('img');
+            thumb.className = 'thumbnail';
+            thumb.src = v ? v.thumb : '';
+            thumb.alt = '';
+            thumb.setAttribute('aria-hidden', 'true');
+            li.appendChild(thumb);
+
+            var titleEl = document.createElement('span');
+            titleEl.className = 'title';
+            titleEl.textContent = v ? v.name : slug;
+            li.appendChild(titleEl);
+
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-btn';
+            removeBtn.setAttribute('aria-label', "Remove '" + slug + "' from ranking");
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              removeSlug(slug);
+            });
+            li.appendChild(removeBtn);
+
+            return li;
+          }
+
+          function refreshRankUI() {
+            // Update each card's checkmark + position-badge.
+            if (grid) {
+              var cards = grid.querySelectorAll('.variant-card');
+              cards.forEach(function (card) {
+                var slug = card.dataset.slug;
+                var pos = ranking.indexOf(slug);
+                var checkmark = card.querySelector('.checkmark');
+                if (!checkmark) return;
+                var badge = checkmark.querySelector('.position-badge');
+                if (pos >= 0) {
+                  checkmark.setAttribute('aria-pressed', 'true');
+                  if (badge) {
+                    badge.textContent = String(pos + 1);
+                    badge.hidden = false;
+                  }
+                } else {
+                  checkmark.setAttribute('aria-pressed', 'false');
+                  if (badge) {
+                    badge.textContent = '';
+                    badge.hidden = true;
+                  }
+                }
+              });
+            }
+
+            // Rebuild the ranked list.
+            if (rankedList) {
+              rankedList.innerHTML = '';
+              ranking.forEach(function (slug, idx) {
+                rankedList.appendChild(buildRankedRow(slug, idx, ranking.length));
+              });
+            }
+            if (rankEmpty) {
+              rankEmpty.style.display = ranking.length === 0 ? 'block' : 'none';
+            }
+
+            // Re-init Sortable: destroy the old instance and attach fresh
+            // (the <ol> rows are a brand-new DOM each refresh). Choice
+            // documented in EXECUTION.md.
+            attachSortable();
+          }
+
+          // ---- Arrow-button reorder ------------------------------------
+          function moveSlug(slug, delta) {
+            var oldIdx = ranking.indexOf(slug);
+            if (oldIdx < 0) return;
+            var newIdx = oldIdx + delta;
+            if (newIdx < 0 || newIdx >= ranking.length) return;
+            ranking.splice(oldIdx, 1);
+            ranking.splice(newIdx, 0, slug);
+            refreshRankUI();
+            persistRanking();
+            announceMove(slug, oldIdx, newIdx, ranking.length);
+          }
+
+          function removeSlug(slug) {
+            var oldIdx = ranking.indexOf(slug);
+            if (oldIdx < 0) return;
+            ranking.splice(oldIdx, 1);
+            refreshRankUI();
+            persistRanking();
+            announce("Removed '" + slug + "' from position " + (oldIdx + 1));
+          }
+
+          // ---- SortableJS (drag-drop reorder) --------------------------
+          function attachSortable() {
+            if (!rankedList) return;
+            if (sortableInstance) {
+              sortableInstance.destroy();
+              sortableInstance = null;
+            }
+            sortableInstance = new Sortable(rankedList, {
+              handle: '.drag-handle',
+              filter: '.arrow-up,.arrow-down,.remove-btn',
+              preventOnFilter: true,
+              animation: 150,
+              delay: 150,
+              delayOnTouchOnly: true,
+              touchStartThreshold: 5,
+              onEnd: function (evt) {
+                var oldIndex = evt.oldIndex;
+                var newIndex = evt.newIndex;
+                if (oldIndex === newIndex) return;
+                // Read the new order from the DOM (Sortable already
+                // mutated it); rebuild `ranking` from data-slug attrs.
+                var newRanking = [];
+                rankedList.querySelectorAll('.ranked-row').forEach(function (li) {
+                  newRanking.push(li.dataset.slug);
+                });
+                ranking = newRanking;
+                persistRanking();
+                announceMove(evt.item.dataset.slug, oldIndex, newIndex, ranking.length);
+                // Re-render so arrow up/down disabled state and badges
+                // reflect the new positions.
+                refreshRankUI();
+              },
+            });
+          }
+
+          // ---- Export --------------------------------------------------
+          function doExportRank() {
+            var raterRaw = (raterInput && raterInput.value) || 'anonymous';
+            var rater = sanitizeRater(raterRaw);
+            if (!rater) {
+              var answer = prompt('Rater name (a-z, 0-9, _-)?');
+              if (answer === null) {
+                console.log('Rank export cancelled by user');
+                return;
+              }
+              rater = sanitizeRater(answer) || 'anonymous';
+              if (raterInput) raterInput.value = rater;
+            }
+            if (ranking.length === 0) {
+              console.warn('Exporting empty ranking');
+            }
+
+            var payload = {
+              experiment_id: EXP_ID,
+              rater: rater,
+              started_at: startedAt,
+              exported_at: new Date().toISOString(),
+              mode: 'rank',
+              ranking: ranking,
+            };
+            var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            var href = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = href;
+            var ymd = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            a.download = rater + '-' + EXP_ID + '-rank-' + ymd + '.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(href);
+          }
+
+          if (exportBtn) exportBtn.addEventListener('click', doExportRank);
+
+          // ---- Boot ----------------------------------------------------
+          renderRankGrid();
+          refreshRankUI();
         })();
       </script>
     </>
