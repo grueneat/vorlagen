@@ -1,33 +1,30 @@
-"""tools/experiment_results.py — results aggregation + ranking (issue #29).
+"""tools/experiment_results.py — results aggregation + ranking (issue #31).
 
 CLI: ``experiment-results <exp-id> [<results.json> ...]``. If no result
 files are passed, the tool globs ``experiments/<exp-id>/results/*.json``.
 
-Multi-rater merging is OUT OF SCOPE per CONTEXT.md "Deferred". Multiple
-result files from the same rater (re-runs) ARE in scope: their votes
-concatenate into a single tally.
+Multi-rater merging combines per-slug position scores by mean across
+raters. Variants no rater placed are excluded (mean over Nones, not
+zero) so the summary reflects what was actually voted on.
 
 Outputs:
   - ``experiments/<exp-id>/results/SUMMARY.md`` — human-readable tally
-    + Spearman halo flag + per-pair disagreement table + corpus-update
-    stub for top-3 / bottom-3.
+    (top-3 / bottom-3) + dropped-variants section + dual-section corpus
+    update stub.
 
-The math (wins-ratio, Spearman, disagreement) is pure stdlib — no
-scipy, no numpy. Implementations are duplicated client-side in the
-voting page so the export-button preview matches what this aggregator
-will compute downstream.
+The aggregator consumes the rank shape (linear Borda position scores)
+and a direct-pick fallback shape (1.0 per selection, None otherwise).
+Pairwise / versus mode is gone; see issue #31 for the schema bump.
 """
+
 from __future__ import annotations
 
 import argparse
-import collections
 import datetime
 import glob
 import json
-import statistics
 import sys
 from pathlib import Path
-from typing import Iterable
 
 import jsonschema
 import yaml
@@ -39,6 +36,7 @@ SCHEMA_PATH = ROOT / "experiments" / "_schema" / "results.schema.yaml"
 # ---------------------------------------------------------------------------
 # Schema validation
 # ---------------------------------------------------------------------------
+
 
 def _load_schema() -> dict:
     return yaml.safe_load(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -53,157 +51,145 @@ def validate_results(payload: dict) -> list[jsonschema.ValidationError]:
 
 
 # ---------------------------------------------------------------------------
-# Aggregation primitives
+# Position score primitives (linear Borda count, normalised to [0, 1])
 # ---------------------------------------------------------------------------
 
-def _is_skip(winner) -> bool:
-    return winner is None or winner == "skip"
 
+def compute_position_scores(
+    ranking: list[str],
+    all_slugs: list[str],
+) -> dict[str, float | None]:
+    """Linear Borda position score for one rater's ranking.
 
-def wins_ratio(votes: Iterable[dict], axis: str) -> dict[str, dict[str, int]]:
-    """Per-variant {wins, plays} accumulator for one axis."""
-    acc: dict[str, dict[str, int]] = collections.defaultdict(
-        lambda: {"wins": 0, "plays": 0}
-    )
-    for v in votes:
-        if v.get("axis") != axis:
-            continue
-        a = v["pair"]["a"]
-        b = v["pair"]["b"]
-        winner = v.get("winner")
-        if _is_skip(winner):
-            continue
-        if winner not in (a, b):
-            # Defensive: ill-formed vote payload — surface but don't crash.
-            continue
-        acc[a]["plays"] += 1
-        acc[b]["plays"] += 1
-        acc[winner]["wins"] += 1
-    return {slug: dict(d) for slug, d in acc.items()}
+    For each slug at rank index ``i`` in ``ranking`` (0-based) over a
+    list of length ``N``:
 
+        score = (N - 1 - i) / (N - 1)
 
-def ranking(wins: dict[str, dict[str, int]]) -> list[str]:
-    """Sort slugs desc by wins/plays, tie-break by total plays then slug."""
-    def score(slug):
-        w = wins[slug]
-        ratio = w["wins"] / w["plays"] if w["plays"] else 0.0
-        return (-ratio, -w["plays"], slug)
-    return sorted(wins.keys(), key=score)
-
-
-def disagreement_index(votes: list[dict]) -> tuple[float, list[dict]]:
-    """Return (index, per_pair_table).
-
-    Index: fraction of pairs voted on BOTH axes where appeal-winner !=
-    transport-winner. Pairs voted on only one axis are excluded.
+    Top-ranked is 1.0, bottom-ranked is 0.0. With ``N == 1`` the single
+    ranked slug gets 1.0 (avoids div-by-zero). Slugs in ``all_slugs``
+    that don't appear in ``ranking`` get ``None`` — excluded from
+    aggregation rather than treated as zero.
     """
-    by_pair: dict[tuple[str, str], dict[str, str | None]] = {}
-    for v in votes:
-        a = v["pair"]["a"]
-        b = v["pair"]["b"]
-        key = tuple(sorted((a, b)))
-        winner = v.get("winner")
-        if _is_skip(winner):
-            continue
-        slot = by_pair.setdefault(key, {})
-        slot[v["axis"]] = winner
-
-    table: list[dict] = []
-    dual = 0
-    disagree = 0
-    for (a, b), axes in by_pair.items():
-        if "appeal" not in axes or "transport" not in axes:
-            continue
-        dual += 1
-        if axes["appeal"] != axes["transport"]:
-            disagree += 1
-        table.append({
-            "a": a,
-            "b": b,
-            "appeal_winner": axes["appeal"],
-            "transport_winner": axes["transport"],
-            "agree": axes["appeal"] == axes["transport"],
-        })
-    return (disagree / dual if dual else 0.0), table
+    n = len(ranking)
+    scores: dict[str, float | None] = {}
+    if n == 0:
+        return {slug: None for slug in all_slugs}
+    if n == 1:
+        ranked = {ranking[0]: 1.0}
+    else:
+        ranked = {slug: (n - 1 - i) / (n - 1) for i, slug in enumerate(ranking)}
+    for slug in all_slugs:
+        scores[slug] = ranked.get(slug)
+    # Also include any slug that's in ranking but not in all_slugs (defensive).
+    for slug, val in ranked.items():
+        scores.setdefault(slug, val)
+    return scores
 
 
-def spearman_correlation(rank_a: list[str], rank_b: list[str]) -> float:
-    """Spearman rank correlation between two ordered slug lists.
+def compute_position_scores_for_direct_pick(
+    selections: list[str],
+    all_slugs: list[str],
+) -> dict[str, float | None]:
+    """Direct-pick fallback: 1.0 for each selected slug, None otherwise.
 
-    Uses Pearson correlation on the ranks; pure stdlib (statistics).
-    Returns 0.0 when either ranking is empty.
+    Treats every selection as equally favoured; unselected slugs are
+    excluded (None) rather than rated zero.
     """
-    common = [s for s in rank_a if s in rank_b]
-    if len(common) < 2:
-        return 0.0
-    rank_pos_a = {slug: i for i, slug in enumerate(rank_a) if slug in rank_b}
-    rank_pos_b = {slug: i for i, slug in enumerate(rank_b) if slug in rank_a}
-    xs = [rank_pos_a[s] for s in common]
-    ys = [rank_pos_b[s] for s in common]
-    try:
-        return statistics.correlation(xs, ys)
-    except statistics.StatisticsError:
-        return 0.0
+    selected = set(selections)
+    scores: dict[str, float | None] = {}
+    for slug in all_slugs:
+        scores[slug] = 1.0 if slug in selected else None
+    for slug in selected:
+        scores.setdefault(slug, 1.0)
+    return scores
 
 
 # ---------------------------------------------------------------------------
-# Aggregator (one or many result files for a single rater session)
+# Aggregator (one or many result files; mean of non-None scores per slug)
 # ---------------------------------------------------------------------------
+
 
 def aggregate(results_files: list[Path]) -> dict:
-    """Merge votes across files, recompute everything from scratch.
+    """Load + validate result files; combine per-slug scores by mean.
 
-    Returns a dict in the shape of the results schema. Even if the
-    input files already carried wins_ratio/ranking, we recompute so
-    multi-file aggregation is correct.
+    Each input file is validated against the rank/direct-pick schema and
+    contributes a single rater's per-slug score map. Across raters the
+    aggregator takes the mean of the non-None values per slug. Slugs no
+    rater placed remain None in the result so render_summary can omit
+    or surface them as desired.
     """
     if not results_files:
         raise ValueError("aggregate() requires at least 1 results file")
 
-    # Load + validate each.
-    payloads = []
-    for p in results_files:
-        with p.open(encoding="utf-8") as f:
+    payloads: list[dict] = []
+    for path in results_files:
+        with path.open(encoding="utf-8") as f:
             data = json.load(f)
         errors = validate_results(data)
         if errors:
             ptr = "/" + "/".join(str(s) for s in errors[0].path)
-            raise ValueError(f"{p}: schema invalid at {ptr}: {errors[0].message}")
+            raise ValueError(f"{path}: schema invalid at {ptr}: {errors[0].message}")
         payloads.append(data)
 
-    head = payloads[0]
-    raters = sorted({p["rater"] for p in payloads})
-    starts = sorted(p["session_start"] for p in payloads)
-    ends = sorted(p["session_end"] for p in payloads)
-    votes: list[dict] = []
-    direct_picks: list[str] = []
-    for p in payloads:
-        votes.extend(p["votes"])
-        for d in p.get("direct_picks", []):
-            if d not in direct_picks:
-                direct_picks.append(d)
+    # Collect every slug seen across rankings + selections.
+    all_slugs: list[str] = []
+    seen: set[str] = set()
+    for payload in payloads:
+        for slug in payload.get("ranking", []) or payload.get("selections", []):
+            if slug not in seen:
+                seen.add(slug)
+                all_slugs.append(slug)
 
-    wa = wins_ratio(votes, "appeal")
-    wt = wins_ratio(votes, "transport")
-    ra = ranking(wa)
-    rt = ranking(wt)
-    di, pair_table = disagreement_index(votes)
-    sp = spearman_correlation(ra, rt)
+    # Per-rater score maps.
+    per_rater_scores: list[tuple[str, dict[str, float | None]]] = []
+    modes_seen: list[str] = []
+    raters: list[str] = []
+    for payload in payloads:
+        rater = payload["rater"]
+        if rater not in raters:
+            raters.append(rater)
+        mode = payload["mode"]
+        if mode not in modes_seen:
+            modes_seen.append(mode)
+        if mode == "rank":
+            scores = compute_position_scores(payload["ranking"], all_slugs)
+        elif mode == "direct-pick":
+            scores = compute_position_scores_for_direct_pick(
+                payload["selections"],
+                all_slugs,
+            )
+        else:  # schema rejects this, but guard defensively
+            raise ValueError(f"unknown mode {mode!r} in {payload}")
+        per_rater_scores.append((rater, scores))
+
+    # Aggregate by mean of non-None values per slug.
+    per_slug: dict[str, dict[str, float | int | None]] = {}
+    for slug in all_slugs:
+        values: list[float] = [
+            s[slug]  # type: ignore[misc]
+            for _, s in per_rater_scores
+            if s.get(slug) is not None
+        ]
+        if values:
+            per_slug[slug] = {
+                "mean_score": sum(values) / len(values),
+                "n_raters": len(values),
+            }
+        else:
+            per_slug[slug] = {"mean_score": None, "n_raters": 0}
+
+    starts = sorted(payload["started_at"] for payload in payloads)
+    ends = sorted(payload["exported_at"] for payload in payloads)
 
     return {
-        "experiment_id": head["experiment_id"],
-        "rater": ", ".join(raters),
-        "session_start": starts[0],
-        "session_end": ends[-1],
-        "votes": votes,
-        "direct_picks": direct_picks,
-        "wins_ratio_appeal": wa,
-        "wins_ratio_transport": wt,
-        "ranking_appeal": ra,
-        "ranking_transport": rt,
-        "disagreement_index": round(di, 6),
-        "spearman_appeal_transport": round(sp, 6),
-        "_per_pair_disagreement": pair_table,
+        "experiment_id": payloads[0]["experiment_id"],
+        "raters": raters,
+        "started_at": starts[0],
+        "exported_at": ends[-1],
+        "modes_seen": modes_seen,
+        "all_slugs": all_slugs,
+        "per_slug": per_slug,
     }
 
 
@@ -211,43 +197,38 @@ def aggregate(results_files: list[Path]) -> dict:
 # Markdown summary
 # ---------------------------------------------------------------------------
 
-def _halo_flag(spearman: float) -> str:
-    if spearman > 0.85:
-        return "halo (raters mostly used appeal as a proxy for transport)"
-    if spearman < 0.5:
-        return "working as intended (axes capture distinct signals)"
-    return "ambiguous (mild halo)"
 
+def _ranked_slugs(agg: dict) -> list[str]:
+    """Return slugs sorted by mean_score desc; None last (stable on slug)."""
 
-def _ratio_line(slug: str, wins: dict[str, dict[str, int]]) -> str:
-    w = wins.get(slug, {"wins": 0, "plays": 0})
-    if w["plays"] == 0:
-        return f"  - `{slug}` — 0/0"
-    return f"  - `{slug}` — {w['wins']}/{w['plays']} ({w['wins']/w['plays']:.0%})"
+    def key(slug: str):
+        v = agg["per_slug"][slug]["mean_score"]
+        # None sorts last; tie-break by slug.
+        return (0 if v is None else 1, v if v is not None else 0.0, slug)
 
-
-def render_summary(
-    aggregated: dict,
-    *,
-    hypotheses: dict[str, dict] | None = None,
-    dropped: list[dict] | None = None,
-) -> str:
-    hypotheses = hypotheses or {}
-    dropped = dropped or []
-    out: list[str] = []
-    out.append(f"# Results — {aggregated['experiment_id']}")
-    out.append("")
-    out.append(f"**Rater:** {aggregated['rater']}")
-    out.append(f"**Sessions:** {aggregated['session_start']} → {aggregated['session_end']}")
-    out.append(f"**Votes:** {len(aggregated['votes'])}")
-    out.append(
-        f"**Spearman ρ(appeal, transport):** "
-        f"{aggregated['spearman_appeal_transport']:.3f} — "
-        f"{_halo_flag(aggregated['spearman_appeal_transport'])}"
+    # Sort desc on the score, asc on slug for stability among ties.
+    slugs = list(agg["per_slug"].keys())
+    return sorted(
+        slugs,
+        key=lambda s: (
+            agg["per_slug"][s]["mean_score"] is None,
+            -(agg["per_slug"][s]["mean_score"] or 0.0),
+            s,
+        ),
     )
-    out.append(f"**Disagreement index:** {aggregated['disagreement_index']:.3f}")
-    out.append("")
 
+
+def _score_line(slug: str, agg: dict) -> str:
+    entry = agg["per_slug"].get(slug, {"mean_score": None, "n_raters": 0})
+    score = entry["mean_score"]
+    n = entry["n_raters"]
+    if score is None:
+        return f"  - `{slug}` — (no raters placed this variant)"
+    return f"  - `{slug}` — score {score:.3f} (n={n})"
+
+
+def render_dropped_section(dropped: list[dict] | None) -> list[str]:
+    out: list[str] = []
     out.append("## Variants dropped during render")
     out.append("")
     if not dropped:
@@ -269,8 +250,14 @@ def render_summary(
                     )
             out.append("")
     out.append("")
+    return out
 
-    out.append("## Corpus update stub (to be amended into design-guide/gruene-corpus.md)")
+
+def render_corpus_stub() -> list[str]:
+    out: list[str] = []
+    out.append(
+        "## Corpus update stub (to be amended into design-guide/gruene-corpus.md)"
+    )
     out.append("")
     out.append("### From v1 (envelope necessity)")
     out.append("")
@@ -289,86 +276,85 @@ def render_summary(
     out.append("### From v2 (density+form findings)")
     out.append("")
     out.append(
-        "_Top-3 (by Bradley-Terry-style win-rate): [VARIANT-1] / "
-        "[VARIANT-2] / [VARIANT-3]. Bottom-3: [...]. Spearman halo flag: "
-        "[...]. To be filled in by the executor of T17 after Flo's voting "
-        "session._"
+        "_Top-3 (by linear Borda position score across raters): "
+        "[VARIANT-1] / [VARIANT-2] / [VARIANT-3]. Bottom-3: [...]. "
+        "To be filled in by the executor of T-final after Flo's rank-mode "
+        "voting session._"
     )
     out.append("")
+    return out
 
-    out.append("## Top 5 by appeal")
-    for slug in aggregated["ranking_appeal"][:5]:
-        out.append(_ratio_line(slug, aggregated["wins_ratio_appeal"]))
+
+def render_summary(
+    aggregated: dict,
+    *,
+    hypotheses: dict[str, dict] | None = None,
+    dropped: list[dict] | None = None,
+) -> str:
+    hypotheses = hypotheses or {}
+    out: list[str] = []
+    out.append(f"# Results — {aggregated['experiment_id']}")
+    out.append("")
+    out.append(f"**Raters:** {', '.join(aggregated['raters'])}")
+    out.append(
+        f"**Sessions:** {aggregated['started_at']} → {aggregated['exported_at']}"
+    )
+    out.append(f"**Modes:** {', '.join(aggregated['modes_seen'])}")
+    out.append(f"**Variants placed:** {len(aggregated['all_slugs'])}")
     out.append("")
 
-    out.append("## Top 5 by transport")
-    for slug in aggregated["ranking_transport"][:5]:
-        out.append(_ratio_line(slug, aggregated["wins_ratio_transport"]))
-    out.append("")
+    out.extend(render_dropped_section(dropped))
+    out.extend(render_corpus_stub())
 
-    out.append("## Bottom 3 by appeal")
-    for slug in aggregated["ranking_appeal"][-3:][::-1]:
-        out.append(_ratio_line(slug, aggregated["wins_ratio_appeal"]))
-    out.append("")
+    ranked = _ranked_slugs(aggregated)
+    placed = [s for s in ranked if aggregated["per_slug"][s]["mean_score"] is not None]
 
-    out.append("## Bottom 3 by transport")
-    for slug in aggregated["ranking_transport"][-3:][::-1]:
-        out.append(_ratio_line(slug, aggregated["wins_ratio_transport"]))
-    out.append("")
-
-    out.append("## Per-pair disagreement (top 10)")
-    pair_table = aggregated.get("_per_pair_disagreement", [])
-    disagree = [p for p in pair_table if not p["agree"]]
-    if not disagree:
-        out.append("(none — all dual-axis pairs agreed)")
+    out.append("## Top 3")
+    if not placed:
+        out.append("_(no variants placed)_")
     else:
-        out.append("| variant A | variant B | appeal winner | transport winner |")
-        out.append("|---|---|---|---|")
-        for row in disagree[:10]:
-            out.append(
-                f"| `{row['a']}` | `{row['b']}` | "
-                f"`{row['appeal_winner']}` | `{row['transport_winner']}` |"
-            )
+        for slug in placed[:3]:
+            out.append(_score_line(slug, aggregated))
+    out.append("")
+
+    out.append("## Bottom 3")
+    if not placed:
+        out.append("_(no variants placed)_")
+    else:
+        for slug in placed[-3:][::-1]:
+            out.append(_score_line(slug, aggregated))
     out.append("")
 
     out.append("## Suggested corpus entries")
     out.append("")
-    out.append("Paste the relevant entries into `design-guide/gruene-corpus.md` "
-               "with provenance tagging (per CONTEXT.md decision 11).")
+    out.append(
+        "Paste the relevant entries into `design-guide/gruene-corpus.md` "
+        "with provenance tagging (per CONTEXT.md decision 11)."
+    )
     out.append("")
     out.append("### Winners (top 3)")
-    for axis, ranking_list in (
-        ("appeal", aggregated["ranking_appeal"]),
-        ("transport", aggregated["ranking_transport"]),
-    ):
-        out.append(f"#### Top-3 by {axis}")
-        for slug in ranking_list[:3]:
-            h = hypotheses.get(slug, {})
-            out.append(
-                f"- **{h.get('name', slug)}** "
-                f"(`{slug}`, axes: `{', '.join(h.get('axis_commitments', []))}`)\n"
-                f"  - rationale: {h.get('rationale', '(unknown)')}\n"
-                f"  - provenance: experiment {aggregated['experiment_id']}, "
-                f"run {aggregated['rater']}, axis: {axis}"
-            )
-        out.append("")
+    for slug in placed[:3]:
+        h = hypotheses.get(slug, {})
+        out.append(
+            f"- **{h.get('name', slug)}** "
+            f"(`{slug}`, axes: `{', '.join(h.get('axis_commitments', []))}`)\n"
+            f"  - rationale: {h.get('rationale', '(unknown)')}\n"
+            f"  - provenance: experiment {aggregated['experiment_id']}, "
+            f"raters: {', '.join(aggregated['raters'])}"
+        )
+    out.append("")
 
     out.append("### Losers (bottom 3)")
-    for axis, ranking_list in (
-        ("appeal", aggregated["ranking_appeal"]),
-        ("transport", aggregated["ranking_transport"]),
-    ):
-        out.append(f"#### Bottom-3 by {axis}")
-        for slug in ranking_list[-3:][::-1]:
-            h = hypotheses.get(slug, {})
-            out.append(
-                f"- **{h.get('name', slug)}** "
-                f"(`{slug}`, axes: `{', '.join(h.get('axis_commitments', []))}`)\n"
-                f"  - rationale: {h.get('rationale', '(unknown)')}\n"
-                f"  - provenance: experiment {aggregated['experiment_id']}, "
-                f"run {aggregated['rater']}, axis: {axis} (loser)"
-            )
-        out.append("")
+    for slug in placed[-3:][::-1]:
+        h = hypotheses.get(slug, {})
+        out.append(
+            f"- **{h.get('name', slug)}** "
+            f"(`{slug}`, axes: `{', '.join(h.get('axis_commitments', []))}`)\n"
+            f"  - rationale: {h.get('rationale', '(unknown)')}\n"
+            f"  - provenance: experiment {aggregated['experiment_id']}, "
+            f"raters: {', '.join(aggregated['raters'])} (loser)"
+        )
+    out.append("")
 
     out.append(
         f"_Generated by `bin/experiment-results` at "
@@ -380,6 +366,7 @@ def render_summary(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def _load_hypotheses(exp_id: str) -> dict[str, dict]:
     """Load manifest hypotheses keyed by slug for SUMMARY.md enrichment."""
@@ -415,9 +402,12 @@ def main(argv: list[str] | None = None) -> int:
         description="Aggregate voting results into rankings + SUMMARY.md.",
     )
     ap.add_argument("exp_id", nargs="?", help="Experiment id.")
-    ap.add_argument("results", nargs="*",
-                    help="Optional results JSON paths; default globs "
-                         "experiments/<exp_id>/results/*.json.")
+    ap.add_argument(
+        "results",
+        nargs="*",
+        help="Optional results JSON paths; default globs "
+        "experiments/<exp_id>/results/*.json.",
+    )
     args = ap.parse_args(argv)
 
     if not args.exp_id:
@@ -429,7 +419,8 @@ def main(argv: list[str] | None = None) -> int:
         files = [Path(p) for p in args.results]
     else:
         files = sorted(
-            Path(p) for p in glob.glob(
+            Path(p)
+            for p in glob.glob(
                 str(ROOT / "experiments" / exp_id / "results" / "*.json"),
             )
         )
@@ -452,12 +443,13 @@ def main(argv: list[str] | None = None) -> int:
     summary_path = out_dir / "SUMMARY.md"
     summary_path.write_text(summary_md, encoding="utf-8")
 
+    placed = sum(1 for s in agg["per_slug"].values() if s["mean_score"] is not None)
     print(
         f"results -> {summary_path.relative_to(ROOT)} "
-        f"({len(agg['votes'])} votes, "
-        f"{len(agg['ranking_appeal'])} variants, "
-        f"disagreement {agg['disagreement_index']:.2f}, "
-        f"spearman {agg['spearman_appeal_transport']:.2f})"
+        f"({len(agg['raters'])} raters, "
+        f"{len(agg['all_slugs'])} variants seen, "
+        f"{placed} placed, "
+        f"modes: {', '.join(agg['modes_seen'])})"
     )
     return 0
 
