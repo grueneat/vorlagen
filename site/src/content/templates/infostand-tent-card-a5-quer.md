@@ -18,7 +18,7 @@ description: 'A4 quer (297×210 mm) gefalzt zu A5-Tent. Steht selbsttragend auf 
 build:
   script: build.py
   output: template.sla
-previews_for_sla: e0a779de42096f2a63f2c2f17407203ef2a27f43d38478af111a2fb72e7d920c
+previews_for_sla: 88a1ddfa18ef8494ec070580600a57d99284f284bc01ed6e30d52f772b112cc6
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Body 1.3× and Termine 1.3× and CTA-Footer 1.27× linesp ratios are intentional
