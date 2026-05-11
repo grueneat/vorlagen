@@ -1,6 +1,7 @@
 ---
 const { title } = Astro.props;
 const BASE = import.meta.env.BASE_URL;
+const url = (p: string) => BASE + p.replace(/^\//, '');
 ---
 <html lang="de">
   <head>
@@ -28,9 +29,26 @@ const BASE = import.meta.env.BASE_URL;
         background: var(--gruen-dunkel);
         color: white;
         padding: 1rem 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
       }
       header a { color: white; text-decoration: none; }
       header h1 { margin: 0; font-size: 1.4rem; }
+      header nav { display: flex; gap: 1rem; flex-wrap: wrap; }
+      header nav a {
+        font-size: 0.95rem;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        transition: background 0.15s, border-color 0.15s;
+      }
+      header nav a:hover {
+        background: var(--gruen-hell);
+        border-color: var(--gruen-hell);
+      }
       main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
       footer { color: var(--muted); padding: 2rem; text-align: center; font-size: 0.85em; }
       h1, h2, h3 { color: var(--gruen-dunkel); }
@@ -38,7 +56,13 @@ const BASE = import.meta.env.BASE_URL;
     </style>
   </head>
   <body>
-    <header><h1><a href={BASE}>Grüne Vorlagen NÖ</a></h1></header>
+    <header>
+      <h1><a href={BASE}>Grüne Vorlagen NÖ</a></h1>
+      <nav>
+        <a href={url('/')}>Galerie</a>
+        <a href={url('experiments/')}>Design-Experimente</a>
+      </nav>
+    </header>
     <main>
       <slot />
     </main>
