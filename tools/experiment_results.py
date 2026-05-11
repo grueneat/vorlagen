@@ -24,6 +24,7 @@ import argparse
 import datetime
 import glob
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -132,6 +133,19 @@ def aggregate(results_files: list[Path]) -> dict:
             ptr = "/" + "/".join(str(s) for s in errors[0].path)
             raise ValueError(f"{path}: schema invalid at {ptr}: {errors[0].message}")
         payloads.append(data)
+
+    return aggregate_payloads(payloads)
+
+
+def aggregate_payloads(payloads: list[dict]) -> dict:
+    """Combine pre-validated payloads by mean per-slug score across raters.
+
+    Extracted from ``aggregate`` so callers that already hold validated
+    payloads (e.g. the ``--from-emails`` flag in :func:`main`) can reuse
+    the same aggregation pipeline without re-marshalling to disk.
+    """
+    if not payloads:
+        raise ValueError("aggregate_payloads() requires at least 1 payload")
 
     # Collect every slug seen across rankings + selections.
     all_slugs: list[str] = []
@@ -365,6 +379,119 @@ def render_summary(
 
 
 # ---------------------------------------------------------------------------
+# Email / text-body ingestion (issue #33)
+# ---------------------------------------------------------------------------
+#
+# The voting page (issue #33) emits a `mailto:` body containing a
+# human-readable ranking + a machine-readable JSON block wrapped by
+# `VOTE-JSON-START` / `VOTE-JSON-END` markers. The aggregator's
+# `--from-emails <dir>` flag walks a directory of `.eml` / `.txt` files,
+# extracts the JSON between markers, validates it against the same
+# results.schema.yaml, and feeds the payloads into `aggregate_payloads`.
+#
+# Tolerance: leading/trailing whitespace + newlines + extra blank lines
+# around the JSON are stripped. The marker regex matches the markers
+# anywhere on a line so quoted-reply forms like "> VOTE-JSON-START"
+# still parse. Multiple votes concatenated in one file (e.g. forwarded
+# email chain) are all extracted; each is validated independently and
+# either contributes or is logged as an error per file.
+
+# Markers may appear with or without surrounding whitespace; we match
+# from one marker to the other and let `json.loads` handle stray
+# whitespace. `re.DOTALL` lets `.` cross newlines.
+_VOTE_BLOCK_RE = re.compile(
+    r"VOTE-JSON-START\s*(.*?)\s*VOTE-JSON-END",
+    re.DOTALL,
+)
+
+
+def extract_vote_blocks(text: str) -> list[str]:
+    """Return raw JSON strings found between VOTE-JSON-START/END markers.
+
+    Returns an empty list when no markers are present. The strings are
+    not parsed or validated — that's the caller's job.
+    """
+    return [m.group(1).strip() for m in _VOTE_BLOCK_RE.finditer(text)]
+
+
+def _strip_quoted_reply_prefixes(text: str) -> str:
+    """Best-effort: drop leading '> ' on each line (quoted email replies).
+
+    Some email clients (Apple Mail, Gmail) prefix forwarded/replied bodies
+    with `> `. We strip ONLY at line-start to avoid mangling JSON content
+    that contains `>` inside strings. Idempotent on already-clean text.
+    """
+    return re.sub(r"(?m)^>\s?", "", text)
+
+
+def payloads_from_email_dir(
+    directory: Path,
+    *,
+    on_warning: callable | None = None,  # type: ignore[valid-type]
+    on_error: callable | None = None,  # type: ignore[valid-type]
+) -> list[dict]:
+    """Walk ``directory`` for `.eml` / `.txt` files, extract validated payloads.
+
+    Files with no markers emit a warning via ``on_warning`` and are
+    skipped (not an error — operator may have saved an unrelated email
+    by accident). Files whose extracted JSON fails to parse or fails
+    schema validation emit an error via ``on_error`` and are skipped.
+
+    ``on_warning`` / ``on_error`` default to printing to stderr; pass
+    custom callables (e.g. for tests) that accept a single string.
+    """
+    if on_warning is None:
+        def on_warning(msg: str) -> None:  # noqa: E306
+            print(f"WARN: {msg}", file=sys.stderr)
+    if on_error is None:
+        def on_error(msg: str) -> None:  # noqa: E306
+            print(f"ERROR: {msg}", file=sys.stderr)
+
+    directory = Path(directory)
+    if not directory.is_dir():
+        raise ValueError(f"{directory}: not a directory")
+
+    # Stable ordering for deterministic SUMMARY output across runs.
+    candidates = sorted(
+        [p for p in directory.iterdir() if p.suffix.lower() in (".eml", ".txt")]
+    )
+
+    payloads: list[dict] = []
+    for path in candidates:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as e:
+            on_error(f"{path.name}: read failed: {e}")
+            continue
+
+        cleaned = _strip_quoted_reply_prefixes(text)
+        blocks = extract_vote_blocks(cleaned)
+        if not blocks:
+            on_warning(f"{path.name}: no VOTE-JSON-START/END markers found — skipped")
+            continue
+
+        for idx, raw in enumerate(blocks, start=1):
+            try:
+                data = json.loads(raw)
+            except json.JSONDecodeError as e:
+                on_error(
+                    f"{path.name}#{idx}: JSON parse failed at line {e.lineno} "
+                    f"col {e.colno}: {e.msg}"
+                )
+                continue
+            errors = validate_results(data)
+            if errors:
+                ptr = "/" + "/".join(str(s) for s in errors[0].path)
+                on_error(
+                    f"{path.name}#{idx}: schema invalid at {ptr}: {errors[0].message}"
+                )
+                continue
+            payloads.append(data)
+
+    return payloads
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -409,6 +536,20 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional results JSON paths; default globs "
         "experiments/<exp_id>/results/*.json.",
     )
+    ap.add_argument(
+        "--from-emails",
+        dest="from_emails",
+        metavar="DIR",
+        help=(
+            "Ingest votes from a directory of .eml/.txt files. Each file's "
+            "body is scanned for VOTE-JSON-START / VOTE-JSON-END markers; "
+            "the JSON between them is validated against the results schema "
+            "and fed into the same aggregator. Files with no markers are "
+            "skipped with a warning; malformed JSON is logged as an error "
+            "and skipped. Compose with positional JSON paths to merge "
+            "both sources in one run (issue #33)."
+        ),
+    )
     args = ap.parse_args(argv)
 
     if not args.exp_id:
@@ -416,21 +557,64 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     exp_id = args.exp_id
+
+    # Direct-JSON inputs: explicit positionals first, else default glob.
     if args.results:
-        files = [Path(p) for p in args.results]
+        json_files = [Path(p) for p in args.results]
     else:
-        files = sorted(
+        json_files = sorted(
             Path(p)
             for p in glob.glob(
                 str(ROOT / "experiments" / exp_id / "results" / "*.json"),
             )
         )
-    if not files:
+
+    # Build the combined payload list. Direct-JSON paths flow through
+    # aggregate(); email-body payloads flow through aggregate_payloads().
+    # When --from-emails is passed alone we suppress the default glob so
+    # operators can run an email-only session without prior JSON files.
+    payloads: list[dict] = []
+
+    # If --from-emails is set AND the user didn't pass explicit JSON paths,
+    # skip the default glob — the operator's intent is "process emails only".
+    if args.from_emails and not args.results:
+        json_files = []
+
+    if json_files:
+        try:
+            agg_from_files = aggregate(json_files)
+            # aggregate() already loaded + validated; reuse its payloads
+            # by re-deriving them from the score map would be lossy, so
+            # we re-load here to preserve cleanliness.
+            for path in json_files:
+                with path.open(encoding="utf-8") as f:
+                    payloads.append(json.load(f))
+            _ = agg_from_files  # validation side-effect only
+        except ValueError as e:
+            print(f"FATAL: {e}", file=sys.stderr)
+            return 3
+
+    if args.from_emails:
+        try:
+            email_payloads = payloads_from_email_dir(Path(args.from_emails))
+        except ValueError as e:
+            print(f"FATAL: {e}", file=sys.stderr)
+            return 4
+        if not email_payloads and not payloads:
+            print(
+                f"FATAL: --from-emails {args.from_emails}: no valid vote "
+                f"blocks extracted; nothing to aggregate",
+                file=sys.stderr,
+            )
+            return 5
+        payloads.extend(email_payloads)
+
+    if not payloads:
         print(f"FATAL: no results files for {exp_id}", file=sys.stderr)
         return 2
 
     try:
-        agg = aggregate(files)
+        agg = aggregate_payloads(payloads)
     except ValueError as e:
         print(f"FATAL: {e}", file=sys.stderr)
         return 3
