@@ -338,6 +338,142 @@ def attribute_diff_bbox(
     return None, 0.0, candidates
 
 
+def extract_all(
+    out_dir: Path,
+    *,
+    template_slug: Optional[str] = None,
+    threshold: int = 200,
+    min_area_px: int = 100,
+    coverage_threshold: float = 0.5,
+    overlay_out: bool = False,
+) -> dict:
+    """Top-level pipeline: iterate ``visual_diff.json``'s pages, run the
+    connected-components extractor on each delta PNG, attribute against
+    template slots, return the full ``diff_bboxes.json`` payload as a dict.
+
+    Page enumeration uses the ``delta_png`` field recorded in
+    ``visual_diff.json`` rather than re-deriving from the page index —
+    this matters because ``baseline-page-N.png`` is variable-padded but
+    ``diff-page-NN.png`` is always 2-digit, and we want to be robust to
+    future renaming.
+
+    When ``overlay_out=True``, also writes a ``diff-page-NN-overlay.png``
+    next to each delta (red rectangle outlines on the DSL rendering).
+    Implemented in task 7; this kwarg is forwarded there.
+
+    Determinism (decision 5): the returned dict's per-page ``bboxes`` list
+    is sorted by ``(y, x, w, h)`` mm; ``write_json`` serialises with
+    ``sort_keys=True`` so the top-level dict ordering doesn't matter.
+    """
+    dpi = load_dpi(out_dir)
+    vd_path = out_dir / "visual_diff.json"
+    vd_payload = json.loads(vd_path.read_text(encoding="utf-8"))
+
+    slots = load_template_slots(template_slug) if template_slug else {}
+
+    pages_out: list[dict] = []
+    for page_entry in vd_payload.get("pages", []):
+        page_idx = int(page_entry["page"])
+        delta_rel = page_entry["delta_png"]
+        delta_path = out_dir / delta_rel
+        bboxes_px = extract_bboxes_px(delta_path, threshold, min_area_px)
+        page_slots = slots.get(page_idx, {})
+
+        bbox_records: list[dict] = []
+        for bpx in bboxes_px:
+            bmm = px_to_mm_bbox(bpx, dpi)
+            w_px = bpx["w_px"]
+            h_px = bpx["h_px"]
+            rect_px = w_px * h_px
+            mismatch_pct_in_bbox = (
+                round((bpx["area_px"] / rect_px) * 100.0, 1) if rect_px > 0 else 0.0
+            )
+            attr_slot, overlap_pct, candidates = attribute_diff_bbox(
+                bmm, page_slots, coverage_threshold,
+            )
+            bbox_records.append({
+                "bbox_px": {
+                    "x": bpx["x_px"], "y": bpx["y_px"],
+                    "w": w_px, "h": h_px,
+                },
+                "bbox_mm": bmm,
+                "area_px": bpx["area_px"],
+                "mismatch_pct_in_bbox": mismatch_pct_in_bbox,
+                "attributed_slot": attr_slot,
+                "attribution_overlap_pct": overlap_pct,
+                "attribution_candidates": candidates,
+            })
+
+        # Sort per-page bboxes by (y_mm, x_mm, w_mm, h_mm) — decision 5a.
+        bbox_records.sort(key=lambda r: (
+            r["bbox_mm"]["y"], r["bbox_mm"]["x"],
+            r["bbox_mm"]["w"], r["bbox_mm"]["h"],
+        ))
+
+        page_record: dict = {
+            "page": page_idx,
+            "delta_png": delta_rel,
+            "bboxes": bbox_records,
+        }
+        # Stash the px-bboxes alongside so the overlay writer (task 7) can
+        # paint them without re-running the IM CC pass. Strip before
+        # serialising; see write_json's filter.
+        page_record["_bboxes_px_internal"] = bboxes_px
+        pages_out.append(page_record)
+
+    if overlay_out:
+        _write_overlays(out_dir, pages_out)
+
+    payload: dict = {
+        "dpi": dpi,
+        "template_slug": template_slug,
+        "pages": pages_out,
+    }
+    return payload
+
+
+def _strip_internal(payload: dict) -> dict:
+    """Return a copy of ``payload`` without the ``_bboxes_px_internal``
+    helper keys that ``extract_all`` stashes for the overlay writer."""
+    return {
+        "dpi": payload["dpi"],
+        "template_slug": payload.get("template_slug"),
+        "pages": [
+            {
+                "page": p["page"],
+                "delta_png": p["delta_png"],
+                "bboxes": p["bboxes"],
+            }
+            for p in payload.get("pages", [])
+        ],
+    }
+
+
+def write_json(payload: dict, json_path: Path) -> None:
+    """Serialise ``payload`` to ``json_path`` deterministically.
+
+    Uses ``sort_keys=True`` (decision 5c) + ``indent=2`` + UTF-8 so two
+    runs against the same input produce byte-identical files. Strips the
+    internal ``_bboxes_px_internal`` helper keys ``extract_all`` stashes
+    for the overlay writer.
+    """
+    clean = _strip_internal(payload)
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(
+        json.dumps(clean, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _write_overlays(out_dir: Path, pages_out: list[dict]) -> None:
+    """Placeholder hook for the overlay writer (task 7). For now a no-op
+    so the API surface is stable; task 7 implements the Pillow drawing.
+    """
+    # Implemented in task 7. Intentionally empty here so task 6's
+    # determinism tests can pass without depending on Pillow round-trips.
+    _ = out_dir, pages_out
+
+
 def _build_argparser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Visual-diff bbox extractor with slot attribution.",
@@ -376,13 +512,20 @@ def _build_argparser() -> argparse.ArgumentParser:
 def main(argv: Optional[list[str]] = None) -> int:
     ap = _build_argparser()
     args = ap.parse_args(argv)
-    # Real logic lands in tasks 2-10. Bootstrap CLI prints the parsed args.
-    print(
-        f"diff_bbox_extract bootstrap: out_dir={args.out_dir} "
-        f"template_slug={args.template_slug} threshold={args.threshold} "
-        f"min_area_px={args.min_area_px} coverage_threshold={args.coverage_threshold} "
-        f"overlay_out={args.overlay_out} json_out={args.json_out}"
+    out_dir: Path = args.out_dir
+    json_out: Path = args.json_out or (out_dir / "diff_bboxes.json")
+    payload = extract_all(
+        out_dir,
+        template_slug=args.template_slug,
+        threshold=args.threshold,
+        min_area_px=args.min_area_px,
+        coverage_threshold=args.coverage_threshold,
+        overlay_out=args.overlay_out,
     )
+    write_json(payload, json_out)
+    n_pages = len(payload.get("pages", []))
+    n_bboxes = sum(len(p["bboxes"]) for p in payload.get("pages", []))
+    print(f"wrote {json_out} ({n_bboxes} bboxes across {n_pages} pages)")
     return 0
 
 

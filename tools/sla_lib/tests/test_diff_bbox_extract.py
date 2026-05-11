@@ -23,8 +23,34 @@ sys.path.insert(0, str(ROOT / "tools"))
 import diff_bbox_extract  # noqa: E402
 from diff_bbox_extract import (  # noqa: E402
     DiffBBoxError, attribute_diff_bbox, coverage_of_diff_inside_slot,
-    extract_bboxes_px, load_dpi, load_template_slots, px_to_mm_bbox,
+    extract_all, extract_bboxes_px, load_dpi, load_template_slots,
+    px_to_mm_bbox, write_json,
 )
+
+
+def _build_synthetic_out_dir(
+    tmpdir: Path, page_rects: list[list[tuple[int, int, int, int]]],
+    *, dpi: int = 96, delta_filenames: list[str] | None = None,
+) -> Path:
+    """Build a fake visual_diff.py output directory in ``tmpdir``.
+
+    ``page_rects`` is a list (one entry per page) of rectangles
+    ``(x, y, w, h)`` in pixels to draw red on the delta PNG. Returns the
+    tmpdir path for convenience.
+    """
+    pages_meta = []
+    for idx, rects in enumerate(page_rects):
+        fname = (
+            delta_filenames[idx] if delta_filenames
+            else f"diff-page-{idx + 1:02d}.png"
+        )
+        _draw_delta(tmpdir / fname, (200, 200), rects)
+        pages_meta.append({"page": idx, "delta_png": fname})
+    (tmpdir / "visual_diff.json").write_text(
+        json.dumps({"dpi": dpi, "pages": pages_meta}, indent=2),
+        encoding="utf-8",
+    )
+    return tmpdir
 
 
 def _draw_delta(path: Path, size: tuple[int, int],
@@ -248,6 +274,100 @@ class AttributionMathTests(unittest.TestCase):
         self.assertIsNone(name)
         self.assertEqual(overlap, 0.0)
         self.assertEqual(cands, [])
+
+
+class ExtractAllPipelineTests(unittest.TestCase):
+    """Tests for ``extract_all`` + ``write_json`` (Issue #36 task 6)."""
+
+    def setUp(self) -> None:
+        self.tmpdir = Path(tempfile.mkdtemp(prefix="diff_bbox_extract_all_"))
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_extract_all_deterministic_byte_equal(self) -> None:
+        out_dir = _build_synthetic_out_dir(
+            self.tmpdir / "vd",
+            page_rects=[
+                [(50, 60, 30, 20)],
+                [(20, 30, 40, 40), (120, 110, 25, 25)],
+            ],
+        )
+        payload_a = extract_all(out_dir, min_area_px=10)
+        payload_b = extract_all(out_dir, min_area_px=10)
+        out_a = self.tmpdir / "a.json"
+        out_b = self.tmpdir / "b.json"
+        write_json(payload_a, out_a)
+        write_json(payload_b, out_b)
+        self.assertEqual(
+            out_a.read_bytes(), out_b.read_bytes(),
+            "diff_bboxes.json must be byte-identical across runs",
+        )
+
+    def test_extract_all_sorts_bboxes_by_y_then_x(self) -> None:
+        out_dir = _build_synthetic_out_dir(
+            self.tmpdir / "vd",
+            page_rects=[[
+                (150, 50, 20, 20),   # rect at low y
+                (10, 150, 25, 25),   # rect at high y (sorted last)
+                (130, 50, 15, 15),   # same y as the first, but lower x
+            ]],
+        )
+        payload = extract_all(out_dir, min_area_px=10)
+        rects = payload["pages"][0]["bboxes"]
+        self.assertEqual(len(rects), 3)
+        ys = [r["bbox_mm"]["y"] for r in rects]
+        self.assertEqual(ys, sorted(ys), f"not sorted by y: {ys}")
+        # Two share y; the lower-x one comes first.
+        same_y = [r for r in rects if r["bbox_mm"]["y"] == ys[0]]
+        if len(same_y) == 2:
+            self.assertLess(same_y[0]["bbox_mm"]["x"], same_y[1]["bbox_mm"]["x"])
+
+    def test_extract_all_no_template_slug_unattributed(self) -> None:
+        out_dir = _build_synthetic_out_dir(
+            self.tmpdir / "vd", page_rects=[[(50, 60, 30, 20)]],
+        )
+        payload = extract_all(out_dir, template_slug=None, min_area_px=10)
+        for page in payload["pages"]:
+            for bbox in page["bboxes"]:
+                self.assertIsNone(bbox["attributed_slot"])
+                self.assertEqual(bbox["attribution_candidates"], [])
+                self.assertEqual(bbox["attribution_overlap_pct"], 0.0)
+
+    def test_extract_all_uses_recorded_delta_filename(self) -> None:
+        # Use a non-default delta_png name to prove extract_all reads
+        # the field from visual_diff.json instead of re-deriving from
+        # the page index (e.g. f"diff-page-{idx+1:02d}.png").
+        out_dir = _build_synthetic_out_dir(
+            self.tmpdir / "vd",
+            page_rects=[[(50, 60, 30, 20)]],
+            delta_filenames=["diff-page-99.png"],
+        )
+        payload = extract_all(out_dir, min_area_px=10)
+        self.assertEqual(
+            payload["pages"][0]["delta_png"], "diff-page-99.png",
+        )
+        self.assertEqual(len(payload["pages"][0]["bboxes"]), 1)
+
+    def test_extract_all_schema_keys(self) -> None:
+        out_dir = _build_synthetic_out_dir(
+            self.tmpdir / "vd", page_rects=[[(50, 60, 30, 20)]],
+        )
+        payload = extract_all(out_dir, min_area_px=10)
+        # Top-level keys (after _strip_internal):
+        write_json(payload, self.tmpdir / "out.json")
+        clean = json.loads((self.tmpdir / "out.json").read_text())
+        self.assertEqual(set(clean.keys()), {"dpi", "template_slug", "pages"})
+        page = clean["pages"][0]
+        self.assertEqual(set(page.keys()), {"page", "delta_png", "bboxes"})
+        bbox = page["bboxes"][0]
+        self.assertEqual(set(bbox.keys()), {
+            "bbox_px", "bbox_mm", "area_px", "mismatch_pct_in_bbox",
+            "attributed_slot", "attribution_overlap_pct",
+            "attribution_candidates",
+        })
+        self.assertEqual(set(bbox["bbox_px"].keys()), {"x", "y", "w", "h"})
+        self.assertEqual(set(bbox["bbox_mm"].keys()), {"x", "y", "w", "h"})
 
 
 if __name__ == "__main__":
