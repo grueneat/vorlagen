@@ -33,15 +33,6 @@ from sla_lib.builder import (  # noqa: E402
 
 INJECT_MAP: dict[str, str] = {}
 
-# Repo-root-relative asset directory; images are referenced by absolute path so
-# Scribus can resolve them regardless of where the SLA file sits on disk.
-_ASSETS = HERE.parents[1] / "shared" / "assets" / "26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2"
-
-
-def _asset(name: str) -> str:
-    """Return absolute path to a shared asset file."""
-    return str(_ASSETS / name)
-
 def _add_styles(doc: Document) -> None:
     """Paragraph styles — populated by tools/idml_to_dsl.py Phase G."""
     # (no paragraph styles in this task-3 skeleton)
@@ -72,12 +63,9 @@ def build_template() -> Document:
             DocumentLayer(name='Gestaltung'),
             DocumentLayer(name='Info', printable=False, editable=False),
         ],
-        # Disable crop/bleed marks so the exported PDF MediaBox matches the
-        # InDesign baseline (297×210 mm trim-only, no marks area).
         extra_pdf_attrs={
             'cropMarks': '0',
             'bleedMarks': '0',
-            'useDocBleeds': '0',
         },
     )
 
@@ -87,19 +75,19 @@ def build_template() -> Document:
     doc.add_master(
         name="Normal",
         size=(297, 210),
-        bleed_mm=0,
+        bleed_mm=2,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
     )
 
     page0 = doc.add_page(
         size=(297, 210),
-        bleed_mm=0,
+        bleed_mm=2,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
         master="Normal",
     )
     page1 = doc.add_page(
         size=(297, 210),
-        bleed_mm=0,
+        bleed_mm=2,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
         master="Normal",
     )
@@ -182,7 +170,9 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=15.6052,
         anname='u141',
         layer=0,
-        image=_asset('gruene-logo-bund-weiss-cmyk.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.png',
+        local_scale=(0.954846, 0.954846),
+        local_offset_mm=(0, -0.0549),
     ))
     page0.add(Polygon(
         x_mm=198.3236,
@@ -221,28 +211,6 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         style='idml/normalparagraphstyle',
         runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', fontsize=38, fcolor='White'), Run(text='', separator='breakline'), Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb'), Run(text='', separator='breakline'), Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
-    ))
-    page0.add(Polygon(
-        x_mm=270.4336,
-        y_mm=64.5139,
-        w_mm=19.8617,
-        h_mm=19.8617,
-        anname='u185',
-        layer=0,
-        rotation_deg=-18,
-        fill='Magenta',
-        shape='ellipse',
-    ))
-    page0.add(TextFrame(
-        x_mm=269.8088,
-        y_mm=71.2819,
-        w_mm=21.1112,
-        h_mm=6.3257,
-        anname='u186',
-        layer=0,
-        rotation_deg=-9,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
     ))
     page0.add(Polygon(
         x_mm=308.75,
@@ -312,7 +280,8 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         runs=[Run(text='\t•\t'), Run(text='Scim rem ', font='Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Tissi iuntem ressiti ', font='Black'), Run(text='orerovi tectotmusaqui tota nis quam.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Uaerum ium ', font='Black'), Run(text='verior alicide liquuntio. '), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='vello modi ', font='Black'), Run(text='aceprate pem ssi iuntem ilis'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='moditatque', font='Black'), Run(text=' nimil maxim voluptur.'), Run(text='', separator='breakline'), Run(text='\t'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
     ))
     # u2b0 omitted: yellow-outline guide marker present in IDML Gestaltung layer
-    # but not emitted in the InDesign PDF export (design artifact, not content).
+    # but excluded from InDesign PDF export (design workflow artifact, not content).
+    # Scribus renders it visible; InDesign suppresses it via internal export logic.
 
 
 def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
@@ -354,7 +323,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=41.6915,
         anname='u2cd',
         layer=0,
-        image=_asset('green-pine-trees-covered-with-fog.jpg'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/green-pine-trees-covered-with-fog.jpg',
+        local_scale=(0.490989, 0.490989),
+        local_offset_mm=(0, -24.0251),
     ))
     page1.add(TextFrame(
         x_mm=110.5,
@@ -458,7 +429,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=210.3748,
         anname='u3a0',
         layer=0,
-        image=_asset('plakat-dunkel-fuer-flyer.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png',
+        local_scale=(0.954702, 0.954702),
+        local_offset_mm=(0, 0.1874),
     ))
     page1.add(TextFrame(
         x_mm=203.88,
@@ -498,7 +471,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        image=_asset('social-media-icons-weiss.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        local_scale=(0.09, 0.09),
+        local_offset_mm=(-12.1647, -0.7654),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -517,7 +492,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        image=_asset('social-media-icons-weiss.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        local_scale=(0.09, 0.09),
+        local_offset_mm=(-4.5974, -0.7654),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -536,7 +513,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        image=_asset('social-media-icons-weiss.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        local_scale=(0.09, 0.09),
+        local_offset_mm=(-8.28, -0.7654),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -555,7 +534,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u477',
         layer=0,
-        image=_asset('bluesky-weiss.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
+        local_scale=(0.091589, 0.091589),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -574,7 +554,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4a2',
         layer=0,
-        image=_asset('website-weiss.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
+        local_scale=(0.095788, 0.095788),
+        local_offset_mm=(-0.0774, -0.0774),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -593,7 +575,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4da',
         layer=0,
-        image=_asset('mail-weiss.png'),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
+        local_scale=(0.095787, 0.095787),
+        local_offset_mm=(-0.0672, -0.0626),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
