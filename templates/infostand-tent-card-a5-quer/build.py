@@ -502,8 +502,20 @@ def build_template() -> Document:
         page.add(prim)
 
     # ---- FOLD LINE at y=105 ---------------------------------------------
+    # Production cutting guide on the Falz layer (Spot-color "Falz", dashed,
+    # 0.5pt — for prepress workflows).
     page.add(TableTentFold(page_size_mm=(TRIM_W_MM, TRIM_H_MM),
                           layer_idx=LAYER_FALZ))
+    # Visible fold marker for end-users printing this on a home printer and
+    # folding by hand: a thin solid black line spanning the trim width at the
+    # fold position. Lives on the Bilder layer so it renders above the
+    # Hellgrün Footer-Strip pair on Hintergrund.
+    page.add(Polygon(
+        x_mm=0, y_mm=FOLD_Y_MM - 0.2, w_mm=TRIM_W_MM, h_mm=0.4,
+        fill="Black",
+        layer=LAYER_BILDER,
+        anname="Falzmarkierung sichtbar",
+    ))
 
     # ---- PANEL B (y=105..210) — V1 "Hero Band", EN 180° -------------------
     for prim in _panel_en():
