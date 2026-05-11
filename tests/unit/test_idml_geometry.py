@@ -135,6 +135,45 @@ def test_shear_rejected():
         )
 
 
+def test_page_geometric_bounds_offset():
+    """Pages can have a non-(0,0) interior origin; GeometricBounds y1/x1
+    must be subtracted to get a true page-top-left coord system.
+
+    Mirrors the target IDML's cover spread:
+      Page u10f: ItemTransform '1 0 0 1 -420.94 -140.31',
+                 GeometricBounds '-157.32 0 437.95 841.89' (y1 x1 y2 x2)
+      Rect at spread origin (0, 0) with anchors at the spread-trim bbox.
+    """
+    anchors = [
+        (-420.9448818897638, -297.6377952755905),
+        (-420.9448818897638, 297.6377952755905),
+        (420.9448818897638, 297.6377952755905),
+        (420.9448818897638, -297.6377952755905),
+    ]
+    # Without geometric_bounds — comes out offset.
+    x_no_gb, y_no_gb, w_no_gb, h_no_gb, _ = _compute_page_local_bbox_pt(
+        item_transform_str="1 0 0 1 0 0",
+        anchors=anchors,
+        ancestor_transforms=[],
+        spread_item_transform_str=IDENT,
+        page_item_transform_str="1 0 0 1 -420.9448818897638 -140.31496062992127",
+    )
+    assert w_no_gb == pytest.approx(841.89, rel=1e-3)
+    assert h_no_gb == pytest.approx(595.28, rel=1e-3)
+    # WITH geometric_bounds — rectangle aligns to page top-left.
+    x, y, w, h, _ = _compute_page_local_bbox_pt(
+        item_transform_str="1 0 0 1 0 0",
+        anchors=anchors,
+        ancestor_transforms=[],
+        spread_item_transform_str=IDENT,
+        page_item_transform_str="1 0 0 1 -420.9448818897638 -140.31496062992127",
+        page_geometric_bounds=(-157.32283464566927, 0.0, 437.9527559055118, 841.8897637795276),
+    )
+    assert x == pytest.approx(0, abs=0.01)
+    assert y == pytest.approx(0, abs=0.01)
+    assert (w, h) == pytest.approx((841.89, 595.28), rel=1e-3)
+
+
 def test_parse_matrix_rejects_bad_token_count():
     with pytest.raises(UnhandledElement):
         _parse_matrix("1 0 0 1 0")  # only 5 tokens

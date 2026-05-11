@@ -252,6 +252,7 @@ def _compute_page_local_bbox_pt(
     ancestor_transforms: list[str],
     spread_item_transform_str: str,
     page_item_transform_str: str,
+    page_geometric_bounds: Optional[tuple[float, float, float, float]] = None,
 ) -> tuple[float, float, float, float, float]:
     """Convert IDML PageItem geometry to (x_pt, y_pt, w_pt, h_pt, rotation_deg)
     in page-top-left coordinates.
@@ -265,13 +266,19 @@ def _compute_page_local_bbox_pt(
         spread_item_transform_str: ``Spread/ItemTransform`` (where the spread
             sits in pasteboard; subtract its translation to get spread-local).
         page_item_transform_str: ``Page/ItemTransform`` (where the page's
-            top-left sits relative to spread origin).
+            local origin sits relative to spread origin).
+        page_geometric_bounds: optional ``(y1, x1, y2, x2)`` from the page's
+            ``GeometricBounds`` attribute. When present, the page-local x1
+            and y1 are SUBTRACTED so the returned (x, y) is relative to the
+            page top-left (i.e. (0, 0) at the top-left corner of the
+            printable page area, NOT including bleed). Without this, the
+            (0, 0) is the page's interior coordinate origin, which can be
+            offset from the page's geometric top-left.
 
     Returns:
         Tuple ``(x_pt, y_pt, w_pt, h_pt, rotation_deg)``. Rotation is CCW
         positive (IDML and Scribus convention agree on sign for our typed
-        DSL — see ``tools/sla_lib/builder/bbox.py``). If the actual emitter
-        finds a sign mismatch during integration, document it in code.
+        DSL — see ``tools/sla_lib/builder/bbox.py``).
 
     Raises:
         UnhandledElement: on sheared or non-uniformly scaled items (only
@@ -317,11 +324,21 @@ def _compute_page_local_bbox_pt(
     spread_origin = _apply_matrix(spread_M, 0.0, 0.0)
     spread_local = [(px - spread_origin[0], py - spread_origin[1]) for (px, py) in spread_pts]
 
-    # Subtract page origin (spread-local → page-local). page_M's translation
-    # is the page's top-left in spread-local coords (e.g. -420.94, -140.31
-    # for our A4-quer left-page layout).
+    # Subtract page origin in spread coords. The page's true top-left in
+    # spread coords is (page_tx + page_x1, page_ty + page_y1), where (x1, y1)
+    # is the page's GeometricBounds top-left in page-local coords. Without
+    # GeometricBounds we fall back to just (page_tx, page_ty) — which is the
+    # page-local-origin, NOT necessarily the page's geometric top-left.
     _, _, _, _, ptx, pty = page_M
-    page_local = [(px - ptx, py - pty) for (px, py) in spread_local]
+    if page_geometric_bounds is not None:
+        y1, x1, _y2, _x2 = page_geometric_bounds
+        page_top_left_in_spread = (ptx + x1, pty + y1)
+    else:
+        page_top_left_in_spread = (ptx, pty)
+    page_local = [
+        (px - page_top_left_in_spread[0], py - page_top_left_in_spread[1])
+        for (px, py) in spread_local
+    ]
 
     xs = [p[0] for p in page_local]
     ys = [p[1] for p in page_local]
@@ -1013,6 +1030,484 @@ def _emit_paragraph_styles_to_function(
 
 
 # ---------------------------------------------------------------------------
+# Phase H — Page items (Spreads/*.xml + nested Stories/*.xml).
+#
+# Recursively walks each spread, dispatches on element type, computes
+# page-local bbox via _compute_page_local_bbox_pt (with the page's
+# GeometricBounds offset), translates IDML colors through ctx.color_map,
+# emits one DSL primitive call per item into ctx.out.
+# ---------------------------------------------------------------------------
+
+# Tags this v1 dispatches to a typed primitive. Anything else (including
+# unknown / out-of-corpus elements like Footnote, Table, Hyperlink) raises.
+_DISPATCHED_PAGEITEM_TAGS = {"Rectangle", "Polygon", "Oval", "TextFrame", "Group"}
+
+
+def _parse_geometric_bounds(s: str) -> tuple[float, float, float, float]:
+    """Parse a GeometricBounds "y1 x1 y2 x2" string into a 4-tuple of floats."""
+    parts = s.split()
+    if len(parts) != 4:
+        raise UnhandledElement(
+            f"GeometricBounds must have 4 tokens, got {len(parts)}: {s!r} "
+            f"(extend tools/idml_to_dsl.py:_parse_geometric_bounds)"
+        )
+    return tuple(float(p) for p in parts)  # type: ignore[return-value]
+
+
+def _extract_anchors(item: Any) -> list[tuple[float, float]]:
+    """Read the PathPointArray anchors from a PageItem's PathGeometry."""
+    pg = item.find("Properties/PathGeometry")
+    if pg is None:
+        # Some items may have a deeply-nested PathGeometry (rare); search.
+        pg = item.find(".//PathGeometry")
+    if pg is None:
+        raise UnhandledElement(
+            f"<{etree.QName(item).localname} Self={item.get('Self')!r}>: "
+            f"no PathGeometry "
+            f"(extend tools/idml_to_dsl.py:_extract_anchors)"
+        )
+    pts = pg.findall(".//PathPointType")
+    if not pts:
+        raise UnhandledElement(
+            f"<{etree.QName(item).localname} Self={item.get('Self')!r}>: "
+            f"PathGeometry has no PathPointType anchors "
+            f"(extend tools/idml_to_dsl.py:_extract_anchors)"
+        )
+    out: list[tuple[float, float]] = []
+    for pp in pts:
+        anchor_str = pp.get("Anchor", "")
+        a = anchor_str.split()
+        if len(a) != 2:
+            raise UnhandledElement(
+                f"PathPointType.Anchor must have 2 tokens: {anchor_str!r} "
+                f"(extend tools/idml_to_dsl.py:_extract_anchors)"
+            )
+        out.append((float(a[0]), float(a[1])))
+    return out
+
+
+def _resolve_fill(self_attr_value: Optional[str], color_map: dict[str, str]) -> Optional[str]:
+    """Translate FillColor / StrokeColor Self-ID through the color map.
+
+    Returns None for None, ``Color/None``, or ``Swatch/None`` (i.e. no fill).
+    Raises if the Self-ID is present but cannot be mapped.
+    """
+    if not self_attr_value:
+        return None
+    if self_attr_value in ("Color/None", "Swatch/None"):
+        return None
+    if self_attr_value not in color_map:
+        raise UnhandledElement(
+            f"FillColor {self_attr_value!r} not resolvable via color_map "
+            f"(extend tools/idml_to_dsl.py:_resolve_fill)"
+        )
+    return color_map[self_attr_value]
+
+
+def _strict_no_threading(item: Any) -> None:
+    """Raise on threaded TextFrames (NextTextFrame / PreviousTextFrame != 'n')."""
+    nxt = item.get("NextTextFrame", "n")
+    prv = item.get("PreviousTextFrame", "n")
+    if nxt != "n" or prv != "n":
+        raise UnhandledElement(
+            f"TextFrame Self={item.get('Self')!r}: threaded "
+            f"(Next/Previous != 'n'); not supported in v1 "
+            f"(extend tools/idml_to_dsl.py:_strict_no_threading)"
+        )
+
+
+def _emit_pageitem(
+    out: PythonRepr,
+    item: Any,
+    ancestor_transforms: list[str],
+    spread_t: str,
+    page_t: str,
+    page_gb: tuple[float, float, float, float],
+    page_var: str,
+    ctx: _Ctx,
+    layer_idx: int,
+) -> None:
+    """Dispatch a PageItem to its emitter and append the call to ctx.out."""
+    tag = etree.QName(item).localname
+    self_id = item.get("Self", "<unknown>")
+
+    if tag == "Group":
+        # Recurse into the group, prepending the group's ItemTransform to the
+        # ancestor chain (innermost-first ordering).
+        grp_t = item.get("ItemTransform", "1 0 0 1 0 0")
+        # Children of Group inherit ItemLayer.
+        grp_layer_idx = layer_idx
+        for child in item:
+            if not isinstance(child.tag, str):
+                continue
+            ctag = etree.QName(child).localname
+            if ctag not in _DISPATCHED_PAGEITEM_TAGS:
+                # Skip Properties etc.; anything else surfaces as a strict raise.
+                if ctag in ("Properties", "TextWrapPreference", "InCopyExportOption",
+                            "ObjectExportOption", "FrameFittingOption",
+                            "AnchoredObjectSetting"):
+                    if ctag == "AnchoredObjectSetting":
+                        # Plan locks this out of scope.
+                        # Only raise if the setting is non-default.
+                        if any(child.attrib.values()):
+                            pass  # default config — skip silently
+                    continue
+                raise UnhandledElement(
+                    f"<Group Self={self_id!r}> contains unhandled <{ctag}>; "
+                    f"(extend tools/idml_to_dsl.py:_emit_pageitem)"
+                )
+            _emit_pageitem(
+                out,
+                child,
+                [grp_t, *ancestor_transforms],
+                spread_t,
+                page_t,
+                page_gb,
+                page_var,
+                ctx,
+                grp_layer_idx,
+            )
+        return
+
+    item_t = item.get("ItemTransform", "1 0 0 1 0 0")
+    anchors = _extract_anchors(item)
+    x_pt, y_pt, w_pt, h_pt, rot = _compute_page_local_bbox_pt(
+        item_t, anchors, ancestor_transforms, spread_t, page_t, page_gb
+    )
+    x_mm = x_pt * PT_TO_MM
+    y_mm = y_pt * PT_TO_MM
+    w_mm = w_pt * PT_TO_MM
+    h_mm = h_pt * PT_TO_MM
+
+    # Detect nested vector logos (<PDF>) — defer per locked decision #2.
+    pdf_children = item.findall(".//PDF")
+    image_children = item.findall(".//Image")
+    eps_children = item.findall(".//EPS")
+    if eps_children:
+        raise UnhandledElement(
+            f"<{tag} Self={self_id!r}> contains <EPS>; not in v1 corpus "
+            f"(extend tools/idml_to_dsl.py:_emit_pageitem)"
+        )
+    if pdf_children:
+        # Collect: each <PDF> + its Link's LinkResourceURI basename.
+        for pdf in pdf_children:
+            link = pdf.find(".//Link")
+            uri = link.get("LinkResourceURI", "") if link is not None else ""
+            basename = _basename_from_uri(uri)
+            # Logo-map override (task 8 wires this); for v1 always defer.
+            mapped = ctx.logo_map.get(basename) if ctx.logo_map else None
+            if mapped:
+                # Use the mapped PNG for the entire enclosing frame.
+                _emit_image_frame_call(
+                    out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
+                    image_path=mapped, ctx=ctx,
+                )
+                return
+            ctx.unmapped_logos.append((pdf.get("Self", "?"), basename or uri))
+        return  # don't also emit the surrounding rectangle as a Polygon
+
+    if image_children:
+        # Use the first <Image> child as the visual content.
+        img = image_children[0]
+        _emit_image_content(out, item, img, x_mm, y_mm, w_mm, h_mm, rot,
+                            self_id, layer_idx, ctx)
+        return
+
+    if tag == "TextFrame":
+        _strict_no_threading(item)
+        # Task 6 stub: emit empty TextFrame; task 7 fills runs.
+        parent_story = item.get("ParentStory")
+        # Determine the per-frame default ParaStyle (first PSR in the story).
+        style_slug = ""
+        if parent_story:
+            try:
+                story_root = _resolve_story_xml(ctx.pkg, parent_story)
+                first_psr = story_root.find(".//ParagraphStyleRange")
+                if first_psr is not None:
+                    ap = first_psr.get("AppliedParagraphStyle")
+                    if ap and ap in ctx.paragraph_style_map:
+                        style_slug = ctx.paragraph_style_map[ap]
+            except UnhandledElement:
+                pass
+        kwargs: dict[str, Any] = {
+            "x_mm": _round_mm(x_mm),
+            "y_mm": _round_mm(y_mm),
+            "w_mm": _round_mm(w_mm),
+            "h_mm": _round_mm(h_mm),
+            "anname": self_id,
+            "layer": layer_idx,
+            "text": "",
+            "style": style_slug,
+        }
+        if abs(rot) > 1e-3:
+            kwargs["rotation_deg"] = _round_rot(rot)
+        # Fill (frame background, rare on TextFrame but corpus has Color/Paper
+        # cases — drop through the color map).
+        fc = _resolve_fill(item.get("FillColor"), ctx.color_map)
+        if fc:
+            kwargs["fill"] = fc
+        _emit_call(
+            ctx.out, "TextFrame", kwargs,
+            receiver=page_var, multiline=True,
+        )
+        return
+
+    if tag in ("Rectangle", "Polygon", "Oval"):
+        # No nested image/pdf — emit as a Polygon.
+        kwargs = {
+            "x_mm": _round_mm(x_mm),
+            "y_mm": _round_mm(y_mm),
+            "w_mm": _round_mm(w_mm),
+            "h_mm": _round_mm(h_mm),
+            "anname": self_id,
+            "layer": layer_idx,
+        }
+        if abs(rot) > 1e-3:
+            kwargs["rotation_deg"] = _round_rot(rot)
+        fc = _resolve_fill(item.get("FillColor"), ctx.color_map)
+        if fc:
+            kwargs["fill"] = fc
+        else:
+            # Polygon's DSL default fill is "Black"; explicit None drops it.
+            kwargs["fill"] = "None"
+        sc = _resolve_fill(item.get("StrokeColor"), ctx.color_map)
+        if sc:
+            kwargs["line_color"] = sc
+            sw = item.get("StrokeWeight")
+            if sw:
+                try:
+                    kwargs["line_width_pt"] = float(sw)
+                except ValueError:
+                    pass
+        if tag == "Oval":
+            kwargs["shape"] = "ellipse"
+        _emit_call(
+            ctx.out, "Polygon", kwargs,
+            receiver=page_var, multiline=True,
+        )
+        return
+
+    raise UnhandledElement(
+        f"PageItem <{tag}> Self={self_id!r}: not handled "
+        f"(extend tools/idml_to_dsl.py:_emit_pageitem)"
+    )
+
+
+def _round_mm(v: float) -> float:
+    """Round mm value to 4 decimal places for emit (sub-micron precision)."""
+    return round(v, 4)
+
+
+def _round_rot(v: float) -> float:
+    """Round rotation_deg to 4 decimal places; collapse near-zero to zero."""
+    if abs(v) < 1e-4:
+        return 0.0
+    return round(v, 4)
+
+
+def _basename_from_uri(uri: str) -> str:
+    """Return the basename of a ``file:`` URI, URL-decoded and NFC-normalised.
+
+    macOS InDesign emits URIs with NFD (decomposed) Unicode for accented chars
+    (e.g. ``u\\u0308`` instead of ``ü``); the rest of the toolchain assumes NFC,
+    so normalise here to keep dict lookups stable.
+    """
+    if not uri:
+        return ""
+    parsed = urlparse(uri)
+    if parsed.scheme not in ("file", ""):
+        # Other schemes (http etc.) not supported.
+        return ""
+    raw_path = unquote(parsed.path)
+    return unicodedata.normalize("NFC", Path(raw_path).name)
+
+
+def _emit_image_frame_call(
+    out: PythonRepr,
+    x_mm: float,
+    y_mm: float,
+    w_mm: float,
+    h_mm: float,
+    rot: float,
+    self_id: str,
+    layer_idx: int,
+    image_path: str,
+    ctx: _Ctx,
+    inline_data: Optional[str] = None,
+    inline_ext: Optional[str] = None,
+) -> None:
+    """Append a page.add(ImageFrame(...)) call to ctx.out."""
+    kwargs: dict[str, Any] = {
+        "x_mm": _round_mm(x_mm),
+        "y_mm": _round_mm(y_mm),
+        "w_mm": _round_mm(w_mm),
+        "h_mm": _round_mm(h_mm),
+        "anname": self_id,
+        "layer": layer_idx,
+    }
+    if abs(rot) > 1e-3:
+        kwargs["rotation_deg"] = _round_rot(rot)
+    if image_path:
+        kwargs["image"] = image_path
+    if inline_data is not None and inline_ext is not None:
+        kwargs["inline_image_data"] = inline_data
+        kwargs["inline_image_ext"] = inline_ext
+    page_var = ctx.layer_id_to_idx  # unused; emit call always uses receiver via outer scope
+    # The receiver is the page variable (e.g. "page0"); the outer _emit_pageitem
+    # passes ctx.out and the page_var explicitly. For simplicity here we emit
+    # without a receiver and rely on the outer page-loop variable. Use a
+    # global stash on ctx instead.
+    receiver = getattr(ctx, "_current_page_var", None) or "page"
+    _emit_call(ctx.out, "ImageFrame", kwargs, receiver=receiver, multiline=True)
+
+
+def _emit_image_content(
+    out: PythonRepr,
+    rect: Any,
+    img: Any,
+    x_mm: float,
+    y_mm: float,
+    w_mm: float,
+    h_mm: float,
+    rot: float,
+    self_id: str,
+    layer_idx: int,
+    ctx: _Ctx,
+) -> None:
+    """Emit a raster Image as an ImageFrame, resolving the file: URI."""
+    link = img.find(".//Link")
+    uri = link.get("LinkResourceURI", "") if link is not None else ""
+    basename = _basename_from_uri(uri)
+    if not basename:
+        raise UnhandledElement(
+            f"<Image Self={img.get('Self')!r}> inside Rectangle Self={self_id!r}: "
+            f"unparseable LinkResourceURI {uri!r} "
+            f"(extend tools/idml_to_dsl.py:_emit_image_content)"
+        )
+    asset_path = ctx.assets_dir / basename
+    if not asset_path.exists():
+        # Decision #3: defer missing-asset raise to end-of-conversion.
+        ctx.missing_assets.append(str(asset_path))
+        return
+    # Repo-relative path for the emitted build.py.
+    try:
+        rel_path = asset_path.resolve().relative_to(ROOT)
+        emit_path = str(rel_path).replace("\\", "/")
+    except ValueError:
+        # Asset is outside the repo root; fall back to absolute path string.
+        emit_path = str(asset_path.resolve())
+
+    _emit_image_frame_call(
+        ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
+        self_id, layer_idx, image_path=emit_path, ctx=ctx,
+    )
+
+
+def _resolve_story_xml(pkg: Any, parent_story_id: str) -> Any:
+    """Open Stories/Story_<id>.xml and return its root element."""
+    path = f"Stories/Story_{parent_story_id}.xml"
+    if path not in pkg.namelist():
+        raise UnhandledElement(
+            f"Story XML not found for ParentStory={parent_story_id!r}: {path} "
+            f"(extend tools/idml_to_dsl.py:_resolve_story_xml)"
+        )
+    xml = pkg.open(path).read()
+    return etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+
+
+def _emit_pages(ctx: _Ctx) -> None:
+    """Phase H driver: emit one _add_page_<i> function body per page."""
+    spreads = list(ctx.pkg.spreads)
+    pages = list(ctx.pkg.pages)
+    if len(spreads) != len(pages):
+        raise UnhandledElement(
+            f"Expected one Page per Spread, got {len(spreads)} spreads "
+            f"and {len(pages)} pages "
+            f"(extend tools/idml_to_dsl.py:_emit_pages)"
+        )
+    for i, (sp_path, page_obj) in enumerate(zip(spreads, pages)):
+        xml = ctx.pkg.open(sp_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        spread_node = root.find(".//Spread")
+        spread_t = spread_node.get("ItemTransform", "1 0 0 1 0 0")
+        page_node = spread_node.find("Page")
+        page_t = page_node.get("ItemTransform", "1 0 0 1 0 0")
+        page_gb = _parse_geometric_bounds(page_node.get("GeometricBounds", "0 0 0 0"))
+        page_var = f"page{i}"
+        ctx._current_page_var = page_var  # type: ignore[attr-defined]
+
+        # Override the task-3 stub for this page.
+        ctx.out.w("")
+        ctx.out.w(f"def _add_page_{i}(doc: Document, {page_var}) -> None:  # overrides task-3 stub")
+        ctx.out.indent += 1
+        ctx.out.w(f'"""Auto-generated page-items for page {i + 1} (Spread {sp_path})."""')
+
+        emit_count = 0
+        for child in spread_node:
+            if not isinstance(child.tag, str):
+                continue
+            tag = etree.QName(child).localname
+            if tag in ("Page", "FlattenerPreference"):
+                continue
+            item_layer = child.get("ItemLayer", "")
+            if item_layer not in ctx.printable_layer_ids:
+                # Drop Info-layer print marks per locked decision #5
+                # (Falz lines added manually post-bootstrap).
+                continue
+            if tag not in _DISPATCHED_PAGEITEM_TAGS:
+                # GraphicLine, MasterSpreadPageReference, etc. — raise loudly
+                # since we filtered to printable layers. Plan locks GraphicLine
+                # to "raise on encounter" but corpus puts all GraphicLines on
+                # Info layer (already filtered) — so a Gestaltung GraphicLine
+                # would be a genuine surprise.
+                raise UnhandledElement(
+                    f"Top-level <{tag} Self={child.get('Self')!r}> on printable "
+                    f"layer {item_layer!r} not handled "
+                    f"(extend tools/idml_to_dsl.py:_emit_pages)"
+                )
+            layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
+            _emit_pageitem(ctx.out, child, [], spread_t, page_t, page_gb,
+                           page_var, ctx, layer_idx)
+            emit_count += 1
+        if emit_count == 0:
+            ctx.out.w("return None")
+        ctx.out.indent -= 1
+        ctx.out.w("")
+
+
+def _final_strictness_gates(ctx: _Ctx) -> None:
+    """Raise a single end-of-run UnhandledElement listing all deferred issues.
+
+    Per locked decisions #2 (unmapped vector logos) and #3 (missing raster
+    assets). Combines both into one message so the human gets a complete
+    work-list before re-running.
+    """
+    msgs: list[str] = []
+    if ctx.unmapped_logos:
+        seen: set[str] = set()
+        unique_logos: list[tuple[str, str]] = []
+        for sid, uri in ctx.unmapped_logos:
+            if uri in seen:
+                continue
+            seen.add(uri)
+            unique_logos.append((sid, uri))
+        logo_list = "\n  ".join(f"- {sid}: {uri}" for sid, uri in unique_logos)
+        msgs.append(
+            f"Unmapped vector logos ({len(unique_logos)} unique):\n  {logo_list}\n"
+            f"Stage pre-rasterised PNGs under shared/logos/ and pass "
+            f"--logo-map <yaml> mapping basename → png_path, then re-run."
+        )
+    if ctx.missing_assets:
+        m_list = "\n  ".join(f"- {p}" for p in ctx.missing_assets)
+        msgs.append(
+            f"Missing raster assets ({len(ctx.missing_assets)}):\n  {m_list}\n"
+            f"Place files under --assets-dir (or extend the resolver)."
+        )
+    if msgs:
+        raise UnhandledElement("\n\n".join(msgs))
+
+
+# ---------------------------------------------------------------------------
 # Phase D/E — emit build.py header + Document + add_master + add_page calls
 # ---------------------------------------------------------------------------
 def _emit_header(out: PythonRepr, template_id: str, idml_name: str) -> None:
@@ -1275,8 +1770,12 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         _emit_document_scaffold(ctx.out, ctx)
         # Phase G — paragraph styles (overrides the task-3 stub)
         _emit_paragraph_styles(ctx.out, ctx)
+        # Phase H — page items (overrides the task-3 stubs)
+        _emit_pages(ctx)
         # Footer (build_preview / build / main)
         _emit_footer(ctx.out)
+        # Final strict-mode gates: surface unmapped logos / missing assets.
+        _final_strictness_gates(ctx)
 
         # Write emitted Python source
         output.parent.mkdir(parents=True, exist_ok=True)
