@@ -43,8 +43,23 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
+import subprocess
 from pathlib import Path
 from typing import Optional
+
+
+# Parse one line of ImageMagick's `-connected-components 8 -define
+# connected-components:verbose=true` output:
+#
+#   Objects (id: bounding-box centroid area mean-color):
+#     0: 1240x1754+0+0 619.5,876.7 2174960 srgba(255,255,255,1)
+#     1: 12x18+340+512  345.5,520.5 216 srgba(199,23,35,1)
+#
+# Groups: (id, w, h, x, y, area, mean_color_str).
+_CC_RE = re.compile(
+    r"^\s*(\d+):\s+(\d+)x(\d+)\+(\d+)\+(\d+)\s+[\d.]+,[\d.]+\s+(\d+)\s+(.+)$"
+)
 
 
 class DiffBBoxError(RuntimeError):
@@ -55,6 +70,95 @@ class DiffBBoxError(RuntimeError):
     stop execution. Soft failures (missing template slots, build failure
     with ``--template-slug``) use ``warnings.warn(...)`` and continue.
     """
+
+
+def extract_bboxes_px(
+    delta_png: Path, threshold: int = 200, min_area_px: int = 100,
+) -> list[dict]:
+    """Run ImageMagick 8-connected-components on a single delta PNG.
+
+    Returns a list of dicts (one per non-background component):
+        {"x_px": int, "y_px": int, "w_px": int, "h_px": int,
+         "area_px": int, "mean_color": str}
+
+    Algorithm (locked decisions 1 + 2):
+      - The delta PNG is RGBA red-on-white (mismatch pixels rendered by IM
+        ``compare`` as ``(199,23,35,255)`` — high R, low G, low B). Matched
+        pixels are NOT pure white: they're the baseline lightened by a red
+        overlay at low alpha, producing tints like ``(210,227,215)``. The
+        luminance discriminator is therefore unreliable (both tinted-matched
+        AND saturated-red have luma < 230). We instead threshold the
+        **HSL saturation** channel: saturation is very high for the
+        red-overlay diff pixels and ~0 for both pure-white and grey-tinted
+        matched pixels. ``-colorspace HSL -channel G -separate +channel
+        -threshold 30%`` cleanly classifies diff vs matched.
+      - Run ``-connected-components 8 -define connected-components:verbose=true``
+        on the binary mask and parse the resulting object table from stdout.
+      - Drop ``id == 0`` (background object — IM emits the topmost-leftmost
+        object as id 0; with the HSL-saturation mask this is the full-page
+        non-saturated background, ``gray(0)``, dropped unconditionally).
+      - Drop components with ``area_px < min_area_px`` (page-edge AA noise).
+      - Sort by (y_px, x_px, w_px, h_px) for deterministic ordering. This
+        complements the cross-page sort in ``extract_all`` (decision 5a).
+
+    ``threshold`` is part of the public API but currently informational — the
+    IM pipeline uses a fixed 30% saturation threshold which discriminates
+    red diff pixels from tinted-matched pixels reliably across observed
+    ``compare`` outputs. Future tuning (e.g. switching to a per-channel
+    red-cutoff) will honour this kwarg.
+
+    Raises ``DiffBBoxError`` if ``delta_png`` does not exist or if the
+    ``convert`` invocation fails (e.g. unreadable PNG).
+    """
+    if not delta_png.exists():
+        raise DiffBBoxError(f"missing delta PNG: {delta_png}")
+    _ = threshold  # reserved for future per-channel threshold path
+    cmd = [
+        "convert", str(delta_png),
+        # Isolate the HSL saturation channel — high for red diff pixels,
+        # ~0 for matched-but-tinted background. See function docstring.
+        "-colorspace", "HSL", "-channel", "G", "-separate", "+channel",
+        "-threshold", "30%",
+        "-define", "connected-components:verbose=true",
+        "-connected-components", "8",
+        "info:-",
+    ]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    except subprocess.CalledProcessError as exc:
+        raise DiffBBoxError(
+            f"ImageMagick convert failed on {delta_png} "
+            f"(rc={exc.returncode}): {exc.stderr.strip()}"
+        ) from exc
+    except FileNotFoundError as exc:
+        raise DiffBBoxError(
+            "ImageMagick `convert` binary not found on PATH"
+        ) from exc
+
+    results: list[dict] = []
+    for line in proc.stdout.splitlines():
+        match = _CC_RE.match(line)
+        if not match:
+            continue
+        obj_id = int(match.group(1))
+        if obj_id == 0:
+            # Background object — IM always emits the largest object first;
+            # after -negate it is the dilated non-diff area. Drop unconditionally.
+            continue
+        w_px = int(match.group(2))
+        h_px = int(match.group(3))
+        x_px = int(match.group(4))
+        y_px = int(match.group(5))
+        area_px = int(match.group(6))
+        mean_color = match.group(7).strip()
+        if area_px < min_area_px:
+            continue
+        results.append({
+            "x_px": x_px, "y_px": y_px, "w_px": w_px, "h_px": h_px,
+            "area_px": area_px, "mean_color": mean_color,
+        })
+    results.sort(key=lambda b: (b["y_px"], b["x_px"], b["w_px"], b["h_px"]))
+    return results
 
 
 def _build_argparser() -> argparse.ArgumentParser:
