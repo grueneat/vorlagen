@@ -383,7 +383,8 @@ def _py_value(v: Any) -> str:
     """Format a Python literal the way Black would.
 
     Floats use ``repr()`` so the emitted build.py is round-trip-stable.
-    Mirrors ``sla_to_dsl.py:_py_value``.
+    Mirrors ``sla_to_dsl.py:_py_value``. Handles Run/Anchor dataclass
+    instances by emitting their constructor call with non-default fields.
     """
     if v is None:
         return "None"
@@ -400,6 +401,27 @@ def _py_value(v: Any) -> str:
         if '"' not in v and "'" in v:
             return '"' + v + '"'
         return repr(v)
+    if isinstance(v, Run):
+        # Emit Run(<non-default kwargs>) so the build.py recreates it identically.
+        kwargs = []
+        for fname in ("text", "has_itext", "font", "fontsize", "fcolor",
+                      "fshade", "fontfeatures", "features", "kern",
+                      "char_style", "paragraph_style", "paragraph_attrs",
+                      "separator", "var", "var_attrs"):
+            fv = getattr(v, fname)
+            if fname == "text" and fv == "":
+                # Only emit text="" if there's nothing else (rare; usually has separator).
+                if v.separator is None and v.paragraph_style is None:
+                    continue
+                # else fall through and emit text=""
+            if fname == "has_itext" and fv is True:
+                continue  # default
+            if fv is None:
+                continue
+            kwargs.append(f"{fname}={_py_value(fv)}")
+        return "Run(" + ", ".join(kwargs) + ")"
+    if isinstance(v, Anchor):
+        return f"Anchor(h={_py_value(v.h)}, v={_py_value(v.v)}, margin_mm={_py_value(v.margin_mm)})"
     if isinstance(v, tuple):
         body = ", ".join(_py_value(x) for x in v)
         if len(v) == 1:
@@ -1215,20 +1237,23 @@ def _emit_pageitem(
 
     if tag == "TextFrame":
         _strict_no_threading(item)
-        # Task 6 stub: emit empty TextFrame; task 7 fills runs.
         parent_story = item.get("ParentStory")
         # Determine the per-frame default ParaStyle (first PSR in the story).
         style_slug = ""
+        runs: list[Run] = []
         if parent_story:
-            try:
-                story_root = _resolve_story_xml(ctx.pkg, parent_story)
-                first_psr = story_root.find(".//ParagraphStyleRange")
-                if first_psr is not None:
-                    ap = first_psr.get("AppliedParagraphStyle")
-                    if ap and ap in ctx.paragraph_style_map:
-                        style_slug = ctx.paragraph_style_map[ap]
-            except UnhandledElement:
-                pass
+            story_root = _resolve_story_xml(ctx.pkg, parent_story)
+            first_psr = story_root.find(".//ParagraphStyleRange")
+            if first_psr is not None:
+                ap = first_psr.get("AppliedParagraphStyle")
+                if ap and ap in ctx.paragraph_style_map:
+                    style_slug = ctx.paragraph_style_map[ap]
+            runs = _walk_story(
+                story_root,
+                paragraph_style_map=ctx.paragraph_style_map,
+                color_map=ctx.color_map,
+                paragraph_styles=ctx.paragraph_styles,
+            )
         kwargs: dict[str, Any] = {
             "x_mm": _round_mm(x_mm),
             "y_mm": _round_mm(y_mm),
@@ -1236,11 +1261,15 @@ def _emit_pageitem(
             "h_mm": _round_mm(h_mm),
             "anname": self_id,
             "layer": layer_idx,
-            "text": "",
-            "style": style_slug,
         }
         if abs(rot) > 1e-3:
             kwargs["rotation_deg"] = _round_rot(rot)
+        if style_slug:
+            kwargs["style"] = style_slug
+        if runs:
+            kwargs["runs"] = runs
+        else:
+            kwargs["text"] = ""
         # Fill (frame background, rare on TextFrame but corpus has Color/Paper
         # cases — drop through the color map).
         fc = _resolve_fill(item.get("FillColor"), ctx.color_map)
@@ -1413,6 +1442,244 @@ def _resolve_story_xml(pkg: Any, parent_story_id: str) -> Any:
         )
     xml = pkg.open(path).read()
     return etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+
+
+# ---------------------------------------------------------------------------
+# Phase H2 — Story walker. Turns a <Story> root into a list of Run primitives.
+#
+# Each <ParagraphStyleRange> contributes a paragraph; each contained
+# <CharacterStyleRange> contributes one or more Run instances depending on
+# inline <Br/>, <?ACE 7?> markers, and <Content> children. Multi-paragraph
+# stories receive a Run(separator="para", paragraph_style=<parent slug>)
+# between paragraphs; the trailing paragraph omits the separator (Scribus
+# convention — no closing <para/> on the last paragraph of a frame).
+# ---------------------------------------------------------------------------
+
+# Allowed <ParagraphStyleRange>/<CharacterStyleRange>-internal element tags.
+# Anything else raises (Hyperlink, Footnote, Table, Note, …).
+_ALLOWED_CSR_CHILDREN = {"Content", "Br", "Properties"}
+_ALLOWED_PSR_CHILDREN = {"CharacterStyleRange", "Properties"}
+_ALLOWED_STORY_CHILDREN = {
+    "ParagraphStyleRange",
+    "StoryPreference",
+    "InCopyExportOption",
+    "XMLElement",  # tagged-content wrapper; ignored at v1 (corpus has none)
+}
+
+
+def _csr_applied_font(csr: Any) -> Optional[str]:
+    """Read AppliedFont (a Properties child) on a CharacterStyleRange."""
+    af = csr.find("Properties/AppliedFont")
+    if af is not None and af.text:
+        return af.text.strip()
+    return None
+
+
+def _walk_story(
+    story_root: Any,
+    paragraph_style_map: dict[str, str],
+    color_map: dict[str, str],
+    paragraph_styles: Optional[dict[str, dict[str, Any]]] = None,
+) -> list[Run]:
+    """Convert a <Story> root into an ordered list of Run primitives.
+
+    Args:
+        story_root: lxml etree Element pointing at <Story>.
+        paragraph_style_map: ``{ParagraphStyle/<self>: idml/<slug>}``.
+        color_map: ``{Color/<self>: <dsl-name>}``.
+        paragraph_styles: optional resolved ParaStyle dicts from Phase G
+            (provides font-family fallback when a CSR sets only FontStyle).
+
+    Returns:
+        ``list[Run]`` ready to be passed to ``TextFrame(runs=...)``.
+
+    Raises:
+        UnhandledElement on:
+        - Hyperlinks, footnotes, tables, notes inside CSRs.
+        - Unknown ``<?ACE N?>`` processing instructions (N != 7).
+        - Unrecognised top-level <Story> child tags.
+    """
+    paragraph_styles = paragraph_styles or {}
+    runs: list[Run] = []
+    # IDML Stories live at //idPkg:Story/Story/...; if the caller passed the
+    # outer wrapper (root tag "Story" with namespace idPkg), descend into the
+    # inner <Story> element. Tests pass synthetic XML with a bare <Story> root.
+    walk_root = story_root
+    inner = story_root.find("Story")
+    if inner is not None:
+        walk_root = inner
+    psrs: list[Any] = []
+    for child in walk_root:
+        if not isinstance(child.tag, str):
+            continue
+        tag = etree.QName(child).localname
+        if tag == "ParagraphStyleRange":
+            psrs.append(child)
+            continue
+        if tag in _ALLOWED_STORY_CHILDREN:
+            continue
+        raise UnhandledElement(
+            f"<Story> contains unhandled child <{tag}>; "
+            f"(extend tools/idml_to_dsl.py:_walk_story)"
+        )
+
+    for i, psr in enumerate(psrs):
+        applied_ps = psr.get("AppliedParagraphStyle", "")
+        para_slug = paragraph_style_map.get(applied_ps, "")
+        # Resolved family for font-cascade fallback.
+        ps_resolved = paragraph_styles.get(applied_ps, {})
+        ps_family = ps_resolved.get("applied_font")
+
+        para_runs: list[Run] = []
+        # Walk CharacterStyleRange children of the PSR in document order.
+        for child in psr:
+            if not isinstance(child.tag, str):
+                continue
+            ctag = etree.QName(child).localname
+            if ctag == "CharacterStyleRange":
+                para_runs.extend(
+                    _walk_csr(child, ps_family, color_map)
+                )
+                continue
+            if ctag in _ALLOWED_PSR_CHILDREN:
+                continue
+            raise UnhandledElement(
+                f"<ParagraphStyleRange> contains unhandled child <{ctag}> "
+                f"(extend tools/idml_to_dsl.py:_walk_story)"
+            )
+
+        runs.extend(para_runs)
+
+        # Inter-paragraph separator: every PSR except the LAST emits a
+        # Run(separator="para") carrying the paragraph_style slug.
+        if i < len(psrs) - 1:
+            runs.append(Run(separator="para", paragraph_style=para_slug))
+        elif para_slug and para_runs:
+            # The LAST paragraph: attach paragraph_style to the trailing Run
+            # so Scribus knows the PARENT for the final paragraph.
+            # We don't emit a separator="para" — that would add an extra newline.
+            # Instead, modify the last text-run in para_runs to carry the slug.
+            for j in range(len(runs) - 1, -1, -1):
+                if runs[j].text or runs[j].separator:
+                    # Replace with copy that carries paragraph_style.
+                    r = runs[j]
+                    runs[j] = Run(
+                        text=r.text,
+                        has_itext=r.has_itext,
+                        font=r.font,
+                        fontsize=r.fontsize,
+                        fcolor=r.fcolor,
+                        fshade=r.fshade,
+                        fontfeatures=r.fontfeatures,
+                        features=r.features,
+                        kern=r.kern,
+                        char_style=r.char_style,
+                        paragraph_style=para_slug,
+                        paragraph_attrs=r.paragraph_attrs,
+                        separator=r.separator,
+                        var=r.var,
+                        var_attrs=r.var_attrs,
+                    )
+                    break
+
+    return runs
+
+
+def _walk_csr(
+    csr: Any,
+    ps_family: Optional[str],
+    color_map: dict[str, str],
+) -> list[Run]:
+    """Convert a <CharacterStyleRange> into a list of Run primitives.
+
+    Honors inline ``<Content>``, ``<Br/>``, and ``<?ACE 7?>`` markers in
+    document order. ``<?ACE N?>`` with N != 7 raises.
+    """
+    runs: list[Run] = []
+    # Per-CSR style fields.
+    csr_family = _csr_applied_font(csr)
+    csr_font_style = csr.get("FontStyle")
+    csr_pt = csr.get("PointSize")
+    csr_fill = csr.get("FillColor")
+
+    family = csr_family or ps_family
+    font_name = _make_font_name(family, csr_font_style, ctx_self_id=csr.get("Self", "?"))
+
+    fontsize: Optional[float] = None
+    if csr_pt is not None:
+        try:
+            v = float(csr_pt)
+            # Fractional PointSizes are common in IDML; bin/check-fontsizes
+            # rejects fractional values. Round to nearest integer if the
+            # difference is < 0.5; raise otherwise so the human notices.
+            rounded = round(v)
+            if abs(v - rounded) >= 0.5:
+                raise UnhandledElement(
+                    f"CharacterStyleRange PointSize={csr_pt!r} is too fractional "
+                    f"to round to an integer (|delta|>=0.5); "
+                    f"(extend tools/idml_to_dsl.py:_walk_csr)"
+                )
+            fontsize = float(rounded)
+        except ValueError as e:
+            raise UnhandledElement(
+                f"CharacterStyleRange PointSize={csr_pt!r} is not numeric ({e}) "
+                f"(extend tools/idml_to_dsl.py:_walk_csr)"
+            ) from e
+
+    fcolor: Optional[str] = None
+    if csr_fill and csr_fill in color_map:
+        fcolor = color_map[csr_fill]
+    elif csr_fill and csr_fill not in ("Color/None", "Swatch/None"):
+        raise UnhandledElement(
+            f"CharacterStyleRange FillColor={csr_fill!r} not in color_map "
+            f"(extend tools/idml_to_dsl.py:_walk_csr)"
+        )
+
+    # Walk the CSR children in document order; honor inline Content / Br /
+    # <?ACE 7?> markers. Use the underlying element's iterator so we see
+    # comments and processing instructions interleaved.
+    for child in csr.iter():
+        # csr.iter() includes csr itself; skip.
+        if child is csr:
+            continue
+        # Only honor DIRECT children of csr for inline ordering.
+        if child.getparent() is not csr:
+            continue
+        # Processing instruction (e.g. <?ACE 7?>).
+        if isinstance(child, etree._ProcessingInstruction):
+            target = child.target  # type: ignore[attr-defined]
+            data = (child.text or "").strip()  # type: ignore[attr-defined]
+            if target == "ACE" and data == "7":
+                # Indent-to-here marker. v1 preserves implicitly (no extra Run).
+                continue
+            raise UnhandledElement(
+                f"Unknown processing instruction <?{target} {data}?> in "
+                f"CharacterStyleRange {csr.get('Self')!r} "
+                f"(extend tools/idml_to_dsl.py:_walk_csr)"
+            )
+        if not isinstance(child.tag, str):
+            continue
+        ctag = etree.QName(child).localname
+        if ctag == "Content":
+            text = child.text or ""
+            runs.append(
+                Run(
+                    text=text,
+                    font=font_name,
+                    fontsize=fontsize,
+                    fcolor=fcolor,
+                )
+            )
+        elif ctag == "Br":
+            runs.append(Run(text="", separator="breakline"))
+        elif ctag == "Properties":
+            continue
+        else:
+            raise UnhandledElement(
+                f"<CharacterStyleRange> contains unhandled child <{ctag}>; "
+                f"(extend tools/idml_to_dsl.py:_walk_csr)"
+            )
+    return runs
 
 
 def _emit_pages(ctx: _Ctx) -> None:
