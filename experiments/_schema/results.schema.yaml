@@ -1,31 +1,26 @@
 # Experiment results schema — JSON Schema (draft-2020-12) expressed in YAML.
-# Validates the JSON file the voting page exports and the results
-# aggregator emits. Issue #29.
+# Validates the JSON the voting page exports and the results aggregator
+# consumes. Two shapes coexist via a top-level oneOf discriminating on
+# `mode.const`: "rank" (ordered list of slugs) and "direct-pick" (an
+# unordered set of selected slugs). Pairwise / versus mode is deleted
+# entirely; v1 result files are no longer processable (issue #31).
 
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://gruene-noe.at/experiments/results.schema.yaml"
 title: "Experiment results"
 description: >
-  Voting-session results for one rater. Captures every pairwise vote
-  with axis, winner, on-screen position (so we can post-hoc analyse
-  position bias), plus computed wins-ratio + ranking + disagreement
-  index. Per CONTEXT.md decision #10.
+  Voting-session results for one rater. Captures either an ordered ranking
+  of variant slugs (rank mode) or a flat set of selections (direct-pick
+  fallback). Per CONTEXT.md decision #9 (issue #31) the pairwise shape is
+  removed; the schema bump is intentional and no migration tool ships.
 type: object
-additionalProperties: false
 
 required:
   - experiment_id
   - rater
-  - session_start
-  - session_end
-  - votes
-  - direct_picks
-  - wins_ratio_appeal
-  - wins_ratio_transport
-  - ranking_appeal
-  - ranking_transport
-  - disagreement_index
-  - spearman_appeal_transport
+  - started_at
+  - exported_at
+  - mode
 
 properties:
 
@@ -37,119 +32,48 @@ properties:
     type: string
     description: "Free-text rater identity. May be 'anonymous'."
 
-  session_start:
+  started_at:
     type: string
-    description: "ISO 8601 timestamp."
+    description: "ISO 8601 timestamp marking session start."
 
-  session_end:
+  exported_at:
     type: string
-    description: "ISO 8601 timestamp."
+    description: "ISO 8601 timestamp at export click."
 
-  votes:
-    type: array
-    items:
-      type: object
-      additionalProperties: false
-      required:
-        - pair
-        - axis
-        - winner
-        - position_a_on_screen
-        - timestamp
-      properties:
-        pair:
-          type: object
-          additionalProperties: false
-          required: [a, b]
-          properties:
-            a:
-              type: string
-              description: "Slug of variant A in the pair."
-            b:
-              type: string
-              description: "Slug of variant B in the pair."
-        axis:
-          type: string
-          enum: [appeal, transport]
-        winner:
-          oneOf:
-            - type: string
-              description: >
-                Variant slug of the winner, or the literal string "skip"
-                when the rater chose to skip.
-            - type: "null"
-              description: "Equivalent to 'skip' (skipped pair)."
-        position_a_on_screen:
-          type: string
-          enum: [left, right]
-        timestamp:
-          type: string
-          description: "ISO 8601 timestamp."
+  mode:
+    type: string
+    enum: [rank, direct-pick]
 
-  direct_picks:
+  ranking:
     type: array
     description: >
-      Variant slugs the rater starred in direct-pick mode. May be empty.
+      Ordered list of variant slugs, best first. Present in rank mode
+      only.
     items:
       type: string
     uniqueItems: true
 
-  wins_ratio_appeal:
-    type: object
-    description: >
-      Per-variant {wins, plays} accumulator for the appeal axis.
-    additionalProperties:
-      type: object
-      additionalProperties: false
-      required: [wins, plays]
-      properties:
-        wins:
-          type: integer
-          minimum: 0
-        plays:
-          type: integer
-          minimum: 0
-
-  wins_ratio_transport:
-    type: object
-    additionalProperties:
-      type: object
-      additionalProperties: false
-      required: [wins, plays]
-      properties:
-        wins:
-          type: integer
-          minimum: 0
-        plays:
-          type: integer
-          minimum: 0
-
-  ranking_appeal:
+  selections:
     type: array
-    description: "Variant slugs sorted desc by appeal wins/plays."
+    description: >
+      Unordered set of selected variant slugs. Present in direct-pick
+      mode only.
     items:
       type: string
+    uniqueItems: true
 
-  ranking_transport:
-    type: array
-    description: "Variant slugs sorted desc by transport wins/plays."
-    items:
-      type: string
-
-  disagreement_index:
-    type: number
-    minimum: 0
-    maximum: 1
-    description: >
-      Fraction of pairs voted on BOTH axes where appeal-winner differs
-      from transport-winner. 0 means full agreement; 1 means they
-      always disagree.
-
-  spearman_appeal_transport:
-    type: number
-    minimum: -1
-    maximum: 1
-    description: >
-      Spearman rank correlation between ranking_appeal and
-      ranking_transport. >0.85 flags halo effect; <0.5 means the two
-      axes are working as independent signals.
+oneOf:
+  - title: "rank"
+    properties:
+      mode:
+        const: "rank"
+    required: [experiment_id, rater, started_at, exported_at, mode, ranking]
+    not:
+      required: [selections]
+  - title: "direct-pick"
+    properties:
+      mode:
+        const: "direct-pick"
+    required: [experiment_id, rater, started_at, exported_at, mode, selections]
+    not:
+      required: [ranking]
