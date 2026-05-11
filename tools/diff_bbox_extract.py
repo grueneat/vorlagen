@@ -11,20 +11,74 @@ path ``tools/audit_alignment.py`` uses), and writes a deterministic
 ``diff_bboxes.json`` next to the deltas.
 
 Defaults (overridable via CLI flags):
-  threshold=200            red-channel cutoff; pixels above are "diff"
-  min_area_px=100          drop connected components below this area
+  threshold=200            informational; the IM stage uses HSL-saturation
+                           thresholding at 30% which discriminates the red
+                           overlay (high saturation) from the baseline-
+                           tinted matched pixels (low saturation) reliably
+  min_area_px=100          drop connected components below this pixel area
+                           (page-edge antialiasing noise filter)
   coverage_threshold=0.5   minimum coverage_of_diff_inside_slot for
-                           attribution (area_intersect / area_diff_bbox)
+                           attribution (area_intersect / area_diff_bbox).
+                           Tie-break among slots with coverage >= threshold:
+                           smaller slot area wins (more specific attribution)
   dilate disabled in v1    (kernel-based merge of near-pixel clusters
                            may land in a follow-up if AA-noise rectangles
                            split too aggressively)
 
+Output schema (``diff_bboxes.json``):
+    {
+      "dpi": 96,
+      "template_slug": "<slug>" | null,
+      "pages": [
+        {
+          "page": <int>,                       # 0-indexed; matches visual_diff.json
+          "delta_png": "<file>",               # always 2-digit zero-padded
+          "bboxes": [
+            {
+              "bbox_px": {"x", "y", "w", "h"},
+              "bbox_mm": {"x", "y", "w", "h"}, # rounded to 0.1 mm
+              "area_px": <int>,                # raw connected-component area
+              "mismatch_pct_in_bbox": <float>, # area_px / (w_px*h_px) * 100
+              "attributed_slot": "<anname>" | null,
+              "attribution_overlap_pct": <float>,  # coverage * 100, 0..100
+              "attribution_candidates": [
+                {"slot", "coverage_pct", "slot_area_mm2"},
+                ... up to 3, descending coverage ...
+              ]
+            }
+          ]
+        }
+      ]
+    }
+
+Determinism guarantees (locked decision 5):
+  - Per-page bboxes sorted by (y_mm, x_mm, w_mm, h_mm)
+  - mm coords rounded to 0.1
+  - JSON serialised with sort_keys=True + indent=2 + trailing newline
+  Two runs against the same input produce byte-identical output.
+
 Strict-mode behaviour:
   Raises ``DiffBBoxError`` for hard failures (missing ``visual_diff.json``,
   missing ``dpi`` field, missing referenced delta PNG, ImageMagick failure).
-  Emits ``warnings.warn(...)`` for soft failures (template build failure with
-  ``--template-slug``, template has no anname'd slots) and continues with
-  ``attributed_slot: null``. This is a post-processor, not a CI gate.
+  Emits ``warnings.warn(...)`` for soft failures (template build failure
+  with ``--template-slug``, template has no anname'd slots) and continues
+  with ``attributed_slot: null``. This is a post-processor, not a CI gate;
+  ``main()`` catches ``DiffBBoxError`` and returns rc=1 with a clean stderr
+  message.
+
+Limitations:
+  - ``frame_bbox_mm`` ignores ``xpos_pt`` / ``width_pt`` verbatim overrides
+    (``tools/sla_lib/builder/bbox.py:13-16``); templates that use those
+    will get slightly off attribution. Mitigation: ``attribution_candidates``
+    top-3 lets reviewers see alternatives.
+  - Page-edge antialiasing strips can leak through ``min_area_px`` if the
+    template has thin border elements; lower the flag value per template
+    when this happens.
+  - Filename padding split: ``baseline-page-N.png`` and ``dsl-page-N.png``
+    are variable-padded (pdftoppm convention), but ``diff-page-NN.png`` is
+    always 2-digit (``visual_diff.py:231``). We read the path from
+    ``visual_diff.json["pages"][i]["delta_png"]`` so this is invisible to
+    callers.
 
 Usage:
     # Standalone — no slot attribution:
@@ -36,7 +90,7 @@ Usage:
         --threshold 200 --min-area-px 100 --coverage-threshold 0.5 \\
         --overlay-out
 
-    # Via visual_diff.py wrapper (issue #36 task 9):
+    # Via visual_diff.py wrapper (Issue #36 task 9):
     python3 tools/visual_diff.py <sla> --baseline <pdf> --tolerance <yml> \\
         --extract-bboxes --template-slug <slug> --out build/<id>/
 """
