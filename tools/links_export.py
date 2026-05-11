@@ -221,9 +221,22 @@ def _convert_ai(src: Path, out_path: Path) -> None:
 
 
 def _convert_psd(src: Path, out_path: Path) -> None:
-    """``.psd`` → flattened PNG via ImageMagick ``convert -flatten``."""
+    """``.psd`` → flattened PNG via ImageMagick ``convert -flatten``.
+
+    Determinism: ImageMagick embeds ``date:create`` + ``date:modify``
+    derived from filesystem mtime into the PNG metadata on every run,
+    which breaks byte-equality of re-runs. ``+set date:create +set
+    date:modify`` suppresses those fields (pixel data + source EXIF/XMP
+    are unaffected because they come from the PSD, not the run clock).
+    """
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    _run(["convert", str(src), "-flatten", str(out_path)])
+    _run([
+        "convert", str(src), "-flatten",
+        "+set", "date:create",
+        "+set", "date:modify",
+        "+set", "date:timestamp",
+        str(out_path),
+    ])
     if not out_path.exists():  # pragma: no cover — defensive
         raise RuntimeError(
             f"ImageMagick convert did not produce {out_path} from {src}"
