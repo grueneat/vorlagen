@@ -2004,15 +2004,33 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             f"File > Export > InDesign Markup (IDML)."
         )
     if assets_dir is not None and not assets_dir.exists():
-        # Defer this until task 8's logo handling lands. For task 3 we don't
-        # actually consume the assets dir yet; only warn.
-        print(
-            f"WARN: --assets-dir {assets_dir} does not exist (raster assets will fail in task 6)",
-            file=sys.stderr,
+        raise UnhandledElement(
+            f"--assets-dir {assets_dir} does not exist "
+            f"(extend tools/idml_to_dsl.py:convert or pass a different directory)"
         )
+
+    # Load the logo map (locked decision #2). NFC-normalise the keys to match
+    # the URI-basename normalisation in _basename_from_uri.
+    logo_map: dict[str, str] = {}
+    if logo_map_path is not None:
+        if not logo_map_path.exists():
+            raise UnhandledElement(
+                f"--logo-map {logo_map_path} does not exist "
+                f"(extend tools/idml_to_dsl.py:convert)"
+            )
+        import yaml  # local import: yaml not needed when --logo-map omitted
+        raw = yaml.safe_load(logo_map_path.read_text(encoding="utf-8")) or {}
+        if not isinstance(raw, dict):
+            raise UnhandledElement(
+                f"--logo-map YAML must be a mapping at the top level, got {type(raw).__name__} "
+                f"(extend tools/idml_to_dsl.py:convert)"
+            )
+        for k, v in raw.items():
+            logo_map[unicodedata.normalize("NFC", str(k))] = str(v)
 
     with IDMLPackage(str(source)) as pkg:
         ctx = _Ctx(pkg=pkg, template_id=template_id, assets_dir=assets_dir)
+        ctx.logo_map = logo_map
 
         # Phase A
         ctx.doc_prefs = _read_doc_preferences(pkg)
@@ -2079,9 +2097,22 @@ def main(argv: Optional[list[str]] = None) -> int:
             "(resolves file: URIs by basename)."
         ),
     )
+    ap.add_argument(
+        "--logo-map",
+        type=Path,
+        required=False,
+        default=None,
+        help=(
+            "Path to a YAML file mapping IDML vector-logo basenames "
+            "(e.g. 'BlueSky weiss.ai') to pre-rasterised PNG paths under "
+            "shared/logos/. Without this, every <PDF>-nested logo surfaces "
+            "in the end-of-run UnhandledElement list."
+        ),
+    )
     args = ap.parse_args(argv)
     try:
-        convert(args.source, args.output, args.template_id, args.assets_dir)
+        convert(args.source, args.output, args.template_id, args.assets_dir,
+                logo_map_path=args.logo_map)
     except UnhandledElement as e:
         print(f"UnhandledElement: {e}", file=sys.stderr)
         return 2

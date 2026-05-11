@@ -1,0 +1,29 @@
+id: kandidat-falzflyer-din-lang-gruenes-cover-v2
+version: 0.1.0
+title: Kandidat-Falzflyer DIN-lang (Grünes Cover v2)
+format: A4
+orientation: landscape
+pages: 2
+preview_dpi: 100
+audience: [kandidat, bezirksgruppe, ortsgruppe]
+description: >
+  3-fach Zickzackfalz A4-quer-Themenflyer mit grünem Cover. Imported from
+  InDesign IDML via tools/idml_to_dsl.py — initial slot schema; refine
+  after first gallery render.
+
+build:
+  script: build.py
+  output: template.sla
+
+# previews_for_sla is filled by bin/render-gallery / bin/check-stale-previews
+previews_for_sla: ""
+
+brand_overrides: []
+
+ci_overrides:
+  non_ci_styles: []
+  non_ci_colors: []
+  non_ci_layers:
+    - "Info"
+
+slots: {}
