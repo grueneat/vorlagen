@@ -151,6 +151,194 @@ class UnhandledElement(Exception):
 
 
 # ---------------------------------------------------------------------------
+# Coordinate math helpers
+#
+# Per RESEARCH.md §"Coordinate math": IDML uses Adobe's row-vector affine
+# convention. A point ``(x, y)`` in inner space maps to outer space via
+# ``[x y 1] · M`` where M is the 3×3 matrix
+#
+#     | a  b  0 |
+#     | c  d  0 |
+#     | tx ty 1 |
+#
+# so ``x' = a*x + c*y + tx``, ``y' = b*x + d*y + ty``.
+#
+# To compose two transforms so that ``compose(parent, child)`` maps inner→outer
+# as "child applied first, then parent", the product is ``child · parent``
+# (row-vector convention: outer transform multiplies on the RIGHT of the inner
+# transform's row vector ``[x y 1] · child · parent``).
+#
+# Group cascade ordering: ``ancestor_transforms`` is a list ordered
+# **innermost first**, e.g. ``[group_just_above_item, group_above_that, ...,
+# outermost_group]``. ``_compute_page_local_bbox_pt`` walks it in that order,
+# composing each ancestor on top of the running cascade so the final matrix
+# maps item-inner-space → spread-coordinate-space.
+# ---------------------------------------------------------------------------
+
+def _parse_matrix(s: str) -> tuple[float, float, float, float, float, float]:
+    """Parse a "a b c d tx ty" affine matrix string into a 6-tuple of floats.
+
+    Raises UnhandledElement on the wrong token count or non-float content.
+    """
+    parts = s.split()
+    if len(parts) != 6:
+        raise UnhandledElement(
+            f"ItemTransform must have 6 tokens, got {len(parts)}: {s!r} "
+            f"(extend tools/idml_to_dsl.py:_parse_matrix)"
+        )
+    try:
+        a, b, c, d, tx, ty = (float(p) for p in parts)
+    except ValueError as e:
+        raise UnhandledElement(
+            f"ItemTransform contains non-numeric token: {s!r} ({e}) "
+            f"(extend tools/idml_to_dsl.py:_parse_matrix)"
+        ) from e
+    return (a, b, c, d, tx, ty)
+
+
+def _matrix_compose(
+    parent: tuple[float, float, float, float, float, float],
+    child: tuple[float, float, float, float, float, float],
+) -> tuple[float, float, float, float, float, float]:
+    """Return the matrix M such that apply(M, p) == apply(parent, apply(child, p)).
+
+    Row-vector convention: ``M = child · parent``. Calling with ``parent`` then
+    ``child`` reads as "child applied first, then parent" — i.e. ``child`` lies
+    INNER to ``parent`` in the cascade.
+    """
+    a1, b1, c1, d1, tx1, ty1 = child
+    a2, b2, c2, d2, tx2, ty2 = parent
+    return (
+        a1 * a2 + b1 * c2,
+        a1 * b2 + b1 * d2,
+        c1 * a2 + d1 * c2,
+        c1 * b2 + d1 * d2,
+        tx1 * a2 + ty1 * c2 + tx2,
+        tx1 * b2 + ty1 * d2 + ty2,
+    )
+
+
+def _apply_matrix(
+    M: tuple[float, float, float, float, float, float], x: float, y: float
+) -> tuple[float, float]:
+    """Apply affine M to a 2D point. Row-vector convention."""
+    a, b, c, d, tx, ty = M
+    return (a * x + c * y + tx, b * x + d * y + ty)
+
+
+def _inner_bbox_from_anchors(
+    anchors: list[tuple[float, float]],
+) -> tuple[float, float, float, float]:
+    """Return (min_x, min_y, max_x, max_y) of raw PathPointArray anchors.
+
+    For TextFrames, anchors are symmetric around (0, 0) — IDML's "frame-centre
+    inner origin" idiosyncrasy. For Rectangle/Polygon, anchors usually start at
+    (0, 0) and extend out (top-left inner origin).
+    """
+    if not anchors:
+        raise UnhandledElement(
+            "Empty anchor list (extend tools/idml_to_dsl.py:_inner_bbox_from_anchors)"
+        )
+    xs = [p[0] for p in anchors]
+    ys = [p[1] for p in anchors]
+    return (min(xs), min(ys), max(xs), max(ys))
+
+
+def _compute_page_local_bbox_pt(
+    item_transform_str: str,
+    anchors: list[tuple[float, float]],
+    ancestor_transforms: list[str],
+    spread_item_transform_str: str,
+    page_item_transform_str: str,
+) -> tuple[float, float, float, float, float]:
+    """Convert IDML PageItem geometry to (x_pt, y_pt, w_pt, h_pt, rotation_deg)
+    in page-top-left coordinates.
+
+    Args:
+        item_transform_str: PageItem's own ``ItemTransform``.
+        anchors: PathPointArray anchors in item-inner-space.
+        ancestor_transforms: ``ItemTransform`` strings of enclosing Groups,
+            ordered **innermost first** (i.e. the Group directly enclosing the
+            item is at index 0, outermost Group is last).
+        spread_item_transform_str: ``Spread/ItemTransform`` (where the spread
+            sits in pasteboard; subtract its translation to get spread-local).
+        page_item_transform_str: ``Page/ItemTransform`` (where the page's
+            top-left sits relative to spread origin).
+
+    Returns:
+        Tuple ``(x_pt, y_pt, w_pt, h_pt, rotation_deg)``. Rotation is CCW
+        positive (IDML and Scribus convention agree on sign for our typed
+        DSL — see ``tools/sla_lib/builder/bbox.py``). If the actual emitter
+        finds a sign mismatch during integration, document it in code.
+
+    Raises:
+        UnhandledElement: on sheared or non-uniformly scaled items (only
+        rotation + uniform scale supported in v1).
+    """
+    item_M = _parse_matrix(item_transform_str)
+    spread_M = _parse_matrix(spread_item_transform_str)
+    page_M = _parse_matrix(page_item_transform_str)
+
+    # Compose ancestor cascade: walk innermost→outermost, building the
+    # transform that maps item-inner-space "after item_transform" up to
+    # spread-coordinate-space. ``acc`` starts as identity ("no ancestors yet").
+    acc: tuple[float, float, float, float, float, float] = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    for ancestor_str in ancestor_transforms:
+        ancestor_M = _parse_matrix(ancestor_str)
+        # Each successive ancestor wraps OUTSIDE the running composite, so
+        # compose with ancestor as the new outer "parent" and the running
+        # composite as the inner "child".
+        acc = _matrix_compose(ancestor_M, acc)
+
+    # Final item→spread matrix: item_transform first, then ancestor cascade.
+    item_to_spread = _matrix_compose(acc, item_M)
+
+    # Reject shear / non-uniform scale at the item-to-spread level. Pure
+    # rotation+uniform-scale satisfies sqrt(a²+b²) == sqrt(c²+d²) and
+    # a*c + b*d == 0.
+    a, b, c, d, _tx, _ty = item_to_spread
+    sx = math.sqrt(a * a + b * b)
+    sy = math.sqrt(c * c + d * d)
+    if abs(sx - sy) > 0.01 or abs(a * c + b * d) > 0.01:
+        raise UnhandledElement(
+            f"Sheared or non-uniform-scaled item; only rotation+uniform-scale "
+            f"supported in v1 (sx={sx:.4f}, sy={sy:.4f}, shear={a * c + b * d:.4f}) "
+            f"(extend tools/idml_to_dsl.py:_compute_page_local_bbox_pt)"
+        )
+
+    # Apply to anchors → spread-coordinate-space points.
+    spread_pts = [_apply_matrix(item_to_spread, x, y) for (x, y) in anchors]
+
+    # Subtract spread origin (pasteboard → spread-local). Most spreads are
+    # identity; spread u108 in the target IDML carries a y-offset of 786.61 pt
+    # (the second spread stacked below the first in the pasteboard).
+    spread_origin = _apply_matrix(spread_M, 0.0, 0.0)
+    spread_local = [(px - spread_origin[0], py - spread_origin[1]) for (px, py) in spread_pts]
+
+    # Subtract page origin (spread-local → page-local). page_M's translation
+    # is the page's top-left in spread-local coords (e.g. -420.94, -140.31
+    # for our A4-quer left-page layout).
+    _, _, _, _, ptx, pty = page_M
+    page_local = [(px - ptx, py - pty) for (px, py) in spread_local]
+
+    xs = [p[0] for p in page_local]
+    ys = [p[1] for p in page_local]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    w = max_x - min_x
+    h = max_y - min_y
+
+    rotation_deg = math.degrees(math.atan2(b, a))
+
+    return (min_x, min_y, w, h, rotation_deg)
+
+
+def _pt_to_mm(value_pt: float) -> float:
+    """Convert points to millimetres using PT_TO_MM."""
+    return value_pt * PT_TO_MM
+
+
+# ---------------------------------------------------------------------------
 def convert(source: Path, output: Path, template_id: str, assets_dir: Path) -> None:
     """Open the IDML and (for task 1) print a one-line summary.
 

@@ -1,0 +1,142 @@
+"""Unit tests for the IDML geometry helpers (issue 35, task 2).
+
+These pin the 3-stacked coordinate cascade math: parse a "a b c d tx ty"
+ItemTransform string, compose Group transforms outermost-first, apply to
+PathPointArray anchors, subtract spread+page origins, and return
+(x_pt, y_pt, w_pt, h_pt, rotation_deg) in page-top-left coordinates.
+
+Test corpus is hand-picked from the target IDML's most awkward frames:
+- Axis-aligned rectangle (the easy case)
+- 90° rotated TextFrame with frame-centre inner origin (u347)
+- 9° rotated cover panel (u186)
+- Nested Group (synthetic; corpus has 5+10 group instances)
+- Shear/non-uniform-scale rejection (strict-mode guard)
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
+
+from idml_to_dsl import (  # noqa: E402
+    UnhandledElement,
+    _apply_matrix,
+    _compute_page_local_bbox_pt,
+    _inner_bbox_from_anchors,
+    _matrix_compose,
+    _parse_matrix,
+)
+
+IDENT = "1 0 0 1 0 0"
+
+
+def test_identity_compose():
+    I = _parse_matrix(IDENT)
+    M = _parse_matrix("0.5 0 0 0.5 10 20")
+    assert _matrix_compose(I, M) == M
+    assert _matrix_compose(M, I) == M
+
+
+def test_translation_only():
+    M = _parse_matrix("1 0 0 1 100 200")
+    assert _apply_matrix(M, 0, 0) == pytest.approx((100, 200))
+    assert _apply_matrix(M, 5, 7) == pytest.approx((105, 207))
+
+
+def test_axis_aligned_rectangle():
+    # Rectangle at spread (100,100), 50×30 pt, no rotation, no ancestors,
+    # spread identity, page origin at (-420.94, -140.31) per target IDML.
+    anchors = [(0, 0), (50, 0), (50, 30), (0, 30)]
+    x, y, w, h, rot = _compute_page_local_bbox_pt(
+        item_transform_str="1 0 0 1 100 100",
+        anchors=anchors,
+        ancestor_transforms=[],
+        spread_item_transform_str=IDENT,
+        page_item_transform_str="1 0 0 1 -420.94 -140.31",
+    )
+    assert (w, h) == pytest.approx((50, 30))
+    assert rot == pytest.approx(0, abs=1e-6)
+    # Item lives at page-local (100 - (-420.94), 100 - (-140.31)) = (520.94, 240.31)
+    assert x == pytest.approx(520.94)
+    assert y == pytest.approx(240.31)
+
+
+def test_rotated_90deg_textframe():
+    # Mimics target IDML's u347: 90° CCW, TextFrame inner anchors symmetric
+    # around 0. ItemTransform≈"0 -1 1 0 124.68 180.78"; spread u108 carries
+    # a y-offset 786.61 pt.
+    anchors = [
+        (-49.5, -148.82),
+        (49.5, -148.82),
+        (49.5, 148.82),
+        (-49.5, 148.82),
+    ]
+    x, y, w, h, rot = _compute_page_local_bbox_pt(
+        item_transform_str="0 -1 1 0 124.68 180.78",
+        anchors=anchors,
+        ancestor_transforms=[],
+        spread_item_transform_str="1 0 0 1 0 786.61",
+        page_item_transform_str="1 0 0 1 -420.94 -140.31",
+    )
+    # After 90° CCW, the inner 99×297.64 rectangle becomes 297.64×99 AABB
+    assert (w, h) == pytest.approx((297.64, 99), rel=1e-3)
+    # Rotation is ±90°; we don't pin sign here (Scribus CCW convention may flip
+    # during emit testing — convention documented in code).
+    assert abs(abs(rot) - 90) < 1
+
+
+def test_rotated_9deg_frame():
+    # u186 cover panel: ItemTransform "0.9877 -0.1564 0.1564 0.9877 11.54 233.10".
+    anchors = [(0, 0), (60, 0), (60, 40), (0, 40)]
+    _, _, w, h, rot = _compute_page_local_bbox_pt(
+        item_transform_str="0.9877 -0.1564 0.1564 0.9877 11.54 233.10",
+        anchors=anchors,
+        ancestor_transforms=[],
+        spread_item_transform_str=IDENT,
+        page_item_transform_str="1 0 0 1 -420.94 -140.31",
+    )
+    # 9° rotation → AABB grows past the raw 60×40
+    assert w > 60 and h > 40
+    assert abs(abs(rot) - 9) < 0.5
+
+
+def test_nested_group():
+    # Outer group translates (50,50); inner group rotates 90°; item at (10,0)..(20,10).
+    # ancestor_transforms order is inner→outer (innermost first in the list).
+    anchors = [(0, 0), (10, 0), (10, 10), (0, 10)]
+    _, _, w, h, rot = _compute_page_local_bbox_pt(
+        item_transform_str="1 0 0 1 10 0",
+        anchors=anchors,
+        ancestor_transforms=["0 -1 1 0 0 0", "1 0 0 1 50 50"],
+        spread_item_transform_str=IDENT,
+        page_item_transform_str=IDENT,
+    )
+    # Item passes through inner→outer correctly: shape stays 10×10
+    assert (w, h) == pytest.approx((10, 10), abs=0.01)
+    assert abs(abs(rot) - 90) < 1
+
+
+def test_inner_bbox_from_anchors():
+    assert _inner_bbox_from_anchors([(0, 0), (50, 30), (50, 0), (0, 30)]) == (0, 0, 50, 30)
+    assert _inner_bbox_from_anchors([(-5, -3), (5, -3), (5, 3), (-5, 3)]) == (-5, -3, 5, 3)
+
+
+def test_shear_rejected():
+    with pytest.raises(UnhandledElement):
+        _compute_page_local_bbox_pt(
+            item_transform_str="1 0.5 0 1 0 0",  # shear
+            anchors=[(0, 0), (10, 0), (10, 10), (0, 10)],
+            ancestor_transforms=[],
+            spread_item_transform_str=IDENT,
+            page_item_transform_str=IDENT,
+        )
+
+
+def test_parse_matrix_rejects_bad_token_count():
+    with pytest.raises(UnhandledElement):
+        _parse_matrix("1 0 0 1 0")  # only 5 tokens
+    with pytest.raises(UnhandledElement):
+        _parse_matrix("1 0 0 1 0 0 0")  # 7 tokens
