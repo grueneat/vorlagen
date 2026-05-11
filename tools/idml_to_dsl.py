@@ -564,6 +564,163 @@ def _check_masters_empty(pkg: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Phase F — Colors (Resources/Graphic.xml) per locked decision #1.
+#
+# Auto-rename on exact CMYK match against shared/ci.yml brand palette. Raise
+# on non-brand printable swatches. Skip Color/None / Color/Registration /
+# Hiddenreserved process inks silently.
+# ---------------------------------------------------------------------------
+def _parse_color_value(s: str) -> tuple[int, int, int, int]:
+    """Parse a CMYK ``ColorValue`` "c m y k" (0..100, possibly fractional)
+    into a 4-tuple of ints.
+
+    Floats are rounded to nearest int (the target IDML uses integer percents).
+    """
+    parts = s.split()
+    if len(parts) != 4:
+        raise UnhandledElement(
+            f"Color/ColorValue must have 4 tokens, got {len(parts)}: {s!r} "
+            f"(extend tools/idml_to_dsl.py:_parse_color_value)"
+        )
+    try:
+        vals = [int(round(float(p))) for p in parts]
+    except ValueError as e:
+        raise UnhandledElement(
+            f"Color/ColorValue contains non-numeric token: {s!r} ({e}) "
+            f"(extend tools/idml_to_dsl.py:_parse_color_value)"
+        ) from e
+    for v in vals:
+        if v < 0 or v > 100:
+            raise UnhandledElement(
+                f"Color/ColorValue out of [0,100]: {s!r} "
+                f"(extend tools/idml_to_dsl.py:_parse_color_value)"
+            )
+    return tuple(vals)  # type: ignore[return-value]
+
+
+def _emit_colors_from_xml(graphic_xml: bytes, used_colors: set[str]) -> dict[str, str]:
+    """Parse a Resources/Graphic.xml blob and return idml_self → dsl_name map.
+
+    Args:
+        graphic_xml: the raw XML bytes of Resources/Graphic.xml.
+        used_colors: set of IDML Self IDs that are referenced by a printable
+            PageItem or Story. Used to gate the "non-brand printable raises"
+            vs "non-brand unused silently dropped" branches.
+
+    Returns:
+        Map ``{idml_self_id: brand_or_local_dsl_name}``. Caller stores on ctx.
+
+    Raises:
+        UnhandledElement when a referenced color cannot be mapped to a brand
+        name (locked decision #1: snap-to-brand fuzzy matching is OOS for v1).
+    """
+    root = etree.fromstring(graphic_xml, parser=_SECURE_XMLPARSER)
+    resolved: dict[str, str] = {}
+    for c in root.findall(".//Color"):
+        self_id = c.get("Self", "")
+        if self_id in IDML_BUILTIN_COLORS_SKIP:
+            # Color/None / Swatch/None / Registration / Process inks listed
+            # in IDML_BUILTIN_COLORS_SKIP never reach the SLA.
+            continue
+        override = c.get("ColorOverride", "")
+        if "Hiddenreserved" in override:
+            # Latent process inks (Cyan/Magenta/Yellow/Black) marked as hidden;
+            # never used, never emitted.
+            continue
+        space = c.get("Space", "")
+        model = c.get("Model", "")
+        # Treat Registration model the same as Self=="Color/Registration" —
+        # never written even if referenced.
+        if model == "Registration":
+            continue
+        # Paper → White (CMYK 0,0,0,0).
+        if self_id == "Color/Paper":
+            resolved[self_id] = "White"
+            continue
+        if space != "CMYK":
+            if self_id in used_colors:
+                raise UnhandledElement(
+                    f"Color {self_id!r} has unsupported Space={space!r} "
+                    f"(extend tools/idml_to_dsl.py:_emit_colors_from_xml)"
+                )
+            continue
+        value_str = c.get("ColorValue", "")
+        if not value_str:
+            if self_id in used_colors:
+                raise UnhandledElement(
+                    f"Color {self_id!r} has empty ColorValue "
+                    f"(extend tools/idml_to_dsl.py:_emit_colors_from_xml)"
+                )
+            continue
+        cmyk = _parse_color_value(value_str)
+        brand_name = COLOR_CMYK_TO_BRAND.get(cmyk)
+        if brand_name is not None:
+            resolved[self_id] = brand_name
+            continue
+        # Non-brand printable swatch.
+        if self_id in used_colors:
+            raise UnhandledElement(
+                f"Color {self_id!r} CMYK={cmyk} does not match shared/ci.yml "
+                f"brand palette and is used by a printable PageItem. "
+                f"(extend tools/idml_to_dsl.py:_emit_colors_from_xml or add "
+                f"to COLOR_CMYK_TO_BRAND)"
+            )
+        # Declared-but-unused non-brand: silently drop.
+    return resolved
+
+
+def _collect_used_fillcolors(pkg: Any, printable_layer_ids: set[str]) -> set[str]:
+    """Return the set of Color Self IDs referenced by printable PageItems
+    and any Story (Stories ignore layer state — text colors always count)."""
+    used: set[str] = set()
+
+    def _attr(node: Any, name: str) -> None:
+        v = node.get(name)
+        if v:
+            used.add(v)
+
+    for sp_path in pkg.spreads:
+        xml = pkg.open(sp_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        # For each top-level page item, recurse with the group's layer in scope.
+        # ItemLayer attribute is inherited from the enclosing Group when absent.
+        def _walk(node: Any, current_layer: str) -> None:
+            tag = etree.QName(node).localname
+            if tag in ("Rectangle", "Polygon", "Oval", "TextFrame", "Group"):
+                lyr = node.get("ItemLayer", "") or current_layer
+                if lyr in printable_layer_ids:
+                    _attr(node, "FillColor")
+                    _attr(node, "StrokeColor")
+                if tag == "Group":
+                    for child in node:
+                        if isinstance(child.tag, str):
+                            _walk(child, lyr)
+                    return
+            for child in node:
+                if isinstance(child.tag, str):
+                    _walk(child, current_layer)
+
+        _walk(root, current_layer="")
+
+    # Stories always count (text rendered everywhere it's referenced).
+    for st_path in pkg.stories:
+        xml = pkg.open(st_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        for tag in ("CharacterStyleRange", "ParagraphStyleRange"):
+            for n in root.findall(f".//{tag}"):
+                _attr(n, "FillColor")
+                _attr(n, "StrokeColor")
+    return used
+
+
+def _emit_colors(ctx: _Ctx) -> None:
+    """Phase F driver. Populates ctx.color_map."""
+    used = _collect_used_fillcolors(ctx.pkg, ctx.printable_layer_ids)
+    graphic_xml = ctx.pkg.open("Resources/Graphic.xml").read()
+    ctx.color_map = _emit_colors_from_xml(graphic_xml, used)
+
+
+# ---------------------------------------------------------------------------
 # Phase D/E — emit build.py header + Document + add_master + add_page calls
 # ---------------------------------------------------------------------------
 def _emit_header(out: PythonRepr, template_id: str, idml_name: str) -> None:
@@ -813,6 +970,8 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         }
         # Phase C
         _check_masters_empty(pkg)
+        # Phase F — colors (run early so styles/items can translate FillColor refs)
+        _emit_colors(ctx)
 
         # Phase D — header
         _emit_header(ctx.out, template_id, source.name)
