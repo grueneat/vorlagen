@@ -9,13 +9,17 @@ Pipeline:
   4. ImageMagick `montage` builds a baseline | dsl | delta composite per page
   5. Apply per-page / per-region tolerance overrides from the template's diff.yml
   6. Emit visual_diff.json (machine summary) and visual_diff.html (review index)
+  7. (optional, --extract-bboxes) Run tools/diff_bbox_extract.py to produce
+     diff_bboxes.json and merge its per-page ``bboxes`` field back into
+     visual_diff.json. Combine with --template-slug for slot attribution.
 
 Usage:
     python3 tools/visual_diff.py templates/<id>/template.sla \\
         --baseline templates/<id>/baseline.pdf \\
         --tolerance templates/<id>/diff.yml \\
         --dpi 96 \\
-        --out build/<id>/
+        --out build/<id>/ \\
+        [--extract-bboxes --template-slug <slug>]
 
 Exit codes: 0 if every page (and every region) is within tolerance. 1 otherwise.
 ``--ci`` is a shortcut for ``--dpi 96`` (CONTEXT.md D4).
@@ -341,6 +345,46 @@ def write_reports(out_dir: Path, template_sla: Path, baseline_pdf: Path,
     (out_dir / "visual_diff.html").write_text(html, encoding="utf-8")
 
 
+def _merge_bboxes_into_visual_diff(
+    out_dir: Path, template_slug: Optional[str],
+) -> None:
+    """Shell out to ``tools/diff_bbox_extract.py`` and merge its per-page
+    bboxes into the just-written ``visual_diff.json``.
+
+    Backward-compatible (Issue #36): every existing key in visual_diff.json
+    is preserved verbatim; only a per-page ``bboxes`` field is added. The
+    extractor's standalone ``diff_bboxes.json`` is also written and left
+    in place for downstream consumers.
+
+    We deliberately do NOT import ``diff_bbox_extract`` at module scope —
+    keeps ``visual_diff.py`` importable in environments where the extractor
+    is not on path, and matches the visual_diff convention of shelling out
+    to siblings (cf. ``_run`` for IM).
+    """
+    extractor = Path(__file__).resolve().parent / "diff_bbox_extract.py"
+    cmd = [sys.executable, str(extractor), str(out_dir)]
+    if template_slug:
+        cmd += ["--template-slug", template_slug]
+    _run(cmd)
+    bb_path = out_dir / "diff_bboxes.json"
+    vd_path = out_dir / "visual_diff.json"
+    bb = json.loads(bb_path.read_text(encoding="utf-8"))
+    vd = json.loads(vd_path.read_text(encoding="utf-8"))
+    # Index extractor's pages by their page index for safe merging — the
+    # extractor sorts by (y, x, w, h) per page but the page list order
+    # already matches visual_diff.json's order.
+    bb_by_idx = {
+        int(p["page"]): p.get("bboxes", [])
+        for p in bb.get("pages", [])
+    }
+    for page in vd.get("pages", []):
+        page["bboxes"] = bb_by_idx.get(int(page["page"]), [])
+    vd_path.write_text(
+        json.dumps(vd, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="Visual diff for DSL-built SLAs.")
     ap.add_argument("template_sla", type=Path, help="DSL-built template.sla")
@@ -354,11 +398,19 @@ def main(argv: Optional[list[str]] = None) -> int:
                     help="Shortcut for --dpi=96")
     ap.add_argument("--out", type=Path, default=Path("build/visual_diff/"),
                     help="Output directory for reports + composites")
+    ap.add_argument("--extract-bboxes", action="store_true",
+                    help="After comparing, run tools/diff_bbox_extract.py "
+                         "and merge per-page bboxes into visual_diff.json")
+    ap.add_argument("--template-slug", type=str, default=None,
+                    help="Template slug for bbox slot attribution "
+                         "(only used with --extract-bboxes)")
     args = ap.parse_args(argv)
     dpi = 96 if args.ci else args.dpi
     tolerance = TemplateTolerance.load(args.tolerance)
     overall_pass, _ = visual_diff(args.template_sla, args.baseline,
                                     tolerance, dpi, args.out)
+    if args.extract_bboxes:
+        _merge_bboxes_into_visual_diff(args.out, args.template_slug)
     return 0 if overall_pass else 1
 
 
