@@ -66,6 +66,7 @@ def build_template() -> Document:
         extra_pdf_attrs={
             'cropMarks': '0',
             'bleedMarks': '0',
+            'useDocBleeds': '0',
         },
     )
 
@@ -75,19 +76,19 @@ def build_template() -> Document:
     doc.add_master(
         name="Normal",
         size=(297, 210),
-        bleed_mm=2,
+        bleed_mm=0,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
     )
 
     page0 = doc.add_page(
         size=(297, 210),
-        bleed_mm=2,
+        bleed_mm=0,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
         master="Normal",
     )
     page1 = doc.add_page(
         size=(297, 210),
-        bleed_mm=2,
+        bleed_mm=0,
         margins_mm=(0.0, 0.0, 0.0, 0.0),
         master="Normal",
     )
@@ -171,8 +172,6 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         anname='u141',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.png',
-        local_scale=(0.954846, 0.954846),
-        local_offset_mm=(0, -0.0549),
     ))
     page0.add(Polygon(
         x_mm=198.3236,
@@ -279,6 +278,30 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
         runs=[Run(text='\t•\t'), Run(text='Scim rem ', font='Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Tissi iuntem ressiti ', font='Black'), Run(text='orerovi tectotmusaqui tota nis quam.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Uaerum ium ', font='Black'), Run(text='verior alicide liquuntio. '), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='vello modi ', font='Black'), Run(text='aceprate pem ssi iuntem ilis'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='moditatque', font='Black'), Run(text=' nimil maxim voluptur.'), Run(text='', separator='breakline'), Run(text='\t'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
     ))
+    # u184 = Störer group: Magenta oval + "Störer" text overlay.
+    # The oval is rotated -18° in IDML but since it's a circle, rotation is visual no-op.
+    # Bounding box computed from IDML spread coords → page coords:
+    #   oval x=270.42-290.32mm, y=64.53-84.42mm (≈19.9mm diameter circle)
+    page0.add(Polygon(
+        x_mm=270.42,
+        y_mm=64.53,
+        w_mm=19.9,
+        h_mm=19.9,
+        anname='u185',
+        layer=0,
+        fill='Magenta',
+        shape='ellipse',
+    ))
+    page0.add(TextFrame(
+        x_mm=269.81,
+        y_mm=71.28,
+        w_mm=21.11,
+        h_mm=6.33,
+        anname='u186',
+        layer=0,
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+    ))
     # u2b0 omitted: yellow-outline guide marker present in IDML Gestaltung layer
     # but excluded from InDesign PDF export (design workflow artifact, not content).
     # Scribus renders it visible; InDesign suppresses it via internal export logic.
@@ -318,14 +341,28 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(ImageFrame(
         x_mm=99.1764,
-        y_mm=0,
+        # y_mm=-0.01: Scribus 1.6.x silently drops image frames whose YPOS
+        # equals the page PAGEYPOS exactly (an off-by-epsilon rendering bug).
+        # A 0.01mm negative offset places the frame 0.003pt above the page
+        # edge — imperceptible in print — and bypasses the Scribus bug.
+        # IDML source: u2cd, y=0 on page 2.
+        y_mm=-0.01,
         w_mm=99,
         h_mm=41.6915,
         anname='u2cd',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/green-pine-trees-covered-with-fog.jpg',
-        local_scale=(0.490989, 0.490989),
-        local_offset_mm=(0, -24.0251),
+        # Scribus cannot render CMYK JPEG directly; use ICC-converted sRGB PNG
+        # without embedded iCCP chunk (Scribus 1.6.x rejects PNGs with iCCP).
+        # Pre-cropped to the exact InDesign-visible region (source rows 578-1071,
+        # cols 0-2381 of the 2598×1732 original), so LOCALX=0/LOCALY=0 from the
+        # top-left of the crop shows exactly what InDesign's FrameFittingOption did.
+        # LOCALSCX: scale to fit 240.72pt natural height → 118.18pt frame height.
+        #   natural_h_pt = 1003px × (72/300) = 240.72pt
+        #   LOCALSCX = frame_h_pt / natural_h_pt = 118.18 / 240.72 = 0.4909
+        # SCALETYPE=0 ("Free Scaling") respects LOCALSCX and LOCALY.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/green-pine-trees-covered-with-fog-crop.png',
+        scale_type=0,
+        local_scale=(0.4909, 0.4909),
     ))
     page1.add(TextFrame(
         x_mm=110.5,
@@ -430,8 +467,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u3a0',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png',
-        local_scale=(0.954702, 0.954702),
-        local_offset_mm=(0, 0.1874),
     ))
     page1.add(TextFrame(
         x_mm=203.88,
@@ -471,9 +506,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
-        local_scale=(0.09, 0.09),
-        local_offset_mm=(-12.1647, -0.7654),
+        # Pre-cropped to show the correct icon region (Instagram icon, rows/cols from IDML).
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3e7-crop.png',
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -492,9 +526,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
-        local_scale=(0.09, 0.09),
-        local_offset_mm=(-4.5974, -0.7654),
+        # Pre-cropped to show Facebook icon region from the multi-icon PNG.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f0-crop.png',
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -513,9 +546,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
-        local_scale=(0.09, 0.09),
-        local_offset_mm=(-8.28, -0.7654),
+        # Pre-cropped to show TikTok icon region from the multi-icon PNG.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f5-crop.png',
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -535,7 +567,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u477',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
-        local_scale=(0.091589, 0.091589),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -555,8 +586,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4a2',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
-        local_scale=(0.095788, 0.095788),
-        local_offset_mm=(-0.0774, -0.0774),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -576,8 +605,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4da',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
-        local_scale=(0.095787, 0.095787),
-        local_offset_mm=(-0.0672, -0.0626),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
