@@ -43,6 +43,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -159,6 +160,45 @@ def extract_bboxes_px(
         })
     results.sort(key=lambda b: (b["y_px"], b["x_px"], b["w_px"], b["h_px"]))
     return results
+
+
+def load_dpi(out_dir: Path) -> int:
+    """Return the ``dpi`` integer from ``out_dir/visual_diff.json``.
+
+    Raises ``DiffBBoxError`` if ``visual_diff.json`` is missing or has no
+    top-level ``dpi`` field. The DPI is required for px -> mm conversion;
+    we deliberately do NOT fall back to a default since the resulting mm
+    bboxes would silently disagree with the slot bboxes from the template
+    build.
+    """
+    vd_path = out_dir / "visual_diff.json"
+    if not vd_path.exists():
+        raise DiffBBoxError(
+            f"missing visual_diff.json in {out_dir} — run tools/visual_diff.py first"
+        )
+    payload = json.loads(vd_path.read_text(encoding="utf-8"))
+    if "dpi" not in payload:
+        raise DiffBBoxError(
+            f"visual_diff.json missing 'dpi' field at {vd_path}"
+        )
+    return int(payload["dpi"])
+
+
+def px_to_mm_bbox(bbox_px: dict, dpi: int) -> dict:
+    """Convert a ``{x_px, y_px, w_px, h_px}`` pixel bbox to ``{x, y, w, h}`` mm.
+
+    Each component is rounded to 0.1 mm. The round step is what makes the
+    pipeline FP-stable across runs (determinism decision 5b) — without it
+    the trailing-binary FP drift can flip the last decimal between two
+    otherwise-identical executions.
+    """
+    mm_per_px = 25.4 / dpi
+    return {
+        "x": round(bbox_px["x_px"] * mm_per_px, 1),
+        "y": round(bbox_px["y_px"] * mm_per_px, 1),
+        "w": round(bbox_px["w_px"] * mm_per_px, 1),
+        "h": round(bbox_px["h_px"] * mm_per_px, 1),
+    }
 
 
 def _build_argparser() -> argparse.ArgumentParser:
