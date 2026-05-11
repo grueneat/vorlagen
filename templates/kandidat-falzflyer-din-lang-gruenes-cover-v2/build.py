@@ -115,6 +115,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         align=3,
         fcolor='White',
         linesp=14.3,
+        linesp_mode=0,
     ))
     doc.add_para_style(ParaStyle(
         name='idml/headline-in-gruenem-kasten',
@@ -124,6 +125,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         align=1,
         fcolor='White',
         linesp=12,
+        linesp_mode=0,
     ))
     doc.add_para_style(ParaStyle(
         name='idml/normalparagraphstyle',
@@ -140,6 +142,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         align=3,
         fcolor='White',
         linesp=14.3,
+        linesp_mode=0,
     ))
     doc.add_para_style(ParaStyle(
         name='idml/aufzaehlungen-auf-gruenem-hintergrund',
@@ -149,6 +152,53 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         align=0,
         fcolor='White',
         linesp=14.3,
+        linesp_mode=0,
+    ))
+    # Center-aligned headline style (used by u52d: 38pt, tight leading 34pt)
+    # linesp_mode=0 = auto/fixed pt leading.
+    doc.add_para_style(ParaStyle(
+        name='idml/headline-cover-zentriert',
+        parent='idml/normalparagraphstyle',
+        font='Gotham Narrow Ultra',
+        fontsize=38,
+        align=1,
+        fcolor='White',
+        linesp=34.134,
+        linesp_mode=0,
+    ))
+    # Center-aligned subheadline style (used by u516: 18pt)
+    # No explicit linesp/linesp_mode → inherits Scribus auto leading (fine for 18pt body text).
+    doc.add_para_style(ParaStyle(
+        name='idml/subheadline-cover-zentriert',
+        parent='idml/normalparagraphstyle',
+        font='Gotham Narrow Book',
+        fontsize=18,
+        align=1,
+        fcolor='White',
+    ))
+    # Left-aligned panel headline: "Ich bin eine / Headline." at 30pt with 27pt leading.
+    # Used by u1b0, u1e6 (page 1) and u24e (page 2), all left-aligned.
+    # linesp_mode=0 = auto/fixed pt leading.
+    doc.add_para_style(ParaStyle(
+        name='idml/headline-panel-weiss',
+        parent='idml/normalparagraphstyle',
+        font='Gotham Narrow Ultra',
+        fontsize=30,
+        align=0,
+        fcolor='White',
+        linesp=27,
+        linesp_mode=0,
+    ))
+    # Same style but Dunkelgrün color (used by u24e on page 2)
+    doc.add_para_style(ParaStyle(
+        name='idml/headline-panel-dunkelgruen',
+        parent='idml/normalparagraphstyle',
+        font='Gotham Narrow Ultra',
+        fontsize=30,
+        align=0,
+        fcolor='Dunkelgrün',
+        linesp=27,
+        linesp_mode=0,
     ))
     return None
 
@@ -172,6 +222,11 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         anname='u141',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.png',
+        # Scribus SCALETYPE=1 does NOT auto-scale external PNGs; renders at natural pt/px.
+        # natural_h_pt = 826px × (72/600) = 99.12pt; frame_h_pt = 15.6052mm × 2.83465 = 44.235pt
+        # LOCALSCX = frame_h_pt / natural_h_pt = 44.235 / 99.12 = 0.44628
+        scale_type=0,
+        local_scale=(0.44628, 0.44628),
     ))
     page0.add(Polygon(
         x_mm=198.3236,
@@ -198,18 +253,58 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=11.6453,
         anname='u516',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Mehrzeilige Subheadline –', font='Gotham Narrow Book', fontsize=18, fcolor='White'), Run(text='', separator='breakline'), Run(text='mehr Info zum Thema', font='Gotham Narrow Book', fontsize=18, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+        style='idml/subheadline-cover-zentriert',
+        runs=[Run(text='Mehrzeilige Subheadline –', font='Gotham Narrow Book', fontsize=18, fcolor='White'), Run(text='', separator='breakline'), Run(text='mehr Info zum Thema', font='Gotham Narrow Book', fontsize=18, fcolor='White', paragraph_style='idml/subheadline-cover-zentriert')],
     ))
+    # u52d = cover headline (3 lines: Gotham "Das ist die" / Vollkorn "dreizeilige" /
+    # Gotham "Headline"). Same Vollkorn-rendering workaround as u1b0/u1e6: any line
+    # AFTER Vollkorn in a mixed-font paragraph is suppressed by Scribus. Split into
+    # three single-line frames positioned to match baseline.pdf glyph top positions.
+    #
+    # Positions calibrated from baseline.pdf (pdfplumber glyph tops, page-relative):
+    #   "Das ist die": 228.2pt = 80.51mm  (Gotham: glyph top = frame top)
+    #   "dreizeilige":  263.1pt = 92.81mm (Vollkorn 38pt: glyph top = frame_top+15.0pt)
+    #   "Headline":     296.4pt = 104.56mm (Gotham: glyph top = frame top)
+    #
+    # Frame 1: "Das ist die" (Gotham Narrow Ultra, centered).
     page0.add(TextFrame(
         x_mm=211.6719,
-        y_mm=79.2087,
+        y_mm=80.51,
         w_mm=71.6562,
-        h_mm=34.7873,
+        # 14.5mm=41.1pt: same height as u52d_hl ("Headline") which renders correctly.
+        # 11mm=31.18pt caused "Das ist die" to NOT render (descent 7.6pt clipped by frame).
+        h_mm=14.5,
         anname='u52d',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', fontsize=38, fcolor='White'), Run(text='', separator='breakline'), Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb'), Run(text='', separator='breakline'), Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+        style='idml/headline-cover-zentriert',
+        runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', fontsize=38, fcolor='White')],
+    ))
+    # Frame 2: "dreizeilige" (Vollkorn Black Italic, centered).
+    # Target glyph top = 263.1pt. Vollkorn 38pt offset=15.0pt → frame_top=248.1pt=87.52mm.
+    page0.add(TextFrame(
+        x_mm=211.6719,
+        y_mm=87.52,
+        w_mm=71.6562,
+        # 19mm=53.86pt: Vollkorn baseline_from_frame_top=15.0+36.18=51.18pt < 53.86pt ✓
+        h_mm=19,
+        anname='u52d_dreiz',
+        layer=0,
+        style='idml/headline-cover-zentriert',
+        runs=[Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb')],
+    ))
+    # Frame 3: "Headline" (Gotham Narrow Ultra, centered).
+    # Target glyph top = 296.4pt → frame_top=296.4pt=104.56mm.
+    page0.add(TextFrame(
+        x_mm=211.6719,
+        y_mm=104.56,
+        w_mm=71.6562,
+        # 14.5mm=41.1pt: Gotham 38pt baseline=0+30.4=30.4pt < 41.1pt ✓; ends at 119.06mm
+        # (u516 subheadline starts at 119.146mm, no overlap).
+        h_mm=14.5,
+        anname='u52d_hl',
+        layer=0,
+        style='idml/headline-cover-zentriert',
+        runs=[Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White')],
     ))
     page0.add(Polygon(
         x_mm=308.75,
@@ -238,15 +333,42 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         fill='Magenta',
     ))
+    # u1b0 = left-panel headline, two-frame workaround for Vollkorn rendering.
+    # Scribus cannot render Vollkorn Black Italic as a SECOND line in a mixed-font
+    # paragraph with LINESP < em-box; it is suppressed regardless of frame height
+    # (confirmed by testing with frames up to 141pt tall — still no rendering).
+    # Solution: emit each headline line as a separate single-line frame.
+    #
+    # Frame 1: Gotham Narrow Ultra "Ich bin eine " (line 1).
+    # y_mm=17.4mm: matches the original IDML frame position. Scribus BASEOF=0
+    # places Gotham glyph top at frame top. The 3pt offset vs InDesign is a
+    # rendering engine difference; correcting it increases mismatch elsewhere.
     page0.add(TextFrame(
         x_mm=16.8913,
         y_mm=17.4,
         w_mm=65.2174,
-        h_mm=17.9915,
+        # 10.9mm = 30.9pt: enough for one 30pt Gotham line.
+        h_mm=10.9,
         anname='u1b0',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
+        style='idml/headline-panel-weiss',
+        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White')],
+    ))
+    # Frame 2: Vollkorn Black Italic "Headline." (line 2).
+    # Vollkorn glyph top in baseline.pdf = 79.9pt = 28.19mm.
+    # Empirical: Vollkorn first line glyph top = frame_top + 11.78pt.
+    # → frame top needed = 79.9 - 11.78 = 68.12pt = 24.03mm from page top.
+    page0.add(TextFrame(
+        x_mm=16.8913,
+        y_mm=24.03,
+        w_mm=65.2174,
+        # u1c7 starts at y=41.69mm. Height = 41.69-24.03 = 17.66mm.
+        # Vollkorn baseline at 40.34pt < 50.05pt (frame height) ✓.
+        h_mm=17.66,
+        anname='u1b0_hl',
+        layer=0,
+        style='idml/headline-panel-weiss',
+        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb')],
     ))
     page0.add(TextFrame(
         x_mm=16.8913,
@@ -258,15 +380,26 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         style='idml/fliesstext-auf-gruenem-hintergrund',
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
     ))
+    # u1e6 = center-panel headline, same two-frame workaround as u1b0.
     page0.add(TextFrame(
         x_mm=115.8913,
         y_mm=17.4,
         w_mm=65.2174,
-        h_mm=17.9915,
+        h_mm=10.9,
         anname='u1e6',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
+        style='idml/headline-panel-weiss',
+        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White')],
+    ))
+    page0.add(TextFrame(
+        x_mm=115.8913,
+        y_mm=24.03,
+        w_mm=65.2174,
+        h_mm=17.66,
+        anname='u1e6_hl',
+        layer=0,
+        style='idml/headline-panel-weiss',
+        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb')],
     ))
     page0.add(TextFrame(
         x_mm=115.8913,
@@ -313,11 +446,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=16.8913,
         y_mm=17.4,
         w_mm=65.2174,
-        h_mm=17.9915,
+        h_mm=20.5,
         anname='u24e',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle')],
+        style='idml/headline-panel-dunkelgruen',
+        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün'), Run(text='', has_itext=False, separator='breakline'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/headline-panel-dunkelgruen')],
     ))
     page1.add(TextFrame(
         x_mm=16.8913,
@@ -368,11 +501,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=110.5,
         y_mm=17.4,
         w_mm=75,
-        h_mm=17.9915,
+        h_mm=20.5,
         anname='u2d5',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin auch ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='eine Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+        style='idml/headline-panel-weiss',
+        runs=[Run(text='Ich bin auch ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', has_itext=False, separator='breakline'), Run(text='eine Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/headline-panel-weiss')],
     ))
     page1.add(Polygon(
         x_mm=-17.3,
@@ -467,6 +600,12 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u3a0',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png',
+        # Portrait PNG has no pHYs DPI chunk — Scribus treats it at 72dpi native.
+        # At native scale the image is 3894×2598pt (far larger than frame).
+        # SCALETYPE=1 (auto-scale-to-frame) fills frame proportionally in Scribus
+        # when the image has no embedded DPI (different behaviour from pHYs images).
+        # Measured from baseline: frame 280×596pt; image fills exactly.
+        # Leave at default SCALETYPE=1 (auto), local_scale=(1,1).
     ))
     page1.add(TextFrame(
         x_mm=203.88,
@@ -508,6 +647,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         # Pre-cropped to show the correct icon region (Instagram icon, rows/cols from IDML).
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3e7-crop.png',
+        # 948×932 @600dpi → natural_h_pt = 932 × (72/600) = 111.84pt
+        # frame_h_pt = 3.299mm × 2.83465 = 9.352pt
+        # LOCALSCX = 9.352 / 111.84 = 0.083615
+        scale_type=0,
+        local_scale=(0.083615, 0.083615),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -528,6 +672,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         # Pre-cropped to show Facebook icon region from the multi-icon PNG.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f0-crop.png',
+        # 948×932 @600dpi → LOCALSCX = 9.352 / 111.84 = 0.083615
+        scale_type=0,
+        local_scale=(0.083615, 0.083615),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -548,6 +695,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         # Pre-cropped to show TikTok icon region from the multi-icon PNG.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f5-crop.png',
+        # 947×932 @600dpi → natural_h_pt = 111.84pt; LOCALSCX = 9.352 / 111.84 = 0.083615
+        scale_type=0,
+        local_scale=(0.083615, 0.083615),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -567,6 +717,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u477',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
+        # 865×865 @600dpi → natural_h_pt = 865 × (72/600) = 103.8pt
+        # frame_h_pt = 3.299mm × 2.83465 = 9.352pt
+        # LOCALSCX = 9.352 / 103.8 = 0.090092
+        scale_type=0,
+        local_scale=(0.090092, 0.090092),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -586,6 +741,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4a2',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
+        # 865×865 @600dpi → LOCALSCX = 9.352 / 103.8 = 0.090092
+        scale_type=0,
+        local_scale=(0.090092, 0.090092),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -605,6 +763,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4da',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
+        # 865×865 @600dpi → LOCALSCX = 9.352 / 103.8 = 0.090092
+        scale_type=0,
+        local_scale=(0.090092, 0.090092),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
