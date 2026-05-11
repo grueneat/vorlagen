@@ -1,12 +1,12 @@
 ---
 name: experiments
 description: |
-  Run constraint-envelope design experiments with pairwise voting. MUST BE USED when the
-  user invokes `/experiments <verb>` where <verb> in {new, generate, render, capture},
-  or when the user mentions design experimentation, hypothesis voting, variant rendering,
-  or amending the corpus with experiment findings. Encodes the three-layer model
-  (envelope / variation surface / implementation), the four-subcommand dispatch, v1's
-  failure-mode lessons, and the corpus-update merge gate.
+  Run constraint-envelope design experiments with rank-mode voting (click-to-rank).
+  MUST BE USED when the user invokes `/experiments <verb>` where <verb> in
+  {new, generate, render, capture}, or when the user mentions design experimentation,
+  hypothesis voting, variant rendering, or amending the corpus with experiment findings.
+  Encodes the three-layer model (envelope / variation surface / implementation), the
+  four-subcommand dispatch, v1's failure-mode lessons, and the corpus-update merge gate.
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Skill
 argument-hint: "[new|generate|render|capture] <experiment-id>"
 ---
@@ -48,6 +48,24 @@ Every experiment has three layers. To understand a hypothesis, identify each lay
 
 The envelope is enforced at render-time on the built Document, NOT trusted from the
 variant module's self-report (see `tools/experiment_envelope.py::run_envelope`).
+
+## Voting mode (primary)
+
+The site exposes **rank** as the **primary** voting mode and **direct-pick** as a
+secondary fallback. Click-to-rank is the design default — voters click a dedicated
+checkmark control on each variant card to add it to an ordered list rendered below
+the grid; the ranked list reorders via ▲/▼ arrow buttons (accessible primary path)
+and SortableJS drag-drop (tactile secondary). Image-click opens the existing lightbox
+and never collides with the checkmark (the checkmark is a sibling button to the `<img>`,
+so click bubbling can't reach the lightbox listener).
+
+Rank mode is the default when the manifest has ≥3 variants; direct-pick is the
+fallback for <3 variants where ranking adds no signal. Mode is switchable per session
+via the toolbar.
+
+**Breaking schema change.** v1 result files are no longer processable. The schema
+bump is intentional; no migration tool ships. The aggregator
+(`tools/experiment_results.py`) rejects unknown modes at validate-time.
 
 ## new
 
@@ -116,20 +134,47 @@ the rendered artefact decides.
 
 To aggregate a voting session, do:
 
-1. Verify the user has voted: `experiments/<id>/results/*.json` exists.
+1. Verify the user has voted: `experiments/<id>/results/*.json` exists. Each results
+   file MUST validate against `experiments/_schema/results.schema.yaml` and carry one
+   of the two modes:
+   - **rank** — ordered slug list (`"mode": "rank"`, `"ranking": ["slug1", ...]`).
+   - **direct-pick** — unordered selection set (`"mode": "direct-pick"`, `"selections": [...]`).
 2. Run `bin/experiment-results <id>`. This writes
    `experiments/<id>/results/SUMMARY.md` with:
-   - Top-5 / Bottom-3 by appeal and by transport
-   - Spearman ρ(appeal, transport) and halo flag
-   - Per-pair disagreement table
-   - `## Variants dropped during render` block (rendered from `manifest.json::_dropped`)
+   - Top-3 / Bottom-3 by mean linear Borda position score across raters.
+   - Per-slug score + rater count.
+   - `## Variants dropped during render` block (rendered from `manifest.json::_dropped`).
    - `## Corpus update stub` with two pre-labelled subsections:
-     `### From v1 (envelope necessity)` and `### From v2 (density+form findings)`
+     `### From v1 (envelope necessity)` and `### From v2 (density+form findings)`.
 3. Display the corpus stub to the user and prompt them to amend
    `design-guide/gruene-corpus.md` with both sections. The dual structure is the merge
    gate: every experiment closes BOTH a methodology lesson AND a substantive finding.
 4. Once the user confirms the corpus is updated, prompt them to commit the results JSON
    + the amended corpus together: `<issue-id>: docs(corpus): close <experiment-name>`.
+
+### Results JSON shape (rank, primary)
+
+```json
+{
+  "experiment_id": "falzflyer-p2-mein-plan-v2",
+  "rater": "flo",
+  "started_at": "2026-05-11T12:00:00Z",
+  "exported_at": "2026-05-11T12:18:00Z",
+  "mode": "rank",
+  "ranking": ["numbered-priority-list-v2", "manifesto-single-statement-v2", "..."]
+}
+```
+
+Direct-pick uses `"mode": "direct-pick"` and `"selections": [...]` instead of `ranking`.
+The schema rejects files carrying both fields and files with unknown mode values.
+
+### Aggregation math
+
+Linear Borda position score, normalised: for a ranking of length `N`, the slug at
+0-based rank `i` gets `(N - 1 - i) / (N - 1)`. Top-ranked → 1.0, bottom → 0.0. Slugs
+no rater placed remain `None` (excluded, not zero). Direct-pick fallback assigns 1.0
+to each selected slug and `None` otherwise. Multi-rater aggregation takes the mean of
+the non-None per-slug scores; the SUMMARY surfaces top-3 and bottom-3 by mean.
 
 ## v1 lessons (the durable carriers)
 
@@ -142,9 +187,11 @@ To aggregate a voting session, do:
   per generation.
 - **Halo effect.** Voters tend to rank by overall polish, not the tested axis.
   Mitigation: every hypothesis declares `axis_commitments`; SUMMARY.md surfaces
-  axis-balance and the Spearman halo flag before voting is considered actionable.
-- **Position bias.** Voters favour the left-presented variant in an A/B pair.
-  Mitigation: per-pair randomization in the Astro voting page.
+  axis-balance before voting is considered actionable. The rank-mode UI shows axis
+  commitments on each card so the rater can sanity-check what they're ranking on.
+- **Position bias.** Voters favour the first-presented variant. Mitigation: rank-mode
+  variant grid renders in manifest order; we accept this as a stable presentation
+  (post-hoc analysis can look for first-position bias if needed).
 - **Why all 16 BRAND_CONSTRAINTS are floor by default.** The variation surface tests
   ONE axis; everything else is constraint. Relaxations MUST be explicit in
   `constraints.yml::relax` with a one-line rationale. Implicit relaxations are
@@ -156,12 +203,13 @@ To aggregate a voting session, do:
 ## Corpus-update merge gate
 
 No experiment merges without:
-1. A complete Flo voting session (`experiments/<id>/results/flo-<DATE>.json`).
+1. A complete Flo voting session (`experiments/<id>/results/flo-<DATE>.json`) in rank
+   mode (or direct-pick for <3-variant runs).
 2. A dual-section corpus amendment in `design-guide/gruene-corpus.md`:
-   - **Part 1** — methodology lesson (e.g. "envelope necessity", "halo-effect
-     surfacing", "axis-commitment dedup").
-   - **Part 2** — substantive findings on the tested axis (top-3 / bottom-3 / halo
-     flag with provenance: experiment id + results JSON path + SUMMARY.md path).
+   - **Part 1** — methodology lesson (e.g. "envelope necessity", "rank-mode adoption
+     and what it changed", "axis-commitment dedup").
+   - **Part 2** — substantive findings on the tested axis (top-3 / bottom-3 with
+     provenance: experiment id + results JSON path + SUMMARY.md path).
 
 This pairing is the durable cross-experiment learning loop. A finding without a
 methodology lesson is anecdotal; a methodology lesson without a finding is theory.
@@ -173,7 +221,7 @@ methodology lesson is anecdotal; a methodology lesson without a finding is theor
 | `new`      | `experiments/_constraints/falzflyer-default.yml` exists; `tools/experiment_envelope.py` importable; `<id>` not already used |
 | `generate` | `experiments/<id>/constraints.yml` exists; `tested_axis` not the default placeholder; ≥ 2 LLMs on PATH (`claude`/`codex`/`gemini`) |
 | `render`   | brand fonts on PATH (`fc-list | grep -i gruene` ≥ 30); `experiments/<id>/manifest.yml` exists and validates |
-| `capture`  | `experiments/<id>/results/*.json` exists with at least one rater session |
+| `capture`  | `experiments/<id>/results/*.json` exists with at least one rater session; each file validates against `experiments/_schema/results.schema.yaml` |
 
 Halt loudly on any precondition failure. Do NOT attempt to repair from the skill —
 surface the missing piece to the user so the failure mode is visible.
@@ -189,6 +237,8 @@ The following are explicit non-features:
   the user with the stub but writes nothing without confirmation.
 - Hypothesis-prompt evolution beyond v1 anti-examples — separate issue once ≥ 2
   experiments have run.
-- Adaptive pair sampling (Glicko/Elo) and Bradley-Terry / Elo ranking.
+- Adaptive pair sampling, Bradley-Terry / Elo, or Glicko ranking — out of scope.
+- Reviving v1's two-axis (appeal + transport) inside rank mode — out of scope.
+- Migrating v1 result files to the rank schema — out of scope; no migration tool ships.
 - Touching `bin/experiment-*` entry-point scripts — they already work; this skill
   dispatches to them.

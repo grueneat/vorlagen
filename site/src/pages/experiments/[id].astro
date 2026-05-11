@@ -28,9 +28,6 @@ const hypotheses: any[] = exp && Array.isArray(exp.data.hypotheses)
 const llms: string[] = exp && Array.isArray(exp.data.contributing_llms)
   ? exp.data.contributing_llms
   : [];
-const totalPairs = hypotheses.length >= 2
-  ? (hypotheses.length * (hypotheses.length - 1)) / 2
-  : 0;
 
 // Embed the variant data as JSON for the client script. We only need
 // the slug + name + axes + rationale + preview paths.
@@ -75,27 +72,51 @@ const variantsForJs = hypotheses.map((h) => ({
           <input id="exp-rater" type="text" value="anonymous"
                  style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; min-width: 12rem;" />
         </label>
+        <button id="exp-mode-rank" type="button" class="exp-mode-btn"
+                style="padding: 0.4rem 0.9rem;">Rank</button>
         <button id="exp-mode-direct" type="button" class="exp-mode-btn"
                 style="padding: 0.4rem 0.9rem;">Direkt-Pick</button>
-        <button id="exp-mode-versus" type="button" class="exp-mode-btn"
-                style="padding: 0.4rem 0.9rem;">Versus</button>
         <button id="exp-export" type="button"
                 style="padding: 0.4rem 0.9rem; margin-left: auto;">
           Export JSON
         </button>
       </div>
 
-      <details style="margin-bottom: 1rem;">
-        <summary style="cursor: pointer;">Tastatur-Shortcuts (Versus-Mode)</summary>
-        <ul style="font-size: 0.9em; color: #555; margin-top: 0.5rem;">
-          <li><kbd>Q</kbd> / <kbd>W</kbd> — Appeal: links / rechts</li>
-          <li><kbd>O</kbd> / <kbd>P</kbd> — Transport: links / rechts</li>
-          <li><kbd>Space</kbd> — Pair überspringen</li>
-          <li><kbd>E</kbd> — Export JSON</li>
-        </ul>
-      </details>
+      <section id="exp-rank" class="exp-mode" style="display: none;">
+        <h2>Rank</h2>
+        <p style="color: #555;">
+          Klicke das Häkchen oben rechts auf einer Variante, um sie der Rangliste hinzuzufügen.
+          Sortiere die Rangliste mit Drag-Drop (Griff <code>⋮⋮</code>) oder den Pfeiltasten ▲/▼.
+          Bild-Klick öffnet weiterhin das Lightbox.
+        </p>
+        <!--
+          Variant-card markup (JS-rendered; the literal shape is below for
+          grep/audit visibility):
 
-      <section id="exp-direct" class="exp-mode" style="display: block;">
+          <div class="variant-card" data-slug="<slug>">
+            <img src="<thumb>" />
+            <button class="checkmark" aria-label="Select <slug>" aria-pressed="false" type="button">
+              <span class="checkmark-visual" aria-hidden="true"></span>
+              <span class="position-badge" aria-hidden="true" hidden></span>
+            </button>
+            <strong>title</strong>
+          </div>
+        -->
+        <div id="exp-rank-grid"
+             style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        </div>
+
+        <h3 style="margin-top: 2rem;">Deine Rangliste</h3>
+        <ol id="ranked-list" aria-label="Your ranked choices"></ol>
+        <p class="rank-empty" id="rank-empty">
+          Noch keine Variante in der Rangliste — klicke ein Häkchen, um zu starten.
+        </p>
+        <button id="export-rank" type="button" style="margin-top: 0.75rem; padding: 0.4rem 0.9rem;">
+          Export ranking JSON
+        </button>
+      </section>
+
+      <section id="exp-direct" class="exp-mode" style="display: none;">
         <h2>Direct-Pick</h2>
         <p style="color: #555;">Klicke den Stern auf einer Variante um sie als Favorit zu markieren.</p>
         <div id="exp-direct-grid"
@@ -103,61 +124,227 @@ const variantsForJs = hypotheses.map((h) => ({
         </div>
       </section>
 
-      <section id="exp-versus" class="exp-mode" style="display: none;">
-        <h2>Versus</h2>
-        <div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem;">
-          <div style="flex: 1; min-width: 240px;">
-            <small>Appeal</small>
-            <progress id="exp-progress-appeal" max="0" value="0"
-                      style="width: 100%; height: 1rem;"></progress>
-            <small id="exp-progress-appeal-label" style="color: #555;">0 / 0</small>
-          </div>
-          <div style="flex: 1; min-width: 240px;">
-            <small>Transport</small>
-            <progress id="exp-progress-transport" max="0" value="0"
-                      style="width: 100%; height: 1rem;"></progress>
-            <small id="exp-progress-transport-label" style="color: #555;">0 / 0</small>
-          </div>
-        </div>
+      <div id="rank-live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
-        <div id="exp-pair-area" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-          <div class="exp-card" data-side="left"
-               style="background: white; padding: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); cursor: zoom-in;">
-            <img class="exp-card-img" src="" alt="" loading="lazy"
-                 style="width: 100%; height: auto; display: block;" />
-            <div class="exp-card-name" style="font-size: 0.85em; color: #555; text-align: center; margin-top: 0.5rem;"></div>
-          </div>
-          <div class="exp-card" data-side="right"
-               style="background: white; padding: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); cursor: zoom-in;">
-            <img class="exp-card-img" src="" alt="" loading="lazy"
-                 style="width: 100%; height: auto; display: block;" />
-            <div class="exp-card-name" style="font-size: 0.85em; color: #555; text-align: center; margin-top: 0.5rem;"></div>
-          </div>
-        </div>
+      <style>
+        /* ============================================================
+           Rank-mode styling (issue #31)
+           Brand colors flow from Base.astro:12-17 (--gruen-hell,
+           --gruen-dunkel). Touch targets are >= 44 x 44px per CONTEXT
+           decision 5 and WCAG AAA SC 2.5.5.
+           ============================================================ */
 
-        <div style="margin-top: 1rem;">
-          <p style="margin: 0.25rem 0;"><strong>Welche spricht dich mehr an?</strong> (Appeal)</p>
-          <div style="display: flex; gap: 0.5rem;">
-            <button id="exp-appeal-left" class="exp-vote-btn" type="button" data-axis="appeal" data-side="left"
-                    style="flex: 1; padding: 0.5rem;">Q · Links</button>
-            <button id="exp-appeal-right" class="exp-vote-btn" type="button" data-axis="appeal" data-side="right"
-                    style="flex: 1; padding: 0.5rem;">W · Rechts</button>
-          </div>
-        </div>
-        <div style="margin-top: 0.75rem;">
-          <p style="margin: 0.25rem 0;"><strong>Welche transportiert die Botschaft besser?</strong> (Transport)</p>
-          <div style="display: flex; gap: 0.5rem;">
-            <button id="exp-transport-left" class="exp-vote-btn" type="button" data-axis="transport" data-side="left"
-                    style="flex: 1; padding: 0.5rem;">O · Links</button>
-            <button id="exp-transport-right" class="exp-vote-btn" type="button" data-axis="transport" data-side="right"
-                    style="flex: 1; padding: 0.5rem;">P · Rechts</button>
-          </div>
-        </div>
-        <div style="margin-top: 0.75rem;">
-          <button id="exp-skip" type="button"
-                  style="width: 100%; padding: 0.5rem;">Space · Skip-Pair</button>
-        </div>
-      </section>
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+
+        #exp-rank-grid .variant-card {
+          position: relative;
+          background: white;
+          padding: 0.75rem;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        #exp-rank-grid .variant-card img {
+          width: 100%;
+          height: auto;
+          display: block;
+          cursor: zoom-in;
+        }
+
+        /* Sibling-to-image checkmark button, top-right of the card.
+           Hit zone >= 44x44 (CONTEXT 5 + WCAG AAA); visible icon ~32px. */
+        .checkmark {
+          position: absolute;
+          top: 0.5rem;
+          right: 0.5rem;
+          min-width: 44px;
+          min-height: 44px;
+          padding: 6px;
+          background: rgba(255, 255, 255, 0.85);
+          border: 2px solid var(--gruen-dunkel);
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .checkmark:hover {
+          background: white;
+          transform: scale(1.05);
+        }
+
+        .checkmark:focus-visible {
+          outline: 3px solid var(--gruen-hell);
+          outline-offset: 2px;
+        }
+
+        .checkmark-visual {
+          display: block;
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: transparent;
+          position: relative;
+        }
+
+        .checkmark[aria-pressed="true"] {
+          background: var(--gruen-hell);
+          border-color: var(--gruen-dunkel);
+        }
+
+        .checkmark[aria-pressed="true"] .checkmark-visual::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 14px;
+          height: 8px;
+          border-left: 3px solid white;
+          border-bottom: 3px solid white;
+          transform: translate(-50%, -65%) rotate(-45deg);
+        }
+
+        /* Position-number pill, top-left of the checkmark button.
+           Hidden until a position is assigned (T08 toggles `hidden`). */
+        .position-badge {
+          position: absolute;
+          top: -6px;
+          left: -6px;
+          min-width: 18px;
+          height: 18px;
+          padding: 0 4px;
+          background: white;
+          border: 1.5px solid var(--gruen-dunkel);
+          color: var(--gruen-dunkel);
+          font-size: 11px;
+          font-weight: 700;
+          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /* ---- Ranked list (ordered rows below the grid) ----------- */
+
+        #ranked-list {
+          list-style: none;
+          padding: 0;
+          margin: 0.75rem 0 0 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+        }
+
+        .ranked-row {
+          min-height: 56px; /* reserve height to prevent CLS on insert */
+          background: white;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          padding: 0.4rem 0.6rem;
+          display: grid;
+          grid-template-columns: 44px 44px 44px 48px 1fr 44px;
+          gap: 0.4rem;
+          align-items: center;
+        }
+
+        /* `touch-action: none` ONLY on .drag-handle — putting it on the
+           row or the list kills page scroll on mobile (top pitfall #5). */
+        .drag-handle {
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.4em;
+          color: #888;
+          cursor: grab;
+          user-select: none;
+          touch-action: none;
+        }
+
+        .drag-handle:active {
+          cursor: grabbing;
+        }
+
+        .ranked-row .arrow-up,
+        .ranked-row .arrow-down,
+        .ranked-row .remove-btn {
+          min-width: 44px;
+          min-height: 44px;
+          background: white;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 1.1em;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+        }
+
+        .ranked-row .arrow-up:focus-visible,
+        .ranked-row .arrow-down:focus-visible,
+        .ranked-row .remove-btn:focus-visible {
+          outline: 3px solid var(--gruen-hell);
+          outline-offset: 2px;
+        }
+
+        .ranked-row .thumbnail {
+          width: 48px;
+          height: 48px;
+          max-width: 48px;
+          max-height: 48px;
+          object-fit: cover;
+        }
+
+        .ranked-row .title {
+          font-size: 0.9rem;
+          color: #222;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .rank-empty {
+          color: #777;
+          font-style: italic;
+          margin: 0.6rem 0 0 0;
+        }
+
+        /* ---- Mobile (~iPhone SE width) ----------------------------- */
+        @media (max-width: 640px) {
+          #exp-rank-grid {
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+          }
+          #ranked-list {
+            width: 100%;
+          }
+          .ranked-row {
+            grid-template-columns: 40px 40px 40px 40px 1fr 40px;
+            gap: 0.3rem;
+          }
+          .drag-handle,
+          .ranked-row .arrow-up,
+          .ranked-row .arrow-down,
+          .ranked-row .remove-btn {
+            min-width: 44px;
+            min-height: 44px;
+          }
+        }
+      </style>
 
       <!-- Lightbox overlay (mirrors templates/[...id].astro pattern) -->
       <div id="exp-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box;">
@@ -170,7 +357,6 @@ const variantsForJs = hypotheses.map((h) => ({
 
       <script id="exp-data" type="application/json" set:html={JSON.stringify({
         expId,
-        totalPairs,
         variants: variantsForJs,
       })} />
 
@@ -181,7 +367,6 @@ const variantsForJs = hypotheses.map((h) => ({
           var DATA = JSON.parse(dataEl.textContent);
           var EXP_ID = DATA.expId;
           var VARIANTS = DATA.variants;
-          var TOTAL_PAIRS = DATA.totalPairs;
           var STORAGE_KEY = 'experiment:' + EXP_ID + ':session:v1';
 
           // ---- Storage helpers (with non-persistence detection) ----
@@ -213,7 +398,6 @@ const variantsForJs = hypotheses.map((h) => ({
           var session = loadSession() || {
             rater: 'anonymous',
             session_start: nowISO(),
-            votes: [],
             direct_picks: [],
           };
 
@@ -294,302 +478,43 @@ const variantsForJs = hypotheses.map((h) => ({
             });
           }
 
-          // ---- Versus mode: pair queue + Fisher-Yates shuffle ----
-          function fisherYates(arr) {
-            for (var i = arr.length - 1; i > 0; i--) {
-              var j = Math.floor(Math.random() * (i + 1));
-              var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-            }
-            return arr;
-          }
-          function buildPairs() {
-            var pairs = [];
-            for (var i = 0; i < VARIANTS.length; i++) {
-              for (var j = i + 1; j < VARIANTS.length; j++) {
-                var aFirst = Math.random() < 0.5;
-                pairs.push({
-                  a: aFirst ? VARIANTS[i] : VARIANTS[j],
-                  b: aFirst ? VARIANTS[j] : VARIANTS[i],
-                  // position_a_on_screen — neutralise position bias
-                  position_a_on_screen: Math.random() < 0.5 ? 'left' : 'right',
-                });
-              }
-            }
-            return fisherYates(pairs);
-          }
-
-          var pairQueue = buildPairs();
-          var pairIdx = 0;
-
-          // Pair state — which axes have been voted on for the current pair?
-          var pairState = { appeal: null, transport: null };
-
-          var leftCard = document.querySelector('.exp-card[data-side="left"]');
-          var rightCard = document.querySelector('.exp-card[data-side="right"]');
-          var leftImg = leftCard ? leftCard.querySelector('.exp-card-img') : null;
-          var rightImg = rightCard ? rightCard.querySelector('.exp-card-img') : null;
-          var leftName = leftCard ? leftCard.querySelector('.exp-card-name') : null;
-          var rightName = rightCard ? rightCard.querySelector('.exp-card-name') : null;
-
-          function currentPair() {
-            if (pairIdx >= pairQueue.length) return null;
-            return pairQueue[pairIdx];
-          }
-
-          // For a given side ('left'|'right') return the variant displayed
-          // there given the pair's position_a_on_screen.
-          function variantForSide(pair, side) {
-            if (!pair) return null;
-            var aSide = pair.position_a_on_screen;
-            if (side === aSide) return pair.a;
-            return pair.b;
-          }
-
-          function showPair() {
-            var pair = currentPair();
-            if (!pair) {
-              // All pairs voted; render a friendly "done" state.
-              if (leftImg) leftImg.src = '';
-              if (rightImg) rightImg.src = '';
-              if (leftName) leftName.textContent = 'Fertig.';
-              if (rightName) rightName.textContent = 'Klick Export JSON.';
-              return;
-            }
-            var lv = variantForSide(pair, 'left');
-            var rv = variantForSide(pair, 'right');
-            if (leftImg) {
-              leftImg.src = lv.thumb;
-              leftImg.alt = lv.name;
-              leftImg.dataset.hires = lv.hires;
-              leftImg.dataset.label = lv.name;
-            }
-            if (rightImg) {
-              rightImg.src = rv.thumb;
-              rightImg.alt = rv.name;
-              rightImg.dataset.hires = rv.hires;
-              rightImg.dataset.label = rv.name;
-            }
-            if (leftName) leftName.textContent = lv.name + (lv.wildcard ? ' · WILDCARD' : '');
-            if (rightName) rightName.textContent = rv.name + (rv.wildcard ? ' · WILDCARD' : '');
-            pairState = { appeal: null, transport: null };
-          }
-
-          function recordVote(axis, winnerSlug) {
-            var pair = currentPair();
-            if (!pair) return;
-            session.votes.push({
-              pair: { a: pair.a.slug, b: pair.b.slug },
-              axis: axis,
-              winner: winnerSlug,
-              position_a_on_screen: pair.position_a_on_screen,
-              timestamp: nowISO(),
-            });
-            pairState[axis] = winnerSlug;
-            saveSession(session);
-            advanceIfBothAxesDone();
-            updateProgress();
-          }
-
-          function advanceIfBothAxesDone() {
-            if (pairState.appeal !== null && pairState.transport !== null) {
-              pairIdx += 1;
-              showPair();
-            }
-          }
-
-          function skipPair() {
-            var pair = currentPair();
-            if (!pair) return;
-            ['appeal', 'transport'].forEach(function (axis) {
-              if (pairState[axis] !== null) return;
-              session.votes.push({
-                pair: { a: pair.a.slug, b: pair.b.slug },
-                axis: axis,
-                winner: 'skip',
-                position_a_on_screen: pair.position_a_on_screen,
-                timestamp: nowISO(),
-              });
-            });
-            saveSession(session);
-            pairIdx += 1;
-            showPair();
-            updateProgress();
-          }
-
-          function updateProgress() {
-            var totalDual = TOTAL_PAIRS;
-            var appealCount = 0;
-            var transportCount = 0;
-            session.votes.forEach(function (v) {
-              if (v.axis === 'appeal') appealCount++;
-              else if (v.axis === 'transport') transportCount++;
-            });
-            var pa = document.getElementById('exp-progress-appeal');
-            var pt = document.getElementById('exp-progress-transport');
-            var la = document.getElementById('exp-progress-appeal-label');
-            var lt = document.getElementById('exp-progress-transport-label');
-            if (pa) { pa.max = totalDual; pa.value = appealCount; }
-            if (pt) { pt.max = totalDual; pt.value = transportCount; }
-            if (la) la.textContent = appealCount + ' / ' + totalDual;
-            if (lt) lt.textContent = transportCount + ' / ' + totalDual;
-          }
-
-          // Vote button handlers.
-          document.querySelectorAll('.exp-vote-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-              var pair = currentPair();
-              if (!pair) return;
-              var side = btn.dataset.side;
-              var axis = btn.dataset.axis;
-              var v = variantForSide(pair, side);
-              if (v) recordVote(axis, v.slug);
-            });
-          });
-          var skipBtn = document.getElementById('exp-skip');
-          if (skipBtn) skipBtn.addEventListener('click', skipPair);
-
-          // Card image click -> lightbox.
-          [leftCard, rightCard].forEach(function (card) {
-            if (!card) return;
-            var img = card.querySelector('.exp-card-img');
-            if (!img) return;
-            img.addEventListener('click', function () {
-              if (img.dataset.hires) openLightbox(img.dataset.hires, img.dataset.label || '');
-            });
-          });
-
           // ---- Mode toggling ----
+          // Note: rank-mode JS lives in a separate bundled <script> block;
+          // this is-inline block only owns the direct-pick path.
           var directSection = document.getElementById('exp-direct');
-          var versusSection = document.getElementById('exp-versus');
+          var rankSection = document.getElementById('exp-rank');
           function setMode(mode) {
             if (directSection) directSection.style.display = mode === 'direct' ? 'block' : 'none';
-            if (versusSection) versusSection.style.display = mode === 'versus' ? 'block' : 'none';
+            if (rankSection) rankSection.style.display = mode === 'rank' ? 'block' : 'none';
             document.body.dataset.expMode = mode;
-            if (mode === 'versus') {
-              showPair();
-              updateProgress();
-            }
           }
           var directBtn = document.getElementById('exp-mode-direct');
-          var versusBtn = document.getElementById('exp-mode-versus');
           if (directBtn) directBtn.addEventListener('click', function () { setMode('direct'); });
-          if (versusBtn) versusBtn.addEventListener('click', function () { setMode('versus'); });
+          var rankBtn = document.getElementById('exp-mode-rank');
+          if (rankBtn) rankBtn.addEventListener('click', function () { setMode('rank'); });
 
           // ---- Keyboard ----
           document.addEventListener('keydown', function (ev) {
             if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
-            if (document.body.dataset.expMode !== 'versus') {
-              if (ev.key.toLowerCase() === 'e') doExport();
-              return;
-            }
-            var pair = currentPair();
-            if (!pair) {
-              if (ev.key.toLowerCase() === 'e') doExport();
-              return;
-            }
-            switch (ev.key.toLowerCase()) {
-              case 'q':
-                recordVote('appeal', variantForSide(pair, 'left').slug); ev.preventDefault(); break;
-              case 'w':
-                recordVote('appeal', variantForSide(pair, 'right').slug); ev.preventDefault(); break;
-              case 'o':
-                recordVote('transport', variantForSide(pair, 'left').slug); ev.preventDefault(); break;
-              case 'p':
-                recordVote('transport', variantForSide(pair, 'right').slug); ev.preventDefault(); break;
-              case ' ':
-                skipPair(); ev.preventDefault(); break;
-              case 'e':
-                doExport(); break;
-            }
+            if (ev.key.toLowerCase() === 'e') doExport();
           });
 
           // ---- Export ----
-          // Aggregator math duplicated client-side — must match
-          // tools/experiment_results.py exactly.
-          function isSkip(w) { return w === null || w === 'skip'; }
-          function winsRatio(votes, axis) {
-            var acc = {};
-            votes.forEach(function (v) {
-              if (v.axis !== axis) return;
-              if (isSkip(v.winner)) return;
-              var a = v.pair.a, b = v.pair.b, w = v.winner;
-              if (w !== a && w !== b) return;
-              if (!acc[a]) acc[a] = { wins: 0, plays: 0 };
-              if (!acc[b]) acc[b] = { wins: 0, plays: 0 };
-              acc[a].plays += 1;
-              acc[b].plays += 1;
-              acc[w].wins += 1;
-            });
-            return acc;
-          }
-          function ranking(wins) {
-            return Object.keys(wins).sort(function (x, y) {
-              var rx = wins[x].plays ? wins[x].wins / wins[x].plays : 0;
-              var ry = wins[y].plays ? wins[y].wins / wins[y].plays : 0;
-              if (rx !== ry) return ry - rx;
-              if (wins[x].plays !== wins[y].plays) return wins[y].plays - wins[x].plays;
-              return x < y ? -1 : (x > y ? 1 : 0);
-            });
-          }
-          function disagreementIndex(votes) {
-            var pairMap = {};
-            votes.forEach(function (v) {
-              if (isSkip(v.winner)) return;
-              var key = [v.pair.a, v.pair.b].sort().join('||');
-              if (!pairMap[key]) pairMap[key] = {};
-              pairMap[key][v.axis] = v.winner;
-            });
-            var dual = 0, disagree = 0;
-            Object.keys(pairMap).forEach(function (k) {
-              var p = pairMap[k];
-              if (p.appeal === undefined || p.transport === undefined) return;
-              dual += 1;
-              if (p.appeal !== p.transport) disagree += 1;
-            });
-            return dual ? disagree / dual : 0;
-          }
-          function spearman(rA, rB) {
-            var common = rA.filter(function (s) { return rB.indexOf(s) >= 0; });
-            if (common.length < 2) return 0;
-            var posA = {}, posB = {};
-            rA.forEach(function (s, i) { if (rB.indexOf(s) >= 0) posA[s] = i; });
-            rB.forEach(function (s, i) { if (rA.indexOf(s) >= 0) posB[s] = i; });
-            var xs = common.map(function (s) { return posA[s]; });
-            var ys = common.map(function (s) { return posB[s]; });
-            var n = xs.length;
-            var mx = xs.reduce(function (a, b) { return a + b; }, 0) / n;
-            var my = ys.reduce(function (a, b) { return a + b; }, 0) / n;
-            var num = 0, dx2 = 0, dy2 = 0;
-            for (var i = 0; i < n; i++) {
-              num += (xs[i] - mx) * (ys[i] - my);
-              dx2 += (xs[i] - mx) * (xs[i] - mx);
-              dy2 += (ys[i] - my) * (ys[i] - my);
-            }
-            return (dx2 && dy2) ? num / Math.sqrt(dx2 * dy2) : 0;
-          }
-
+          // Direct-pick branch only; rank-mode export lives in the
+          // bundled <script> (it owns its own button, #export-rank).
+          // Mode-aware: if the user is currently in direct-pick mode,
+          // this exports direct-pick selections. Rank exports go
+          // through the bundled handler.
           function doExport() {
             session.session_end = nowISO();
             session.rater = (raterInput && raterInput.value) || session.rater || 'anonymous';
-            var wa = winsRatio(session.votes, 'appeal');
-            var wt = winsRatio(session.votes, 'transport');
-            var ra = ranking(wa);
-            var rt = ranking(wt);
-            var di = disagreementIndex(session.votes);
-            var sp = spearman(ra, rt);
             var payload = {
               experiment_id: EXP_ID,
               rater: session.rater,
-              session_start: session.session_start,
-              session_end: session.session_end,
-              votes: session.votes,
-              direct_picks: session.direct_picks || [],
-              wins_ratio_appeal: wa,
-              wins_ratio_transport: wt,
-              ranking_appeal: ra,
-              ranking_transport: rt,
-              disagreement_index: Number(di.toFixed(6)),
-              spearman_appeal_transport: Number(sp.toFixed(6)),
+              started_at: session.session_start,
+              exported_at: session.session_end,
+              mode: 'direct-pick',
+              selections: session.direct_picks || [],
             };
             var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
             var href = URL.createObjectURL(blob);
@@ -635,9 +560,395 @@ const variantsForJs = hypotheses.map((h) => ({
           });
 
           // ---- Boot ----
+          // Default to rank mode when ≥3 variants (CONTEXT decision 2);
+          // direct-pick otherwise (rank doesn't add value with <3 cards).
           renderDirect();
-          updateProgress();
-          setMode('direct');
+          var defaultMode = VARIANTS.length >= 3 ? 'rank' : 'direct';
+          setMode(defaultMode);
+        })();
+      </script>
+
+      <!--
+        Rank-mode rendering lives in a bundled <script> block so it can
+        `import Sortable from 'sortablejs'` (T08+). Astro/Vite bundles
+        only the non-inline block; the lightbox + direct-pick blocks
+        above stay as is:inline IIFEs.
+      -->
+      <script>
+        import Sortable from 'sortablejs';
+
+        (function rankMode() {
+          var dataEl = document.getElementById('exp-data');
+          if (!dataEl || !dataEl.textContent) return;
+          var DATA = JSON.parse(dataEl.textContent);
+          var EXP_ID = DATA.expId;
+          var VARIANTS = DATA.variants;
+          var STORAGE_KEY = 'experiment:' + EXP_ID + ':session:v2:rank';
+
+          var grid = document.getElementById('exp-rank-grid');
+          var rankedList = document.getElementById('ranked-list');
+          var rankEmpty = document.getElementById('rank-empty');
+          var liveRegion = document.getElementById('rank-live-region');
+          var exportBtn = document.getElementById('export-rank');
+          var raterInput = document.getElementById('exp-rater');
+
+          // ---- State ---------------------------------------------------
+          var ranking = [];           // ordered slug array
+          var startedAt = null;       // ISO timestamp on first interaction
+          var sortableInstance = null;
+
+          var slugToVariant = {};
+          VARIANTS.forEach(function (v) { slugToVariant[v.slug] = v; });
+
+          // ---- localStorage --------------------------------------------
+          // v1 cleanup: scan for stale `experiment:*:session:v1:*` keys,
+          // log once, delete. Silent migration per CONTEXT decision 14.
+          (function clearV1Keys() {
+            try {
+              var toRemove = [];
+              for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                if (!k) continue;
+                if (/^experiment:.+:session:v1(:.+)?$/.test(k)) {
+                  toRemove.push(k);
+                }
+              }
+              toRemove.forEach(function (k) {
+                console.log('Migrating from v1 schema — clearing stale key:', k);
+                localStorage.removeItem(k);
+              });
+            } catch (e) { /* localStorage may be blocked; banner handled in inline block */ }
+          })();
+
+          function loadStored() {
+            try {
+              var raw = localStorage.getItem(STORAGE_KEY);
+              if (!raw) return null;
+              return JSON.parse(raw);
+            } catch (e) { return null; }
+          }
+
+          function persistRanking() {
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                started_at: startedAt,
+                ranking: ranking,
+              }));
+            } catch (e) { /* swallow — banner already up */ }
+          }
+
+          var stored = loadStored();
+          if (stored && Array.isArray(stored.ranking)) {
+            // Keep only slugs we still know about; drop anything stale.
+            ranking = stored.ranking.filter(function (s) {
+              return Object.prototype.hasOwnProperty.call(slugToVariant, s);
+            });
+            startedAt = stored.started_at || new Date().toISOString();
+          }
+          if (!startedAt) startedAt = new Date().toISOString();
+
+          // ---- Rater-name sanitization (mirrors export filename rule) -
+          function sanitizeRater(name) {
+            var trimmed = (name || '').toLowerCase();
+            // Allowlist [a-z0-9_-]; map anything else to '-'.
+            return trimmed.replace(/[^a-z0-9_-]/g, '-');
+          }
+
+          // ---- Live region announcement helper -------------------------
+          function announce(text) {
+            if (!liveRegion) return;
+            liveRegion.textContent = text;
+          }
+
+          function announceMove(slug, oldIndex, newIndex, total) {
+            announce(
+              "Moved '" + slug + "' from position " + (oldIndex + 1) +
+              " to " + (newIndex + 1) + " of " + total
+            );
+          }
+
+          // ---- Render variant grid (with checkmark buttons) ------------
+          function renderRankGrid() {
+            if (!grid) return;
+            grid.innerHTML = '';
+            VARIANTS.forEach(function (v) {
+              var card = document.createElement('div');
+              card.className = 'variant-card';
+              card.dataset.slug = v.slug;
+
+              var img = document.createElement('img');
+              img.src = v.thumb;
+              img.alt = v.name;
+              img.loading = 'lazy';
+              img.addEventListener('click', function () {
+                // Image-click opens lightbox (parity with direct-pick block).
+                var lightbox = document.getElementById('exp-lightbox');
+                var lightImg = document.getElementById('exp-lightbox-image');
+                var lightLabel = document.getElementById('exp-lightbox-label');
+                if (!lightbox || !lightImg || !lightLabel) return;
+                lightImg.src = v.hires;
+                lightImg.alt = v.name || '';
+                lightLabel.textContent = v.name || '';
+                lightbox.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+              });
+              card.appendChild(img);
+
+              var title = document.createElement('strong');
+              title.textContent = v.name;
+              title.style.display = 'block';
+              title.style.marginTop = '0.5rem';
+              card.appendChild(title);
+
+              var checkmark = document.createElement('button');
+              checkmark.type = 'button';
+              checkmark.className = 'checkmark';
+              checkmark.setAttribute('aria-label', 'Select ' + v.slug);
+              checkmark.setAttribute('aria-pressed', 'false');
+
+              var checkVisual = document.createElement('span');
+              checkVisual.className = 'checkmark-visual';
+              checkVisual.setAttribute('aria-hidden', 'true');
+              checkmark.appendChild(checkVisual);
+
+              var positionBadge = document.createElement('span');
+              positionBadge.className = 'position-badge';
+              positionBadge.setAttribute('aria-hidden', 'true');
+              positionBadge.hidden = true;
+              checkmark.appendChild(positionBadge);
+
+              // Defensive stopPropagation — the click listener is attached
+              // to the sibling <img>, not a parent, so bubble-through is
+              // architecturally impossible (pitfall #1) but we still call
+              // stopPropagation for belt-and-suspenders.
+              checkmark.addEventListener('click', function (ev) {
+                ev.stopPropagation();
+                toggleSlug(v.slug);
+              });
+
+              card.appendChild(checkmark);
+              grid.appendChild(card);
+            });
+          }
+
+          function toggleSlug(slug) {
+            var idx = ranking.indexOf(slug);
+            if (idx >= 0) {
+              ranking.splice(idx, 1);
+              announce("Removed '" + slug + "' from ranking");
+            } else {
+              ranking.push(slug);
+              announce("Added '" + slug + "' to ranking at position " + ranking.length);
+            }
+            refreshRankUI();
+            persistRanking();
+          }
+
+          // ---- Ranked-list rendering -----------------------------------
+          function buildRankedRow(slug, idx, total) {
+            var v = slugToVariant[slug];
+            var li = document.createElement('li');
+            li.className = 'ranked-row';
+            li.dataset.slug = slug;
+
+            var dragHandle = document.createElement('span');
+            dragHandle.className = 'drag-handle';
+            dragHandle.setAttribute('aria-hidden', 'true');
+            dragHandle.textContent = '⋮⋮';
+            li.appendChild(dragHandle);
+
+            var arrowUp = document.createElement('button');
+            arrowUp.type = 'button';
+            arrowUp.className = 'arrow-up';
+            arrowUp.setAttribute('aria-label', "Move '" + slug + "' up");
+            arrowUp.textContent = '▲';
+            arrowUp.disabled = idx === 0;
+            arrowUp.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              moveSlug(slug, -1);
+            });
+            li.appendChild(arrowUp);
+
+            var arrowDown = document.createElement('button');
+            arrowDown.type = 'button';
+            arrowDown.className = 'arrow-down';
+            arrowDown.setAttribute('aria-label', "Move '" + slug + "' down");
+            arrowDown.textContent = '▼';
+            arrowDown.disabled = idx === total - 1;
+            arrowDown.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              moveSlug(slug, +1);
+            });
+            li.appendChild(arrowDown);
+
+            var thumb = document.createElement('img');
+            thumb.className = 'thumbnail';
+            thumb.src = v ? v.thumb : '';
+            thumb.alt = '';
+            thumb.setAttribute('aria-hidden', 'true');
+            li.appendChild(thumb);
+
+            var titleEl = document.createElement('span');
+            titleEl.className = 'title';
+            titleEl.textContent = v ? v.name : slug;
+            li.appendChild(titleEl);
+
+            var removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-btn';
+            removeBtn.setAttribute('aria-label', "Remove '" + slug + "' from ranking");
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              removeSlug(slug);
+            });
+            li.appendChild(removeBtn);
+
+            return li;
+          }
+
+          function refreshRankUI() {
+            // Update each card's checkmark + position-badge.
+            if (grid) {
+              var cards = grid.querySelectorAll('.variant-card');
+              cards.forEach(function (card) {
+                var slug = card.dataset.slug;
+                var pos = ranking.indexOf(slug);
+                var checkmark = card.querySelector('.checkmark');
+                if (!checkmark) return;
+                var badge = checkmark.querySelector('.position-badge');
+                if (pos >= 0) {
+                  checkmark.setAttribute('aria-pressed', 'true');
+                  if (badge) {
+                    badge.textContent = String(pos + 1);
+                    badge.hidden = false;
+                  }
+                } else {
+                  checkmark.setAttribute('aria-pressed', 'false');
+                  if (badge) {
+                    badge.textContent = '';
+                    badge.hidden = true;
+                  }
+                }
+              });
+            }
+
+            // Rebuild the ranked list.
+            if (rankedList) {
+              rankedList.innerHTML = '';
+              ranking.forEach(function (slug, idx) {
+                rankedList.appendChild(buildRankedRow(slug, idx, ranking.length));
+              });
+            }
+            if (rankEmpty) {
+              rankEmpty.style.display = ranking.length === 0 ? 'block' : 'none';
+            }
+
+            // Re-init Sortable: destroy the old instance and attach fresh
+            // (the <ol> rows are a brand-new DOM each refresh). Choice
+            // documented in EXECUTION.md.
+            attachSortable();
+          }
+
+          // ---- Arrow-button reorder ------------------------------------
+          function moveSlug(slug, delta) {
+            var oldIdx = ranking.indexOf(slug);
+            if (oldIdx < 0) return;
+            var newIdx = oldIdx + delta;
+            if (newIdx < 0 || newIdx >= ranking.length) return;
+            ranking.splice(oldIdx, 1);
+            ranking.splice(newIdx, 0, slug);
+            refreshRankUI();
+            persistRanking();
+            announceMove(slug, oldIdx, newIdx, ranking.length);
+          }
+
+          function removeSlug(slug) {
+            var oldIdx = ranking.indexOf(slug);
+            if (oldIdx < 0) return;
+            ranking.splice(oldIdx, 1);
+            refreshRankUI();
+            persistRanking();
+            announce("Removed '" + slug + "' from position " + (oldIdx + 1));
+          }
+
+          // ---- SortableJS (drag-drop reorder) --------------------------
+          function attachSortable() {
+            if (!rankedList) return;
+            if (sortableInstance) {
+              sortableInstance.destroy();
+              sortableInstance = null;
+            }
+            sortableInstance = new Sortable(rankedList, {
+              handle: '.drag-handle',
+              filter: '.arrow-up,.arrow-down,.remove-btn',
+              preventOnFilter: true,
+              animation: 150,
+              delay: 150,
+              delayOnTouchOnly: true,
+              touchStartThreshold: 5,
+              onEnd: function (evt) {
+                var oldIndex = evt.oldIndex;
+                var newIndex = evt.newIndex;
+                if (oldIndex === newIndex) return;
+                // Read the new order from the DOM (Sortable already
+                // mutated it); rebuild `ranking` from data-slug attrs.
+                var newRanking = [];
+                rankedList.querySelectorAll('.ranked-row').forEach(function (li) {
+                  newRanking.push(li.dataset.slug);
+                });
+                ranking = newRanking;
+                persistRanking();
+                announceMove(evt.item.dataset.slug, oldIndex, newIndex, ranking.length);
+                // Re-render so arrow up/down disabled state and badges
+                // reflect the new positions.
+                refreshRankUI();
+              },
+            });
+          }
+
+          // ---- Export --------------------------------------------------
+          function doExportRank() {
+            var raterRaw = (raterInput && raterInput.value) || 'anonymous';
+            var rater = sanitizeRater(raterRaw);
+            if (!rater) {
+              var answer = prompt('Rater name (a-z, 0-9, _-)?');
+              if (answer === null) {
+                console.log('Rank export cancelled by user');
+                return;
+              }
+              rater = sanitizeRater(answer) || 'anonymous';
+              if (raterInput) raterInput.value = rater;
+            }
+            if (ranking.length === 0) {
+              console.warn('Exporting empty ranking');
+            }
+
+            var payload = {
+              experiment_id: EXP_ID,
+              rater: rater,
+              started_at: startedAt,
+              exported_at: new Date().toISOString(),
+              mode: 'rank',
+              ranking: ranking,
+            };
+            var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            var href = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = href;
+            var ymd = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            a.download = rater + '-' + EXP_ID + '-rank-' + ymd + '.json';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(href);
+          }
+
+          if (exportBtn) exportBtn.addEventListener('click', doExportRank);
+
+          // ---- Boot ----------------------------------------------------
+          renderRankGrid();
+          refreshRankUI();
         })();
       </script>
     </>

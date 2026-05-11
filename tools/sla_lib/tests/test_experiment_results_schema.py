@@ -1,14 +1,13 @@
-"""Results-schema unit tests (issue #29 T04).
+"""Results-schema unit tests (issue #31).
 
-Validates ``experiments/_schema/results.schema.yaml`` against
-``experiments/_schema/results.example.json`` and asserts rejection of
-the malformations the schema must catch:
-  - missing axis field
-  - axis enum out of range
-  - position_a_on_screen not in {left, right}
-  - missing required top-level field
-  - disagreement_index out of [0, 1]
+Validates ``experiments/_schema/results.schema.yaml`` against valid rank
+and direct-pick payloads, and asserts rejection of the malformations the
+schema must catch:
+  - ambiguous file carrying BOTH ranking and selections
+  - missing `mode` discriminator
+  - unknown `mode` value (e.g. legacy "versus")
 """
+
 from __future__ import annotations
 
 import copy
@@ -32,65 +31,95 @@ def _load_example() -> dict:
     return json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 
 
+def _valid_rank() -> dict:
+    return {
+        "experiment_id": "example-experiment",
+        "rater": "alice",
+        "started_at": "2026-05-10T14:00:00Z",
+        "exported_at": "2026-05-10T14:05:00Z",
+        "mode": "rank",
+        "ranking": ["alpha", "beta", "gamma"],
+    }
+
+
+def _valid_direct_pick() -> dict:
+    return {
+        "experiment_id": "example-experiment",
+        "rater": "alice",
+        "started_at": "2026-05-10T14:00:00Z",
+        "exported_at": "2026-05-10T14:05:00Z",
+        "mode": "direct-pick",
+        "selections": ["alpha", "gamma"],
+    }
+
+
 class ResultsSchemaTest(unittest.TestCase):
     def setUp(self):
         self.schema = _load_schema()
-        self.example = _load_example()
         self.validator = jsonschema.Draft202012Validator(self.schema)
 
     def test_example_validates(self):
-        errors = sorted(self.validator.iter_errors(self.example),
-                        key=lambda e: list(e.path))
+        example = _load_example()
+        errors = sorted(self.validator.iter_errors(example), key=lambda e: list(e.path))
         self.assertEqual(
-            errors, [],
+            errors,
+            [],
             f"example must validate; got: {[e.message for e in errors]}",
         )
 
-    def test_rejects_missing_axis(self):
-        m = copy.deepcopy(self.example)
-        del m["votes"][0]["axis"]
+    def test_valid_rank_payload(self):
+        self.validator.validate(_valid_rank())
+
+    def test_valid_direct_pick_payload(self):
+        self.validator.validate(_valid_direct_pick())
+
+    def test_rejects_ambiguous_both_ranking_and_selections(self):
+        m = _valid_rank()
+        m["selections"] = ["alpha"]
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(m)
 
-    def test_rejects_unknown_axis_enum(self):
-        m = copy.deepcopy(self.example)
-        m["votes"][0]["axis"] = "not-an-axis"
+    def test_rejects_missing_mode(self):
+        m = _valid_rank()
+        del m["mode"]
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(m)
 
-    def test_rejects_unknown_position(self):
-        m = copy.deepcopy(self.example)
-        m["votes"][0]["position_a_on_screen"] = "centre"
+    def test_rejects_unknown_mode_versus(self):
+        # Legacy v1 mode must be rejected — pairwise shape is deleted.
+        m = _valid_rank()
+        m["mode"] = "versus"
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(m)
 
-    def test_rejects_missing_required_top_level(self):
-        m = copy.deepcopy(self.example)
-        del m["disagreement_index"]
+    def test_rejects_rank_mode_missing_ranking(self):
+        m = _valid_rank()
+        del m["ranking"]
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(m)
 
-    def test_rejects_disagreement_index_out_of_range(self):
-        m = copy.deepcopy(self.example)
-        m["disagreement_index"] = 1.5
+    def test_rejects_direct_pick_missing_selections(self):
+        m = _valid_direct_pick()
+        del m["selections"]
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(m)
 
-    def test_rejects_spearman_out_of_range(self):
-        m = copy.deepcopy(self.example)
-        m["spearman_appeal_transport"] = -2.0
+    def test_rejects_rank_mode_with_selections_field(self):
+        # A rank file MUST NOT carry a `selections` field.
+        m = _valid_rank()
+        m["selections"] = []
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(m)
 
-    def test_accepts_null_winner_for_skipped_pair(self):
-        m = copy.deepcopy(self.example)
-        m["votes"][0]["winner"] = None
-        # null winner is allowed (oneOf string|null)
-        self.validator.validate(m)
+    def test_rejects_direct_pick_with_ranking_field(self):
+        m = _valid_direct_pick()
+        m["ranking"] = []
+        with self.assertRaises(jsonschema.ValidationError):
+            self.validator.validate(m)
 
-    def test_rejects_unknown_top_level_field(self):
-        m = copy.deepcopy(self.example)
-        m["bogus"] = 42
+    def test_rejects_duplicate_slugs_in_ranking(self):
+        m = _valid_rank()
+        m["ranking"] = ["alpha", "alpha"]
         with self.assertRaises(jsonschema.ValidationError):
             self.validator.validate(m)
 

@@ -1,9 +1,10 @@
-"""Results aggregator unit tests (issue #29 T08).
+"""Results aggregator unit tests (issue #31).
 
-Hand-computed expected values for wins-ratio, disagreement index, and
-Spearman rank correlation. Markdown summary is asserted to contain
-each required section header.
+Covers the rewritten rank + direct-pick aggregator. Drops the
+versus-mode test classes (WinsRatioTest, DisagreementTest, SpearmanTest);
+keeps DroppedAndCorpusStubTest verbatim from issue #30.
 """
+
 from __future__ import annotations
 
 import json
@@ -18,254 +19,230 @@ sys.path.insert(0, str(ROOT / "tools"))
 import experiment_results as er  # noqa: E402
 
 
-def _vote(a, b, axis, winner, *, position="left", ts="2026-05-10T14:00:00Z"):
-    return {
-        "pair": {"a": a, "b": b},
-        "axis": axis,
-        "winner": winner,
-        "position_a_on_screen": position,
-        "timestamp": ts,
-    }
-
-
-def _payload(votes, *, exp_id="example-experiment", rater="alice",
-             direct_picks=None):
+def _rank_payload(
+    ranking: list[str],
+    *,
+    exp_id: str = "example-experiment",
+    rater: str = "alice",
+    started_at: str = "2026-05-10T14:00:00Z",
+    exported_at: str = "2026-05-10T14:30:00Z",
+) -> dict:
     return {
         "experiment_id": exp_id,
         "rater": rater,
-        "session_start": "2026-05-10T14:00:00Z",
-        "session_end": "2026-05-10T14:30:00Z",
-        "votes": votes,
-        "direct_picks": direct_picks or [],
-        # Aggregator recomputes these from votes; stub values here are
-        # ignored once aggregate() runs but must satisfy the schema for
-        # the input files.
-        "wins_ratio_appeal": {},
-        "wins_ratio_transport": {},
-        "ranking_appeal": [],
-        "ranking_transport": [],
-        "disagreement_index": 0.0,
-        "spearman_appeal_transport": 0.0,
+        "started_at": started_at,
+        "exported_at": exported_at,
+        "mode": "rank",
+        "ranking": ranking,
     }
 
 
-class WinsRatioTest(unittest.TestCase):
-
-    def test_three_variants_six_votes_per_axis(self):
-        # Pairs: (a,b), (a,c), (b,c). 2 votes per pair (appeal +
-        # transport) = 6 votes per axis = 12 total.
-        # Appeal: a beats b, a beats c, b beats c.
-        #   a: 2/2; b: 1/2; c: 0/2.
-        # Transport: c beats a, b beats a, c beats b.
-        #   a: 0/2; b: 1/2; c: 2/2.
-        votes = [
-            _vote("a", "b", "appeal", "a"),
-            _vote("a", "b", "transport", "b"),
-            _vote("a", "c", "appeal", "a"),
-            _vote("a", "c", "transport", "c"),
-            _vote("b", "c", "appeal", "b"),
-            _vote("b", "c", "transport", "c"),
-        ]
-        wa = er.wins_ratio(votes, "appeal")
-        wt = er.wins_ratio(votes, "transport")
-        self.assertEqual(wa, {
-            "a": {"wins": 2, "plays": 2},
-            "b": {"wins": 1, "plays": 2},
-            "c": {"wins": 0, "plays": 2},
-        })
-        self.assertEqual(wt, {
-            "a": {"wins": 0, "plays": 2},
-            "b": {"wins": 1, "plays": 2},
-            "c": {"wins": 2, "plays": 2},
-        })
-
-    def test_skip_votes_excluded(self):
-        votes = [
-            _vote("a", "b", "appeal", "skip"),
-            _vote("a", "b", "appeal", None),
-            _vote("a", "b", "appeal", "a"),
-        ]
-        wa = er.wins_ratio(votes, "appeal")
-        self.assertEqual(wa, {
-            "a": {"wins": 1, "plays": 1},
-            "b": {"wins": 0, "plays": 1},
-        })
-
-    def test_ranking_orders_desc_by_ratio(self):
-        wins = {
-            "a": {"wins": 2, "plays": 2},
-            "b": {"wins": 1, "plays": 2},
-            "c": {"wins": 0, "plays": 2},
-        }
-        self.assertEqual(er.ranking(wins), ["a", "b", "c"])
-
-    def test_ranking_tie_breaks_by_plays_then_slug(self):
-        wins = {
-            "a": {"wins": 1, "plays": 2},
-            "b": {"wins": 2, "plays": 4},
-            "c": {"wins": 0, "plays": 0},
-        }
-        # a: 0.5 (2 plays); b: 0.5 (4 plays); c: 0 (0 plays).
-        # b beats a on plays count.
-        self.assertEqual(er.ranking(wins), ["b", "a", "c"])
+def _direct_pick_payload(
+    selections: list[str],
+    *,
+    exp_id: str = "example-experiment",
+    rater: str = "alice",
+    started_at: str = "2026-05-10T14:00:00Z",
+    exported_at: str = "2026-05-10T14:30:00Z",
+) -> dict:
+    return {
+        "experiment_id": exp_id,
+        "rater": rater,
+        "started_at": started_at,
+        "exported_at": exported_at,
+        "mode": "direct-pick",
+        "selections": selections,
+    }
 
 
-class DisagreementTest(unittest.TestCase):
-
-    def test_two_of_five_disagree(self):
-        # 5 dual-axis pairs; appeal-winner and transport-winner agree
-        # on 3, disagree on 2 -> 0.4.
-        votes = []
-        # pair 1 — both axes pick a
-        votes.append(_vote("a", "b", "appeal", "a"))
-        votes.append(_vote("a", "b", "transport", "a"))
-        # pair 2 — disagree (appeal a, transport b)
-        votes.append(_vote("a", "c", "appeal", "a"))
-        votes.append(_vote("a", "c", "transport", "c"))
-        # pair 3 — both axes pick b
-        votes.append(_vote("b", "c", "appeal", "b"))
-        votes.append(_vote("b", "c", "transport", "b"))
-        # pair 4 — disagree
-        votes.append(_vote("a", "d", "appeal", "a"))
-        votes.append(_vote("a", "d", "transport", "d"))
-        # pair 5 — both axes pick c
-        votes.append(_vote("c", "d", "appeal", "c"))
-        votes.append(_vote("c", "d", "transport", "c"))
-
-        di, table = er.disagreement_index(votes)
-        self.assertAlmostEqual(di, 0.4, places=9)
-        self.assertEqual(len(table), 5)
-        disagree = [r for r in table if not r["agree"]]
-        self.assertEqual(len(disagree), 2)
-
-    def test_single_axis_pair_excluded(self):
-        votes = [
-            _vote("a", "b", "appeal", "a"),  # only appeal
-            _vote("a", "c", "appeal", "a"),
-            _vote("a", "c", "transport", "a"),
-        ]
-        di, table = er.disagreement_index(votes)
-        # One dual-axis pair, agreed -> 0.0.
-        self.assertEqual(di, 0.0)
-        self.assertEqual(len(table), 1)
-
-    def test_no_dual_pairs_returns_zero(self):
-        votes = [_vote("a", "b", "appeal", "a")]
-        di, table = er.disagreement_index(votes)
-        self.assertEqual(di, 0.0)
-        self.assertEqual(table, [])
+def _write_payload(tmpdir: str, name: str, payload: dict) -> Path:
+    p = Path(tmpdir) / name
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    return p
 
 
-class SpearmanTest(unittest.TestCase):
-
-    def test_identical_rankings(self):
-        a = ["x", "y", "z"]
-        b = ["x", "y", "z"]
-        self.assertAlmostEqual(er.spearman_correlation(a, b), 1.0, places=9)
-
-    def test_reversed_rankings(self):
-        a = ["x", "y", "z"]
-        b = ["z", "y", "x"]
-        self.assertAlmostEqual(er.spearman_correlation(a, b), -1.0, places=9)
-
-    def test_known_partial(self):
-        # ranks for shared slugs:
-        #   x: a=0, b=1
-        #   y: a=1, b=0
-        #   z: a=2, b=2
-        # Pearson on (0,1,2) vs (1,0,2):
-        #   mean_x=1, mean_y=1
-        #   numer = (-1)(0) + (0)(-1) + (1)(1) = 1
-        #   denom = sqrt(2 * 2) = 2
-        #   rho = 0.5
-        a = ["x", "y", "z"]
-        b = ["y", "x", "z"]
-        self.assertAlmostEqual(
-            er.spearman_correlation(a, b), 0.5, places=9,
+class RankAggregationTest(unittest.TestCase):
+    def test_single_rater_four_variants_linear_borda(self):
+        scores = er.compute_position_scores(
+            ["a", "b", "c", "d"],
+            ["a", "b", "c", "d"],
         )
+        self.assertAlmostEqual(scores["a"], 1.0, places=9)
+        self.assertAlmostEqual(scores["b"], 2 / 3, places=9)
+        self.assertAlmostEqual(scores["c"], 1 / 3, places=9)
+        self.assertAlmostEqual(scores["d"], 0.0, places=9)
 
-    def test_too_few_common_returns_zero(self):
-        self.assertEqual(er.spearman_correlation(["x"], ["y"]), 0.0)
-
-
-class AggregateAndSummaryTest(unittest.TestCase):
-
-    def test_aggregate_two_files_concatenates_votes(self):
+    def test_two_raters_same_ranking_mean_equals_individual(self):
         with tempfile.TemporaryDirectory() as td:
-            p1 = Path(td) / "alice-1.json"
-            p2 = Path(td) / "alice-2.json"
-            p1.write_text(json.dumps(_payload(
-                [_vote("a", "b", "appeal", "a"),
-                 _vote("a", "b", "transport", "b")],
-            )), encoding="utf-8")
-            p2.write_text(json.dumps(_payload(
-                [_vote("a", "c", "appeal", "a"),
-                 _vote("a", "c", "transport", "c")],
-            )), encoding="utf-8")
+            p1 = _write_payload(
+                td, "alice.json", _rank_payload(["a", "b", "c"], rater="alice")
+            )
+            p2 = _write_payload(
+                td, "bob.json", _rank_payload(["a", "b", "c"], rater="bob")
+            )
             agg = er.aggregate([p1, p2])
-            self.assertEqual(len(agg["votes"]), 4)
-            self.assertEqual(agg["wins_ratio_appeal"]["a"],
-                             {"wins": 2, "plays": 2})
-            self.assertEqual(agg["wins_ratio_transport"]["b"],
-                             {"wins": 1, "plays": 1})
+        self.assertAlmostEqual(agg["per_slug"]["a"]["mean_score"], 1.0, places=9)
+        self.assertAlmostEqual(agg["per_slug"]["b"]["mean_score"], 0.5, places=9)
+        self.assertAlmostEqual(agg["per_slug"]["c"]["mean_score"], 0.0, places=9)
+        self.assertEqual(agg["per_slug"]["a"]["n_raters"], 2)
+
+    def test_two_raters_disjoint_orderings_average_correctly(self):
+        # Rater 1: a=1.0, b=0.5, c=0.0
+        # Rater 2: a=0.0, b=0.5, c=1.0
+        # mean:    a=0.5, b=0.5, c=0.5
+        with tempfile.TemporaryDirectory() as td:
+            p1 = _write_payload(
+                td, "alice.json", _rank_payload(["a", "b", "c"], rater="alice")
+            )
+            p2 = _write_payload(
+                td, "bob.json", _rank_payload(["c", "b", "a"], rater="bob")
+            )
+            agg = er.aggregate([p1, p2])
+        for slug in ("a", "b", "c"):
+            self.assertAlmostEqual(
+                agg["per_slug"][slug]["mean_score"],
+                0.5,
+                places=9,
+            )
+            self.assertEqual(agg["per_slug"][slug]["n_raters"], 2)
+
+    def test_slug_unranked_by_every_rater_is_none(self):
+        # Two raters; "d" appears in neither ranking but the test asks
+        # for it via all_slugs handling.
+        scores_a = er.compute_position_scores(
+            ["a", "b", "c"],
+            ["a", "b", "c", "d"],
+        )
+        self.assertIsNone(scores_a["d"])
+
+    def test_single_variant_ranking_avoids_div_by_zero(self):
+        scores = er.compute_position_scores(["only"], ["only", "x"])
+        self.assertEqual(scores["only"], 1.0)
+        self.assertIsNone(scores["x"])
+
+    def test_empty_ranking_returns_all_none(self):
+        scores = er.compute_position_scores([], ["a", "b", "c"])
+        self.assertEqual(scores, {"a": None, "b": None, "c": None})
+
+
+class DirectPickFallbackTest(unittest.TestCase):
+    def test_one_rater_two_of_four_selected(self):
+        scores = er.compute_position_scores_for_direct_pick(
+            ["a", "c"],
+            ["a", "b", "c", "d"],
+        )
+        self.assertEqual(scores, {"a": 1.0, "b": None, "c": 1.0, "d": None})
+
+    def test_two_raters_overlapping_subsets(self):
+        # Rater 1 picks a, b. Rater 2 picks b, c. Never-selected: d.
+        with tempfile.TemporaryDirectory() as td:
+            p1 = _write_payload(
+                td, "alice.json", _direct_pick_payload(["a", "b"], rater="alice")
+            )
+            p2 = _write_payload(
+                td, "bob.json", _direct_pick_payload(["b", "c"], rater="bob")
+            )
+            agg = er.aggregate([p1, p2])
+        # a, b, c all selected at least once -> mean 1.0
+        self.assertEqual(agg["per_slug"]["a"]["mean_score"], 1.0)
+        self.assertEqual(agg["per_slug"]["b"]["mean_score"], 1.0)
+        self.assertEqual(agg["per_slug"]["c"]["mean_score"], 1.0)
+        # a appears for one rater only; b for both
+        self.assertEqual(agg["per_slug"]["a"]["n_raters"], 1)
+        self.assertEqual(agg["per_slug"]["b"]["n_raters"], 2)
+        self.assertEqual(agg["per_slug"]["c"]["n_raters"], 1)
+
+
+class MixedModeAggregationTest(unittest.TestCase):
+    def test_rank_plus_direct_pick_combine(self):
+        # Rater 1 (rank): a=1.0, b=0.5, c=0.0
+        # Rater 2 (direct-pick): a, c selected -> a=1.0, c=1.0
+        # Mean per slug:
+        #   a: (1.0 + 1.0) / 2 = 1.0
+        #   b: 1.0 (only rater 1; rater 2 didn't select) -> 0.5
+        #   c: (0.0 + 1.0) / 2 = 0.5
+        with tempfile.TemporaryDirectory() as td:
+            p1 = _write_payload(
+                td, "alice.json", _rank_payload(["a", "b", "c"], rater="alice")
+            )
+            p2 = _write_payload(
+                td,
+                "bob.json",
+                _direct_pick_payload(["a", "c"], rater="bob"),
+            )
+            agg = er.aggregate([p1, p2])
+        self.assertAlmostEqual(agg["per_slug"]["a"]["mean_score"], 1.0, places=9)
+        self.assertAlmostEqual(agg["per_slug"]["b"]["mean_score"], 0.5, places=9)
+        self.assertAlmostEqual(agg["per_slug"]["c"]["mean_score"], 0.5, places=9)
+        self.assertEqual(set(agg["modes_seen"]), {"rank", "direct-pick"})
 
     def test_aggregate_rejects_invalid_results(self):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "bad.json"
-            payload = _payload([_vote("a", "b", "appeal", "a")])
-            del payload["disagreement_index"]
+            payload = _rank_payload(["a", "b"])
+            # Strip required mode -> schema fails.
+            del payload["mode"]
             p.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaises(ValueError):
                 er.aggregate([p])
 
     def test_render_summary_contains_required_sections(self):
-        votes = [
-            _vote("a", "b", "appeal", "a"),
-            _vote("a", "b", "transport", "b"),
-            _vote("a", "c", "appeal", "a"),
-            _vote("a", "c", "transport", "c"),
-            _vote("b", "c", "appeal", "b"),
-            _vote("b", "c", "transport", "c"),
-        ]
         with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "v.json"
-            p.write_text(json.dumps(_payload(votes)), encoding="utf-8")
+            p = _write_payload(
+                td,
+                "alice.json",
+                _rank_payload(["alpha", "beta", "gamma"], rater="alice"),
+            )
             agg = er.aggregate([p])
-        md = er.render_summary(agg, hypotheses={
-            "a": {"name": "Alpha", "axis_commitments": ["density"],
-                  "rationale": "alpha rationale"},
-            "b": {"name": "Beta", "axis_commitments": ["hierarchy"],
-                  "rationale": "beta rationale"},
-            "c": {"name": "Gamma", "axis_commitments": ["typography"],
-                  "rationale": "gamma rationale"},
-        })
+        md = er.render_summary(
+            agg,
+            hypotheses={
+                "alpha": {
+                    "name": "Alpha",
+                    "axis_commitments": ["density"],
+                    "rationale": "alpha rationale",
+                },
+                "beta": {
+                    "name": "Beta",
+                    "axis_commitments": ["hierarchy"],
+                    "rationale": "beta rationale",
+                },
+                "gamma": {
+                    "name": "Gamma",
+                    "axis_commitments": ["typography"],
+                    "rationale": "gamma rationale",
+                },
+            },
+        )
         for section in (
             "# Results — example-experiment",
-            "**Spearman ρ(appeal, transport):**",
-            "**Disagreement index:**",
-            "## Top 5 by appeal",
-            "## Top 5 by transport",
-            "## Bottom 3 by appeal",
-            "## Bottom 3 by transport",
-            "## Per-pair disagreement (top 10)",
+            "**Raters:** alice",
+            "**Variants placed:**",
+            "## Top 3",
+            "## Bottom 3",
             "## Suggested corpus entries",
-            "provenance: experiment example-experiment",
+            "## Variants dropped during render",
+            "### From v1 (envelope necessity)",
+            "### From v2 (density+form findings)",
         ):
             self.assertIn(section, md, f"summary missing section: {section!r}")
 
 
 class DroppedAndCorpusStubTest(unittest.TestCase):
-    """Issue #30 T09: SUMMARY.md surfaces _dropped + dual-section corpus stub."""
+    """Issue #30 T09: SUMMARY.md surfaces _dropped + dual-section corpus stub.
 
-    def _agg_with_one_vote(self):
-        votes = [_vote("a", "b", "appeal", "a")]
+    Preserved verbatim from issue #30; the corpus stub structure
+    (v1 envelope necessity + v2 density+form findings) and the dropped
+    section are issue #31's responsibility to maintain unchanged.
+    """
+
+    def _agg_with_one_rank(self):
         with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "v.json"
-            p.write_text(json.dumps(_payload(votes)), encoding="utf-8")
+            p = _write_payload(td, "alice.json", _rank_payload(["a", "b"]))
             return er.aggregate([p])
 
     def test_summary_includes_dropped_section(self):
-        agg = self._agg_with_one_vote()
+        agg = self._agg_with_one_rank()
         dropped = [
             {
                 "slug": "tiny-body",
@@ -286,17 +263,16 @@ class DroppedAndCorpusStubTest(unittest.TestCase):
         self.assertIn("`layer1:body_min_pt`", md)
 
     def test_summary_dropped_empty_path(self):
-        agg = self._agg_with_one_vote()
+        agg = self._agg_with_one_rank()
         md = er.render_summary(agg)
         self.assertIn("## Variants dropped during render", md)
         self.assertIn("No variants dropped", md)
 
     def test_summary_includes_corpus_stub(self):
-        agg = self._agg_with_one_vote()
+        agg = self._agg_with_one_rank()
         md = er.render_summary(agg)
         self.assertIn(
-            "## Corpus update stub (to be amended into "
-            "design-guide/gruene-corpus.md)",
+            "## Corpus update stub (to be amended into design-guide/gruene-corpus.md)",
             md,
         )
         self.assertIn("### From v1 (envelope necessity)", md)

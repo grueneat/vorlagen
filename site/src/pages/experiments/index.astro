@@ -14,9 +14,10 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
   <p><a href={url('/')}>← Zurück zur Galerie</a></p>
   <h1>Design-Experimente</h1>
   <p>
-    Pairwise voting auf strukturell unterschiedlichen Layout-Varianten.
+    Click-to-rank Voting auf strukturell unterschiedlichen Layout-Varianten.
     Hypothesen werden von mehreren LLMs unabhängig generiert, in situ
-    gerendert, und über zwei Achsen (Appeal + Transport) bewertet.
+    gerendert, und als geordnete Rangliste bewertet (Direct-Pick als
+    Fallback bei <code>&lt;</code>3 Varianten).
   </p>
 
   {experiments.length === 0 && (
