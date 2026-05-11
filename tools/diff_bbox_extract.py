@@ -271,6 +271,73 @@ def px_to_mm_bbox(bbox_px: dict, dpi: int) -> dict:
     }
 
 
+def coverage_of_diff_inside_slot(diff_bbox: dict, slot_bbox: dict) -> float:
+    """Fraction of the diff bbox that lies inside the slot bbox, in [0, 1].
+
+    Decision 4: this metric (``area_intersect / area_diff_bbox``) is
+    preferred over pure IoU. A 5 mm^2 portrait shift inside a 50x70 mm
+    slot has IoU ~= 0.001 but coverage 1.0 — and "1.0" is the correct
+    attribution. Returns 0.0 if the diff bbox has zero area (degenerate).
+    """
+    ix = max(
+        0.0,
+        min(diff_bbox["x"] + diff_bbox["w"], slot_bbox["x"] + slot_bbox["w"])
+        - max(diff_bbox["x"], slot_bbox["x"]),
+    )
+    iy = max(
+        0.0,
+        min(diff_bbox["y"] + diff_bbox["h"], slot_bbox["y"] + slot_bbox["h"])
+        - max(diff_bbox["y"], slot_bbox["y"]),
+    )
+    intersect = ix * iy
+    diff_area = diff_bbox["w"] * diff_bbox["h"]
+    return (intersect / diff_area) if diff_area > 0 else 0.0
+
+
+def attribute_diff_bbox(
+    diff_bbox: dict, page_slots: dict[str, dict],
+    coverage_threshold: float = 0.5,
+) -> tuple[Optional[str], float, list[dict]]:
+    """Return ``(attributed_slot_or_None, overlap_pct, top3_candidates)``.
+
+    ``candidates`` shape (decision 4, top-3, sorted descending by coverage,
+    tie-break ascending by slot area_mm^2 so the more-specific smaller
+    slot wins when two coverages tie):
+        [{"slot": str, "coverage_pct": float, "slot_area_mm2": float}, ...]
+
+    Attribution returns the first candidate iff its raw coverage is
+    >= ``coverage_threshold`` (default 0.5). ``overlap_pct`` is the
+    attribution's coverage as a percentage (0..100). When no candidate
+    passes the threshold or ``page_slots`` is empty, returns
+    ``(None, 0.0, candidates_top3)`` so the JSON consumer still sees the
+    alternatives.
+    """
+    ranked: list[tuple[str, float, float]] = []
+    for name, sbox in page_slots.items():
+        cov = coverage_of_diff_inside_slot(diff_bbox, sbox)
+        area = sbox["w"] * sbox["h"]
+        ranked.append((name, cov, area))
+    # Sort: higher coverage first, then smaller slot first (more specific
+    # attribution wins ties — decision 4 tie-break).
+    ranked.sort(key=lambda r: (-r[1], r[2]))
+
+    top3 = ranked[:3]
+    candidates = [
+        {
+            "slot": name,
+            "coverage_pct": round(cov * 100.0, 1),
+            "slot_area_mm2": round(area, 1),
+        }
+        for name, cov, area in top3
+    ]
+
+    if top3 and top3[0][1] >= coverage_threshold:
+        chosen_name = top3[0][0]
+        chosen_overlap = round(top3[0][1] * 100.0, 1)
+        return chosen_name, chosen_overlap, candidates
+    return None, 0.0, candidates
+
+
 def _build_argparser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         description="Visual-diff bbox extractor with slot attribution.",

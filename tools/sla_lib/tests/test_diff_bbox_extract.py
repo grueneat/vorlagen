@@ -22,8 +22,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import diff_bbox_extract  # noqa: E402
 from diff_bbox_extract import (  # noqa: E402
-    DiffBBoxError, extract_bboxes_px, load_dpi, load_template_slots,
-    px_to_mm_bbox,
+    DiffBBoxError, attribute_diff_bbox, coverage_of_diff_inside_slot,
+    extract_bboxes_px, load_dpi, load_template_slots, px_to_mm_bbox,
 )
 
 
@@ -171,6 +171,83 @@ class SlotLoaderTests(unittest.TestCase):
             any("attribution skipped" in str(w.message) for w in caught),
             f"no skip-warning in captured: {[str(w.message) for w in caught]}",
         )
+
+
+class AttributionMathTests(unittest.TestCase):
+    """Tests for ``coverage_of_diff_inside_slot`` + ``attribute_diff_bbox``
+    (Issue #36 task 5)."""
+
+    def test_coverage_full_overlap(self) -> None:
+        d = {"x": 10, "y": 10, "w": 5, "h": 5}
+        s = {"x": 0, "y": 0, "w": 50, "h": 50}
+        self.assertAlmostEqual(coverage_of_diff_inside_slot(d, s), 1.0)
+
+    def test_coverage_no_overlap(self) -> None:
+        d = {"x": 100, "y": 100, "w": 10, "h": 10}
+        s = {"x": 0, "y": 0, "w": 50, "h": 50}
+        self.assertAlmostEqual(coverage_of_diff_inside_slot(d, s), 0.0)
+
+    def test_coverage_partial_50pct(self) -> None:
+        # Diff is 10x10; slot covers the left 5x10 half => coverage = 0.5
+        d = {"x": 0, "y": 0, "w": 10, "h": 10}
+        s = {"x": 0, "y": 0, "w": 5, "h": 10}
+        self.assertAlmostEqual(coverage_of_diff_inside_slot(d, s), 0.5)
+
+    def test_coverage_zero_area_diff_returns_zero(self) -> None:
+        d = {"x": 0, "y": 0, "w": 0, "h": 0}
+        s = {"x": 0, "y": 0, "w": 10, "h": 10}
+        self.assertEqual(coverage_of_diff_inside_slot(d, s), 0.0)
+
+    def test_attribute_picks_smaller_slot_on_tie(self) -> None:
+        # Two slots both cover the diff 100%; tie-break prefers smaller area.
+        d = {"x": 10, "y": 10, "w": 5, "h": 5}
+        page_slots = {
+            "Bg": {"x": 0, "y": 0, "w": 30, "h": 30},        # area 900
+            "Headline": {"x": 5, "y": 5, "w": 10, "h": 10},  # area 100
+        }
+        name, overlap, cands = attribute_diff_bbox(d, page_slots, 0.5)
+        self.assertEqual(name, "Headline")
+        self.assertEqual(overlap, 100.0)
+        # candidates[0] is the winner; candidates[1] is the loser.
+        self.assertEqual(cands[0]["slot"], "Headline")
+        self.assertEqual(cands[1]["slot"], "Bg")
+
+    def test_attribute_no_match_below_threshold(self) -> None:
+        d = {"x": 0, "y": 0, "w": 10, "h": 10}
+        page_slots = {
+            "Far": {"x": 9, "y": 9, "w": 10, "h": 10},  # coverage 0.01
+        }
+        name, overlap, cands = attribute_diff_bbox(d, page_slots, 0.5)
+        self.assertIsNone(name)
+        self.assertEqual(overlap, 0.0)
+        # Candidates list still populated so consumer sees the alternative.
+        self.assertEqual(len(cands), 1)
+        self.assertEqual(cands[0]["slot"], "Far")
+
+    def test_candidates_top3_only(self) -> None:
+        d = {"x": 0, "y": 0, "w": 10, "h": 10}
+        # Five slots that all overlap the diff, distinct coverages.
+        page_slots = {
+            "A": {"x": 0, "y": 0, "w": 10, "h": 10},   # cov 1.0, area 100
+            "B": {"x": 0, "y": 0, "w": 10, "h": 9},    # cov 0.9, area 90
+            "C": {"x": 0, "y": 0, "w": 10, "h": 8},    # cov 0.8, area 80
+            "D": {"x": 0, "y": 0, "w": 10, "h": 7},    # cov 0.7, area 70
+            "E": {"x": 0, "y": 0, "w": 10, "h": 6},    # cov 0.6, area 60
+        }
+        _, _, cands = attribute_diff_bbox(d, page_slots, 0.5)
+        self.assertEqual(len(cands), 3)
+        # Sorted descending by coverage_pct.
+        self.assertEqual([c["slot"] for c in cands], ["A", "B", "C"])
+        # coverage_pct values rounded to 1 decimal.
+        self.assertEqual(cands[0]["coverage_pct"], 100.0)
+        self.assertAlmostEqual(cands[1]["coverage_pct"], 90.0)
+
+    def test_empty_page_slots_returns_none_attribution(self) -> None:
+        d = {"x": 0, "y": 0, "w": 10, "h": 10}
+        name, overlap, cands = attribute_diff_bbox(d, {}, 0.5)
+        self.assertIsNone(name)
+        self.assertEqual(overlap, 0.0)
+        self.assertEqual(cands, [])
 
 
 if __name__ == "__main__":
