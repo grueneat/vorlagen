@@ -73,11 +73,17 @@ RUN echo "deb http://deb.debian.org/debian trixie main" \
 #     output across container regenerations.
 #   - jsonschema==4.26.0: validates shared/sample-images/manifest.yml against the
 #     library Draft 2020-12 schema (issue #13).
+#   - SimpleIDML==1.3.1: read-only IDML zip + XML access for tools/idml_to_dsl.py
+#     (issue #35). Dev-only: only used by the one-shot IDML→DSL bootstrap; not
+#     touched by CI render path. Pinning here because the dev container is the
+#     same image that runs the converter. Never import simple_idml.indesign
+#     (pulls in LGPL suds-py3 SOAP stack); we only use simple_idml.idml (BSD-3).
 RUN pip3 install --break-system-packages --no-cache-dir \
         'qrcode[pil]==8.2' \
         'pyzbar==0.1.9' \
         'pillow==12.2.0' \
-        'jsonschema==4.26.0'
+        'jsonschema==4.26.0' \
+        'SimpleIDML==1.3.1'
 
 # Brand fonts (proprietary Gotham Narrow, OFL Vollkorn). Source files live at
 # /root/workspace/fonts/ (gitignored; user-controlled drop zone) and are NOT
@@ -168,7 +174,7 @@ RUN set -e; \
     command -v scribus >/dev/null && echo "scribus: $(command -v scribus)"; \
     xvfb-run -a --server-args="-screen 0 800x600x24" scribus --version 2>&1 | head -5 || true; \
     pdftoppm -v 2>&1 | head -1; \
-    python3 -c "import lxml.etree, yaml; print('python deps ok')"
+    python3 -c "import lxml.etree, yaml, simple_idml.idml; print('python deps ok')"
 
 # Default working directory is the mounted repo (volume from base image).
 WORKDIR /root/workspace
