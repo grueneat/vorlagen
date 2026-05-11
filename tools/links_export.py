@@ -275,7 +275,12 @@ def _convert_psd(src: Path, out_path: Path) -> None:
     elif img.mode not in ("RGB", "RGBA", "L", "LA"):
         img = img.convert("RGB")
 
-    img.save(str(out_path), format="PNG")
+    # Scribus 1.6.x silently skips PNG images that carry an embedded iCCP chunk
+    # (the ICC profile block).  The profile is only needed during the ICC
+    # colour transform above; once the pixel data is in sRGB space the chunk
+    # must be dropped so Scribus can load the file.  Passing ``icc_profile=None``
+    # in the save kwargs suppresses Pillow's automatic re-embedding.
+    img.save(str(out_path), format="PNG", icc_profile=None)
 
 
 def _passthrough_copy(src: Path, out_path: Path) -> None:

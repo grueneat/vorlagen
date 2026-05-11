@@ -1231,7 +1231,7 @@ def _emit_pageitem(
     w_mm = w_pt * PT_TO_MM
     h_mm = h_pt * PT_TO_MM
 
-    # The raw (pre-ItemTransform) top-left anchor of this frame, used by
+    # The raw (pre-ItemTransform) anchor extents of this frame, used by
     # _extract_content_local_params to compute image/PDF local offset.
     # Image/PDF child ItemTransforms use the same rect-local coordinate space
     # as the PathPointArray anchors (both are BEFORE the rect's ItemTransform).
@@ -1273,7 +1273,7 @@ def _emit_pageitem(
                 pdf_local_offset: Optional[tuple[float, float]] = None
                 if pdf_transform_str:
                     pdf_local_scale, pdf_local_offset = _extract_content_local_params(
-                        pdf_transform_str, frame_tl_anchor
+                        pdf_transform_str, frame_tl_anchor,
                     )
                 # Use the mapped PNG for the entire enclosing frame.
                 _emit_image_frame_call(
@@ -1289,7 +1289,8 @@ def _emit_pageitem(
         # Use the first <Image> child as the visual content.
         img = image_children[0]
         _emit_image_content(out, item, img, x_mm, y_mm, w_mm, h_mm, rot,
-                            self_id, layer_idx, ctx, frame_tl_anchor=frame_tl_anchor)
+                            self_id, layer_idx, ctx,
+                            frame_tl_anchor=frame_tl_anchor)
         return
 
     if tag == "TextFrame":
@@ -1416,20 +1417,32 @@ def _extract_content_local_params(
 
     IDML stores Image/PDF children with an ItemTransform whose (tx, ty) is the
     content origin in the **same coordinate space as the enclosing Rectangle's
-    anchors** (spread-local).  Scribus LOCALX/LOCALY is the delta from the
-    frame's top-left corner to the content origin, measured in points.
+    anchors** (item-local).  Scribus LOCALX/LOCALY is the delta from the
+    frame's bottom-left corner (min-x, min-y) to the content origin, measured
+    in points.
+
+    IDML uses an upward-y coordinate system.  Both the PathPointArray anchors
+    and the Image/PDF ``ItemTransform`` (tx, ty) are in that same upward-y
+    space.  The offset ``ty - min_y_anchor`` gives the distance from the frame
+    bottom-left to the image origin in upward-y units.  Because Scribus
+    LOCALY is measured *upward* from the frame's bottom-left (positive = image
+    shifted down, negative = image shifted up relative to frame TL), this
+    offset maps directly without a sign flip:
+
+    - ty < min_y  →  image origin is below frame bottom  →  LOCALY < 0
+      (image is scrolled up relative to frame, showing a lower portion)
+    - ty = min_y  →  image origin at frame bottom  →  LOCALY ≈ 0
 
     Args:
         content_transform_str: the ``ItemTransform`` attribute of the ``<Image>``
             or ``<PDF>`` element (e.g. "0.491 0 0 0.491 -299.62 1296.99").
-        frame_tl_anchor: the ``(x, y)`` of the Rectangle frame's top-left
-            PathPointType anchor in the same spread-local coordinate space
-            (min-x, min-y of the rectangle's PathPointArray).
+        frame_tl_anchor: the ``(min_x, min_y)`` of the Rectangle frame's
+            PathPointArray anchors in the same item-local coordinate space.
 
     Returns:
         ``(local_scale, local_offset_pt)`` where *local_scale* is a
         ``(scx, scy)`` tuple and *local_offset_pt* is the ``(dx, dy)``
-        translation from frame TL to content origin in points.
+        translation from frame bottom-left to content origin in points.
     """
     parts = content_transform_str.split()
     if len(parts) != 6:
@@ -1532,11 +1545,11 @@ def _emit_image_content(
          instead of a blank preview.
 
     Args:
-        frame_tl_anchor: the ``(x, y)`` of the Rectangle's top-left
-            PathPointType anchor in spread-local coordinates. When supplied,
-            the Image's ``ItemTransform`` is used to derive ``local_scale``
-            and ``local_offset_pt`` so Scribus positions the content correctly
-            inside the frame (matching InDesign's image placement).
+        frame_tl_anchor: the ``(min_x, min_y)`` of the Rectangle frame's
+            PathPointArray anchors in item-local coordinates. Used with the
+            Image's ``ItemTransform`` to derive the correct Scribus
+            ``LOCALX / LOCALY`` content placement (see
+            ``_extract_content_local_params``).
     """
     link = img.find(".//Link")
     uri = link.get("LinkResourceURI", "") if link is not None else ""
@@ -1556,7 +1569,7 @@ def _emit_image_content(
     img_transform_str = img.get("ItemTransform", "")
     if img_transform_str and frame_tl_anchor is not None:
         local_scale, local_offset_pt = _extract_content_local_params(
-            img_transform_str, frame_tl_anchor
+            img_transform_str, frame_tl_anchor,
         )
 
     # 1. Asset-map lookup (Phase 2 path).
