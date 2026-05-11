@@ -9,21 +9,226 @@ audience: [kandidat, bezirksgruppe, ortsgruppe]
 description: >
   3-fach Zickzackfalz A4-quer-Themenflyer mit grünem Cover. Imported from
   InDesign IDML via tools/idml_to_dsl.py — initial slot schema; refine
-  after first gallery render.
+  after first gallery render. Annames are IDML Self IDs verbatim
+  (u-prefixed); a human will refactor them to semantic slot names
+  post-bootstrap.
 
 build:
   script: build.py
   output: template.sla
 
-# previews_for_sla is filled by bin/render-gallery / bin/check-stale-previews
+# Filled by bin/render-gallery / bin/check-stale-previews after first render.
 previews_for_sla: ""
 
 brand_overrides: []
 
 ci_overrides:
-  non_ci_styles: []
+  non_ci_styles:
+    - "idml/absatzformat-1"
+    - "idml/aufzaehlungen-auf-gruenem-hintergrund"
+    - "idml/fliesstext-auf-gruenem-hintergrund"
+    - "idml/headline-in-gruenem-kasten"
+    - "idml/no-paragraph-style"
+    - "idml/normalparagraphstyle"
   non_ci_colors: []
   non_ci_layers:
     - "Info"
 
-slots: {}
+example_pages:
+  - { num: 1, label: "Cover" }
+  - { num: 2, label: "Innenseite" }
+
+preflight:
+  bleed_mm: 2
+  fold_mm: [99, 198]
+  cmyk_only: true
+  min_image_dpi: 300
+
+slots:
+  # Annames are IDML Self IDs (u-prefixed). Refactor to semantic slot names
+  # (e.g. p1_cover_background) after first gallery review.
+  # tools/idml_meta_stub.py regenerates this block.
+  u1ae:
+    type: shape
+    description: ""
+    anname: u1ae
+  u141:
+    type: image
+    description: ""
+    anname: u141
+  u151:
+    type: shape
+    description: ""
+    anname: u151
+  u513:
+    type: shape
+    description: ""
+    anname: u513
+  u516:
+    type: text
+    description: ""
+    anname: u516
+  u52d:
+    type: text
+    description: ""
+    anname: u52d
+  u185:
+    type: shape
+    description: ""
+    anname: u185
+  u186:
+    type: text
+    description: ""
+    anname: u186
+  u19d:
+    type: shape
+    description: ""
+    anname: u19d
+  u1ac:
+    type: shape
+    description: ""
+    anname: u1ac
+  u1ad:
+    type: shape
+    description: ""
+    anname: u1ad
+  u1b0:
+    type: text
+    description: ""
+    anname: u1b0
+  u1c7:
+    type: text
+    description: ""
+    anname: u1c7
+  u1e6:
+    type: text
+    description: ""
+    anname: u1e6
+  u1fd:
+    type: text
+    description: ""
+    anname: u1fd
+  u2b0:
+    type: shape
+    description: ""
+    anname: u2b0
+  u24e:
+    type: text
+    description: ""
+    anname: u24e
+  u265:
+    type: text
+    description: ""
+    anname: u265
+  u295:
+    type: text
+    description: ""
+    anname: u295
+  u2cd:
+    type: image
+    description: ""
+    anname: u2cd
+  u2d5:
+    type: text
+    description: ""
+    anname: u2d5
+  u2ef:
+    type: shape
+    description: ""
+    anname: u2ef
+  u2f0:
+    type: shape
+    description: ""
+    anname: u2f0
+  u346:
+    type: shape
+    description: ""
+    anname: u346
+  u347:
+    type: text
+    description: ""
+    anname: u347
+  u35f:
+    type: text
+    description: ""
+    anname: u35f
+  u376:
+    type: text
+    description: ""
+    anname: u376
+  u394:
+    type: shape
+    description: ""
+    anname: u394
+  u397:
+    type: shape
+    description: ""
+    anname: u397
+  u398:
+    type: shape
+    description: ""
+    anname: u398
+  u3a0:
+    type: image
+    description: ""
+    anname: u3a0
+  u3a2:
+    type: text
+    description: ""
+    anname: u3a2
+  u3ba:
+    type: text
+    description: ""
+    anname: u3ba
+  u3d1:
+    type: shape
+    description: ""
+    anname: u3d1
+  u3e7:
+    type: image
+    description: ""
+    anname: u3e7
+  u40c:
+    type: text
+    description: ""
+    anname: u40c
+  u3f0:
+    type: image
+    description: ""
+    anname: u3f0
+  u412:
+    type: text
+    description: ""
+    anname: u412
+  u3f5:
+    type: image
+    description: ""
+    anname: u3f5
+  u45b:
+    type: text
+    description: ""
+    anname: u45b
+  u477:
+    type: image
+    description: ""
+    anname: u477
+  u47b:
+    type: text
+    description: ""
+    anname: u47b
+  u4a2:
+    type: image
+    description: ""
+    anname: u4a2
+  u4a6:
+    type: text
+    description: ""
+    anname: u4a6
+  u4da:
+    type: image
+    description: ""
+    anname: u4da
+  u4df:
+    type: text
+    description: ""
+    anname: u4df
