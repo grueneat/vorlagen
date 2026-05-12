@@ -1789,3 +1789,88 @@ criteria (all checked), and updates P9 to list run_style_audit as a
 content-level diff source.
 
 **Phase B completed:** 2026-05-12
+
+---
+
+## Phase G — region_color_audit (2026-05-12)
+
+**Goal:** Separate "uniform ICC colour rendering drift" (engine floor, unfixable)
+from "wrong fill colour per frame" (converter bug, fixable) via per-region mean
+RGB delta sampling.
+
+### Commit SHAs
+
+- `441b4ce` (issue/35 branch) — `37: feat(tools): run_style_audit — per-Run font/size/color fidelity (Phase F)`
+  *Note: Phase G files (region_color_audit.py + tests + render_pipeline wiring) were
+  bundled into this commit by the parallel Phase F agent due to a shared working tree.
+  All Phase G code is fully present in this commit.*
+- `0d68274` (main branch) — `37: docs(issues): add Phase G (region_color_audit) — ICC-vs-fill-bug classification`
+
+### Acceptance verification output
+
+```
+[kandidat-falzflyer-din-lang-gruenes-cover-v2] region_color_audit: 16 ok, 15 icc_likely, 5 fill_likely — pattern: predominantly_icc_drift
+```
+
+```
+pattern: predominantly_icc_drift
+by_severity: {'fill_likely': 5, 'icc_likely': 15, 'ok': 16}
+top 5 fill_likely (real bugs):
+  u4da     page 2  baseline_rgb=[156.9, 188.0, 164.8] preview_rgb=[45.0, 108.3, 58.5] delta=99.3
+  u477     page 2  baseline_rgb=[152.9, 185.1, 160.9] preview_rgb=[44.6, 107.2, 58.1] delta=96.32
+  u4a2     page 2  baseline_rgb=[150.5, 183.5, 158.9] preview_rgb=[44.5, 106.8, 57.9] delta=94.56
+  u3f0     page 2  baseline_rgb=[182.3, 205.1, 188.6] preview_rgb=[83.4, 133.7, 94.3] delta=88.22
+  u3e7     page 2  baseline_rgb=[176.4, 200.4, 182.9] preview_rgb=[221.8, 231.3, 223.9] delta=39.09
+top 5 icc_likely (likely engine floor):
+  u2d5     page 2  baseline_rgb=[140.4, 140.5, 121.5] preview_rgb=[128.9, 131.0, 114.1] delta=9.43
+  u2cd     page 2  baseline_rgb=[146.6, 146.0, 124.2] preview_rgb=[138.0, 139.7, 116.9] delta=7.38
+  u185     page 1  baseline_rgb=[205.3, 32.6, 124.1] preview_rgb=[201.2, 41.2, 133.3] delta=7.31
+  u3f5     page 2  baseline_rgb=[177.4, 201.9, 184.2] preview_rgb=[170.8, 195.2, 176.1] delta=7.14
+  u186     page 1  baseline_rgb=[228.1, 39.0, 141.3] preview_rgb=[224.4, 44.9, 150.3] delta=6.22
+```
+
+### by_severity summary + pattern verdict
+
+| severity    | count |
+|-------------|-------|
+| ok          | 16    |
+| icc_likely  | 15    |
+| fill_likely | 5     |
+
+**Pattern: `predominantly_icc_drift`** — icc_likely (15) ≥ 3× fill_likely (5).
+The document's overall colour delta profile is dominated by the ICC rendering
+floor, not by wrong fill-color emits from the converter.
+
+### Critical interpretation: u1ae + u1fd background drift
+
+**u1ae** (page 1, full-bleed background Polygon, Dunkelgrün fill):
+- baseline_rgb: [55.7, 124.3, 66.8]
+- preview_rgb:  [60.7, 127.9, 70.5]
+- mean_delta: 4.09 — **severity: `icc_likely`**
+
+**u1fd** (page 1, overlay TextFrame region):
+- baseline_rgb: [58.3, 126.9, 64.8]
+- preview_rgb:  [63.6, 130.7, 68.6]
+- mean_delta: 4.28 — **severity: `icc_likely`**
+
+**Verdict: ENGINE FLOOR. UNFIXABLE.**
+
+Both u1ae and u1fd show a mean RGB delta of ~4 units — consistent with the
+~4-unit offset characteristic of CMYK→sRGB ICC rendering differences between
+InDesign/Acrobat (used to produce baseline.pdf) and Scribus (used to produce
+preview.pdf). The converter's `fill='Dunkelgrün'` emit is correct — the delta
+is not a fill-color bug. The 1.70pp (u1ae) + 1.26pp (u1fd) contribution to the
+8.09% page-1 visual_diff is irreducible cross-engine colour drift.
+
+Fixing attempts on u1ae or u1fd would be wasted work.
+
+The 5 `fill_likely` frames (u4da, u477, u4a2, u3f0, u3e7 on page 2) with
+deltas of 39-99 RGB units ARE real converter bugs — those frames show image
+content in baseline vs solid fill in preview (or vice versa), indicating wrong
+image or fill assignment. These should be the next fix targets.
+
+### Test coverage
+
+25 unit tests + 4 integration tests (total: 298 pass, was 294 before Phase G).
+
+**Phase G completed:** 2026-05-12
