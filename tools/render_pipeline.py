@@ -653,6 +653,114 @@ def _orchestrate_template(tdir: Path, args) -> int:
 # main() — CLI entry point
 # ---------------------------------------------------------------------------
 
+def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
+    """Run A1 (idml_inventory) + A2 (baseline_text_audit) + A3 (baseline_image_audit).
+
+    Returns (audit_issue_count, summary_line).
+    Reports are written to build/validation/<slug>/{inventory,text_audit,image_audit}.yml.
+
+    Audit failure does NOT block the render — just surfaces the reports.
+    When --audit-strict is set the caller uses the issue count to set exit code.
+    """
+    tid = meta["id"]
+    out_dir = ROOT / "build" / "validation" / tid
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    issue_parts: list[str] = []
+
+    # A1: IDML inventory (requires an IDML source)
+    idml_source = None
+    for key in ("idml_source", "original_idml"):
+        val = meta.get(key, "")
+        if val:
+            candidate = (tdir / val).resolve()
+            if candidate.exists():
+                idml_source = candidate
+                break
+    # Also try a common originals path pattern
+    if idml_source is None:
+        # Search originals/ for an .idml matching the template's source dir
+        for candidate in sorted((ROOT / "originals").rglob("*.idml")):
+            idml_source = candidate
+            break
+
+    inventory_path = out_dir / "inventory.yml"
+    if idml_source is not None and (tdir / "build.py").exists():
+        try:
+            from idml_inventory import run_inventory, _yaml_dump as _inv_yaml
+            report = run_inventory(idml_source, tdir / "build.py", template=tid)
+            inventory_path.write_text(_inv_yaml(report), encoding="utf-8")
+            # Count dropped elements across all spreads
+            dropped = sum(
+                len(s.get("elements_dropped", []))
+                for s in report.get("spreads", [])
+            )
+            if dropped:
+                issue_parts.append(f"{dropped} dropped element(s)")
+        except Exception as exc:
+            print(f"[{tid}] audit A1 (inventory) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit A1 (inventory): skipped (no IDML source found)",
+            file=sys.stderr,
+        )
+
+    # A2: baseline text audit
+    text_audit_path = out_dir / "text_audit.yml"
+    baseline = tdir / "baseline.pdf"
+    build_py = tdir / "build.py"
+    if baseline.exists() and build_py.exists():
+        try:
+            from baseline_text_audit import run_text_audit, _yaml_dump as _txt_yaml
+            report = run_text_audit(baseline, build_py, template=tid)
+            text_audit_path.write_text(_txt_yaml(report), encoding="utf-8")
+            unmatched = sum(
+                len(p.get("lines_unmatched", []))
+                for p in report.get("pages", [])
+            )
+            if unmatched:
+                issue_parts.append(f"{unmatched} unmatched text line(s)")
+        except Exception as exc:
+            print(f"[{tid}] audit A2 (text) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit A2 (text): skipped (no baseline.pdf or build.py)",
+            file=sys.stderr,
+        )
+
+    # A3: baseline image audit
+    image_audit_path = out_dir / "image_audit.yml"
+    if baseline.exists() and build_py.exists():
+        try:
+            from baseline_image_audit import run_image_audit, _yaml_dump as _img_yaml
+            report = run_image_audit(baseline, build_py, template=tid)
+            image_audit_path.write_text(_img_yaml(report), encoding="utf-8")
+            vector_delta_total = sum(
+                p.get("vector_paths", {}).get("delta", 0)
+                for p in report.get("pages", [])
+                if p.get("vector_paths", {}).get("delta", 0) > 0
+            )
+            strip_count = len(report.get("composite_strips", []))
+            if vector_delta_total:
+                issue_parts.append(f"{vector_delta_total} vector-path delta")
+            if strip_count:
+                issue_parts.append(f"{strip_count} composite-strip issue(s)")
+        except Exception as exc:
+            print(f"[{tid}] audit A3 (image) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit A3 (image): skipped (no baseline.pdf or build.py)",
+            file=sys.stderr,
+        )
+
+    if issue_parts:
+        summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
+    else:
+        summary = f"[{tid}] audit: clean"
+
+    return len(issue_parts), summary
+
+
 def main(argv=None) -> int:
     """Entry point for bin/render-gallery."""
     parser = argparse.ArgumentParser(
@@ -682,8 +790,30 @@ def main(argv=None) -> int:
         action="store_true",
         help="Render and validate but do NOT write meta.yml hash or mirror to site/public/.",
     )
+    parser.add_argument(
+        "--audit",
+        action="store_true",
+        help=(
+            "After render+visual_diff, run A1 (idml_inventory) + A2 (baseline_text_audit) "
+            "+ A3 (baseline_image_audit) and write reports to "
+            "build/validation/<slug>/{inventory,text_audit,image_audit}.yml. "
+            "Prints a per-template audit summary. Informational only (use --audit-strict "
+            "to fail on audit issues)."
+        ),
+    )
+    parser.add_argument(
+        "--audit-strict",
+        action="store_true",
+        help=(
+            "Same as --audit but exits non-zero if any audit issues are found. "
+            "Implies --audit. Intended for CI."
+        ),
+    )
 
     args = parser.parse_args(argv)
+    # --audit-strict implies --audit
+    if args.audit_strict:
+        args.audit = True
 
     # Preflight: brand fonts.
     _verify_brand_fonts()
@@ -725,14 +855,27 @@ def main(argv=None) -> int:
         return 1
 
     results: dict[str, int] = {}
+    audit_summaries: list[str] = []
+    audit_issue_count_total = 0
     for tdir in work:
         tid = tdir.name
+        meta = yaml.safe_load((tdir / "meta.yml").read_text(encoding="utf-8"))
         try:
             rc = _orchestrate_template(tdir, args)
         except Exception as exc:
             print(f"[{tid}] EXCEPTION: {exc}", file=sys.stderr)
             rc = 1
         results[tid] = rc
+
+        # Run audit AFTER render (non-blocking by default).
+        if getattr(args, "audit", False):
+            try:
+                n_issues, summary = _run_audit(tdir, meta, args)
+                print(summary)
+                audit_summaries.append(summary)
+                audit_issue_count_total += n_issues
+            except Exception as exc:
+                print(f"[{tid}] audit EXCEPTION: {exc}", file=sys.stderr)
 
     # Summary.
     sep = "=" * 64
@@ -744,9 +887,22 @@ def main(argv=None) -> int:
     for tid, rc in results.items():
         status = "OK" if rc == 0 else "FAIL"
         print(f"  {tid:<42} {status}")
+    if getattr(args, "audit", False) and audit_summaries:
+        print()
+        print("Audit summaries:")
+        for s in audit_summaries:
+            print(f"  {s}")
     print(sep)
 
     overall = 0 if all(rc == 0 for rc in results.values()) else 1
+    # --audit-strict: fail if any audit issues found
+    if getattr(args, "audit_strict", False) and audit_issue_count_total > 0:
+        print(
+            f"AUDIT STRICT: {audit_issue_count_total} audit issue category(ies) found "
+            f"across {len(work)} template(s) — exiting non-zero.",
+            file=sys.stderr,
+        )
+        overall = 1
     return overall
 
 
