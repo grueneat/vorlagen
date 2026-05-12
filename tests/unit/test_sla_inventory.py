@@ -266,3 +266,55 @@ def test_page_offset_correct_for_second_page(tmp_path):
     assert abs(u201["ypos_pt"] - 118.0) < 0.01, (
         f"Expected page-relative y=118pt; got {u201['ypos_pt']}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests: OwnPage=-1 nearest-page offset (Phase R3 fix)
+# ---------------------------------------------------------------------------
+
+OWNPAGE_MINUS1_SLA = dedent("""\
+    <?xml version="1.0" encoding="UTF-8"?>
+    <SCRIBUSUTF8NEW Version="1.6.4">
+        <DOCUMENT ANZPAGES="2" PAGEWIDTH="595" PAGEHEIGHT="842">
+            <PAGE NUM="0" PAGEXPOS="100" PAGEYPOS="20" PAGEWIDTH="595" PAGEHEIGHT="842"/>
+            <PAGE NUM="1" PAGEXPOS="100" PAGEYPOS="882" PAGEWIDTH="595" PAGEHEIGHT="842"/>
+            <PAGEOBJECT XPOS="310" YPOS="890" WIDTH="18" HEIGHT="18"
+                        PTYPE="6" OwnPage="-1" ANNAME="u300" ROT="0"/>
+            <PAGEOBJECT XPOS="50" YPOS="15" WIDTH="18" HEIGHT="18"
+                        PTYPE="6" OwnPage="-1" ANNAME="u301" ROT="0"/>
+        </DOCUMENT>
+    </SCRIBUSUTF8NEW>
+""")
+
+
+def test_ownpage_minus1_uses_nearest_page_offset(tmp_path):
+    """OwnPage=-1 items use the nearest page's PAGEXPOS/PAGEYPOS for offset subtraction.
+
+    u300 at YPOS=890pt: page 1 PAGEYPOS=882pt (dist=8pt) vs page 0 PAGEYPOS=20pt+842pt bottom=862pt (dist=28pt).
+    → nearest page = 1 → offset subtracted: y=890-882=8pt.
+
+    u301 at YPOS=15pt: page 0 top=20pt (dist=5pt) vs page 1 (very far).
+    → nearest page = 0 → offset subtracted: y=15-20=-5pt.
+    """
+    from sla_inventory import _collect_pageobjects
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(OWNPAGE_MINUS1_SLA)
+    doc = root.find("DOCUMENT")
+    records = _collect_pageobjects(doc)
+
+    u300 = next(r for r in records if r["anname"] == "u300")
+    # YPOS=890, PAGEYPOS(1)=882 → page-relative y=8pt
+    assert abs(u300["ypos_pt"] - 8.0) < 0.01, (
+        f"OwnPage=-1 u300: expected y=8pt (nearest=page1, offset=882); got {u300['ypos_pt']}"
+    )
+    # XPOS=310, PAGEXPOS(1)=100 → page-relative x=210pt
+    assert abs(u300["xpos_pt"] - 210.0) < 0.01, (
+        f"OwnPage=-1 u300: expected x=210pt; got {u300['xpos_pt']}"
+    )
+
+    u301 = next(r for r in records if r["anname"] == "u301")
+    # YPOS=15pt, page 0 top=20pt → page-relative y=-5pt (just above page 0 top)
+    assert abs(u301["ypos_pt"] - (-5.0)) < 0.01, (
+        f"OwnPage=-1 u301: expected y=-5pt (nearest=page0, offset=20); got {u301['ypos_pt']}"
+    )

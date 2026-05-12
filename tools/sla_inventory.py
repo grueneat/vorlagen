@@ -89,6 +89,44 @@ def _build_page_offsets(doc_el: ET.Element) -> dict[int, tuple[float, float]]:
     return offsets
 
 
+def _nearest_page_offset(
+    ypos_abs_pt: float,
+    page_offsets: dict[int, tuple[float, float]],
+    page_heights_pt: dict[int, float],
+) -> tuple[float, float]:
+    """For OwnPage=-1 elements, find the nearest page by YPOS and return its offset.
+
+    Scribus assigns OwnPage=-1 to items that fall outside all page boundaries
+    (e.g. registration marks in the pasteboard). These still live in document-
+    absolute coordinates and should be rendered relative to the nearest page,
+    matching the coordinate system used in build.py.
+
+    Strategy: pick the page whose BOTTOM (PAGEYPOS + PAGEHEIGHT) is closest to
+    or just below the item's YPOS. This correctly associates items in the
+    pasteboard below a page with that page rather than the next one.
+    """
+    if not page_offsets:
+        return (0.0, 0.0)
+
+    def _dist_from_page(num: int) -> float:
+        _, py = page_offsets[num]
+        ph = page_heights_pt.get(num, 0.0)
+        page_top = py
+        page_bot = py + ph
+        if ypos_abs_pt < page_top:
+            # Item is above this page → distance to page top.
+            return page_top - ypos_abs_pt
+        elif ypos_abs_pt <= page_bot:
+            # Item is within this page → zero distance (on-page but OwnPage=-1 is unusual).
+            return 0.0
+        else:
+            # Item is below this page → distance to page bottom.
+            return ypos_abs_pt - page_bot
+
+    best_num = min(page_offsets.keys(), key=_dist_from_page)
+    return page_offsets[best_num]
+
+
 def _collect_pageobjects(
     doc_el: ET.Element,
 ) -> list[dict]:
@@ -110,6 +148,14 @@ def _collect_pageobjects(
     records: list[dict] = []
     unnamed_counter = 0
     page_offsets = _build_page_offsets(doc_el)
+    # Build page heights for nearest-page lookup (OwnPage=-1 items).
+    page_heights_pt: dict[int, float] = {}
+    for page_el in doc_el.findall("PAGE"):
+        try:
+            num = int(page_el.get("NUM", "0"))
+        except ValueError:
+            num = 0
+        page_heights_pt[num] = _parse_float(page_el.get("PAGEHEIGHT"))
 
     def _walk(el: ET.Element, parent_anname: Optional[str]) -> None:
         nonlocal unnamed_counter
@@ -141,7 +187,15 @@ def _collect_pageobjects(
                 own_page_for_offset = int(own_page_raw)
             except ValueError:
                 own_page_for_offset = 0
-            page_ox, page_oy = page_offsets.get(own_page_for_offset, (0.0, 0.0))
+            if own_page_for_offset == -1:
+                # OwnPage=-1 means Scribus treats the item as off-page (pasteboard/
+                # registration mark). Use the nearest page's offset so coordinates
+                # match the build.py page-relative system.
+                page_ox, page_oy = _nearest_page_offset(
+                    ypos_abs, page_offsets, page_heights_pt
+                )
+            else:
+                page_ox, page_oy = page_offsets.get(own_page_for_offset, (0.0, 0.0))
             xpos = xpos_abs - page_ox
             ypos = ypos_abs - page_oy
 

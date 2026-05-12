@@ -66,6 +66,7 @@ def build_template() -> Document:
         extra_pdf_attrs={
             'cropMarks': '0',
             'bleedMarks': '0',
+            # P5/inject: suppress document bleeds in PDF export to match baseline.pdf trim box.
             'useDocBleeds': '0',
         },
     )
@@ -154,8 +155,10 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp=14.3,
         linesp_mode=0,
     ))
-    # Center-aligned headline style (used by u52d: 38pt, tight leading 34pt)
-    # linesp_mode=0 = auto/fixed pt leading.
+    # P5/inject: custom styles for hand-split Vollkorn frames + Störer label.
+    # These styles are not in the IDML style map but required for the multi-frame
+    # headline workaround (Vollkorn Black Italic rendering issue in Scribus).
+    # Re-emit drops them; restore here. See Phase 4 EXECUTION.md.
     doc.add_para_style(ParaStyle(
         name='idml/headline-cover-zentriert',
         parent='idml/normalparagraphstyle',
@@ -166,8 +169,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp=34.134,
         linesp_mode=0,
     ))
-    # Center-aligned subheadline style (used by u516: 18pt)
-    # No explicit linesp/linesp_mode → inherits Scribus auto leading (fine for 18pt body text).
     doc.add_para_style(ParaStyle(
         name='idml/subheadline-cover-zentriert',
         parent='idml/normalparagraphstyle',
@@ -176,9 +177,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         align=1,
         fcolor='White',
     ))
-    # Left-aligned panel headline: "Ich bin eine / Headline." at 30pt with 27pt leading.
-    # Used by u1b0, u1e6 (page 1) and u24e (page 2), all left-aligned.
-    # linesp_mode=0 = auto/fixed pt leading.
     doc.add_para_style(ParaStyle(
         name='idml/headline-panel-weiss',
         parent='idml/normalparagraphstyle',
@@ -189,7 +187,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp=27,
         linesp_mode=0,
     ))
-    # Same style but Dunkelgrün color (used by u24e on page 2)
     doc.add_para_style(ParaStyle(
         name='idml/headline-panel-dunkelgruen',
         parent='idml/normalparagraphstyle',
@@ -200,8 +197,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp=27,
         linesp_mode=0,
     ))
-    # Center-aligned text for Störer label in u186.
-    # IDML Justification="CenterAlign" → align=1 in Scribus.
     doc.add_para_style(ParaStyle(
         name='idml/stoerer-center',
         parent='idml/normalparagraphstyle',
@@ -281,8 +276,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         x_mm=211.6719,
         y_mm=80.51,
         w_mm=71.6562,
-        # 14.5mm=41.1pt: same height as u52d_hl ("Headline") which renders correctly.
-        # 11mm=31.18pt caused "Das ist die" to NOT render (descent 7.6pt clipped by frame).
+        # 14.5mm=41.1pt: enough for one 38pt Gotham line.
         h_mm=14.5,
         anname='u52d',
         layer=0,
@@ -315,6 +309,32 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         style='idml/headline-cover-zentriert',
         runs=[Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White')],
+    ))
+    # u184 = Störer group: Magenta oval + "Störer" text overlay.
+    # The oval is rotated -18° in IDML but since it's a circle, rotation is visual no-op.
+    # Bounding box computed from IDML spread coords → page coords:
+    #   oval x=270.42-290.32mm, y=64.53-84.42mm (≈19.9mm diameter circle)
+    page0.add(Polygon(
+        x_mm=270.42,
+        y_mm=64.53,
+        w_mm=19.9,
+        h_mm=19.9,
+        anname='u185',
+        layer=0,
+        fill='Magenta',
+        shape='ellipse',
+    ))
+    page0.add(TextFrame(
+        # IDML u186 Störer text: Justification="CenterAlign" → use center-aligned style.
+        # Baseline PDF: "Störer" at x0=274.66mm (within 269.81-290.92mm frame → centered).
+        x_mm=269.81,
+        y_mm=71.28,
+        w_mm=21.11,
+        h_mm=6.33,
+        anname='u186',
+        layer=0,
+        style='idml/stoerer-center',
+        runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/stoerer-center')],
     ))
     page0.add(Polygon(
         x_mm=308.75,
@@ -419,37 +439,14 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         anname='u1fd',
         layer=0,
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
-        runs=[Run(text='\t•\t'), Run(text='Scim rem ', font='Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Tissi iuntem ressiti ', font='Black'), Run(text='orerovi tectotmusaqui tota nis quam.'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='Uaerum ium ', font='Black'), Run(text='verior alicide liquuntio. '), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='vello modi ', font='Black'), Run(text='aceprate pem ssi iuntem ilis'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t'), Run(text='moditatque', font='Black'), Run(text=' nimil maxim voluptur.'), Run(text='', separator='breakline'), Run(text='\t'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
+        runs=[Run(text='\t•\t', font='Gotham Narrow'), Run(text='Scim rem ', font='Gotham Narrow Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='Uaerum ium ', font='Gotham Narrow Black'), Run(text='verior alicide liquuntio. ', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='vello modi ', font='Gotham Narrow Black'), Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='moditatque', font='Gotham Narrow Black'), Run(text=' nimil maxim voluptur.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='\t', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
     ))
-    # u184 = Störer group: Magenta oval + "Störer" text overlay.
-    # The oval is rotated -18° in IDML but since it's a circle, rotation is visual no-op.
-    # Bounding box computed from IDML spread coords → page coords:
-    #   oval x=270.42-290.32mm, y=64.53-84.42mm (≈19.9mm diameter circle)
-    page0.add(Polygon(
-        x_mm=270.42,
-        y_mm=64.53,
-        w_mm=19.9,
-        h_mm=19.9,
-        anname='u185',
-        layer=0,
-        fill='Magenta',
-        shape='ellipse',
-    ))
-    page0.add(TextFrame(
-        # IDML u186 Störer text: Justification="CenterAlign" → use center-aligned style.
-        # Baseline PDF: "Störer" at x0=274.66mm (within 269.81-290.92mm frame → centered).
-        x_mm=269.81,
-        y_mm=71.28,
-        w_mm=21.11,
-        h_mm=6.33,
-        anname='u186',
-        layer=0,
-        style='idml/stoerer-center',
-        runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/stoerer-center')],
-    ))
-    # u2b0 omitted: yellow-outline guide marker present in IDML Gestaltung layer
-    # but excluded from InDesign PDF export (design workflow artifact, not content).
-    # Scribus renders it visible; InDesign suppresses it via internal export logic.
+    # P5/inject: u2b0 (yellow wind-turbine outline) deliberately excluded.
+    # InDesign does not export this Polygon to PDF even though it sits on the
+    # Gestaltung (printable) layer — it is a design-workflow guide artifact.
+    # Including it adds a yellow mismatch of ~86k px vs baseline.pdf.
+    # Removed in Phase 3 (commit 3774a8a); re-emit must leave it out.
+    # See Phase R3 EXECUTION.md.
 
 
 def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
@@ -462,7 +459,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u24e',
         layer=0,
         style='idml/headline-panel-dunkelgruen',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün'), Run(text='', has_itext=False, separator='breakline'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/headline-panel-dunkelgruen')],
+        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/headline-panel-dunkelgruen')],
     ))
     page1.add(TextFrame(
         x_mm=16.8913,
@@ -517,7 +514,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u2d5',
         layer=0,
         style='idml/headline-panel-weiss',
-        runs=[Run(text='Ich bin auch ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', has_itext=False, separator='breakline'), Run(text='eine Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/headline-panel-weiss')],
+        runs=[Run(text='Ich bin auch ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='eine Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/headline-panel-weiss')],
     ))
     page1.add(Polygon(
         x_mm=-17.3,
@@ -565,7 +562,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u35f',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(TextFrame(
         x_mm=21.6413,
@@ -671,8 +668,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        # IDML-derived: full social-media-icons-weiss.png with local_offset to crop to icon.
-        # scale=0.09 from PDF child ItemTransform; offset from PDF origin vs frame anchor.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
         local_scale=(0.09, 0.09),
         local_offset_mm=(-12.1647, -0.7654),
@@ -685,7 +680,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u40c',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@diegruenen', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@diegruenen', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
@@ -694,7 +689,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        # IDML-derived: full social-media-icons-weiss.png offset to second icon row.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
         local_scale=(0.09, 0.09),
         local_offset_mm=(-4.5974, -0.7654),
@@ -707,7 +701,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u412',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@diegruenen', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@diegruenen', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
@@ -716,7 +710,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        # IDML-derived: full social-media-icons-weiss.png offset to third icon row.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
         local_scale=(0.09, 0.09),
         local_offset_mm=(-8.28, -0.7654),
@@ -729,7 +722,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u45b',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@diegruenenaustria', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@diegruenenaustria', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
@@ -738,7 +731,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u477',
         layer=0,
-        # IDML-derived scale from PDF child ItemTransform (scale=0.09158896567421919).
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
         local_scale=(0.091589, 0.091589),
     ))
@@ -750,7 +742,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u47b',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@gruene.at', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@gruene.at', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
@@ -759,7 +751,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4a2',
         layer=0,
-        # IDML-derived scale (0.095788) + tiny offset from PDF child ItemTransform.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
         local_scale=(0.095788, 0.095788),
         local_offset_mm=(-0.0774, -0.0774),
@@ -772,7 +763,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4a6',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='gruene.at', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='gruene.at', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
@@ -781,7 +772,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4da',
         layer=0,
-        # IDML-derived scale (0.095787) + tiny offset from PDF child ItemTransform.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
         local_scale=(0.095787, 0.095787),
         local_offset_mm=(-0.0672, -0.0626),
@@ -794,7 +784,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4df',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='gruene.at', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='gruene.at', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
     ))
 
 def build_preview() -> Document:

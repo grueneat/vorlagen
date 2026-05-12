@@ -114,6 +114,39 @@ def test_sla_inventory_u2b0_has_linescolor():
     assert u2b0["ptype_label"] == "polyline"
 
 
+def test_sla_inventory_ownpage_minus1_uses_nearest_page_offset():
+    """OwnPage=-1 off-page items use nearest page offset (Phase R3 fix).
+
+    u151 is a Magenta registration mark just below page 0 (OwnPage=-1).
+    Its sla_inventory x/y must match build.py coords (within 1mm).
+    """
+    if not SLA_PATH.exists():
+        pytest.skip(f"SLA not found: {SLA_PATH}")
+
+    report = run_sla_inventory(SLA_PATH, template=SLUG)
+    objs = report["pageobjects_by_anname"]
+
+    # u151: build.py x=198.3236, y=214.5
+    assert "u151" in objs, "u151 must be in sla_inventory"
+    u151 = objs["u151"]
+    assert abs(u151["bbox_mm"]["x"] - 198.3236) < 1.0, (
+        f"u151 x should be ~198.32mm (page-0-relative); got {u151['bbox_mm']['x']}"
+    )
+    assert abs(u151["bbox_mm"]["y"] - 214.5) < 1.0, (
+        f"u151 y should be ~214.5mm (page-0-relative); got {u151['bbox_mm']['y']}"
+    )
+
+    # u394: build.py x=-15.75, y=186.3 (page 1 off-page marker)
+    assert "u394" in objs, "u394 must be in sla_inventory"
+    u394 = objs["u394"]
+    assert abs(u394["bbox_mm"]["x"] - (-15.75)) < 1.0, (
+        f"u394 x should be ~-15.75mm (page-1-relative); got {u394['bbox_mm']['x']}"
+    )
+    assert abs(u394["bbox_mm"]["y"] - 186.3) < 1.0, (
+        f"u394 y should be ~186.3mm (page-1-relative); got {u394['bbox_mm']['y']}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # three_way_audit integration
 # ---------------------------------------------------------------------------
