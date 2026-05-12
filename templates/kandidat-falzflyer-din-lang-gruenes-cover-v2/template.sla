@@ -19,12 +19,12 @@
     <STYLE NAME="ci/stoerer" PARENT="ci/default" ALIGN="1" LINESP="11" FONTSIZE="10" FONT="Gotham Narrow Ultra" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/cta" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="13" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="idml/no-paragraph-style" ALIGN="0" FONTSIZE="12" FONT="Times Roman"/>
-    <STYLE NAME="idml/fliesstext-auf-gruenem-hintergrund" PARENT="idml/no-paragraph-style" ALIGN="3" LINESPMode="0" LINESP="16" FONTSIZE="11" FONT="Gotham Narrow Book" FCOLOR="White">
+    <STYLE NAME="idml/fliesstext-auf-gruenem-hintergrund" PARENT="idml/no-paragraph-style" ALIGN="0" LINESPMode="0" LINESP="16" FONTSIZE="11" FONT="Gotham Narrow Book" FCOLOR="White">
       <Tabs Type="0" Pos="15" Fill=""/>
     </STYLE>
     <STYLE NAME="idml/headline-in-gruenem-kasten" PARENT="idml/no-paragraph-style" ALIGN="1" LINESPMode="0" LINESP="12" FONTSIZE="12" FONT="Gotham Narrow Bold" FCOLOR="White"/>
     <STYLE NAME="idml/normalparagraphstyle" PARENT="idml/no-paragraph-style" ALIGN="0" FONTSIZE="12" FONT="Times Roman"/>
-    <STYLE NAME="idml/absatzformat-1" PARENT="idml/fliesstext-auf-gruenem-hintergrund" ALIGN="3" LINESPMode="0" LINESP="14.3" FONTSIZE="11" FONT="Gotham Narrow Book" FCOLOR="White"/>
+    <STYLE NAME="idml/absatzformat-1" PARENT="idml/fliesstext-auf-gruenem-hintergrund" ALIGN="0" LINESPMode="0" LINESP="14.3" FONTSIZE="11" FONT="Gotham Narrow Book" FCOLOR="White"/>
     <STYLE NAME="idml/aufzaehlungen-auf-gruenem-hintergrund" PARENT="idml/fliesstext-auf-gruenem-hintergrund" ALIGN="0" LINESPMode="0" LINESP="16" FONTSIZE="11" FIRST="-13" INDENT="13" FONT="Gotham Narrow Book" FCOLOR="White">
       <Tabs Type="0" Pos="5" Fill=""/>
       <Tabs Type="0" Pos="13" Fill=""/>
@@ -149,8 +149,8 @@
         <tab FEATURES="inherit"/>
         <ITEXT CH="Scim rem " FONT="Gotham Narrow Black"/>
         <ITEXT CH="utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re." FONT="Gotham Narrow Book"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
         <ITEXT CH="" FONT="Gotham Narrow Book"/>
         <tab FEATURES="inherit"/>
         <ITEXT CH="•" FONT="Gotham Narrow Book"/>
@@ -158,8 +158,8 @@
         <tab FEATURES="inherit"/>
         <ITEXT CH="Tissi iuntem ressiti " FONT="Gotham Narrow Black"/>
         <ITEXT CH="orerovi tectotmusaqui tota nis quam." FONT="Gotham Narrow Book"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
         <ITEXT CH="" FONT="Gotham Narrow Book"/>
         <tab FEATURES="inherit"/>
         <ITEXT CH="•" FONT="Gotham Narrow Book"/>
@@ -167,7 +167,7 @@
         <tab FEATURES="inherit"/>
         <ITEXT CH="Uaerum ium " FONT="Gotham Narrow Black"/>
         <ITEXT CH="verior alicide liquuntio. " FONT="Gotham Narrow Book"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
         <ITEXT CH="" FONT="Gotham Narrow Book"/>
         <tab FEATURES="inherit"/>
         <ITEXT CH="•" FONT="Gotham Narrow Book"/>
@@ -176,8 +176,8 @@
         <ITEXT CH="Ur, omniet " FONT="Gotham Narrow Book"/>
         <ITEXT CH="vello modi " FONT="Gotham Narrow Black"/>
         <ITEXT CH="aceprate pem ssi iuntem ilis" FONT="Gotham Narrow Book"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
         <ITEXT CH="" FONT="Gotham Narrow Book"/>
         <tab FEATURES="inherit"/>
         <ITEXT CH="•" FONT="Gotham Narrow Book"/>
@@ -186,10 +186,10 @@
         <ITEXT CH="Lia vellam, conemporro " FONT="Gotham Narrow Book"/>
         <ITEXT CH="moditatque" FONT="Gotham Narrow Black"/>
         <ITEXT CH=" nimil maxim voluptur." FONT="Gotham Narrow Book"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
         <ITEXT CH="" FONT="Gotham Narrow Book"/>
         <tab FEATURES="inherit"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="1"/>
+        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" LINESPMode="0" LINESP="16"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="450.0988661417323" YPOS="382.7102047244095" OwnPage="0" ItemID="100000015" PTYPE="7" WIDTH="138.85738582677166" HEIGHT="168.60472440944883" FRTYPE="3" CLIPEDIT="1" PCOLOR="None" PCOLOR2="Gelb" PWIDTH="4.203916263369494" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" gXpos="450.0988661417323" gYpos="382.7102047244095" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0" path="M74.32 89.74 C80.8 89.74 86.06 84.41 86.06 77.83 C86.06 71.26 80.8 65.93 74.32 65.93 C67.83 65.93 62.58 71.26 62.58 77.83 C62.58 84.41 67.83 89.74 74.32 89.74 Z M69.21 59.74 L60.47 47.63 L82.33 0 L92.74 1.684 L84.21 62.24 M92.97 81.45 L107.8 79.68 L138.9 121.9 L132.3 130.2 L83.51 93.36 M61.92 91.68 L55.98 105.4 L3.87 110.9 L0 101.1 L56.4 77.51 M68.49 97.5 L64.13 150.3 M80.22 98.93 L85.14 157.8 L96.9 157.8 L96.9 168.6 M76.14 157.8 L51.78 157.8 L51.78 168.6" copath="M74.32 89.74 C80.8 89.74 86.06 84.41 86.06 77.83 C86.06 71.26 80.8 65.93 74.32 65.93 C67.83 65.93 62.58 71.26 62.58 77.83 C62.58 84.41 67.83 89.74 74.32 89.74 Z M69.21 59.74 L60.47 47.63 L82.33 0 L92.74 1.684 L84.21 62.24 M92.97 81.45 L107.8 79.68 L138.9 121.9 L132.3 130.2 L83.51 93.36 M61.92 91.68 L55.98 105.4 L3.87 110.9 L0 101.1 L56.4 77.51 M68.49 97.5 L64.13 150.3 M80.22 98.93 L85.14 157.8 L96.9 157.8 L96.9 168.6 M76.14 157.8 L51.78 157.8 L51.78 168.6" fillRule="0" ANNAME="u2b0"/>
@@ -264,8 +264,10 @@
     <PAGEOBJECT XPOS="161.34541732283466" YPOS="1085.5657322834645" OwnPage="1" ItemID="100000026" PTYPE="4" WIDTH="149.33026771653545" HEIGHT="24.000094488188978" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338582677165356" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="161.34541732283466" gYpos="1085.5657322834645" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0" FRTYPE="0" path="M0 0 L149.33 0 L149.33 24.0001 L0 24.0001 L0 0 Z" copath="M0 0 L149.33 0 L149.33 24.0001 L0 24.0001 L0 0 Z" ANNAME="u376">
       <StoryText>
         <DefaultStyle PARENT="idml/headline-in-gruenem-kasten"/>
-        <ITEXT CH="Headline in einem grünen Kasten " FONT="Gotham Narrow Bold"/>
-        <trail PARENT="idml/headline-in-gruenem-kasten"/>
+        <ITEXT CH="Headline in einem grünen" FONT="Gotham Narrow Bold" FCOLOR="White" FONTSIZE="12"/>
+        <breakline/>
+        <ITEXT CH="Kasten" FONT="Gotham Narrow Bold" FCOLOR="White" FONTSIZE="12"/>
+        <trail PARENT="idml/headline-in-gruenem-kasten" ALIGN="1"/>
       </StoryText>
     </PAGEOBJECT>
     <PAGEOBJECT XPOS="55.354330708661415" YPOS="1183.3700787401576" OwnPage="1" ItemID="100000027" PTYPE="6" WIDTH="17.858267716535433" HEIGHT="17.858267716535433" CLIPEDIT="0" PCOLOR="Magenta" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" gXpos="55.354330708661415" gYpos="1183.3700787401576" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0" FRTYPE="0" path="M0 0 L17.8583 0 L17.8583 17.8583 L0 17.8583 L0 0 Z" copath="M0 0 L17.8583 0 L17.8583 17.8583 L0 17.8583 L0 0 Z" ANNAME="u394"/>

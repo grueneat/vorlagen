@@ -114,7 +114,12 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         parent='idml/no-paragraph-style',
         font='Gotham Narrow Book',
         fontsize=11,
-        align=3,
+        # P5/inject: align 3 (justified, fills line) → 0 (left, ragged right).
+        # Visual confirmation from user + horizontal drift accumulating along each
+        # line is characteristic of justified vs ragged. Backport: converter must
+        # NOT emit align=3 unless the IDML's ParagraphStyle has Justification
+        # ="LeftJustified" (full justify) — LeftAlign should map to align=0.
+        align=0,
         fcolor='White',
         # P5/inject: linesp 14.3 (IDML CSR Leading) → 16.0 (baseline.pdf measured
         # rendering). IDML's `<Leading>14.3</Leading>` does NOT match what InDesign
@@ -149,7 +154,8 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         parent='idml/fliesstext-auf-gruenem-hintergrund',
         font='Gotham Narrow Book',
         fontsize=11,
-        align=3,
+        # P5/inject: align 3 (justified) → 0 (left) — same fix as fliesstext.
+        align=0,
         fcolor='White',
         linesp=14.3,
         linesp_mode=0,
@@ -413,23 +419,23 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
             Run(text='', font='Gotham Narrow Book', separator='tab'),
             Run(text='Scim rem ', font='Gotham Narrow Black'),
             Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow Book'),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
             # Bullet 2
             Run(text='', font='Gotham Narrow Book', separator='tab'),
             Run(text='•', font='Gotham Narrow Book'),
             Run(text='', font='Gotham Narrow Book', separator='tab'),
             Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'),
             Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow Book'),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
             # Bullet 3
             Run(text='', font='Gotham Narrow Book', separator='tab'),
             Run(text='•', font='Gotham Narrow Book'),
             Run(text='', font='Gotham Narrow Book', separator='tab'),
             Run(text='Uaerum ium ', font='Gotham Narrow Black'),
             Run(text='verior alicide liquuntio. ', font='Gotham Narrow Book'),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
             # Bullet 4 (no double-blank after bullet 3 in original IDML)
             Run(text='', font='Gotham Narrow Book', separator='tab'),
             Run(text='•', font='Gotham Narrow Book'),
@@ -437,8 +443,8 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
             Run(text='Ur, omniet ', font='Gotham Narrow Book'),
             Run(text='vello modi ', font='Gotham Narrow Black'),
             Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow Book'),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
             # Bullet 5
             Run(text='', font='Gotham Narrow Book', separator='tab'),
             Run(text='•', font='Gotham Narrow Book'),
@@ -447,9 +453,9 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
             Run(text='moditatque', font='Gotham Narrow Black'),
             Run(text=' nimil maxim voluptur.', font='Gotham Narrow Book'),
             # Trailing: end of bullet 5, then tab-only para (from IDML Br/Content=tab/Br)
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
             Run(text='', font='Gotham Narrow Book', separator='tab'),
-            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '1'}),
+            Run(text='', has_itext=False, separator='para', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'LINESPMode': '0', 'LINESP': '16'}),
         ],
     ))
     page0.add(PolyLine(
@@ -608,7 +614,19 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u376',
         layer=0,
         style='idml/headline-in-gruenem-kasten',
-        runs=[Run(text='Headline in einem grünen Kasten ', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten')],
+        # P5/inject: split into 2 Runs with explicit breakline. Scribus's auto-wrap
+        # does NOT center the wrapped second line ('Kasten') despite ParaStyle
+        # align=1. With explicit <breakline/> between runs, both lines render as
+        # center-aligned. Backport candidate: when a ParaStyle has align=center +
+        # frame is narrow enough that the IDML's single-Content text WOULD wrap,
+        # the converter should pre-split at the natural wrap point (or emit
+        # additional layout hint).
+        runs=[
+            Run(text='Headline in einem grünen', font='Gotham Narrow Bold', fontsize=12, fcolor='White', paragraph_style='idml/headline-in-gruenem-kasten'),
+            Run(text='', has_itext=False, separator='breakline'),
+            Run(text='Kasten', font='Gotham Narrow Bold', fontsize=12, fcolor='White', paragraph_style='idml/headline-in-gruenem-kasten'),
+        ],
+        trail_attrs={'ALIGN': '1'},
     ))
     page1.add(Polygon(
         x_mm=-15.75,
