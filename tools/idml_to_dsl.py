@@ -1449,6 +1449,7 @@ def _emit_pageitem(
         # Determine the per-frame default ParaStyle (first PSR in the story).
         style_slug = ""
         runs: list[Run] = []
+        trail_attrs: Optional[dict] = None
         if parent_story:
             story_root = _resolve_story_xml(ctx.pkg, parent_story)
             first_psr = story_root.find(".//ParagraphStyleRange")
@@ -1462,6 +1463,10 @@ def _emit_pageitem(
                 color_map=ctx.color_map,
                 paragraph_styles=ctx.paragraph_styles,
             )
+            # PSR inline Justification override for the trailing <trail> element.
+            # _walk_story handles <para> separators for non-final PSRs; the final
+            # PSR's alignment goes here so TextFrame.trail_attrs emits it correctly.
+            trail_attrs = _psr_trail_attrs_for_story(story_root)
         kwargs: dict[str, Any] = {
             "x_mm": _round_mm(x_mm),
             "y_mm": _round_mm(y_mm),
@@ -1478,6 +1483,8 @@ def _emit_pageitem(
             kwargs["runs"] = runs
         else:
             kwargs["text"] = ""
+        if trail_attrs:
+            kwargs["trail_attrs"] = trail_attrs
         # Fill (frame background, rare on TextFrame but corpus has Color/Paper
         # cases — drop through the color map).
         fc = _resolve_fill(item.get("FillColor"), ctx.color_map)
@@ -1910,6 +1917,23 @@ def _walk_story(
         ps_family = ps_resolved.get("applied_font")
         ps_font_style = ps_resolved.get("font_style")
 
+        # PSR inline Justification override: a non-default Justification
+        # attribute on the PSR overrides the AppliedParagraphStyle's alignment.
+        # This is the same pattern as CSR FontStyle (R5) — an inline attribute
+        # that takes precedence over the applied style's defaults.
+        # LeftAlign (0) is the default; only non-zero values require an override.
+        psr_just = psr.get("Justification")
+        psr_align_override: Optional[dict] = None
+        if psr_just and psr_just in JUSTIFICATION_MAP:
+            align_int = JUSTIFICATION_MAP[psr_just]
+            if align_int != 0:  # 0 = LeftAlign = default, no override needed
+                psr_align_override = {"ALIGN": str(align_int)}
+        elif psr_just and psr_just not in JUSTIFICATION_MAP:
+            raise UnhandledElement(
+                f"ParagraphStyleRange Justification={psr_just!r} unknown "
+                f"(extend tools/idml_to_dsl.py:JUSTIFICATION_MAP)"
+            )
+
         para_runs: list[Run] = []
         # Walk CharacterStyleRange children of the PSR in document order.
         for child in psr:
@@ -1933,12 +1957,19 @@ def _walk_story(
         # Inter-paragraph separator: every PSR except the LAST emits a
         # Run(separator="para") carrying the paragraph_style slug.
         if i < len(psrs) - 1:
-            runs.append(Run(separator="para", paragraph_style=para_slug))
+            runs.append(Run(
+                separator="para",
+                paragraph_style=para_slug,
+                paragraph_attrs=psr_align_override,
+            ))
         elif para_slug and para_runs:
             # The LAST paragraph: attach paragraph_style to the trailing Run
             # so Scribus knows the PARENT for the final paragraph.
             # We don't emit a separator="para" — that would add an extra newline.
             # Instead, modify the last text-run in para_runs to carry the slug.
+            # The PSR inline alignment override is NOT attached here — it belongs
+            # on the <trail> element which is emitted by TextFrame.trail_attrs
+            # (handled in _emit_pageitem via _psr_trail_attrs_for_story).
             for j in range(len(runs) - 1, -1, -1):
                 if runs[j].text or runs[j].separator:
                     # Replace with copy that carries paragraph_style.
@@ -1963,6 +1994,39 @@ def _walk_story(
                     break
 
     return runs
+
+
+def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
+    """Return paragraph_attrs for the <trail> of the LAST PSR, or None.
+
+    The IDML ``Justification`` attribute on a ``<ParagraphStyleRange>`` is an
+    inline override over the AppliedParagraphStyle's default alignment.  Scribus
+    encodes this on the ``<para>`` separator (for non-final paragraphs) and on
+    the ``<trail>`` element (for the final / only paragraph).  This helper
+    extracts the trail-level override so ``_emit_pageitem`` can pass it as
+    ``TextFrame(trail_attrs=...)``.
+
+    Only non-default (non-LeftAlign) justification values produce output.
+    LeftAlign (JUSTIFICATION_MAP value 0) is Scribus's default and requires no
+    explicit ALIGN attribute.
+    """
+    walk_root = story_root
+    inner = story_root.find("Story")
+    if inner is not None:
+        walk_root = inner
+    psrs = [
+        child for child in walk_root
+        if isinstance(child.tag, str) and etree.QName(child).localname == "ParagraphStyleRange"
+    ]
+    if not psrs:
+        return None
+    last_psr = psrs[-1]
+    psr_just = last_psr.get("Justification")
+    if psr_just and psr_just in JUSTIFICATION_MAP:
+        align_int = JUSTIFICATION_MAP[psr_just]
+        if align_int != 0:
+            return {"ALIGN": str(align_int)}
+    return None
 
 
 def _walk_csr(

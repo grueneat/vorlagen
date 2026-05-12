@@ -239,6 +239,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         style='idml/normalparagraphstyle',
         runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', fontsize=38, fcolor='White'), Run(text='', separator='breakline'), Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb'), Run(text='', separator='breakline'), Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+        trail_attrs={'ALIGN': '1'},
     ))
     page0.add(Polygon(
         x_mm=270.42,

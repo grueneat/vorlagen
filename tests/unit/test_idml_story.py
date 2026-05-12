@@ -18,7 +18,7 @@ from lxml import etree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
-from idml_to_dsl import UnhandledElement, _walk_story  # noqa: E402
+from idml_to_dsl import UnhandledElement, _walk_story, _psr_trail_attrs_for_story  # noqa: E402
 
 
 def _story_xml(inner: str) -> bytes:
@@ -258,3 +258,86 @@ def test_font_cascade_via_based_on_chain():
     # With resolved styles, the CSR's "Black" style combines with the inherited
     # family "Gotham Narrow" → "Gotham Narrow Black".
     assert lead.font == "Gotham Narrow Black"
+
+
+def test_psr_center_justification_emits_para_separator_with_align():
+    """PSR inline Justification="CenterAlign" on a non-final paragraph emits
+    paragraph_attrs={"ALIGN": "1"} on the inter-paragraph Run(separator="para").
+
+    Regression guard for Bug R6-1: the PSR-level Justification inline override
+    was silently dropped — only the AppliedParagraphStyle's default alignment
+    was used. This caused all five CenterAlign stories in the v2 falzflyer to
+    render as left-aligned instead of centered.
+    """
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle"'
+        ' Justification="CenterAlign">'
+        '<CharacterStyleRange><Content>centered para</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">'
+        '<CharacterStyleRange><Content>default para</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    runs = _walk_story(root, **_styles_dict())
+    # The inter-paragraph separator for the FIRST PSR (CenterAlign) must carry ALIGN="1".
+    sep = next((r for r in runs if r.separator == "para"), None)
+    assert sep is not None, "Expected a para separator between two PSRs"
+    assert sep.paragraph_attrs == {"ALIGN": "1"}, (
+        f"Expected paragraph_attrs={{'ALIGN': '1'}}, got {sep.paragraph_attrs!r}"
+    )
+
+
+def test_psr_left_justification_emits_no_align_override():
+    """PSR Justification="LeftAlign" (the default) must NOT emit an ALIGN override.
+
+    Scribus's default alignment is left (ALIGN=0); emitting an explicit ALIGN=0
+    would be redundant noise. Only non-default alignments produce paragraph_attrs.
+    """
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle"'
+        ' Justification="LeftAlign">'
+        '<CharacterStyleRange><Content>left para</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">'
+        '<CharacterStyleRange><Content>another para</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    runs = _walk_story(root, **_styles_dict())
+    sep = next((r for r in runs if r.separator == "para"), None)
+    assert sep is not None
+    assert sep.paragraph_attrs is None, (
+        f"LeftAlign must not emit ALIGN override, got {sep.paragraph_attrs!r}"
+    )
+
+
+def test_psr_trail_attrs_for_story_center_align():
+    """_psr_trail_attrs_for_story returns {"ALIGN": "1"} when the last PSR has
+    Justification="CenterAlign".
+
+    This trail-attrs dict is passed as TextFrame(trail_attrs=...) to emit the
+    alignment override on the <trail> SLA element — the mechanism for the final
+    (or only) paragraph in a story.
+    """
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle"'
+        ' Justification="CenterAlign">'
+        '<CharacterStyleRange><Content>only paragraph</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    result = _psr_trail_attrs_for_story(root)
+    assert result == {"ALIGN": "1"}, f"Expected {{'ALIGN': '1'}}, got {result!r}"
+
+
+def test_psr_trail_attrs_for_story_no_justification():
+    """_psr_trail_attrs_for_story returns None when no Justification override is set."""
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">'
+        '<CharacterStyleRange><Content>left aligned</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    result = _psr_trail_attrs_for_story(root)
+    assert result is None, f"Expected None for no Justification, got {result!r}"
