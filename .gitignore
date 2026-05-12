@@ -15,6 +15,7 @@ node_modules/
 # reference_sla diff lane; the build pipeline reads them via meta.yml
 # paths but the binaries themselves stay out of git.
 /originals/
+/originals
 
 # Brand fonts — proprietary, never commit to public repo.
 # Local copies live at /root/workspace/fonts/; they're installed into
