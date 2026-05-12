@@ -1556,3 +1556,84 @@ are legitimate signals for future layout convergence work.
   intentional: NFC may compose some codepoints, and ligatures should be folded
   on the composed form to avoid edge cases with combining marks adjacent to
   ligature characters.
+
+---
+
+## Phase E — Per-element drift attribution (2026-05-12)
+
+**Goal:** Aggregate `diff_bboxes.json` into a per-slot mismatch contribution
+table so future fix dispatches target the highest-leverage slots first, without
+reading any image.
+
+### Tool description
+
+`tools/per_element_drift.py` reads `diff_bboxes.json` + `visual_diff.json` and
+writes `per_element_drift.yml`. Per slot: `mismatch_px_summed` (sum of
+`area_px` for all bboxes attributed to that slot), `pct_of_page_mismatch`
+(fraction of page mismatch = rank metric), `pct_of_page_total_drift`
+(contribution to page mismatch_pct — the leverage pp number), `bbox_count`.
+Uses `visual_diff.json`'s `mismatch_pixels` as denominator (not bbox area sum,
+which is smaller due to bbox/mismatch coverage ratio). Top 20 per page; sub-1%
+long tail omitted. Unattributed bboxes collected under `__unattributed__`.
+
+Wired into `render_pipeline.py::_run_audit` after D8. Diagnostic only — never
+fails the audit.
+
+### Commit SHAs (on issue/35 branch)
+
+- `c6c2027` — 37: feat(tools): per_element_drift — aggregate bbox contribution by slot (Phase E)
+- `c9abcfe` — 37: feat(render-pipeline): wire per_element_drift into --audit
+
+### Issue 37 update (on main)
+
+- `0c3f0c1` — 37: docs(issues): add Phase E (per-element drift attribution)
+
+### v2 falzflyer per_element_drift.yml — top 5 per page
+
+```
+=== page 1 (total 8.0916%) ===
+  u1ae                   20.98% of mismatch  =  1.70pp contribution
+  u1c7                   18.43% of mismatch  =  1.49pp contribution
+  u1fd                   15.60% of mismatch  =  1.26pp contribution
+  u52d_dreiz              6.08% of mismatch  =  0.49pp contribution
+  u1e6_hl                 4.14% of mismatch  =  0.34pp contribution
+=== page 2 (total 7.087%) ===
+  u2cd                   28.37% of mismatch  =  2.01pp contribution
+  u295                   19.17% of mismatch  =  1.36pp contribution
+  u265                   13.62% of mismatch  =  0.96pp contribution
+  u3a2                   12.41% of mismatch  =  0.88pp contribution
+  u3a0                    3.11% of mismatch  =  0.22pp contribution
+```
+
+**Interpretation:**
+- Page 1: `u1ae` (large background slot covering most of page) accounts for 1.7pp
+  of the 8.09% drift — likely background-color drift from the green cover panel.
+  `u1c7`, `u1fd` are candidate photo/portrait frames — their 1.5pp / 1.3pp
+  contribution is likely portrait cropping or scale mismatch.
+- Page 2: `u2cd` (2.01pp, 28%) is the highest single-element leverage point —
+  this should be the first fix target for page 2 drift reduction. `u295` (1.36pp),
+  `u265` (0.96pp) follow. `u3a2` (0.88pp) is the pull-quote frame with the known
+  x_mm alignment issue from R6 (CenterAlign trail_attrs deferred).
+
+### Tests added
+
+9 unit tests (`tests/unit/test_per_element_drift.py`):
+- `test_aggregates_multiple_bboxes_per_slot`
+- `test_unattributed_bboxes_collected_under_sentinel`
+- `test_top_contributors_sorted_desc_by_pixel_count`
+- `test_pct_of_total_drift_computed_correctly`
+- `test_empty_page_bboxes_produces_empty_contributions`
+- `test_uses_visual_diff_authoritative_total`
+- `test_top_20_cap`
+- `test_multi_page_uses_own_page_denominators`
+- `test_zero_total_mismatch_no_crash`
+
+4 integration tests (`tests/integration/test_per_element_drift_v2.py`):
+- `test_produces_sensible_top5`
+- `test_known_hotspot_in_top3_page1`
+- `test_pct_of_page_mismatch_sums_lte_100`
+- `test_runtime_under_2s`
+
+**Total test suite: 248 passed (was 235)**
+**Phase E runtime:** <50ms for v2 falzflyer (327 bboxes page 0, 337 page 1)
+**Phase E completed:** 2026-05-12
