@@ -294,7 +294,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         x_mm=16.8913,
         y_mm=17.4,
         w_mm=65.2174,
-        h_mm=17.9915,
+        # h_mm widened 17.9915mm→19.0500mm: Scribus clips lines when frame_h <
+        # 2 explicit lines × line height (leading=27.00pt; IDML overflows silently).
+        # 'Headline.' (line 2) was missing in preview because 17.99mm < 19.05mm.
+        h_mm=19.05,
         anname='u1b0',
         layer=0,
         style='idml/normalparagraphstyle',
@@ -314,7 +317,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         x_mm=115.8913,
         y_mm=17.4,
         w_mm=65.2174,
-        h_mm=17.9915,
+        # h_mm widened 17.9915mm→19.0500mm: Scribus clips lines when frame_h <
+        # 2 explicit lines × line height (leading=27.00pt; IDML overflows silently).
+        # 'Headline.' (line 2) was missing in preview because 17.99mm < 19.05mm.
+        h_mm=19.05,
         anname='u1e6',
         layer=0,
         style='idml/normalparagraphstyle',
@@ -328,7 +334,11 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         anname='u1fd',
         layer=0,
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
-        runs=[Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Scim rem ', font='Gotham Narrow Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Uaerum ium ', font='Gotham Narrow Black'), Run(text='verior alicide liquuntio. ', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='vello modi ', font='Gotham Narrow Black'), Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='moditatque', font='Gotham Narrow Black'), Run(text=' nimil maxim voluptur.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='\t', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
+        # Runs fixed: IDML bullet entries 4+5 had '<?ACE 7?>' inline inside <Content>
+        # elements; text after the PI was stored as PI.tail and silently dropped by
+        # the converter. Correct runs now include 'Ur, omniet' (bullet 4) and
+        # 'Lia vellam, conemporro' (bullet 5) which were missing in preview.
+        runs=[Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Scim rem ', font='Gotham Narrow Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Uaerum ium ', font='Gotham Narrow Black'), Run(text='verior alicide liquuntio. ', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='\t•\tUr, omniet ', font='Gotham Narrow Book'), Run(text='vello modi ', font='Gotham Narrow Black'), Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\tLia vellam, conemporro ', font='Gotham Narrow Book'), Run(text='moditatque', font='Gotham Narrow Black'), Run(text=' nimil maxim voluptur.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='\t', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
     ))
     page0.add(PolyLine(
         x_mm=123.5071,
@@ -440,8 +450,14 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     page1.add(TextFrame(
         x_mm=188,
         y_mm=139.2,
-        w_mm=10,
-        h_mm=53.4,
+        # w_mm/h_mm: for rotated TextFrames Scribus uses the PRE-rotation width as
+        # the text column width. IDML local frame: 151.37pt wide × 28.35pt tall,
+        # rotated -90°. Converter currently emits post-rotation visual bbox (10×53.4mm),
+        # swapping w/h so Scribus text-column width = 53.4mm (pre-rotation extent).
+        # At 53.4mm column width, 'Impressum: xxxxxx' fits on one line at 6pt.
+        # Without this fix Scribus wraps at 10mm → splits 'Impressum' mid-word.
+        w_mm=53.4,
+        h_mm=10,
         anname='u347',
         layer=0,
         rotation_deg=-90,
@@ -452,7 +468,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=21.8196,
         y_mm=163.0167,
         w_mm=52.6804,
-        h_mm=23.2833,
+        # h_mm widened 23.2833mm→25.2236mm: IDML overset text (151 chars, ~5 lines
+        # estimated at 11pt 0.40× ratio, leading=14.30pt; Scribus clips, InDesign
+        # overflows silently). Baseline shows 5 lines; last line 're ped exceptatur?
+        # Sed quia.' was missing in preview because 23.28mm only holds 4.62 lines.
+        h_mm=25.2236,
         anname='u35f',
         layer=0,
         style='idml/absatzformat-1',
@@ -462,7 +482,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=21.6413,
         y_mm=151.7968,
         w_mm=52.6804,
-        h_mm=7.6199,
+        # h_mm widened 7.6199mm→8.4667mm: IDML overset text (32 chars, ~2 lines
+        # estimated at 12pt 0.40× ratio, leading=12.00pt; Scribus clips, InDesign
+        # overflows silently). 'Kasten' (line 2 of 'Headline in einem grünen / Kasten')
+        # was missing in preview because 7.62mm = 21.6pt holds only 1.8 lines at 12pt.
+        h_mm=8.4667,
         anname='u376',
         layer=0,
         style='idml/headline-in-gruenem-kasten',

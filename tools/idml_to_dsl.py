@@ -389,8 +389,19 @@ def _pt_to_mm(value_pt: float) -> float:
 # Scribus suppresses entire lines of text when the TextFrame's h_pt is
 # smaller than the effective line height. InDesign silently overflows;
 # Scribus clips. The converter widens h_mm to the minimum required by
-# Scribus so the first line is always visible. This is a geometry
-# translation concern (IDML→Scribus), not a content edit.
+# Scribus so every line is visible. This is a geometry translation concern
+# (IDML→Scribus), not a content edit.
+#
+# Two sub-cases are handled:
+#   A. Single-line clipping: h_pt < effective_line_height_pt
+#      → widen to exactly 1 line.
+#   B. Multi-line overflow: h_pt is enough for ≥1 line but not enough for
+#      all lines (InDesign overset). Detected via character-count heuristic:
+#      estimate n_lines = ceil(total_chars / chars_per_line) and compare
+#      n_lines * line_h to frame_h. Uses a conservative narrow-font ratio
+#      (0.55 × point_size, calibrated on Gotham Narrow / body copy).
+#      Only triggers when the estimate shows a deficit ≥ 1 full line;
+#      widens to n_lines * leading + epsilon.
 #
 # Required effective line height:
 #   - If the paragraph style sets an explicit Leading (not "Auto"):
@@ -398,6 +409,16 @@ def _pt_to_mm(value_pt: float) -> float:
 #   - Otherwise (auto-leading): line_h_pt = point_size_pt * 1.2
 #     (standard auto-leading multiplier, matching InDesign and Scribus).
 # ---------------------------------------------------------------------------
+
+# Narrow-font average character width ratio: char_w_pt ≈ _NARROW_CHAR_RATIO × fontsize_pt.
+# Calibrated on Gotham Narrow Book at 11pt body copy (observed ~34 chars/line at 149pt
+# frame width → ratio = 149/(34×11) ≈ 0.40). Under-estimating chars-per-line (using a
+# larger ratio) would OVER-estimate line count and widen frames more than needed.
+# 0.40 targets body copy; bolder or wider fonts may have higher ratios but the
+# heuristic is only applied to single-paragraph frames (no explicit breaklines) where
+# the IDML frame is already measured to be shorter than the text's natural height.
+_NARROW_CHAR_RATIO: float = 0.40
+
 
 def _required_text_frame_height_mm(
     point_size_pt: float,
@@ -416,13 +437,52 @@ def _required_text_frame_height_mm(
     return line_h_pt * PT_TO_MM
 
 
+def _estimate_line_count(
+    total_chars: int,
+    frame_w_mm: float,
+    point_size_pt: float,
+) -> int:
+    """Estimate the number of lines a block of text needs in a frame.
+
+    Uses a narrow-font character-width ratio to approximate chars-per-line.
+    Conservative: under-estimates chars_per_line so the heuristic only fires
+    when overflow is near-certain (avoids false positives on wider fonts).
+
+    Args:
+        total_chars: total character count across all text runs (excluding
+            newlines/separators).
+        frame_w_mm: frame inner width in mm (insets already subtracted if any).
+        point_size_pt: font size in points.
+
+    Returns:
+        Estimated number of lines required (always ≥ 1).
+    """
+    if total_chars <= 0 or frame_w_mm <= 0 or point_size_pt <= 0:
+        return 1
+    frame_w_pt = frame_w_mm / PT_TO_MM
+    char_w_pt = _NARROW_CHAR_RATIO * point_size_pt
+    chars_per_line = max(1, frame_w_pt / char_w_pt)
+    import math
+    return max(1, math.ceil(total_chars / chars_per_line))
+
+
 def _maybe_widen_frame_h(
     idml_h_mm: float,
     max_fontsize_pt: Optional[float],
     leading_pt: Optional[float],
+    total_text_chars: int = 0,
+    frame_w_mm: float = 0.0,
+    explicit_line_count: int = 0,
 ) -> tuple[float, Optional[str]]:
     """If the frame's h_mm is too small for the text content, return widened h_mm
     and a comment explaining the adjustment. Otherwise return idml_h_mm unchanged.
+
+    Handles three overflow cases:
+    - Sub-case A: frame_h < effective_line_height (can't show even 1 line).
+    - Sub-case B: frame fits some lines but not all (InDesign overset on single-
+      paragraph text). Detected via character-count heuristic.
+    - Sub-case C: frame has explicit line breaks (breakline/para separators) and
+      frame_h < n_explicit_lines * line_height. Exact line count is known.
 
     Args:
         idml_h_mm: height from the IDML PathPointArray (already in mm).
@@ -430,6 +490,12 @@ def _maybe_widen_frame_h(
             Pass None if the frame has no text runs.
         leading_pt: explicit leading from the paragraph style (pt), or None
             when leading is "Auto" or not set.
+        total_text_chars: total character count of all text runs (used for
+            sub-case B multi-line overflow detection). Pass 0 to skip.
+        frame_w_mm: frame width in mm (used for sub-case B). Pass 0.0 to skip.
+        explicit_line_count: number of text lines from explicit breakline/para
+            separators (1 = no separators, 2 = one breakline, etc.). Used for
+            sub-case C. Pass 0 to skip.
 
     Returns:
         ``(h_mm, comment_or_None)`` — if widening occurred, comment is a
@@ -437,19 +503,62 @@ def _maybe_widen_frame_h(
     """
     if max_fontsize_pt is None:
         return idml_h_mm, None
-    required_mm = _required_text_frame_height_mm(max_fontsize_pt, leading_pt)
+    line_h_pt = leading_pt if leading_pt is not None else max_fontsize_pt * 1.2
+    line_h_mm = line_h_pt * PT_TO_MM
     epsilon_mm = 0.05  # avoid flapping on sub-mm rounding
-    if idml_h_mm < required_mm - epsilon_mm:
+
+    # Sub-case A: can't show even one line.
+    required_mm_one_line = line_h_mm
+    if idml_h_mm < required_mm_one_line - epsilon_mm:
         leading_desc = (
             f"leading={leading_pt:.2f}pt" if leading_pt is not None
             else f"auto-leading={max_fontsize_pt:.0f}pt×1.2"
         )
         comment = (
-            f"h_mm widened {idml_h_mm:.4f}mm→{required_mm:.4f}mm: "
+            f"h_mm widened {idml_h_mm:.4f}mm→{required_mm_one_line:.4f}mm: "
             f"Scribus clips lines when frame_h < effective line height "
             f"({leading_desc}; IDML overflows silently)"
         )
-        return required_mm, comment
+        return required_mm_one_line, comment
+
+    # Sub-case C: explicit line count (from breakline/para separators) — exact.
+    # Runs that carry separator=breakline or separator=para each add an explicit
+    # newline; explicit_line_count = separator_count + 1 (at minimum 1).
+    if explicit_line_count >= 2:
+        required_mm_explicit = explicit_line_count * line_h_mm
+        if idml_h_mm < required_mm_explicit - epsilon_mm:
+            leading_desc = (
+                f"leading={leading_pt:.2f}pt" if leading_pt is not None
+                else f"auto-leading={max_fontsize_pt:.0f}pt×1.2"
+            )
+            comment = (
+                f"h_mm widened {idml_h_mm:.4f}mm→{required_mm_explicit:.4f}mm: "
+                f"Scribus clips lines when frame_h < {explicit_line_count} explicit "
+                f"lines × line height ({leading_desc}; IDML overflows silently)"
+            )
+            return required_mm_explicit, comment
+
+    # Sub-case B: frame fits ≥1 line but not all lines (InDesign overset on
+    # single-paragraph text). Only run when caller supplied text measurement data.
+    if total_text_chars > 0 and frame_w_mm > 0.0 and max_fontsize_pt > 0:
+        n_lines = _estimate_line_count(total_text_chars, frame_w_mm, max_fontsize_pt)
+        required_mm_all = n_lines * line_h_mm
+        # Widen when frame_h < estimated total height. The conservative char-width
+        # ratio (_NARROW_CHAR_RATIO=0.40) under-estimates chars_per_line, so n_lines
+        # tends to be ≥ actual; widening is only triggered when the deficit is real.
+        if idml_h_mm < required_mm_all - epsilon_mm:
+            leading_desc = (
+                f"leading={leading_pt:.2f}pt" if leading_pt is not None
+                else f"auto-leading={max_fontsize_pt:.0f}pt×1.2"
+            )
+            comment = (
+                f"h_mm widened {idml_h_mm:.4f}mm→{required_mm_all:.4f}mm: "
+                f"IDML overset text ({total_text_chars} chars, ~{n_lines} lines "
+                f"estimated at {max_fontsize_pt:.0f}pt {_NARROW_CHAR_RATIO:.2f}× "
+                f"ratio, {leading_desc}; Scribus clips, InDesign overflows silently)"
+            )
+            return required_mm_all, comment
+
     return idml_h_mm, None
 
 
@@ -1541,9 +1650,10 @@ def _emit_pageitem(
             # PSR's alignment goes here so TextFrame.trail_attrs emits it correctly.
             trail_attrs = _psr_trail_attrs_for_story(story_root)
 
-        # Pattern 9 — auto-widen h_mm when Scribus would clip the first line.
+        # Pattern 9 — auto-widen h_mm when Scribus would clip lines.
         # Scribus clips text when frame_h < effective line height; InDesign
         # overflows silently. Widen to the required minimum so every line renders.
+        # Two sub-cases: (A) single-line clip, (B) multi-line overset.
         _max_fontsize_pt: Optional[float] = None
         if runs:
             _fontsizes = [r.fontsize for r in runs if r.fontsize is not None]
@@ -1580,9 +1690,33 @@ def _emit_pageitem(
                 except (ValueError, TypeError):
                     pass
 
+        # Explicit line count (sub-case C) and total text chars (sub-case B).
+        # Sub-case C: frames with breakline/para separators have an exact line count
+        # (separator count + 1). Apply this to widen when IDML frame is too short.
+        # Sub-case B: single-paragraph frames (no explicit newlines) use char-count
+        # heuristic. Both are mutually exclusive — sub-case B skipped when
+        # explicit newlines are present (heuristic would double-count).
+        _total_text_chars: int = 0
+        _explicit_line_count: int = 0
+        if runs:
+            _separator_count = sum(
+                1 for _r in runs if _r.separator in ("breakline", "para")
+            )
+            if _separator_count > 0:
+                # Sub-case C: exact line count from separators.
+                _explicit_line_count = _separator_count + 1
+            else:
+                # Sub-case B: single-paragraph char-count heuristic.
+                for _r in runs:
+                    if _r.separator is None and _r.text:
+                        _total_text_chars += len(_r.text)
+
         emitted_h_mm = _round_mm(h_mm)
         _widened_h_mm, _widen_comment = _maybe_widen_frame_h(
-            emitted_h_mm, _max_fontsize_pt, _leading_pt
+            emitted_h_mm, _max_fontsize_pt, _leading_pt,
+            total_text_chars=_total_text_chars,
+            frame_w_mm=_round_mm(w_mm),
+            explicit_line_count=_explicit_line_count,
         )
         if _widen_comment:
             ctx.out.w(f"# {_widen_comment}")
@@ -2229,7 +2363,18 @@ def _walk_csr(
             target = child.target  # type: ignore[attr-defined]
             data = (child.text or "").strip()  # type: ignore[attr-defined]
             if target == "ACE" and data == "7":
-                # Indent-to-here marker. v1 preserves implicitly (no extra Run).
+                # Indent-to-here (indent-to-here/tab-align marker).
+                # Preserve tail text: IDML sometimes places content text as
+                # the PI's tail (e.g. <Content>•<?ACE 7?>Ur, omniet</Content>
+                # → PI.tail = "Ur, omniet"). Emit it as a Run with this CSR's
+                # style rather than silently dropping it.
+                if child.tail:
+                    runs.append(Run(
+                        text=child.tail,
+                        font=font_name,
+                        fontsize=fontsize,
+                        fcolor=fcolor,
+                    ))
                 continue
             raise UnhandledElement(
                 f"Unknown processing instruction <?{target} {data}?> in "
@@ -2240,7 +2385,29 @@ def _walk_csr(
             continue
         ctag = etree.QName(child).localname
         if ctag == "Content":
-            text = child.text or ""
+            # Gather text from the Content element including any <?ACE 7?> PI
+            # children's tail text. IDML sometimes inlines the ACE indent marker
+            # inside <Content>, causing subsequent text to sit in PI.tail rather
+            # than Content.text (e.g. <Content>•<?ACE 7?>Ur, omniet</Content>
+            # → Content.text="•", ACE_PI.tail="Ur, omniet"). We concatenate
+            # text + all child PI tails so the full content text is captured.
+            text_parts: list[str] = []
+            if child.text:
+                text_parts.append(child.text)
+            for sub in child:
+                if isinstance(sub, etree._ProcessingInstruction):
+                    # ACE 7 = indent-to-here marker; any other PI would be unknown
+                    sub_target = sub.target  # type: ignore[attr-defined]
+                    sub_data = (sub.text or "").strip()  # type: ignore[attr-defined]
+                    if sub_target != "ACE" or sub_data != "7":
+                        raise UnhandledElement(
+                            f"Unknown PI <?{sub_target} {sub_data}?> inside "
+                            f"<Content> of CSR {csr.get('Self')!r} "
+                            f"(extend tools/idml_to_dsl.py:_walk_csr)"
+                        )
+                    if sub.tail:
+                        text_parts.append(sub.tail)
+            text = "".join(text_parts)
             runs.append(
                 Run(
                     text=text,
