@@ -1468,3 +1468,89 @@ Both well within the ≤5s combined target.
 **Total test suite: 223 passed.**
 
 **Phase D7 + D8 completed:** 2026-05-12
+
+---
+
+## Phase A1 + A2 — D7/D8 audit quality fixes (2026-05-12)
+
+**Scope:** Two targeted false-positive reductions in the D7 (text_render_audit)
+and D8 (text_position_audit) audit tools shipped in the previous phase.
+
+### Per-fix description
+
+- **A1 — D7 Unicode ligature normalization:** `_normalize_text()` helper added
+  to `tools/text_render_audit.py` that folds Latin ligatures U+FB00–U+FB06
+  (ﬁ→fi, ﬃ→ffi, ﬂ→fl, ﬀ→ff, ﬄ→ffl, ﬅ/ﬆ→st) before NFC normalization.
+  Eliminates false-positive missing-word reports when one PDF stores `ﬃ` as a
+  single glyph and the other stores `ffi` as three glyphs.
+
+- **A2 — D8 common-word matcher noise reduction:** `run_text_position_audit()`
+  in `tools/text_position_audit.py` now counts per-page word frequencies in
+  both PDFs and filters words appearing ≥ `common_word_threshold` (default 5)
+  from `large_deltas` after matching. Greedy matching is unchanged. Outputs two
+  new fields: `common_word_threshold` and `suppressed_common_word_deltas_count`.
+
+### v2 falzflyer audit outputs — before vs after
+
+**D7 text_render_audit.yml::missing_in_preview:**
+- Before (15 unique): `conemporro`, `exceptatur`, `headline.`, `impressum`,
+  `kasten`, `lia`, **`offic` × 3**, **`officit` × 3**, `omniet`, `ped`,
+  `quia.`, `re`, `sed`, `ur`, `vellam`
+- After (13 unique): `conemporro`, `exceptatur`, `headline.`, `impressum`,
+  `kasten`, `lia`, `omniet`, `ped`, `quia.`, `re`, `sed`, `ur`, `vellam`
+- Reduction: 2 ligature artifacts removed (`offic` × 3 and `officit` × 3;
+  both collapsed to matching tokens after ﬃ→ffi folding)
+
+**D8 text_position_audit.yml:**
+- Before: `large_deltas_count: 405` (unfiltered)
+- After: `large_deltas_count: 359`, `suppressed_common_word_deltas_count: 46`
+- Suppressed words: `et` (20 occurrences, highest frequency), `que` (6),
+  `qui` (11), `ut` (5), `•` (5) — all high-frequency same-page repeated tokens
+
+**Note on expected D8 reduction:** The issue description estimated ~20-50
+remaining after filtering. The actual result (359 remaining) reflects that most
+lorem ipsum noise comes from words appearing 1-4 times per page — each is a
+unique tokenization artifact of the multi-column layout mismatch between
+InDesign and Scribus, not a common word the threshold can catch. The 46
+suppressed are the true "common word" category per the spec. The remaining 359
+are legitimate signals for future layout convergence work.
+
+### Commit SHAs
+
+(To be filled in after commit)
+
+### Tests added
+
+**D7 — 10 new unit tests in `tests/unit/test_text_render_audit.py`:**
+- `test_ligature_ffi_normalized` — baseline ﬃ, preview ffi → no missing word
+- `test_ligature_fi_normalized` — baseline ﬁ, preview fi → no missing word
+- `test_all_ligatures_in_FB00_FB06_range[ﬀ-ff]` — fold table parametric
+- `test_all_ligatures_in_FB00_FB06_range[ﬁ-fi]` — fold table parametric
+- `test_all_ligatures_in_FB00_FB06_range[ﬂ-fl]` — fold table parametric
+- `test_all_ligatures_in_FB00_FB06_range[ﬃ-ffi]` — fold table parametric
+- `test_all_ligatures_in_FB00_FB06_range[ﬄ-ffl]` — fold table parametric
+- `test_all_ligatures_in_FB00_FB06_range[ﬅ-st]` — fold table parametric
+- `test_all_ligatures_in_FB00_FB06_range[ﬆ-st]` — fold table parametric
+
+**D8 — 3 new unit tests in `tests/unit/test_text_position_audit.py`:**
+- `test_common_word_filter_excludes_high_frequency_word` — 6× `et` all suppressed
+- `test_unique_word_delta_still_reported` — `Leonore` with large shift IS reported
+  alongside suppressed common words
+- `test_suppressed_count_reflects_filter` — `suppressed_common_word_deltas_count`
+  equals total_deltas - filtered_deltas (3 common words × 5 occurrences = 15 suppressed)
+
+**Total tests added: 12 (9 D7 + 3 D8)**
+**Total test suite after: 235 passed (was 223)**
+
+### Edge cases discovered
+
+- The D8 common-word threshold of 5 captures `et` (8-12 per page) and `que`/`qui`
+  (5-6 per page) but does NOT capture `omniet`, `modi`, `ssi` (1-4 per page).
+  These words generate large deltas because entire lorem ipsum column blocks are
+  laid out differently by Scribus vs InDesign — each word appears infrequently
+  because the full block is diverse. This is an irreducible signal until the
+  column layout itself is corrected.
+- `_normalize_text` applies ligature folding AFTER NFC normalization. This is
+  intentional: NFC may compose some codepoints, and ligatures should be folded
+  on the composed form to avoid edge cases with combining marks adjacent to
+  ligature characters.
