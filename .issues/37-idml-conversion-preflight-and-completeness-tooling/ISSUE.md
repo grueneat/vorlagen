@@ -949,3 +949,42 @@ ok: false
 - Wired into `bin/render-gallery --audit`
 - For each ParaStyle with `>0.5pt` drift, emits a clear override recommendation
 - v2 falzflyer test: must flag the original 14.3pt mismatch before the fix
+
+## Backport 9 — Justification → Scribus align mapping (added 2026-05-12)
+
+**Bug class** discovered: converter emits `align=3` (Scribus "Justified",
+fully-justified text filling each line) for body-text ParaStyles where
+baseline.pdf renders left-aligned (ragged right). Adobe's H&J engine
+produces different word spacing than Scribus's when both are "justified",
+causing cumulative horizontal drift along each line — and the design
+likely intends left-align anyway.
+
+**Largest single-fix drift drop** of v2 falzflyer convergence session
+(2026-05-12): `align 3→0` on `idml/fliesstext-auf-gruenem-hintergrund`
+and `idml/absatzformat-1` cut page 1 drift by 1.18pp, page 2 by 1.29pp,
+and reduced text_position_audit large_deltas by 141.
+
+**Converter detection** (no visual review required):
+
+1. Read the IDML ParagraphStyle's `Justification` attribute (and inherit
+   through `BasedOn` chain if needed).
+2. Map to Scribus `align`:
+   - `LeftAlign` → `align=0`
+   - `CenterAlign` → `align=1`
+   - `RightAlign` → `align=2`
+   - `LeftJustified` / `CenterJustified` / `RightJustified` / `FullyJustified`
+     → `align=3` (or whichever Scribus enum matches — verify)
+   - `ToBindingSide` / `AwayFromBindingSide` → `align=0` (treat as left)
+
+3. Default if Justification is absent on the style: `align=0`.
+
+**Acceptance**:
+- `tools/idml_to_dsl.py` reads `<ParagraphStyle Justification="...">` from
+  `Resources/Styles.xml` correctly (not just from PSR inline overrides).
+- Regression test exercises the mapping for each Justification enum
+  value.
+- v2 falzflyer test: the `fliesstext-auf-gruenem-hintergrund` style must
+  emit `align=0` (not 3), assuming the IDML's actual Justification is
+  `LeftAlign` (verify before fixing — could be `LeftJustified` with
+  design intent of left-align, in which case it's an IDML authoring
+  issue rather than converter bug).
