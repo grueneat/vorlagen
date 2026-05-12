@@ -19,6 +19,11 @@ For family templates (plakat), steps 2-4 and 7 run per-size SLA.
 
 Idempotent: running twice produces no git diff (PDF metadata is byte-scrubbed
 via length-preserving regex substitution on CreationDate/ModDate/ID fields).
+
+Oracle stack: IDML (authoring truth) + baseline.pdf (convergence target).
+No Scribus-imported SLA is used — the reference_sla tooling was removed
+2026-05-12 after empirical measurement showed our converter already beats
+Scribus's importer on visual_diff vs baseline.pdf.
 """
 from __future__ import annotations
 
@@ -452,6 +457,7 @@ def _run_visual_diff(tid: str, tdir: Path, args) -> int:
         )
     else:
         print(f"[{tid}] visual_diff (150dpi): PASS")
+
     return r.returncode
 
 
@@ -653,6 +659,290 @@ def _orchestrate_template(tdir: Path, args) -> int:
 # main() — CLI entry point
 # ---------------------------------------------------------------------------
 
+def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
+    """Run A1 (idml_inventory) + A2 (baseline_text_audit) + A3 (baseline_image_audit).
+
+    Returns (audit_issue_count, summary_line).
+    Reports are written to build/validation/<slug>/{inventory,text_audit,image_audit}.yml.
+
+    Audit failure does NOT block the render — just surfaces the reports.
+    When --audit-strict is set the caller uses the issue count to set exit code.
+    """
+    tid = meta["id"]
+    out_dir = ROOT / "build" / "validation" / tid
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    issue_parts: list[str] = []
+
+    # A1: IDML inventory (requires an IDML source)
+    idml_source = None
+    for key in ("idml_source", "original_idml"):
+        val = meta.get(key, "")
+        if val:
+            candidate = (tdir / val).resolve()
+            if candidate.exists():
+                idml_source = candidate
+                break
+    # Also try a common originals path pattern
+    if idml_source is None:
+        # Search originals/ for an .idml matching the template's source dir
+        for candidate in sorted((ROOT / "originals").rglob("*.idml")):
+            idml_source = candidate
+            break
+
+    inventory_path = out_dir / "inventory.yml"
+    if idml_source is not None and (tdir / "build.py").exists():
+        try:
+            from idml_inventory import run_inventory, _yaml_dump as _inv_yaml
+            report = run_inventory(idml_source, tdir / "build.py", template=tid)
+            inventory_path.write_text(_inv_yaml(report), encoding="utf-8")
+            # Count dropped elements across all spreads
+            dropped = sum(
+                len(s.get("elements_dropped", []))
+                for s in report.get("spreads", [])
+            )
+            if dropped:
+                issue_parts.append(f"{dropped} dropped element(s)")
+        except Exception as exc:
+            print(f"[{tid}] audit A1 (inventory) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit A1 (inventory): skipped (no IDML source found)",
+            file=sys.stderr,
+        )
+
+    # A2: baseline text audit
+    text_audit_path = out_dir / "text_audit.yml"
+    baseline = tdir / "baseline.pdf"
+    build_py = tdir / "build.py"
+    if baseline.exists() and build_py.exists():
+        try:
+            from baseline_text_audit import run_text_audit, _yaml_dump as _txt_yaml
+            report = run_text_audit(baseline, build_py, template=tid)
+            text_audit_path.write_text(_txt_yaml(report), encoding="utf-8")
+            unmatched = sum(
+                len(p.get("lines_unmatched", []))
+                for p in report.get("pages", [])
+            )
+            if unmatched:
+                issue_parts.append(f"{unmatched} unmatched text line(s)")
+        except Exception as exc:
+            print(f"[{tid}] audit A2 (text) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit A2 (text): skipped (no baseline.pdf or build.py)",
+            file=sys.stderr,
+        )
+
+    # A3: baseline image audit
+    image_audit_path = out_dir / "image_audit.yml"
+    if baseline.exists() and build_py.exists():
+        try:
+            from baseline_image_audit import run_image_audit, _yaml_dump as _img_yaml
+            report = run_image_audit(baseline, build_py, template=tid)
+            image_audit_path.write_text(_img_yaml(report), encoding="utf-8")
+            vector_delta_total = sum(
+                p.get("vector_paths", {}).get("delta", 0)
+                for p in report.get("pages", [])
+                if p.get("vector_paths", {}).get("delta", 0) > 0
+            )
+            strip_count = len(report.get("composite_strips", []))
+            if vector_delta_total:
+                issue_parts.append(f"{vector_delta_total} vector-path delta")
+            if strip_count:
+                issue_parts.append(f"{strip_count} composite-strip issue(s)")
+        except Exception as exc:
+            print(f"[{tid}] audit A3 (image) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit A3 (image): skipped (no baseline.pdf or build.py)",
+            file=sys.stderr,
+        )
+
+    # Phase D6: pdffonts font audit (preview vs baseline embedded font sets).
+    preview_pdf = tdir / "preview.pdf"
+    font_audit_path = out_dir / "font_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from font_audit import run_font_audit, _yaml_dump as _fa_yaml
+            fa_report = run_font_audit(preview_pdf, baseline, template=tid)
+            font_audit_path.write_text(_fa_yaml(fa_report), encoding="utf-8")
+            missing = fa_report.get("missing_in_preview", [])
+            fa_ok = fa_report.get("ok", False)
+            if missing:
+                fa_line = (
+                    f"[{tid}] font_audit: {len(missing)} missing variant(s) "
+                    f"({', '.join(missing)}) → FAIL"
+                )
+                print(fa_line)
+                issue_parts.append(f"{len(missing)} missing font variant(s)")
+            else:
+                print(f"[{tid}] font_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit D6 (font_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit D6 (font_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
+    # Phase D7: text presence audit (preview.pdf vs baseline.pdf).
+    # Catches words emitted to Scribus but suppressed at render time
+    # (frame clipping, off-page, color-on-color, hidden layer, etc.).
+    text_render_audit_path = out_dir / "text_render_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from text_render_audit import run_text_render_audit, _yaml_dump as _tra_yaml
+            tra_report = run_text_render_audit(preview_pdf, baseline, template=tid)
+            text_render_audit_path.write_text(_tra_yaml(tra_report), encoding="utf-8")
+            if not tra_report["ok"]:
+                n_missing = sum(tra_report["missing_in_preview"].values())
+                n_unique = len(tra_report["missing_in_preview"])
+                print(
+                    f"[{tid}] text_render_audit: {n_unique} unique words missing "
+                    f"({n_missing} occurrences) — silent suppression → FAIL",
+                    file=sys.stderr,
+                )
+                issue_parts.append(f"{n_unique} word(s) missing in render")
+            else:
+                print(f"[{tid}] text_render_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit D7 (text_render_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit D7 (text_render_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
+    # Phase D8: text position audit (per-word bounding-box drift).
+    # Catches words rendered but mis-positioned (alignment drift, group-transform
+    # gaps, off-by-margin bugs). Threshold: 2.0pt ≈ 0.7mm.
+    text_position_audit_path = out_dir / "text_position_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from text_position_audit import run_text_position_audit, _yaml_dump as _tpa_yaml
+            tpa_report = run_text_position_audit(preview_pdf, baseline, template=tid)
+            text_position_audit_path.write_text(_tpa_yaml(tpa_report), encoding="utf-8")
+            if not tpa_report["ok"]:
+                print(
+                    f"[{tid}] text_position_audit: "
+                    f"{tpa_report['large_deltas_count']} word(s) drifted "
+                    f"> {tpa_report['threshold_pt']}pt",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"{tpa_report['large_deltas_count']} word(s) with position drift"
+                )
+            else:
+                print(f"[{tid}] text_position_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit D8 (text_position_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit D8 (text_position_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
+    # Phase F: run_style_audit — per-Run font/size/color fidelity.
+    # Catches wrong font assigned to a Run (e.g. Gotham where Vollkorn was expected),
+    # wrong PointSize (fractional rounding artifacts), wrong color (bad brand mapping).
+    # D6 only checks embedding; D7 only checks presence; F checks per-word style.
+    run_style_audit_path = out_dir / "run_style_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from run_style_audit import run_style_audit as _rsa_run
+            from run_style_audit import _yaml_dump as _rsa_yaml
+            rsa_report = _rsa_run(preview_pdf, baseline, template=tid)
+            run_style_audit_path.write_text(_rsa_yaml(rsa_report), encoding="utf-8")
+            large = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "large")
+            small = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "small")
+            suppressed = rsa_report.get("suppressed_common_word_drifts_count", 0)
+            if large:
+                print(
+                    f"[{tid}] run_style_audit: {large} large style drifts, "
+                    f"{small} small drifts → REVIEW"
+                )
+                issue_parts.append(f"{large} word(s) with large style drift")
+            elif small:
+                print(
+                    f"[{tid}] run_style_audit: 0 large drifts, {small} small drifts "
+                    f"(ICC/rounding, suppressed={suppressed})"
+                )
+            else:
+                print(f"[{tid}] run_style_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit F (run_style_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit F (run_style_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
+    # Phase E: per-element drift attribution.
+    # Aggregates diff_bboxes.json into a per-slot contribution table so the next
+    # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
+    diff_bboxes_path = out_dir / "diff_bboxes.json"
+    vd_json = out_dir / "visual_diff.json"
+    if diff_bboxes_path.exists() and vd_json.exists():
+        try:
+            import json as _json
+            from per_element_drift import aggregate_per_element as _ped_aggregate
+            from per_element_drift import _yaml_dump as _ped_yaml
+
+            _db = _json.loads(diff_bboxes_path.read_text(encoding="utf-8"))
+            _vd = _json.loads(vd_json.read_text(encoding="utf-8"))
+            _ped_result = _ped_aggregate(_db, _vd)
+            ped_path = out_dir / "per_element_drift.yml"
+            ped_path.write_text(_ped_yaml(_ped_result), encoding="utf-8")
+            for _page in _ped_result.get("pages", []):
+                _top = _page.get("top_contributors", [])
+                if _top:
+                    _leader = _top[0]
+                    print(
+                        f"[{tid}] per_element_drift: "
+                        f"top contributor page {_page['page'] + 1} is "
+                        f"{_leader['slot']} "
+                        f"({_leader['pct_of_page_total_drift']:.1f}pp of page drift)"
+                    )
+        except Exception as exc:
+            print(f"[{tid}] audit E (per_element_drift) error: {exc}", file=sys.stderr)
+
+    # Phase G: region_color_audit — per-region ICC-vs-fill-bug classification.
+    # Runs when both preview.pdf and baseline.pdf exist. Diagnostic only (never
+    # blocks audit). Writes region_color_audit.yml and prints a one-line summary.
+    color_audit_path = out_dir / "region_color_audit.yml"
+    preview_pdf_path = tdir / "preview.pdf"
+    if preview_pdf_path.exists() and baseline.exists() and build_py.exists():
+        try:
+            from region_color_audit import run_region_color_audit as _rca_run
+            from region_color_audit import _yaml_dump as _rca_yaml
+            _rca_result = _rca_run(build_py, baseline, preview_pdf_path, tid)
+            color_audit_path.write_text(_rca_yaml(_rca_result), encoding="utf-8")
+            _bs = _rca_result["by_severity"]
+            print(
+                f"[{tid}] region_color_audit: "
+                f"{_bs.get('ok', 0)} ok, "
+                f"{_bs.get('icc_likely', 0)} icc_likely, "
+                f"{_bs.get('fill_likely', 0)} fill_likely "
+                f"— pattern: {_rca_result['pattern']}"
+            )
+        except Exception as exc:
+            print(f"[{tid}] audit G (region_color_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit G (region_color_audit): skipped "
+            f"(no preview.pdf or baseline.pdf or build.py)",
+            file=sys.stderr,
+        )
+
+    if issue_parts:
+        summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
+    else:
+        summary = f"[{tid}] audit: clean"
+
+    return len(issue_parts), summary
+
+
 def main(argv=None) -> int:
     """Entry point for bin/render-gallery."""
     parser = argparse.ArgumentParser(
@@ -682,8 +972,30 @@ def main(argv=None) -> int:
         action="store_true",
         help="Render and validate but do NOT write meta.yml hash or mirror to site/public/.",
     )
+    parser.add_argument(
+        "--audit",
+        action="store_true",
+        help=(
+            "After render+visual_diff, run A1 (idml_inventory) + A2 (baseline_text_audit) "
+            "+ A3 (baseline_image_audit) and write reports to "
+            "build/validation/<slug>/{inventory,text_audit,image_audit}.yml. "
+            "Prints a per-template audit summary. Informational only (use --audit-strict "
+            "to fail on audit issues)."
+        ),
+    )
+    parser.add_argument(
+        "--audit-strict",
+        action="store_true",
+        help=(
+            "Same as --audit but exits non-zero if any audit issues are found. "
+            "Implies --audit. Intended for CI."
+        ),
+    )
 
     args = parser.parse_args(argv)
+    # --audit-strict implies --audit
+    if args.audit_strict:
+        args.audit = True
 
     # Preflight: brand fonts.
     _verify_brand_fonts()
@@ -725,14 +1037,27 @@ def main(argv=None) -> int:
         return 1
 
     results: dict[str, int] = {}
+    audit_summaries: list[str] = []
+    audit_issue_count_total = 0
     for tdir in work:
         tid = tdir.name
+        meta = yaml.safe_load((tdir / "meta.yml").read_text(encoding="utf-8"))
         try:
             rc = _orchestrate_template(tdir, args)
         except Exception as exc:
             print(f"[{tid}] EXCEPTION: {exc}", file=sys.stderr)
             rc = 1
         results[tid] = rc
+
+        # Run audit AFTER render (non-blocking by default).
+        if getattr(args, "audit", False):
+            try:
+                n_issues, summary = _run_audit(tdir, meta, args)
+                print(summary)
+                audit_summaries.append(summary)
+                audit_issue_count_total += n_issues
+            except Exception as exc:
+                print(f"[{tid}] audit EXCEPTION: {exc}", file=sys.stderr)
 
     # Summary.
     sep = "=" * 64
@@ -744,9 +1069,22 @@ def main(argv=None) -> int:
     for tid, rc in results.items():
         status = "OK" if rc == 0 else "FAIL"
         print(f"  {tid:<42} {status}")
+    if getattr(args, "audit", False) and audit_summaries:
+        print()
+        print("Audit summaries:")
+        for s in audit_summaries:
+            print(f"  {s}")
     print(sep)
 
     overall = 0 if all(rc == 0 for rc in results.values()) else 1
+    # --audit-strict: fail if any audit issues found
+    if getattr(args, "audit_strict", False) and audit_issue_count_total > 0:
+        print(
+            f"AUDIT STRICT: {audit_issue_count_total} audit issue category(ies) found "
+            f"across {len(work)} template(s) — exiting non-zero.",
+            file=sys.stderr,
+        )
+        overall = 1
     return overall
 
 

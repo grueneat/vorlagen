@@ -516,11 +516,18 @@ class InjectIntoFrameTests(unittest.TestCase):
     def test_sets_inline_image_and_scale_type(self) -> None:
         from sla_lib.builder.primitives import ImageFrame
 
-        # Fresh frame with the dataclass default (scale_type=1 = manual scale,
-        # the value migrated from production SLAs that caused the bug).
+        # Fresh frame with the dataclass default (scale_type=0 = ScaleAuto;
+        # issue 37 Backport 10 flipped the default from 1 → 0 because
+        # Scribus 1.6.x renders small white-on-transparent RGBA PNGs
+        # invisible when SCALETYPE=1 at high downscale ratios).
         frame = ImageFrame(x_mm=0, y_mm=0, w_mm=87, h_mm=24)
-        self.assertEqual(frame.scale_type, 1, "precondition: default is manual")
+        self.assertEqual(frame.scale_type, 0, "precondition: default is ScaleAuto")
         self.assertIsNone(frame.inline_image_data)
+
+        # Simulate the pre-fix manual setting to exercise the inject path's
+        # explicit assignment (the call must still set scale_type=0 even
+        # when the caller previously set it to 1).
+        frame.scale_type = 1
 
         img = library.load("themen_topic1")
         assert img is not None
