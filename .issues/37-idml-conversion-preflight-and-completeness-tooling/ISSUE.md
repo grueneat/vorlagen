@@ -52,68 +52,33 @@ the design team. Drift convergence is measured against it via
 `visual_diff.py`. Pass means `mismatch_pct <= diff.yml::max_pixel_mismatch_pct`
 on every page. No other artifact is a convergence target.
 
-### P2 — Three sources, three distinct roles. Never conflate.
+### P2 — Two sources, two distinct roles. Never conflate.
 
 | Source | Role | NEVER used as |
 |---|---|---|
 | `original.idml` | Authoring truth — what InDesign content exists | Visual reference |
 | `baseline.pdf` | **Convergence target** (P1) — what the design SHOULD look like | Element extraction (lossy; positions are subpixel) |
-| `reference.sla` (Scribus's own IDML import) | **Element extraction source** + informational converter-quality metric | Convergence target (not pixel-perfect; Scribus's importer has its own gaps) |
 
-### P3 — `reference.sla` is ONE ADDITIONAL INPUT, not gospel. Verify against baseline.pdf.
+### P3 — `baseline.pdf` is the only convergence reference. No mirroring of other importers' choices.
 
-The Scribus-imported SLA is a useful **extraction hint** when our
-converter is missing structure (windmill, decorative paths, alignment
-encoding, group geometry). When an element is in IDML + in `reference.sla`
-but NOT in `build.py`, you can copy the `<PAGEOBJECT>`'s
-`XPOS/YPOS/WIDTH/HEIGHT/ROT/FCOLOR/PCOLOR/LINESCOLOR` into a DSL primitive
-as a starting point — but **always verify the resulting render against
-`baseline.pdf` before accepting**.
+Don't introduce a "second importer's output" (e.g. Scribus's own IDML import) as a reference signal — empirically, that creates more cognitive overhead than value. Agents repeatedly fell into the trap of mirroring the alternative importer's choices (e.g. `LINESPMode="1"`) without verifying against `baseline.pdf`, and the alternative importer's render had its own drift gaps (page-dimension differences, wrong leading strategy). Stick to two sources: IDML (authoring truth) + baseline.pdf (convergence target).
 
-**Critical empirical finding (v2 falzflyer, 2026-05-12):** the Scribus-
-imported SLA is NOT a strict-better reference. Direct measurement:
-
-| Render | page 1 drift vs baseline.pdf | page 2 drift vs baseline.pdf |
-|---|---|---|
-| Our DSL's `preview.pdf` | 6.84% | 6.30% |
-| `reference-scribus.pdf` (from Scribus's own IDML importer) | **9.77%** | **11.50%** |
-
-Our converter already beats Scribus's importer on overall pixel diff by
-~3-5pp per page. The Scribus-SLA has its own bugs: adds bleed extents
-(301×214mm vs baseline's 297×210mm), may render some text differently,
-inherits the same IDML-feature limitations (per-Image LocalOffset on
-composite raster strips, etc.).
-
-**Conclusion: treat Scribus-SLA as one input among several, NOT a
-canonical or pixel-perfect oracle.** It's right about some things
-(center-alignment encoding, windmill placement, Störer geometry) and
-wrong about others (page dimensions, possibly some text positioning).
-Cherry-pick per element. Each cherry-pick is verified by measuring
-`visual_diff` against `baseline.pdf` before and after.
-
-**Reading the diff lanes:**
-- When `reference_diff` (preview vs reference-scribus.pdf) FAILS but
-  `visual_diff` (preview vs baseline.pdf) PASSES or is lower: our
-  converter is closer to InDesign than Scribus's importer is. Don't
-  copy Scribus's choices in those regions — they're WORSE than ours.
-- When `reference_diff` PASSES but `visual_diff` FAILS: our converter
-  matches Scribus's importer, but both diverge from baseline in the
-  same way. This residual is likely cross-engine (font rendering,
-  ICC) — document, verify with P7 (font audit) first, don't chase.
-- When BOTH FAIL with non-overlapping regions: we have converter gaps
-  AND there are cross-engine artifacts. Address converter gaps first
-  (use P4 audits to find them), then verify what's left.
-
-**Convergence target is ALWAYS `baseline.pdf`.** Never optimise for
-`reference_diff` directly.
+**Post-mortem (2026-05-12):** the Scribus-imported SLA was added as a
+`reference_sla:` field and wired into the pipeline. Empirical measurement
+showed it was 3-5pp WORSE than our converter on `visual_diff` vs
+`baseline.pdf` (9.77%/11.50% vs 6.84%/6.30%). Agents repeatedly fell into
+the "trust Scribus's choice" trap — including for `LINESPMode="1"` (wrong
+leading strategy) and page dimensions (bleed extents). The SLA was removed
+from `originals/` and all tooling (sla_inventory, three_way_audit,
+reference_diff lane) was deleted on 2026-05-12.
 
 ### P4 — Structural completeness is a hard precondition for drift work.
 
-Phase A audits (`inventory.yml`, `text_audit.yml`, `image_audit.yml`,
-and Phase D's `sla_inventory.yml`) must show every IDML PageItem is
-either emitted by `build.py` OR explicitly skipped with a documented
-reason. Drift convergence work that starts before this is provably
-clean burns tokens diagnosing structural gaps as positioning bugs.
+Phase A audits (`inventory.yml`, `text_audit.yml`, `image_audit.yml`) must
+show every IDML PageItem is either emitted by `build.py` OR explicitly
+skipped with a documented reason. Drift convergence work that starts before
+this is provably clean burns tokens diagnosing structural gaps as positioning
+bugs.
 
 ### P5 — Generator over artifact. Re-emit beats hand-patch.
 
@@ -310,109 +275,19 @@ The convergence loop then routes `missing` bboxes to the inventory tools
 (Phase A) instead of frame-parameter tuning. Routes `position`/`scale` to
 the `_extract_content_local_params` helper. Etc.
 
-### Phase D — Multi-source convergence (strategic addition, 2026-05-12)
+### Phase D — IDML-side audits + inject overlay
 
-**Discovered during issue #35 reconciliation work.** Every IDML import has been treated as one source (the IDML), with one reference (the InDesign-exported `baseline.pdf`). That conflates two questions: "does our converter handle this IDML correctly?" and "how do Scribus and InDesign render the same content differently?" The answer to the second is a cross-engine artifact (~6-7% drift floor); the answer to the first is what we actually want to optimise. Without a same-engine reference, executors can't tell the two apart — issue #35 burned ~500K tokens because of this ambiguity.
-
-**Solution:** treat the Scribus-imported SLA as an **additional reference**, NOT a replacement for any existing source. `baseline.pdf` remains the only convergence success criterion. The Scribus-SLA's most valuable role is per-element **extraction** for items our converter drops (the wind turbine `u2b0` is reportedly correctly placed there); its diff-target role is informational only.
-
-| Source | Role | Used for |
-|---|---|---|
-| `original.idml` | Authoring truth | Structural audit (Phase A1) — element completeness |
-| `baseline.pdf` | **Cross-engine ground truth — THE convergence target** | `preview.pdf` vs `baseline.pdf` — drift convergence (this is the only success criterion) |
-| `reference.sla` (NEW) | **Per-element extraction hint** for dropped/wrong elements. **Informational diff signal** about Scribus's importer drift — NOT a convergence target. | (a) Per-element: copy `<PAGEOBJECT>` geometry/style as a starting point when our converter is missing structure; verify each cherry-pick against `baseline.pdf`. (b) Diff-lane: compare against baseline to learn where Scribus's importer is better/worse than ours. |
-
-The `reference.sla` is produced by a **one-time human GUI run** in Scribus (`File → Import → Get IDML File → Save As .sla`). Scribus headless cannot do this (verified 2026-05-12: `openDoc(idml)` via Scripter API hangs >14 min in `-g -ns` mode; IDML import plugin is GUI-only). The cost is ~5-10 min of human time per template at import; it eliminates a class of executor confusion that costs hours of agent runtime downstream.
-
-**Critical framing — what the Scribus-SLA is and isn't:**
-- **It is NOT pixel-perfect, NOT a strict-better reference.** Empirically on v2 falzflyer (2026-05-12), `reference-scribus.pdf` renders 9.77% / 11.50% drift vs `baseline.pdf` — *worse* than our DSL's `preview.pdf` at 6.84% / 6.30%. Scribus's own importer has bugs (adds bleed extents 301×214mm vs baseline's 297×210mm; inherits the same `<Image>` LocalScale/LocalOffset gaps for composite raster strips; may render text differently). It is not a canonical oracle.
-- **It is NOT the design ground truth.** `baseline.pdf` (InDesign's own export) is the only source of "what the design should look like." Drift convergence is measured against `baseline.pdf`, period.
-- **It IS a useful per-element extraction hint** when our converter is missing structure. Example wins from v2 falzflyer: windmill `u2b0` placement, Störer `u184`/`u185`/`u186` geometry, center-alignment encoding (`ALIGN="1"` from `Justification="CenterAlign"` inline override). Each cherry-pick must be verified against `baseline.pdf` — Scribus's importer is right about some things and wrong about others.
-- **It IS a useful informational diff signal** about *where Scribus's importer's drift sits*. When `reference_diff` (preview vs reference-scribus) lands at very different numbers than `visual_diff` (preview vs baseline), it tells you which side of the disagreement to trust — see P3's "reading the diff lanes" rubric.
-
-#### D1. `meta.yml` schema — `reference_sla:` field
-
-```yaml
-build:
-  ...
-reference_sla: ../../originals/<idml-name>/<file>.sla
-```
-
-Analogue to the existing `original_sla:` field used by V1 templates for round-trip validation. Documented in `shared/brand/SPEC-WRITING-GUIDE.md`.
-
-#### D2. Import workflow — `bin/idml-import` adds human GUI step
-
-`bin/idml-import` (the single entry point from Phase C1) checks for `originals/<idml-name>/<file>.sla` next to the IDML. If absent, it prints clear human instructions:
-
-```
-[idml-import] Scribus IDML reference not found at <path>
-To produce it (one-time, ~5 min):
-  1. Open Scribus 1.6 in GUI mode (not headless)
-  2. File → Import → Get IDML File → select the IDML
-  3. Wait for import to complete (large IDMLs take 2-5 min)
-  4. File → Save As → <path>
-  5. Re-run bin/idml-import
-[idml-import] Continuing without reference; converter quality cannot be isolated from engine artifacts.
-```
-
-The reference is optional but recommended. Without it, the convergence loop has only the IDML + baseline.pdf signals and the cross-engine ambiguity returns.
-
-#### D3. Render pipeline — second visual_diff lane (informational, not a target)
-
-`tools/render_pipeline.py::_run_visual_diff` extended: when `reference_sla:` is set in meta.yml, render that SLA to PDF (using existing `tools/render.py` machinery + cwd=originals folder so relative `Links/` paths resolve) and run a second `visual_diff` with output `reference_diff.json` alongside `visual_diff.json`.
-
-There are now **THREE diff lanes** to consider:
-1. `visual_diff` — `preview.pdf` vs `baseline.pdf`. **THE convergence target (P1).** What we minimise.
-2. `reference_diff` — `preview.pdf` vs `reference-scribus.pdf`. Informational: tells us how far our converter sits from Scribus's own importer.
-3. `scribus_baseline_diff` — `reference-scribus.pdf` vs `baseline.pdf`. Informational: tells us Scribus's importer drift from InDesign. Run once at template import; the number is a useful **benchmark** ("are we doing better than Scribus's importer alone?") but **never a target**.
-
-Audit summary surfaces all three:
-
-```
-[<slug>] visual_diff             (preview vs baseline)         : p1=6.84% p2=6.30% FAIL  ← THE TARGET (P1)
-[<slug>] reference_diff          (preview vs reference-scribus): p1=N.NN% p2=N.NN% INFO  ← informational
-[<slug>] scribus_baseline_diff   (reference-scribus vs baseline): p1=9.77% p2=11.50% INFO  ← benchmark
-```
-
-**No "engine floor" conclusion may be drawn from any of these numbers** until P7 font-fidelity audit is clean AND P4 structural-completeness audits are clean. The reference_diff lane in particular does NOT signal "the floor" — Scribus's importer has its own drift, and that drift is largely INDEPENDENT of cross-engine artifacts. Use the three lanes together to diagnose, not in isolation to declare stopping conditions.
-
-**Cherry-picking from Scribus-SLA must be verified.** Per element extracted, measure `visual_diff` against `baseline.pdf` before and after. If the cherry-pick doesn't reduce baseline drift, revert — Scribus's importer was wrong about that element.
-
-#### D3a. Element extraction from Scribus-SLA — the primary value lane
-
-When the 3-way audit (D4) flags an element as "in IDML, in Scribus-SLA, NOT in build.py", the fix path is:
-
-1. Read the Scribus-SLA's `<PAGEOBJECT ANNAME="uXXX" ...>` for the missing element. It has `XPOS`/`YPOS`/`WIDTH`/`HEIGHT`/`ROT`/`FCOLOR`/`PCOLOR`/`LINESCOLOR` already worked out by Scribus's importer.
-2. Translate that PAGEOBJECT into the corresponding DSL primitive call (`Polygon` / `ImageFrame` / `TextFrame`) — straight 1:1 mapping from Scribus's coordinate system to DSL mm.
-3. Add to `inject.yml` as an explicit overlay keyed by anname, OR fix the converter handler if a generic pattern emerges.
-
-This is the **fast path** for filling converter gaps — no path/transform math, no investigation of guards. The wind turbine `u2b0` is the canonical first case: Scribus reportedly placed it correctly, so its PAGEOBJECT gives us the right `Polygon(x_mm, y_mm, w_mm, h_mm, fill, line_color, line_width_pt, points=[...])` directly.
-
-#### D4. `tools/sla_inventory.py` — Scribus-SLA element inventory
-
-Parse Scribus's SLA XML (`SCRIBUSUTF8NEW` root → `DOCUMENT` → `PAGEOBJECT` elements). Each `PAGEOBJECT` has `ANNAME=`, `PTYPE=` (4=text, 2=image, 7=polygon, etc.), `XPOS/YPOS/WIDTH/HEIGHT`, `ROT`, `FCOLOR/PCOLOR`. Emit `sla_inventory.yml`:
-
-```yaml
-template: kandidat-falzflyer-din-lang-gruenes-cover-v2
-reference_sla: ../../originals/.../<file>.sla
-pageobjects_total: 101
-pageobjects_by_anname:
-  u184: {ptype: 12, bbox_mm: [...], fcolor: None, pcolor: None}
-  u185: {ptype: 7, bbox_mm: [...], fcolor: "C=85 M=35 Y=95 K=10", pcolor: None}
-  ...
-```
-
-Then extends the Phase A audit to a 3-way Venn report:
-
-| In IDML | In Scribus-SLA | In build.py | Action |
-|---|---|---|---|
-| ✓ | ✓ | ✗ | **Converter bug** — Scribus did it, we didn't. PRIORITISE. |
-| ✓ | ✗ | ✗ | Scribus also dropped — likely IDML feature both skip. Out of scope. |
-| ✓ | ✓ | ✓ | Match — compare bbox; if drift, Scribus geometry is the reference. |
-| ✓ | ✓ | ✓ (geom differs) | Geometry drift — diagnose. |
-| ✗ | ✗ | ✓ | We emit something not in source — suspicious. |
-
-The "converter bug" row is the highest-leverage executor input: each entry is "Scribus's IDML importer made this work — match it." Often the fix is direct extraction from Scribus's SLA geometry into our DSL.
+**Note on removed sections (D1/D2/D3/D3a/D4):** Sections D1 through D4
+described a `reference_sla:` / Scribus-imported SLA strategy (meta.yml
+field, import GUI step, second visual_diff lane, three-way Venn audit).
+This strategy was removed on 2026-05-12. Empirical measurement showed
+Scribus's own IDML importer was 3-5pp WORSE than our converter on
+`visual_diff` vs `baseline.pdf`. Agents repeatedly fell into the trap of
+mirroring Scribus's choices (including wrong leading strategy and inflated
+page dimensions) without verifying against `baseline.pdf`. The SLA file
+was removed from `originals/`; all tooling (sla_inventory.py,
+three_way_audit.py, reference_diff lane) was deleted. The IDML +
+baseline.pdf two-source oracle stack is sufficient.
 
 #### D5. `tools/reconcile_build_py.py` — INJECT_MAP overlay system
 
@@ -427,7 +302,7 @@ The committed `build.py` accumulated 373 lines of hand-edits across issue #35's 
        overrides:
          font: "Black"
      u3a2:
-       reason: "Phase 3 — Group transform u3a1 ascender correction (not Group cascade fix, verified via reference.sla)"
+       reason: "Phase 3 — Group transform u3a1 ascender correction (not Group cascade fix)"
        overrides:
          x_mm_delta: 5.05
    ```
@@ -803,31 +678,10 @@ gaps become rare instead of routine.
 - [ ] `tools/idml_to_dsl_patterns/README.md` library exists with at least
       the 7 patterns listed above
 
-### Phase D — Multi-source convergence
-- [ ] `meta.yml` schema accepts `reference_sla:` field; documented in
-      `shared/brand/SPEC-WRITING-GUIDE.md`
-- [ ] `bin/idml-import` checks for `reference.sla` next to the IDML and
-      prints clear GUI-step instructions if absent; continues without it
-      with a warning about lost engine-isolation
-- [ ] `tools/render_pipeline.py` renders `reference_sla` (when present)
-      to PDF and runs a second `visual_diff` lane (`preview.pdf` vs
-      `reference-scribus.pdf`), emitting `reference_diff.json`
-- [ ] Audit summary surfaces both lanes: `reference_diff (same-engine)`
-      and `visual_diff (cross-engine)` with PASS/FAIL per lane
-- [ ] `tools/sla_inventory.py` parses Scribus SLA PAGEOBJECTs and
-      produces `sla_inventory.yml` with anname-keyed bbox/style data
-- [ ] Phase A audit extended to a 3-way Venn (IDML / Scribus-SLA /
-      build.py) with the "converter bug" row marked as highest priority
+### Phase D — Inject overlay
 - [ ] `tools/reconcile_build_py.py` reads `templates/<slug>/inject.yml`,
       applies overlays to fresh converter emit, produces reconciled
       build.py with provenance comments
-- [ ] V2 falzflyer template carries `reference_sla:` pointing at the
-      Scribus-imported SLA already in `originals/26-03-Leporello.../`
-- [ ] At least one inject.yml entry exists for v2 falzflyer documenting
-      any genuine Scribus rendering quirks (verified via isolation
-      experiment, NOT rationalized) — none from the Phase 4 Black-weight
-      "workaround" since that turned out to be a CSR-FontStyle converter
-      bug, not a real quirk
 
 ### Phase D6 — Font fidelity (P7 enforcement)
 - [ ] `tools/font_audit.py` exists; takes `preview.pdf` + `baseline.pdf`
