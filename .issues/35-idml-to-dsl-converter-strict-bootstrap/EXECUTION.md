@@ -1009,7 +1009,7 @@ before calling `_make_font_name`.
 ### Commits
 
 - `b6bb481` — 35: fix(idml-stories): compose family + FontStyle for CSR weight overrides
-- `<sha2>` — 37: feat(render-pipeline): pdffonts audit step (Phase D6)
+- `ff485db` — 37: feat(render-pipeline): pdffonts audit step (Phase D6)
 
 ### Before/after pdffonts preview.pdf
 
