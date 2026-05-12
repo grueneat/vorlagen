@@ -700,6 +700,20 @@ class _Ctx:
     # logo_map for both <PDF> (vector) and <Image> (raster) references.
     asset_map: dict[str, str] = field(default_factory=dict)
     unmapped_assets: list[tuple[str, str]] = field(default_factory=list)
+    # Issue #37 Phase B1 (P3 task 16): track every IDML PageItem Self ID
+    # that produced output, plus explicit skips with reasons. The
+    # end-of-conversion assertion compares against the IDML's PageItem
+    # inventory and fires UnhandledElement when the gap is non-empty.
+    emitted_self_ids: set[str] = field(default_factory=set)
+    skipped_with_reason: list[dict] = field(default_factory=list)
+
+    def record_skipped(self, self_id: str, reason: str) -> None:
+        """Explicitly skip an IDML PageItem with a reason — bypasses the
+        end-of-conversion completeness assertion for ``self_id`` only."""
+        self.skipped_with_reason.append({
+            "self_id": str(self_id),
+            "reason": str(reason),
+        })
 
 
 # ---------------------------------------------------------------------------
@@ -1543,6 +1557,13 @@ def _emit_pageitem(
     """Dispatch a PageItem to its emitter and append the call to ctx.out."""
     tag = etree.QName(item).localname
     self_id = item.get("Self", "<unknown>")
+    # Issue #37 Phase B1: record every dispatched PageItem so the end-of-
+    # conversion completeness check can compare against the IDML inventory.
+    # Group containers are also recorded — their children separately add
+    # their own Self IDs, but recording the Group Self matches the IDML's
+    # PageItem inventory where Group is a leaf element.
+    if self_id != "<unknown>":
+        ctx.emitted_self_ids.add(self_id)
 
     if tag == "Group":
         # Recurse into the group, prepending the group's ItemTransform to the
@@ -2671,6 +2692,12 @@ def _emit_pages(ctx: _Ctx) -> None:
             if item_layer not in ctx.printable_layer_ids:
                 # Drop Info-layer print marks per locked decision #5
                 # (Falz lines added manually post-bootstrap).
+                _ch_sid = child.get("Self", "")
+                if _ch_sid:
+                    ctx.record_skipped(
+                        _ch_sid,
+                        f"non-printable layer {item_layer!r}",
+                    )
                 continue
             if tag not in _DISPATCHED_PAGEITEM_TAGS:
                 # GraphicLine, MasterSpreadPageReference, etc. — raise loudly
@@ -2718,6 +2745,11 @@ def _emit_pages(ctx: _Ctx) -> None:
                             f"InDesign design artifact, not emitted",
                             file=sys.stderr,
                         )
+                        if sid:
+                            ctx.record_skipped(
+                                sid,
+                                "InDesign design artifact (entirely outside page+bleed)",
+                            )
                         continue
                 except UnhandledElement:
                     # If anchor extraction fails for a non-Group, skip the guard.
@@ -2730,6 +2762,61 @@ def _emit_pages(ctx: _Ctx) -> None:
             ctx.out.w("return None")
         ctx.out.indent -= 1
         ctx.out.w("")
+
+
+_PAGE_ITEM_LEAF_TAGS = frozenset({
+    "Rectangle", "Polygon", "Oval", "TextFrame", "Image", "PDF",
+    "GraphicLine", "Group",
+})
+
+
+def _walk_idml_pageitem_self_ids(pkg: Any) -> set[str]:
+    """Walk every Spread's PageItem (top-level + inside Groups) and return the
+    set of ``Self`` IDs for the leaf-or-container tags we consider in scope.
+
+    Used by the end-of-conversion completeness assertion (Issue #37 Phase B1 /
+    P3 task 16). The set is the universe of IDs the converter is expected to
+    EITHER emit OR explicitly skip; anything in the gap is a silent drop.
+    """
+    ids: set[str] = set()
+    for sp_path in pkg.spreads:
+        xml = pkg.open(sp_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        for el in root.iter():
+            if not isinstance(el.tag, str):
+                continue
+            tag = etree.QName(el).localname
+            if tag in _PAGE_ITEM_LEAF_TAGS:
+                sid = el.get("Self")
+                if sid:
+                    ids.add(sid)
+    return ids
+
+
+def _assert_conversion_completeness(ctx: _Ctx) -> None:
+    """Compare ``ctx.emitted_self_ids`` (+ explicit skips) against the IDML's
+    PageItem inventory. Raise ``UnhandledElement`` when the gap is non-empty.
+
+    Issue #37 Phase B1 / P3 task 16. The assertion catches the silent-drop
+    class: a PageItem in the IDML that produces neither output nor an
+    explicit skip annotation.
+    """
+    all_ids = _walk_idml_pageitem_self_ids(ctx.pkg)
+    skipped = {s["self_id"] for s in ctx.skipped_with_reason}
+    missing = all_ids - ctx.emitted_self_ids - skipped
+    if not missing:
+        return
+    sample = sorted(missing)[:10]
+    suffix = "..." if len(missing) > 10 else ""
+    raise UnhandledElement(
+        f"Conversion incomplete: {len(missing)} IDML PageItem(s) emitted "
+        f"no output and were not explicitly skipped. "
+        f"IDs: {sample}{suffix}. "
+        f"Either implement the relevant pattern in tools/idml_to_dsl.py, "
+        f"or add a '# IDML pattern: <name>: skipped because <reason>' "
+        f"annotation and call ctx.record_skipped(self_id, reason). "
+        f"Use --allow-dropped-pageitems to bypass during debugging."
+    )
 
 
 def _final_strictness_gates(ctx: _Ctx) -> None:
@@ -2996,7 +3083,8 @@ def _emit_footer(out: PythonRepr) -> None:
 # ---------------------------------------------------------------------------
 def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             logo_map_path: Optional[Path] = None,
-            asset_map_path: Optional[Path] = None) -> None:
+            asset_map_path: Optional[Path] = None,
+            allow_dropped_pageitems: bool = False) -> None:
     """Strict 7-phase IDML → DSL build.py converter.
 
     Phases:
@@ -3122,6 +3210,11 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         _emit_footer(ctx.out)
         # Final strict-mode gates: surface unmapped logos / missing assets.
         _final_strictness_gates(ctx)
+        # Issue #37 P3 task 16: completeness assertion — every IDML
+        # PageItem must have been emitted OR explicitly skipped with a
+        # reason. --allow-dropped-pageitems bypasses for debugging.
+        if not allow_dropped_pageitems:
+            _assert_conversion_completeness(ctx)
 
         # Write emitted Python source
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -3222,6 +3315,16 @@ def main(argv: Optional[list[str]] = None) -> int:
             "both are supplied."
         ),
     )
+    ap.add_argument(
+        "--allow-dropped-pageitems",
+        action="store_true",
+        help=(
+            "Bypass the end-of-conversion completeness assertion that fires "
+            "when an IDML PageItem produced no output and was not explicitly "
+            "skipped via ctx.record_skipped(). Use only for debugging; the "
+            "default (strict) is what CI should run."
+        ),
+    )
     args = ap.parse_args(argv)
 
     # Auto-invoke fallback: no --asset-map AND no --logo-map AND a sibling
@@ -3245,7 +3348,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     try:
         convert(args.source, args.output, args.template_id, args.assets_dir,
                 logo_map_path=args.logo_map,
-                asset_map_path=asset_map_path)
+                asset_map_path=asset_map_path,
+                allow_dropped_pageitems=args.allow_dropped_pageitems)
     except UnhandledElement as e:
         print(f"UnhandledElement: {e}", file=sys.stderr)
         return 2

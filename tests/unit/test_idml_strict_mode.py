@@ -11,6 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 CONVERTER = ROOT / "tools" / "idml_to_dsl.py"
 
@@ -251,3 +253,121 @@ def test_image_with_psd_basename_with_asset_map_emits_mapped_png(tmp_path: Path)
     rendered = ctx.out.render()
     assert "plakat.png" in rendered
     assert "Plakat.psd" not in rendered
+
+
+# ---------------------------------------------------------------------------
+# Issue #37 P3 task 16 — end-of-conversion completeness assertion
+# ---------------------------------------------------------------------------
+
+sys.path.insert(0, str(ROOT / "tools"))
+from idml_to_dsl import (  # noqa: E402
+    UnhandledElement,
+    _Ctx,
+    _assert_conversion_completeness,
+)
+
+
+class _FakePkg:
+    """Minimal IDMLPackage-like stub for the completeness walker."""
+
+    def __init__(self, spread_xml_by_path: dict[str, bytes]):
+        self._data = spread_xml_by_path
+        self.spreads = list(spread_xml_by_path.keys())
+
+    def open(self, path: str):
+        class _Reader:
+            def __init__(self, data): self._data = data
+            def read(self): return self._data
+        return _Reader(self._data[path])
+
+
+def _spread_xml(*items: str) -> bytes:
+    inner = "\n".join(items)
+    return (
+        f'<?xml version="1.0"?>'
+        f'<idPkg:Spread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">'
+        f'<Spread Self="sp1">{inner}</Spread>'
+        f'</idPkg:Spread>'
+    ).encode("utf-8")
+
+
+def test_completeness_all_emitted_no_assertion(tmp_path):
+    """5 PageItems all emitted → no assertion fires."""
+    pkg = _FakePkg({
+        "Spreads/Spread_sp1.xml": _spread_xml(
+            '<Rectangle Self="u1"/>',
+            '<TextFrame Self="u2"/>',
+            '<Polygon Self="u3"/>',
+            '<Image Self="u4"/>',
+            '<Oval Self="u5"/>',
+        ),
+    })
+    ctx = _Ctx(pkg=pkg, template_id="t", assets_dir=tmp_path)
+    ctx.emitted_self_ids = {"u1", "u2", "u3", "u4", "u5"}
+    _assert_conversion_completeness(ctx)  # must not raise
+
+
+def test_completeness_silent_drop_raises(tmp_path):
+    """5 PageItems but only 4 emitted → UnhandledElement names u5."""
+    pkg = _FakePkg({
+        "Spreads/Spread_sp1.xml": _spread_xml(
+            '<Rectangle Self="u1"/>',
+            '<TextFrame Self="u2"/>',
+            '<Polygon Self="u3"/>',
+            '<Image Self="u4"/>',
+            '<Oval Self="u5"/>',
+        ),
+    })
+    ctx = _Ctx(pkg=pkg, template_id="t", assets_dir=tmp_path)
+    ctx.emitted_self_ids = {"u1", "u2", "u3", "u4"}
+    with pytest.raises(UnhandledElement) as exc:
+        _assert_conversion_completeness(ctx)
+    assert "1 IDML PageItem(s)" in str(exc.value)
+    assert "'u5'" in str(exc.value)
+    assert "record_skipped" in str(exc.value)
+
+
+def test_completeness_explicit_skip_satisfies_assertion(tmp_path):
+    """4 emitted + 1 explicitly skipped → no assertion."""
+    pkg = _FakePkg({
+        "Spreads/Spread_sp1.xml": _spread_xml(
+            '<Rectangle Self="u1"/>',
+            '<Polygon Self="u123"/>',  # complex; will be skipped
+        ),
+    })
+    ctx = _Ctx(pkg=pkg, template_id="t", assets_dir=tmp_path)
+    ctx.emitted_self_ids = {"u1"}
+    ctx.record_skipped("u123", "complex polygon — TODO")
+    _assert_conversion_completeness(ctx)  # must not raise
+
+
+def test_completeness_empty_idml_no_assertion(tmp_path):
+    """An empty spread (0 PageItems) does not fire."""
+    pkg = _FakePkg({
+        "Spreads/Spread_sp1.xml": _spread_xml(),
+    })
+    ctx = _Ctx(pkg=pkg, template_id="t", assets_dir=tmp_path)
+    _assert_conversion_completeness(ctx)  # must not raise
+
+
+def test_completeness_group_counted_as_pageitem(tmp_path):
+    """A Group is itself a PageItem (Self ID); emitting the Group satisfies it."""
+    pkg = _FakePkg({
+        "Spreads/Spread_sp1.xml": _spread_xml(
+            '<Group Self="g1"><Rectangle Self="u_inside"/></Group>',
+        ),
+    })
+    ctx = _Ctx(pkg=pkg, template_id="t", assets_dir=tmp_path)
+    # Emitting the Group container + its child satisfies both Self IDs.
+    ctx.emitted_self_ids = {"g1", "u_inside"}
+    _assert_conversion_completeness(ctx)
+
+
+def test_record_skipped_appends_with_reason():
+    ctx = _Ctx(pkg=None, template_id="t", assets_dir=Path("."))
+    ctx.record_skipped("u1", "non-printable layer")
+    ctx.record_skipped("u2", "out-of-page artifact")
+    assert ctx.skipped_with_reason == [
+        {"self_id": "u1", "reason": "non-printable layer"},
+        {"self_id": "u2", "reason": "out-of-page artifact"},
+    ]
