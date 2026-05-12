@@ -216,3 +216,84 @@ def test_parse_matrix_rejects_bad_token_count():
         _parse_matrix("1 0 0 1 0")  # only 5 tokens
     with pytest.raises(UnhandledElement):
         _parse_matrix("1 0 0 1 0 0 0")  # 7 tokens
+
+
+# ---------------------------------------------------------------------------
+# Issue #37 P1 task 4 — Backport 10 edge fix: emit scale_type=1 whenever the
+# converter actually expresses a non-trivial crop (local_scale != (1,1) or
+# local_offset_mm != (0,0)). Otherwise Scribus's default SCALETYPE=0
+# (ScaleAuto = fit-to-frame) silently ignores the LOCAL* params.
+# ---------------------------------------------------------------------------
+
+from idml_to_dsl import (  # noqa: E402
+    PythonRepr,
+    _Ctx,
+    _emit_image_frame_call,
+)
+
+
+def _make_ctx() -> _Ctx:
+    ctx = _Ctx(pkg=None, template_id="test", assets_dir=Path("."), out=PythonRepr())
+    ctx._current_page_var = "page0"  # type: ignore[attr-defined]
+    return ctx
+
+
+def _emit(ctx, **kwargs) -> str:
+    """Emit an ImageFrame call with sensible defaults; return the rendered output."""
+    _emit_image_frame_call(
+        ctx.out,
+        x_mm=10.0,
+        y_mm=20.0,
+        w_mm=50.0,
+        h_mm=40.0,
+        rot=0.0,
+        self_id="u123",
+        layer_idx=0,
+        image_path="img.png",
+        ctx=ctx,
+        **kwargs,
+    )
+    return ctx.out.render()
+
+
+def test_scale_type_emitted_when_local_scale_deviates():
+    """Local scale (0.5, 0.5) ≠ unity → scale_type=1 emitted."""
+    ctx = _make_ctx()
+    rendered = _emit(ctx, local_scale=(0.5, 0.5), local_offset_pt=(0.0, 0.0))
+    assert "scale_type=1" in rendered
+    assert "local_scale=(0.5, 0.5)" in rendered
+
+
+def test_no_scale_type_for_full_fit_image():
+    """Local scale (1, 1) and zero offset → no scale_type kwarg (inherits default 0)."""
+    ctx = _make_ctx()
+    rendered = _emit(ctx, local_scale=(1.0, 1.0), local_offset_pt=(0.0, 0.0))
+    assert "scale_type=" not in rendered
+    assert "local_scale" not in rendered
+    assert "local_offset_mm" not in rendered
+
+
+def test_scale_type_emitted_when_local_offset_non_trivial():
+    """Non-zero local_offset (5.0pt → ~1.76mm) → scale_type=1 emitted."""
+    ctx = _make_ctx()
+    rendered = _emit(ctx, local_scale=(1.0, 1.0), local_offset_pt=(5.0, -3.0))
+    assert "scale_type=1" in rendered
+    assert "local_offset_mm" in rendered
+
+
+def test_scale_type_emitted_once_when_both_deviate():
+    """Both local_scale and local_offset non-trivial → scale_type=1 appears exactly once."""
+    ctx = _make_ctx()
+    rendered = _emit(ctx, local_scale=(0.5, 0.5), local_offset_pt=(5.0, -3.0))
+    assert rendered.count("scale_type=1") == 1
+    assert "local_scale=(0.5, 0.5)" in rendered
+    assert "local_offset_mm" in rendered
+
+
+def test_scale_type_not_emitted_when_offset_sub_mm():
+    """Sub-0.01 mm offset (rounding noise) → treated as zero → no scale_type."""
+    ctx = _make_ctx()
+    # 0.001 pt ≈ 0.0003 mm — below the 0.01 mm threshold
+    rendered = _emit(ctx, local_scale=(1.0, 1.0), local_offset_pt=(0.001, 0.001))
+    assert "scale_type=" not in rendered
+    assert "local_offset_mm" not in rendered

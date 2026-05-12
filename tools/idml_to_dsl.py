@@ -2009,10 +2009,19 @@ def _emit_image_frame_call(
         kwargs["inline_image_ext"] = inline_ext
     # Emit content placement params when they deviate meaningfully from defaults.
     # Scribus default: local_scale=(1,1), local_offset=(0,0).
+    #
+    # Issue #37 P1 task 4: Backport 10 set the dataclass default scale_type=0
+    # (Scribus ScaleAuto = fit-to-frame). SCALETYPE=0 IGNORES LOCALX/LOCALY/
+    # LOCALSCX/LOCALSCY at render time, so any LOCAL* kwargs we emit here are
+    # silently dropped by Scribus unless we ALSO emit scale_type=1
+    # (free scaling). Flag it whenever local_scale or local_offset deviates
+    # from defaults.
+    needs_free_scaling = False
     if local_scale is not None:
         scx, scy = local_scale
         if abs(scx - 1.0) > 1e-4 or abs(scy - 1.0) > 1e-4:
             kwargs["local_scale"] = (round(scx, 6), round(scy, 6))
+            needs_free_scaling = True
     if local_offset_pt is not None:
         ox_pt, oy_pt = local_offset_pt
         # Convert pt → mm for the DSL parameter (primitives.py multiplies back).
@@ -2020,6 +2029,9 @@ def _emit_image_frame_call(
         oy_mm = oy_pt * PT_TO_MM
         if abs(ox_mm) > 0.01 or abs(oy_mm) > 0.01:
             kwargs["local_offset_mm"] = (round(ox_mm, 4), round(oy_mm, 4))
+            needs_free_scaling = True
+    if needs_free_scaling:
+        kwargs["scale_type"] = 1
     page_var = ctx.layer_id_to_idx  # unused; emit call always uses receiver via outer scope
     # The receiver is the page variable (e.g. "page0"); the outer _emit_pageitem
     # passes ctx.out and the page_var explicitly. For simplicity here we emit
