@@ -723,7 +723,8 @@ class TextFrame(_Frame):
                 elif r.separator == "breakline":
                     etree.SubElement(story, "breakline")
                 elif r.separator == "tab":
-                    etree.SubElement(story, "tab")
+                    tab_el = etree.SubElement(story, "tab")
+                    tab_el.set("FEATURES", "inherit")
                 elif r.separator == "breakcol":
                     etree.SubElement(story, "breakcol")
                 elif r.separator == "breakframe":

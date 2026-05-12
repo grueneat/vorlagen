@@ -883,6 +883,14 @@ class Document:
             v = getattr(ps, kw)
             if v is not None:
                 st.set(attr, "1" if v else "0")
+        # Tab stops — child <Tabs> elements (Scribus 1.6.x SLA format).
+        # Each entry is (position_pt, type): type 0=left, 1=right, 2=center, 3=decimal.
+        if ps.tab_stops:
+            for pos_pt, tab_type in ps.tab_stops:
+                tab_el = etree.SubElement(st, "Tabs")
+                tab_el.set("Type", str(tab_type))
+                tab_el.set("Pos", _fmt_num(pos_pt))
+                tab_el.set("Fill", "")
 
     def _emit_table_cell_stubs(self, doc) -> None:
         ts = etree.SubElement(doc, "TableStyle")

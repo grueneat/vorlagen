@@ -1102,6 +1102,30 @@ def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, An
         if based_on == self_id:
             based_on = None
 
+        # Tab stops from TabList under Properties.
+        tab_stops: list[tuple[float, int]] = []
+        if props is not None:
+            tl = props.find("TabList")
+            if tl is not None:
+                for li in tl.findall("ListItem"):
+                    pos_el = li.find("Position")
+                    align_el = li.find("Alignment")
+                    if pos_el is None or pos_el.text is None:
+                        continue
+                    try:
+                        pos_pt = float(pos_el.text.strip())
+                    except ValueError:
+                        continue
+                    align_str = align_el.text.strip() if align_el is not None and align_el.text else "LeftAlign"
+                    # IDML Alignment → Scribus Tabulator Type
+                    tab_type = {
+                        "LeftAlign": 0,
+                        "RightAlign": 1,
+                        "CenterAlign": 2,
+                        "DecimalAlign": 3,
+                    }.get(align_str, 0)
+                    tab_stops.append((pos_pt, tab_type))
+
         point_size = ps.get("PointSize")
         fill_color = ps.get("FillColor")
         font_style = ps.get("FontStyle")
@@ -1116,6 +1140,7 @@ def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, An
             "font_style": font_style,
             "justification": justification,
             "applied_font": applied_font,
+            "tab_stops": tab_stops if tab_stops else None,
         }
     return styles
 
@@ -1134,7 +1159,7 @@ def _resolve_paragraph_style(
         visited.add(parent_self)
         parent = all_styles[parent_self]
         for k in ("point_size", "leading", "fill_color", "font_style",
-                  "justification", "applied_font"):
+                  "justification", "applied_font", "tab_stops"):
             if resolved.get(k) is None:
                 resolved[k] = parent.get(k)
         parent_self = parent.get("based_on_self")
@@ -1253,6 +1278,13 @@ def _emit_paragraph_styles_to_function(
                     kwargs["linesp"] = float(ld)
                 except ValueError:
                     pass
+            # Tab stops: emit only those defined directly on THIS style (not inherited),
+            # so child styles don't redundantly repeat the parent's tab stops.
+            own_tabs = st.get("tab_stops")
+            if own_tabs:
+                kwargs["tab_stops"] = tuple(
+                    (round(pos, 4), typ) for pos, typ in own_tabs
+                )
             ctx.out.w("doc.add_para_style(ParaStyle(")
             ctx.out.indent += 1
             for k, v in kwargs.items():
@@ -2116,6 +2148,28 @@ def _csr_applied_font(csr: Any) -> Optional[str]:
     return None
 
 
+def _psr_effective_leading(psr: Any) -> Optional[str]:
+    """Return the effective Leading for a ParagraphStyleRange.
+
+    Scans all CharacterStyleRange children for a ``<Properties/Leading>``
+    value.  The first CSR with an explicit (non-Auto) numeric Leading wins
+    (InDesign applies the leading of the *first* CSR in the paragraph as the
+    dominant line spacing).  Returns ``"Auto"`` when the first CSR's leading
+    is literally ``"Auto"``; returns ``None`` when no CSR carries any Leading
+    child at all (caller should fall back to the paragraph style's own leading
+    or leave the ``<para>`` element without explicit LINESPMode/LINESP).
+    """
+    for csr in psr:
+        if not isinstance(csr.tag, str):
+            continue
+        if etree.QName(csr).localname != "CharacterStyleRange":
+            continue
+        ld_el = csr.find("Properties/Leading")
+        if ld_el is not None and ld_el.text:
+            return ld_el.text.strip()
+    return None
+
+
 def _walk_story(
     story_root: Any,
     paragraph_style_map: dict[str, str],
@@ -2178,16 +2232,38 @@ def _walk_story(
         # that takes precedence over the applied style's defaults.
         # LeftAlign (0) is the default; only non-zero values require an override.
         psr_just = psr.get("Justification")
-        psr_align_override: Optional[dict] = None
+        psr_para_attrs: dict = {}
         if psr_just and psr_just in JUSTIFICATION_MAP:
             align_int = JUSTIFICATION_MAP[psr_just]
             if align_int != 0:  # 0 = LeftAlign = default, no override needed
-                psr_align_override = {"ALIGN": str(align_int)}
+                psr_para_attrs["ALIGN"] = str(align_int)
         elif psr_just and psr_just not in JUSTIFICATION_MAP:
             raise UnhandledElement(
                 f"ParagraphStyleRange Justification={psr_just!r} unknown "
                 f"(extend tools/idml_to_dsl.py:JUSTIFICATION_MAP)"
             )
+
+        # Per-para LINESPMode + LINESP from the CSR's Properties/Leading.
+        # InDesign renders with the explicit Leading value from the first CSR in
+        # the paragraph; Scribus falls back to ~15pt without an explicit LINESP.
+        # Scribus SLA LINESPMode semantics (from reference.sla corpus):
+        #   0 = auto (proportional to font size; LINESP is a default, not enforced)
+        #   1 = auto-from-font-metrics (no explicit LINESP needed)
+        #   2 = explicit fixed LINESP value ("Fixed" in Scribus UI)
+        # We emit LINESPMode="2" + LINESP=<value> for numeric IDML Leading, or
+        # LINESPMode="1" for Auto-leading (font-metrics-based).
+        psr_ld = _psr_effective_leading(psr)
+        if psr_ld is not None:
+            if psr_ld == "Auto":
+                psr_para_attrs["LINESPMode"] = "1"
+            else:
+                try:
+                    psr_para_attrs["LINESPMode"] = "2"
+                    psr_para_attrs["LINESP"] = str(float(psr_ld))
+                except ValueError:
+                    pass  # malformed value — skip silently
+
+        psr_align_override: Optional[dict] = psr_para_attrs if psr_para_attrs else None
 
         para_runs: list[Run] = []
         # Walk CharacterStyleRange children of the PSR in document order.
@@ -2197,7 +2273,8 @@ def _walk_story(
             ctag = etree.QName(child).localname
             if ctag == "CharacterStyleRange":
                 para_runs.extend(
-                    _walk_csr(child, ps_family, color_map, ps_font_style=ps_font_style)
+                    _walk_csr(child, ps_family, color_map, ps_font_style=ps_font_style,
+                              para_slug=para_slug, para_attrs=psr_align_override)
                 )
                 continue
             if ctag in _ALLOWED_PSR_CHILDREN:
@@ -2261,9 +2338,12 @@ def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
     extracts the trail-level override so ``_emit_pageitem`` can pass it as
     ``TextFrame(trail_attrs=...)``.
 
-    Only non-default (non-LeftAlign) justification values produce output.
+    Only non-default (non-LeftAlign) justification values produce ALIGN output.
     LeftAlign (JUSTIFICATION_MAP value 0) is Scribus's default and requires no
     explicit ALIGN attribute.
+
+    Also emits LINESPMode + LINESP from the last PSR's CSR ``Properties/Leading``
+    (same rule as ``_walk_story`` applies to inter-paragraph ``<para>`` separators).
     """
     walk_root = story_root
     inner = story_root.find("Story")
@@ -2276,12 +2356,23 @@ def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
     if not psrs:
         return None
     last_psr = psrs[-1]
+    trail: dict = {}
     psr_just = last_psr.get("Justification")
     if psr_just and psr_just in JUSTIFICATION_MAP:
         align_int = JUSTIFICATION_MAP[psr_just]
         if align_int != 0:
-            return {"ALIGN": str(align_int)}
-    return None
+            trail["ALIGN"] = str(align_int)
+    psr_ld = _psr_effective_leading(last_psr)
+    if psr_ld is not None:
+        if psr_ld == "Auto":
+            trail["LINESPMode"] = "1"
+        else:
+            try:
+                trail["LINESPMode"] = "2"
+                trail["LINESP"] = str(float(psr_ld))
+            except ValueError:
+                pass
+    return trail if trail else None
 
 
 def _walk_csr(
@@ -2289,11 +2380,24 @@ def _walk_csr(
     ps_family: Optional[str],
     color_map: dict[str, str],
     ps_font_style: Optional[str] = None,
+    para_slug: Optional[str] = None,
+    para_attrs: Optional[dict] = None,
 ) -> list[Run]:
     """Convert a <CharacterStyleRange> into a list of Run primitives.
 
     Honors inline ``<Content>``, ``<Br/>``, and ``<?ACE 7?>`` markers in
     document order. ``<?ACE N?>`` with N != 7 raises.
+
+    ``para_slug`` is the Scribus paragraph style name for the enclosing PSR.
+    When ``<Br/>`` is encountered inside a CSR, it emits a ``separator='para'``
+    Run (InDesign paragraph break) rather than a ``separator='breakline'`` Run
+    (Scribus forced line break within a paragraph). This preserves the hanging-
+    indent and per-paragraph attributes of each bullet / list item.
+
+    ``para_attrs`` carries the per-paragraph attribute overrides (e.g.
+    ``{"LINESPMode": "0", "LINESP": "27.0", "ALIGN": "1"}``). These are
+    forwarded to any ``<Br/>``-generated ``Run(separator="para")`` elements
+    so that all paragraphs within the PSR get the correct line spacing.
 
     Font cascade:
     - ``csr_family``: explicit AppliedFont on this CSR (highest priority).
@@ -2408,16 +2512,39 @@ def _walk_csr(
                     if sub.tail:
                         text_parts.append(sub.tail)
             text = "".join(text_parts)
-            runs.append(
-                Run(
-                    text=text,
-                    font=font_name,
-                    fontsize=fontsize,
-                    fcolor=fcolor,
-                )
-            )
+            # Split on tab chars so Scribus emits <tab/> elements (which honour
+            # paragraph-style tab stops) rather than ITEXT CH with embedded &#9;
+            # (which uses the document-default TabWidth and ignores style tab stops).
+            segments = text.split("\t")
+            for seg_idx, seg in enumerate(segments):
+                if seg:
+                    runs.append(
+                        Run(
+                            text=seg,
+                            font=font_name,
+                            fontsize=fontsize,
+                            fcolor=fcolor,
+                        )
+                    )
+                if seg_idx < len(segments) - 1:
+                    # Emit a tab separator between segments (including leading/trailing tabs).
+                    runs.append(Run(text="", font=font_name, fontsize=fontsize, fcolor=fcolor, separator="tab"))
         elif ctag == "Br":
-            runs.append(Run(text="", separator="breakline"))
+            # IDML <Br/> is an "end of paragraph" marker within a PSR, not a
+            # forced line break. In Scribus this must be a <para> (paragraph
+            # separator) so each bullet/section gets its own paragraph with
+            # correct hanging-indent and LINESPMode behaviour.  We use
+            # has_itext=False to avoid emitting a spurious empty <ITEXT CH=""/>
+            # before the <para/> — consecutive control elements must not invent
+            # text nodes (see primitives.py Run docstring).
+            # para_attrs carries LINESPMode + LINESP (and ALIGN if needed) so
+            # every sub-paragraph within the PSR gets explicit line spacing.
+            runs.append(Run(
+                has_itext=False,
+                separator="para",
+                paragraph_style=para_slug or None,
+                paragraph_attrs=para_attrs or None,
+            ))
         elif ctag == "Properties":
             continue
         else:

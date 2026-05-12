@@ -9,8 +9,8 @@ emitter writes only attributes whose value is not ``None``, so STYLE
 inheritance is preserved correctly.
 """
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -89,6 +89,11 @@ class ParaStyle:
                                               # number as string; we treat as opaque)
     numeration: Optional[int] = None         # Numeration
     is_default: bool = False                 # DefaultStyle="1"
+    # Tab stops — list of (position_pt, type) tuples.
+    # type: 0=left, 1=right, 2=center, 3=decimal (matches Scribus Tabs Type attr).
+    # Emitted as child <Tabs Type="..." Pos="..." Fill=""/> elements of <STYLE>.
+    # None (default) = no custom tab stops (Scribus uses document default tab width).
+    tab_stops: Optional[Tuple[Tuple[float, int], ...]] = None
 
 
 @dataclass(frozen=True)

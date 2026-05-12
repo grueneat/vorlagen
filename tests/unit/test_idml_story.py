@@ -2,7 +2,9 @@
 
 Pins the rules in PLAN.md task 7:
 - Single Content under one ParagraphStyleRange → one Run.
-- Br/ → Run(separator="breakline").
+- Br/ → Run(separator="para"): InDesign <Br/> is an end-of-paragraph marker,
+  not a forced line break. Must emit <para> so per-paragraph attributes
+  (hanging indent FIRST/INDENT, LINESPMode) apply to each bullet/section.
 - Inter-paragraph → Run(separator="para") with the paragraph_style PARENT.
 - Font cascade: CSR with FontStyle and no AppliedFont falls back to its
   paragraph style's resolved font family.
@@ -78,7 +80,12 @@ def test_single_content_emits_one_run():
     assert runs[0].separator is None
 
 
-def test_br_emits_breakline_between_content():
+def test_br_emits_para_between_content():
+    """InDesign <Br/> is an 'end of paragraph' marker (not a forced line-break).
+    It must map to separator='para' so Scribus creates a new paragraph and
+    per-paragraph attributes (hanging indent, LINESPMode) are applied correctly
+    to each bullet / list item that shares the same ParagraphStyleRange.
+    """
     xml = _story_xml(
         '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Fließtext auf grünem Hintergrund">'
         '<CharacterStyleRange><Content>A</Content><Br/><Content>B</Content></CharacterStyleRange>'
@@ -88,7 +95,9 @@ def test_br_emits_breakline_between_content():
     runs = _walk_story(root, **_styles_dict())
     texts = [(r.text, r.separator) for r in runs]
     assert ("A", None) in texts
-    assert ("", "breakline") in texts
+    # Br → para (not breakline): creates a new Scribus paragraph so that
+    # FIRST/INDENT hanging-indent and LINESPMode apply to each bullet.
+    assert ("", "para") in texts or any(r.separator == "para" and not r.has_itext for r in runs)
     assert ("B", None) in texts
 
 
