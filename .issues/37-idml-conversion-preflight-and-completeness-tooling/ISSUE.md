@@ -188,13 +188,15 @@ hand-patch the template.
 
 When visual_diff shows drift, consult content-level audits FIRST:
 text_render_audit (presence), text_position_audit (per-word position deltas),
-font_audit (per-font embedding), image_audit (raster + vector counts),
-and per_element_drift (per-slot mismatch pixel contribution — tells you which
-named template slot is responsible for the largest share of page mismatch so
-fix dispatches target the highest-leverage element first). These answer "what's
-different" mechanically. Visual review answers "how it looks", which is a much
-narrower question. Reach for the rendered images only when all structured audits
-are clean and residual drift is sub-percent.
+font_audit (per-font embedding), run_style_audit (per-Run font/size/color —
+catches wrong font per word even when the variant is embedded and the text is
+present), image_audit (raster + vector counts), and per_element_drift (per-slot
+mismatch pixel contribution — tells you which named template slot is responsible
+for the largest share of page mismatch so fix dispatches target the highest-
+leverage element first). These answer "what's different" mechanically. Visual
+review answers "how it looks", which is a much narrower question. Reach for the
+rendered images only when all structured audits are clean and residual drift is
+sub-percent.
 
 ## Scope
 
@@ -563,6 +565,64 @@ Key fields:
 
 Diagnostic only — never fails the audit (pass/fail is D8's job).
 
+### Phase F — Per-Run style fidelity (`tools/run_style_audit.py`)
+
+**Gap that D6 and D7 both miss:** D6 (`font_audit`) confirms each font variant
+is EMBEDDED in preview.pdf. D7 (`text_render_audit`) confirms each word's TEXT
+is rendered. Neither tells us WHICH FONT each word is rendered with. If a Run
+that should be Vollkorn Black Italic 38pt yellow is accidentally emitted as
+Gotham Narrow 38pt yellow, both audits pass but every glyph of that Run is
+wrong. Phase F catches that class.
+
+**Approach:** use `pdfplumber.extract_words(extra_attrs=["fontname", "size",
+"non_stroking_color"])` on both PDFs. For each baseline word, find the matching
+preview word (same page+text) via greedy first-available. Compare fontname
+(subset-prefix stripped), size (within tolerance), and color.
+
+**Severity heuristic:**
+- `large`: fontname differs (after stripping PDF subset prefix like `DAZTTR+`)
+  OR size differs > 1.0pt OR color RGB delta > 30
+- `small`: size differs 0.5–1.0pt OR color RGB delta 5–30 (likely ICC artifact)
+- not reported: within threshold
+
+**Common-word filter (default threshold=5):** Words appearing ≥ 5 times on a
+page in either PDF are excluded from `style_drifts` — high-frequency words
+produce ambiguous greedy matches. `suppressed_common_word_drifts_count` tracks
+excluded count (mirrors D8 logic).
+
+**`ok` flag:** `false` when any `large`-severity drift exists. Small drifts are
+surfaced but do not fail the audit (likely ICC/rounding).
+
+**Output schema** (`build/validation/<slug>/run_style_audit.yml`):
+
+```yaml
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+baseline_word_count: 464
+preview_word_count: 458
+threshold_size_pt: 0.5
+common_word_threshold: 5
+style_drift_count: 12
+suppressed_common_word_drifts_count: 0
+style_drifts:
+  - text: "Headline"
+    page: 0
+    baseline: {fontname: "GothamNarrow-Ultra", size: 37.93, color: "#ffffff"}
+    preview:  {fontname: "GothamNarrow-Black", size: 37.93, color: "#ffffff"}
+    drift: {fontname: "diff", size_pt: 0.0, color: false}
+    severity: large   # WRONG FONT — converter bug
+ok: false  # any large-severity drift fails
+```
+
+**Wire-up:** `render_pipeline.py::_run_audit` runs Phase F after D8
+(`text_position_audit`) when both `preview.pdf` and `baseline.pdf` exist.
+Prints a one-line summary:
+
+```
+[<slug>] run_style_audit: 3 large style drifts, 9 small drifts → REVIEW
+```
+
+Large drifts are added to `issue_parts` so `--audit-strict` surfaces them.
+
 ### Phase C — Workflow + agent discipline (low cost, high recall)
 
 #### C1. Single up-front visual review on import (`bin/idml-import`)
@@ -774,6 +834,33 @@ gaps become rare instead of routine.
       u1ae/u1c7/u1fd; on page 2 are u2cd/u295/u265/u3a2 (known hotspots)
 - [x] 9 unit tests + 4 integration tests; runtime <2s on v2 falzflyer data
 - [x] Deterministic YAML output (sort_keys=True, no timestamps)
+
+### Phase F — Per-Run style fidelity
+- [x] `tools/run_style_audit.py` exists; uses `pdfplumber.extract_words()` with
+      `extra_attrs=["fontname","size","non_stroking_color"]`; takes `preview.pdf` +
+      `baseline.pdf` + `--template` + `--threshold-size` (default 0.5pt) +
+      `--common-word-threshold` (default 5); emits `run_style_audit.yml`
+- [x] Output keys: `template`, `baseline_word_count`, `preview_word_count`,
+      `threshold_size_pt`, `common_word_threshold`, `style_drift_count`,
+      `suppressed_common_word_drifts_count`, `style_drifts` (list), `ok`
+- [x] Each `style_drift` entry: `text`, `page`, `baseline` (fontname/size/color),
+      `preview` (fontname/size/color), `drift` (fontname/size_pt/color), `severity`
+- [x] Subset-prefix stripping: `DAZTTR+GothamNarrow-Bold` → `GothamNarrow-Bold`
+- [x] Color normalisation: RGB tuple → `#rrggbb`; gray float → `gray:N`; CMYK →
+      `cmyk:C,M,Y,K`; None → `""`
+- [x] Severity: large = fontname differs OR size_diff > 1.0pt OR RGB delta > 30;
+      small = size diff 0.5–1.0pt OR RGB delta 5–30; None = sub-threshold
+- [x] `ok: false` when any large-severity drift exists; small-only → ok=true
+- [x] Common-word filter (same logic as D8): words >= threshold excluded;
+      `suppressed_common_word_drifts_count` records count
+- [x] Greedy match: each preview word consumed at most once per baseline word
+- [x] Words absent from preview are skipped (D7 handles presence)
+- [x] YAML output is deterministic (sort_keys=True, stable across two runs)
+- [x] Wired into `render_pipeline.py::_run_audit` after D8; large drifts added
+      to `issue_parts` for `--audit-strict`; runs when both PDFs exist
+- [x] 15 unit tests + 6 integration tests; runtime <3s on v2 falzflyer
+- [x] V2 falzflyer `run_style_audit.yml` produced; `ok: true` with 0 style
+      drifts — confirms current font encoding is correct after R4/R5 fixes
 
 ### Cross-cutting
 - [ ] All new tools have pytest coverage (repo idiom, not unittest —
