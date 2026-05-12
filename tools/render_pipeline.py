@@ -852,7 +852,25 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         try:
             from run_style_audit import run_style_audit as _rsa_run
             from run_style_audit import _yaml_dump as _rsa_yaml
-            rsa_report = _rsa_run(preview_pdf, baseline, template=tid)
+            # #37 P1 task 3: pass pdftotext word counts from D7 (if available)
+            # so run_style_audit can surface engine-disagreement warnings.
+            tra_counts: dict | None = None
+            if text_render_audit_path.exists():
+                try:
+                    import yaml as _yaml_mod
+                    tra_loaded = _yaml_mod.safe_load(
+                        text_render_audit_path.read_text(encoding="utf-8")
+                    ) or {}
+                    tra_counts = {
+                        "baseline": int(tra_loaded.get("baseline_word_count", 0) or 0),
+                        "preview": int(tra_loaded.get("preview_word_count", 0) or 0),
+                    }
+                except Exception:
+                    tra_counts = None
+            rsa_report = _rsa_run(
+                preview_pdf, baseline, template=tid,
+                text_render_audit_counts=tra_counts,
+            )
             run_style_audit_path.write_text(_rsa_yaml(rsa_report), encoding="utf-8")
             large = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "large")
             small = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "small")
@@ -870,11 +888,65 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                 )
             else:
                 print(f"[{tid}] run_style_audit: OK")
+            # Surface text-extraction-engine disagreement (Issue #37 P1 task 3).
+            eed = rsa_report.get("extraction_engine_disagreement")
+            if eed and eed.get("warn"):
+                print(
+                    f"[{tid}] run_style_audit: extraction engines disagree "
+                    f"({eed['preview_pdftotext']} vs "
+                    f"{eed['preview_pdfplumber']} preview words; "
+                    f"{eed['baseline_pdftotext']} vs "
+                    f"{eed['baseline_pdfplumber']} baseline words)",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"text extraction engines disagree "
+                    f"({eed['preview_pdftotext']} vs "
+                    f"{eed['preview_pdfplumber']} preview words)"
+                )
         except Exception as exc:
             print(f"[{tid}] audit F (run_style_audit) error: {exc}", file=sys.stderr)
     else:
         print(
             f"[{tid}] audit F (run_style_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
+    # Phase E2: line_spacing_audit — per-TextFrame baseline-to-baseline drift.
+    # Catches the LeadingModel-mismatch class (IDML CSR <Leading>14.3</Leading>
+    # rendered at 16.0pt in baseline.pdf). Issue #37 P3 task 14.
+    line_spacing_audit_path = out_dir / "line_spacing_audit.yml"
+    if preview_pdf.exists() and baseline.exists() and build_py.exists():
+        try:
+            from line_spacing_audit import (
+                run_line_spacing_audit as _lsa_run,
+                _yaml_dump as _lsa_yaml,
+            )
+            lsa_report = _lsa_run(preview_pdf, baseline, build_py, template=tid)
+            line_spacing_audit_path.write_text(
+                _lsa_yaml(lsa_report), encoding="utf-8",
+            )
+            if not lsa_report["ok"]:
+                print(
+                    f"[{tid}] line_spacing_audit: "
+                    f"{lsa_report['line_spacing_drift_count']} frame(s) with "
+                    f"|delta| > {lsa_report['threshold_pt']}pt → REVIEW",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"{lsa_report['line_spacing_drift_count']} line-spacing drift(s)"
+                )
+            else:
+                print(f"[{tid}] line_spacing_audit: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit E2 (line_spacing_audit) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit E2 (line_spacing_audit): skipped "
+            "(no preview.pdf, baseline.pdf, or build.py)",
             file=sys.stderr,
         )
 
@@ -935,12 +1007,265 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase H: per-region visual_diff (Backport 12 / Issue #37 P2).
+    # Runs ONLY when the page-wide rasterised PNGs already exist
+    # (baseline-page-N.png / dsl-page-N.png are produced by the page-wide
+    # visual_diff in _orchestrate_template). Diagnostic + failable; failing
+    # cells are surfaced to preflight via _build_preflight below.
+    vd_region_path = out_dir / "visual_diff_regions.yml"
+    if (out_dir / "baseline-page-1.png").exists() and (out_dir / "dsl-page-1.png").exists():
+        try:
+            from visual_diff import (
+                run_region_grid_audit as _vdr_run,
+                TemplateTolerance as _VDTol,
+            )
+            _vdr_tol = _VDTol.load(tdir / "diff.yml")
+            _vdr_result = _vdr_run(
+                baseline_png_dir=out_dir,
+                preview_png_dir=out_dir,
+                tolerance=_vdr_tol,
+                out_dir=out_dir,
+                template=tid,
+            )
+            vd_region_path.write_text(
+                yaml.dump(
+                    _vdr_result,
+                    sort_keys=True,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                ),
+                encoding="utf-8",
+            )
+            n_hot = sum(len(p["hot_regions"]) for p in _vdr_result["pages"])
+            if not _vdr_result["ok"]:
+                print(
+                    f"[{tid}] visual_diff_regions: {n_hot} hot region(s) → REVIEW",
+                    file=sys.stderr,
+                )
+                issue_parts.append(f"{n_hot} hot region(s)")
+            else:
+                print(f"[{tid}] visual_diff_regions: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit H (visual_diff_regions) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit H (visual_diff_regions): skipped "
+            "(no baseline/dsl page PNGs)",
+            file=sys.stderr,
+        )
+
+    # Issue #37 P1 task 6: aggregated preflight.yml — one canonical
+    # "are all sub-audits ok?" file that bin/render-gallery --audit hard-fails on.
+    preflight = _build_preflight(
+        out_dir, tid,
+        inventory_path=inventory_path,
+        text_audit_path=text_audit_path,
+        image_audit_path=image_audit_path,
+        font_audit_path=font_audit_path,
+        text_render_audit_path=text_render_audit_path,
+        text_position_audit_path=text_position_audit_path,
+        run_style_audit_path=run_style_audit_path,
+        color_audit_path=color_audit_path,
+        visual_diff_regions_path=vd_region_path,
+        line_spacing_audit_path=line_spacing_audit_path,
+    )
+    preflight_path = out_dir / "preflight.yml"
+    preflight_path.write_text(
+        yaml.dump(
+            preflight,
+            sort_keys=True,
+            allow_unicode=True,
+            default_flow_style=False,
+        ),
+        encoding="utf-8",
+    )
+    if not preflight["ok"]:
+        n_failed = sum(1 for a in preflight["audits"].values() if not a["ok"])
+        issue_parts.append(f"preflight FAILED ({n_failed} sub-audit(s))")
+
     if issue_parts:
         summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
     else:
         summary = f"[{tid}] audit: clean"
 
     return len(issue_parts), summary
+
+
+def _build_preflight(
+    out_dir: Path,
+    tid: str,
+    inventory_path: Path,
+    text_audit_path: Path,
+    image_audit_path: Path,
+    font_audit_path: Path,
+    text_render_audit_path: Path,
+    text_position_audit_path: Path,
+    run_style_audit_path: Path,
+    color_audit_path: Path,
+    visual_diff_regions_path: Path | None = None,
+    line_spacing_audit_path: Path | None = None,
+) -> dict:
+    """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
+
+    Shape::
+        {
+          template: <slug>,
+          ok: bool (AND of every sub-audit's ok),
+          audits: {
+            <name>: {ok: bool, issues: int, detail: str},
+            ...
+          },
+          hot_issues: [
+            {audit: <name>, issues: int, message: str},
+            ...  # top 5 by issues count, failing only
+          ],
+        }
+
+    Sub-audits that emit a yml ARE recorded; sub-audits whose yml is missing
+    (audit skipped because preview.pdf/baseline.pdf not present) are silently
+    omitted — they neither pass nor fail the preflight.
+
+    Diagnostic-only audits (``per_element_drift``, ``region_color_audit``)
+    are always recorded with ``ok=True``; they surface in ``hot_issues`` only
+    if explicitly opted-in by a future schema bump.
+    """
+    def _load_yml(p: Path) -> dict | None:
+        if not p.exists():
+            return None
+        try:
+            return yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        except Exception:
+            return None
+
+    audits_summary: dict[str, dict] = {}
+
+    def _record(name: str, ok: bool, issues: int, detail: str = "") -> None:
+        audits_summary[name] = {
+            "ok": bool(ok),
+            "issues": int(issues),
+            "detail": detail or "",
+        }
+
+    inv = _load_yml(inventory_path)
+    if inv is not None:
+        n_dropped = sum(
+            len(s.get("elements_dropped", []))
+            for s in inv.get("spreads", [])
+        )
+        _record("inventory", n_dropped == 0, n_dropped,
+                f"{n_dropped} dropped element(s)" if n_dropped else "")
+
+    ta = _load_yml(text_audit_path)
+    if ta is not None:
+        n_unmatched = sum(
+            len(p.get("lines_unmatched", []))
+            for p in ta.get("pages", [])
+        )
+        _record("text_audit", n_unmatched == 0, n_unmatched, "")
+
+    ia = _load_yml(image_audit_path)
+    if ia is not None:
+        n_delta = sum(
+            p.get("vector_paths", {}).get("delta", 0)
+            for p in ia.get("pages", [])
+            if p.get("vector_paths", {}).get("delta", 0) > 0
+        )
+        _record("image_audit", n_delta == 0, n_delta, "")
+
+    fa = _load_yml(font_audit_path)
+    if fa is not None:
+        missing = fa.get("missing_in_preview", []) or []
+        _record("font_audit", bool(fa.get("ok", False)), len(missing),
+                ", ".join(missing) if missing else "")
+
+    tra = _load_yml(text_render_audit_path)
+    if tra is not None:
+        missing = tra.get("missing_in_preview", {}) or {}
+        _record("text_render_audit", bool(tra.get("ok", False)),
+                len(missing), "")
+
+    tpa = _load_yml(text_position_audit_path)
+    if tpa is not None:
+        _record("text_position_audit", bool(tpa.get("ok", False)),
+                int(tpa.get("large_deltas_count", 0) or 0), "")
+
+    rsa = _load_yml(run_style_audit_path)
+    if rsa is not None:
+        large = sum(
+            1 for d in (rsa.get("style_drifts") or [])
+            if d.get("severity") == "large"
+        )
+        _record("run_style_audit", bool(rsa.get("ok", False)) and large == 0,
+                large, "")
+
+    ped = _load_yml(out_dir / "per_element_drift.yml")
+    if ped is not None:
+        # diagnostic only — never fails preflight
+        _record("per_element_drift", True, 0,
+                "diagnostic; see top_contributors")
+
+    rca = _load_yml(color_audit_path)
+    if rca is not None:
+        # diagnostic only — but record the pattern + fill_likely count
+        fill_likely = int(
+            (rca.get("by_severity") or {}).get("fill_likely", 0) or 0
+        )
+        _record("region_color_audit", True, fill_likely,
+                str(rca.get("pattern", "")))
+
+    # Phase H (Issue #37 P2 task 10): per-region visual_diff. Hot-region count
+    # comes from the audit's hot_regions list (capped at 10 per page).
+    if visual_diff_regions_path is not None:
+        vdr = _load_yml(visual_diff_regions_path)
+        if vdr is not None:
+            n_hot = sum(
+                len(p.get("hot_regions", []) or [])
+                for p in (vdr.get("pages") or [])
+            )
+            _record(
+                "visual_diff_regions",
+                bool(vdr.get("ok", True)),
+                n_hot,
+                "",
+            )
+
+    # Phase E2 (Issue #37 P3 task 14): line_spacing_audit drift count.
+    if line_spacing_audit_path is not None:
+        lsa = _load_yml(line_spacing_audit_path)
+        if lsa is not None:
+            _record(
+                "line_spacing_audit",
+                bool(lsa.get("ok", True)),
+                int(lsa.get("line_spacing_drift_count", 0) or 0),
+                "",
+            )
+
+    preflight_ok = all(a["ok"] for a in audits_summary.values())
+
+    # Hot-issues list: top 5 failing audits by issue count.
+    hot = sorted(
+        ((name, info) for name, info in audits_summary.items()
+         if not info["ok"]),
+        key=lambda kv: -kv[1]["issues"],
+    )[:5]
+    hot_issues = [
+        {
+            "audit": name,
+            "issues": info["issues"],
+            "message": info["detail"] or f"{info['issues']} issue(s)",
+        }
+        for name, info in hot
+    ]
+
+    return {
+        "template": tid,
+        "ok": preflight_ok,
+        "audits": audits_summary,
+        "hot_issues": hot_issues,
+    }
 
 
 def main(argv=None) -> int:
@@ -976,18 +1301,21 @@ def main(argv=None) -> int:
         "--audit",
         action="store_true",
         help=(
-            "After render+visual_diff, run A1 (idml_inventory) + A2 (baseline_text_audit) "
-            "+ A3 (baseline_image_audit) and write reports to "
-            "build/validation/<slug>/{inventory,text_audit,image_audit}.yml. "
-            "Prints a per-template audit summary. Informational only (use --audit-strict "
-            "to fail on audit issues)."
+            "After render+visual_diff, run every sub-audit (inventory, text, "
+            "image, fonts, text-render, text-position, run-style, "
+            "per-element-drift, region-color) and write reports to "
+            "build/validation/<slug>/*.yml. Aggregates the sub-audits into a "
+            "single preflight.yml. "
+            "Hard-fails (exit non-zero) when any preflight.yml::ok == false. "
+            "Use --audit-strict to additionally fail on any audit issue_parts."
         ),
     )
     parser.add_argument(
         "--audit-strict",
         action="store_true",
         help=(
-            "Same as --audit but exits non-zero if any audit issues are found. "
+            "Same as --audit but also exits non-zero if any audit-summary "
+            "issue_parts are reported (a stricter superset of preflight failure). "
             "Implies --audit. Intended for CI."
         ),
     )
@@ -1077,7 +1405,31 @@ def main(argv=None) -> int:
     print(sep)
 
     overall = 0 if all(rc == 0 for rc in results.values()) else 1
-    # --audit-strict: fail if any audit issues found
+    # Issue #37 P1 task 6: --audit (not just --audit-strict) hard-fails when
+    # any per-template preflight.yml::ok == false.
+    if getattr(args, "audit", False):
+        preflight_failed: list[str] = []
+        for tdir in work:
+            tid = tdir.name
+            preflight_p = ROOT / "build" / "validation" / tid / "preflight.yml"
+            if preflight_p.exists():
+                try:
+                    pre = yaml.safe_load(
+                        preflight_p.read_text(encoding="utf-8")
+                    ) or {}
+                except Exception:
+                    pre = {}
+                if pre.get("ok") is False:
+                    preflight_failed.append(tid)
+        if preflight_failed:
+            print(
+                f"AUDIT: preflight failed for {len(preflight_failed)} "
+                f"template(s) — exiting non-zero: "
+                f"{', '.join(preflight_failed)}",
+                file=sys.stderr,
+            )
+            overall = 1
+    # --audit-strict: additionally fail if any audit issue_parts reported
     if getattr(args, "audit_strict", False) and audit_issue_count_total > 0:
         print(
             f"AUDIT STRICT: {audit_issue_count_total} audit issue category(ies) found "

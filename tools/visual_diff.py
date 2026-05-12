@@ -38,9 +38,15 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 
 PT_PER_INCH = 72.0
+
+# Default per-region grid shape (Issue #37 Backport 12 / P2 task 7).
+# 6x4 cells per page is ~ "design-slot sized" on A4 (35×74 mm per cell).
+DEFAULT_GRID_COLS = 6
+DEFAULT_GRID_ROWS = 4
 
 
 @dataclass
@@ -53,11 +59,29 @@ class TemplateTolerance:
     ``fuzz_pct=25`` absorbs most of that noise; per-template configs raise
     ``max_pixel_mismatch_pct`` for body-text-heavy templates (e.g. Zeitung)
     where the sum of glyph-edge hinting drift naturally exceeds 1%.
+
+    The ``region_grid`` block (Issue #37 P2 / Backport 12) adds a per-cell
+    diff metric so semantically large but pixel-small drift (e.g. a centred
+    headline shifted 5 mm) is no longer washed out by the page-wide average.
+    Schema::
+
+        region_grid:
+          cols: int (default 6)
+          rows: int (default 4)
+          default_max_pixel_mismatch_pct: float (defaults to max_pixel_mismatch_pct)
+          default_fuzz_pct: float (defaults to fuzz_pct)
+          per_cell:
+            - page: int
+              col: int
+              row: int
+              max_pixel_mismatch_pct: float (optional)
+              fuzz_pct: float (optional)
     """
     max_pixel_mismatch_pct: float = 1.0
     fuzz_pct: float = 25.0
     per_page: dict = field(default_factory=dict)   # int -> {max_pixel_mismatch_pct?, fuzz_pct?}
     per_region: list = field(default_factory=list) # list of {page, bbox_mm, max_pixel_mismatch_pct?, fuzz_pct?}
+    region_grid: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Optional[Path]) -> "TemplateTolerance":
@@ -72,11 +96,25 @@ class TemplateTolerance:
             page = int(entry.get("page"))
             per_page[page] = {k: v for k, v in entry.items() if k != "page"}
         per_region = block.get("per_region", []) or []
+        region_grid = block.get("region_grid", {}) or {}
+        if region_grid:
+            region_grid.setdefault("cols", DEFAULT_GRID_COLS)
+            region_grid.setdefault("rows", DEFAULT_GRID_ROWS)
+            region_grid.setdefault("per_cell", [])
+            cols = region_grid["cols"]
+            rows = region_grid["rows"]
+            assert isinstance(cols, int) and cols > 0, (
+                f"region_grid.cols must be a positive int, got {cols!r}"
+            )
+            assert isinstance(rows, int) and rows > 0, (
+                f"region_grid.rows must be a positive int, got {rows!r}"
+            )
         return cls(
             max_pixel_mismatch_pct=float(block.get("max_pixel_mismatch_pct", 1.0)),
             fuzz_pct=float(block.get("fuzz_pct", 2.0)),
             per_page=per_page,
             per_region=per_region,
+            region_grid=region_grid,
         )
 
     def for_page(self, page_index: int) -> tuple[float, float]:
@@ -85,6 +123,31 @@ class TemplateTolerance:
             float(cfg.get("max_pixel_mismatch_pct", self.max_pixel_mismatch_pct)),
             float(cfg.get("fuzz_pct", self.fuzz_pct)),
         )
+
+    def for_cell(self, page_index: int, col: int, row: int) -> tuple[float, float]:
+        """Resolve (max_pixel_mismatch_pct, fuzz_pct) for one grid cell.
+
+        Resolution order:
+        1. per_cell override matching (page, col, row) keys
+        2. region_grid.default_{max_pixel_mismatch_pct,fuzz_pct}
+        3. per-page tolerance (via ``for_page``)
+
+        Issue #37 P2 task 7.
+        """
+        page_max, page_fuzz = self.for_page(page_index)
+        grid = self.region_grid or {}
+        max_pct = float(grid.get("default_max_pixel_mismatch_pct", page_max))
+        fuzz = float(grid.get("default_fuzz_pct", page_fuzz))
+        for cell in grid.get("per_cell", []) or []:
+            if (
+                cell.get("page") == page_index
+                and cell.get("col") == col
+                and cell.get("row") == row
+            ):
+                max_pct = float(cell.get("max_pixel_mismatch_pct", max_pct))
+                fuzz = float(cell.get("fuzz_pct", fuzz))
+                break
+        return max_pct, fuzz
 
 
 @dataclass
@@ -197,6 +260,257 @@ def montage_composite(baseline: Path, dsl: Path, diff: Path, out: Path) -> None:
         "-tile", "3x1", "-geometry", "+4+4",
         str(out),
     ])
+
+
+def compare_grid(
+    baseline_png: Path,
+    preview_png: Path,
+    cols: int,
+    rows: int,
+    fuzz_pct: float = 25.0,
+) -> list[dict]:
+    """Per-cell pixel diff over a ``cols × rows`` grid laid on both rasters.
+
+    Both images MUST be the same pixel dimensions (caller's responsibility to
+    ensure DPI-matched pdftoppm rasterisation). Returns a list of dicts in
+    (row, col) reading order::
+
+        {col, row, mismatch_pixels, total_pixels, mismatch_pct,
+         bbox_px: {x, y, w, h}}
+
+    Mismatch semantics approximate ImageMagick ``compare -metric AE -fuzz N%``:
+    per pixel, the maximum per-channel absolute delta is compared to
+    ``threshold = round(255 * fuzz_pct / 100)`` and counted as mismatched if
+    strictly greater. Cell totals do NOT exactly equal the page-wide
+    ImageMagick AE value (Euclidean vs max-channel semantics; ~1-2 % drift),
+    which is expected — see ``ecosystem.md`` §10.5.
+
+    Implementation uses Pillow (``ImageChops.difference`` + ``lighter``) so
+    there are no fork-cost overheads from 24+ subprocess calls per page.
+
+    Issue #37 P2 task 8 (Backport 12).
+    """
+    base = Image.open(baseline_png).convert("RGB")
+    prev = Image.open(preview_png).convert("RGB")
+    if base.size != prev.size:
+        raise ValueError(
+            f"image size mismatch: baseline={base.size}, preview={prev.size}"
+        )
+    w_px, h_px = base.size
+
+    # Integer cell sizes; the LAST column/row absorbs the modulus so we
+    # always cover the full image without overlap or gap.
+    col_widths = [w_px // cols] * cols
+    col_widths[-1] += w_px % cols
+    row_heights = [h_px // rows] * rows
+    row_heights[-1] += h_px % rows
+
+    threshold = round(255 * fuzz_pct / 100.0)
+
+    results: list[dict] = []
+    y = 0
+    for row in range(rows):
+        x = 0
+        for col in range(cols):
+            cell_w = col_widths[col]
+            cell_h = row_heights[row]
+            b_crop = base.crop((x, y, x + cell_w, y + cell_h))
+            p_crop = prev.crop((x, y, x + cell_w, y + cell_h))
+            diff = ImageChops.difference(b_crop, p_crop)
+            r, g, b = diff.split()
+            max_chan = ImageChops.lighter(ImageChops.lighter(r, g), b)
+            hist = max_chan.histogram()  # 256 bins
+            mismatch_px = sum(hist[threshold + 1:])
+            total_px = cell_w * cell_h
+            results.append({
+                "col": col,
+                "row": row,
+                "mismatch_pixels": int(mismatch_px),
+                "total_pixels": int(total_px),
+                "mismatch_pct": (
+                    round(mismatch_px / total_px * 100, 4) if total_px else 0.0
+                ),
+                "bbox_px": {"x": x, "y": y, "w": cell_w, "h": cell_h},
+            })
+            x += cell_w
+        y += row_heights[row]
+    return results
+
+
+def _heatmap_color(mismatch_pct: float, threshold_pct: float) -> tuple[int, int, int, int]:
+    """Linear ramp green → amber → red, RGBA tuple. Alpha fixed at 180/255.
+
+    - ``pct <= 0``           → green  (76, 175, 80)
+    - ``pct == threshold``   → amber  (255, 193, 7)
+    - ``pct >= 2*threshold`` → red    (244, 67, 54)
+
+    Linear interpolation between segments. Threshold = 0 (defensive) makes
+    every positive pct red.
+
+    Issue #37 P2 task 9 (Backport 12).
+    """
+    green = (76, 175, 80)
+    amber = (255, 193, 7)
+    red = (244, 67, 54)
+    if mismatch_pct <= 0:
+        rgb = green
+    elif threshold_pct <= 0:
+        rgb = red
+    elif mismatch_pct >= 2 * threshold_pct:
+        rgb = red
+    elif mismatch_pct <= threshold_pct:
+        t = mismatch_pct / threshold_pct
+        rgb = tuple(int(green[i] + (amber[i] - green[i]) * t) for i in range(3))
+    else:
+        t = (mismatch_pct - threshold_pct) / threshold_pct
+        rgb = tuple(int(amber[i] + (red[i] - amber[i]) * t) for i in range(3))
+    return (rgb[0], rgb[1], rgb[2], 180)
+
+
+def render_grid_heatmap(
+    baseline_png: Path,
+    cells: list[dict],
+    threshold_pct: float,
+    out_png: Path,
+) -> None:
+    """Render an RGBA heatmap overlaying ``cells`` on a grayscale baseline.
+
+    Each cell is filled with a green→amber→red ramped color (per
+    ``_heatmap_color``) and labelled with its ``mismatch_pct``. Output is
+    saved as a PNG with the same pixel dimensions as ``baseline_png``.
+
+    Issue #37 P2 task 9 (Backport 12).
+    """
+    base = Image.open(baseline_png).convert("L").convert("RGBA")
+    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    try:
+        font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size=14,
+        )
+    except Exception:
+        font = ImageFont.load_default()
+    for cell in cells:
+        bx = cell["bbox_px"]["x"]
+        by = cell["bbox_px"]["y"]
+        bw = cell["bbox_px"]["w"]
+        bh = cell["bbox_px"]["h"]
+        color = _heatmap_color(cell["mismatch_pct"], threshold_pct)
+        draw.rectangle(
+            [bx, by, bx + bw - 1, by + bh - 1],
+            fill=color,
+            outline=(0, 0, 0, 255),
+            width=1,
+        )
+        label = f"{cell['mismatch_pct']:.1f}%"
+        draw.text((bx + 4, by + 4), label, fill=(0, 0, 0, 255), font=font)
+    composite = Image.alpha_composite(base, overlay)
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+    composite.save(out_png, format="PNG")
+
+
+def run_region_grid_audit(
+    baseline_png_dir: Path,
+    preview_png_dir: Path,
+    tolerance: TemplateTolerance,
+    out_dir: Path,
+    template: str = "",
+) -> dict:
+    """Run per-cell visual diff on every page; emit heatmap PNGs + report dict.
+
+    Looks for ``baseline-page-{N}.png`` / ``dsl-page-{N}.png`` pairs (1-indexed)
+    in the given directories. Stops when a page's PNG pair isn't found.
+
+    ``tolerance.region_grid`` controls the grid shape; per-cell overrides are
+    resolved via ``tolerance.for_cell``. Heatmaps are saved into ``out_dir``
+    as ``visual_diff_heatmap-page-{N:02d}.png``.
+
+    Returns a dict::
+
+        {
+          template: str,
+          grid: {cols: int, rows: int},
+          pages: [
+            {page: int, regions: [...], hot_regions: [...], heatmap_png: str},
+            ...
+          ],
+          ok: bool,
+        }
+
+    Issue #37 P2 task 10 (Backport 12).
+    """
+    if not tolerance.region_grid:
+        tolerance.region_grid = {
+            "cols": DEFAULT_GRID_COLS,
+            "rows": DEFAULT_GRID_ROWS,
+            "per_cell": [],
+        }
+    cols = tolerance.region_grid["cols"]
+    rows = tolerance.region_grid["rows"]
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pages: list[dict] = []
+    page_idx = 0
+    while True:
+        base_p = baseline_png_dir / f"baseline-page-{page_idx + 1}.png"
+        prev_p = preview_png_dir / f"dsl-page-{page_idx + 1}.png"
+        if not base_p.exists() or not prev_p.exists():
+            break
+        page_max, page_fuzz = tolerance.for_page(page_idx)
+        cells = compare_grid(base_p, prev_p, cols, rows, fuzz_pct=page_fuzz)
+        # Apply per-cell tolerances (and recompute mismatch if per_cell fuzz
+        # differs from the page default — semantics MUST match the override).
+        for cell in cells:
+            cell_max, cell_fuzz = tolerance.for_cell(
+                page_idx, cell["col"], cell["row"]
+            )
+            cell["threshold_pct"] = cell_max
+            cell["fuzz_pct"] = cell_fuzz
+            if abs(cell_fuzz - page_fuzz) > 1e-6:
+                # Recompute this cell with the per-cell fuzz.
+                recomputed = compare_grid(
+                    base_p, prev_p, cols, rows, fuzz_pct=cell_fuzz,
+                )
+                for rc in recomputed:
+                    if rc["col"] == cell["col"] and rc["row"] == cell["row"]:
+                        cell["mismatch_pixels"] = rc["mismatch_pixels"]
+                        cell["total_pixels"] = rc["total_pixels"]
+                        cell["mismatch_pct"] = rc["mismatch_pct"]
+                        break
+            cell["pass"] = cell["mismatch_pct"] <= cell_max
+
+        hot_sorted = sorted(
+            (c for c in cells if not c["pass"]),
+            key=lambda c: -c["mismatch_pct"],
+        )[:10]
+        hot_regions = [
+            {
+                "col": c["col"],
+                "row": c["row"],
+                "mismatch_pct": c["mismatch_pct"],
+            }
+            for c in hot_sorted
+        ]
+
+        heatmap_name = f"visual_diff_heatmap-page-{page_idx + 1:02d}.png"
+        heatmap_path = out_dir / heatmap_name
+        render_grid_heatmap(base_p, cells, page_max, heatmap_path)
+
+        pages.append({
+            "page": page_idx,
+            "regions": cells,
+            "hot_regions": hot_regions,
+            "heatmap_png": heatmap_name,
+        })
+        page_idx += 1
+
+    page_ok = all(c["pass"] for page in pages for c in page["regions"])
+    return {
+        "template": template,
+        "grid": {"cols": cols, "rows": rows},
+        "pages": pages,
+        "ok": page_ok if pages else True,
+    }
 
 
 def crop_for_region(image: Path, dpi: int, page_w_pt: float, page_h_pt: float,

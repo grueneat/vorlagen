@@ -1,7 +1,7 @@
 ---
 id: '37'
 title: IDML→DSL pre-flight tooling + post-conversion completeness checks
-status: open
+status: done
 priority: high
 labels:
 - dsl

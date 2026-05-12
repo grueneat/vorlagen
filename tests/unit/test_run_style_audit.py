@@ -428,3 +428,129 @@ def test_greedy_no_double_counting(tmp_path, monkeypatch):
     # Second baseline "Title" consumed preview[1] (correct) → no drift
     assert report["style_drift_count"] == 1
     assert report["style_drifts"][0]["severity"] == "large"
+
+
+# ---------------------------------------------------------------------------
+# #37 P1 task 3: extraction-engine disagreement surfacing
+# ---------------------------------------------------------------------------
+
+def test_engine_disagreement_warn_when_counts_diverge(tmp_path, monkeypatch):
+    """pdftotext 444/444 vs pdfplumber 464/458 → warn=True, deltas reported."""
+    # Build 464 baseline + 458 preview pdfplumber words (no style drift).
+    baseline_words = [
+        _word(f"w{i}", 0, "TestFont-Regular", 12.0, "#000000")
+        for i in range(464)
+    ]
+    preview_words = [
+        _word(f"w{i}", 0, "TestFont-Regular", 12.0, "#000000")
+        for i in range(458)
+    ]
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_style_audit(
+        preview_pdf, baseline_pdf, template="test",
+        text_render_audit_counts={"baseline": 444, "preview": 444},
+    )
+    eed = report["extraction_engine_disagreement"]
+    assert eed["baseline_pdfplumber"] == 464
+    assert eed["preview_pdfplumber"] == 458
+    assert eed["baseline_pdftotext"] == 444
+    assert eed["preview_pdftotext"] == 444
+    assert abs(eed["baseline_delta_pct"] - 4.5) < 0.05  # 20/444 ≈ 4.5%
+    assert abs(eed["preview_delta_pct"] - 3.15) < 0.1   # 14/444 ≈ 3.15%
+    assert eed["warn"] is True
+
+
+def test_engine_disagreement_no_warn_when_counts_match(tmp_path, monkeypatch):
+    """Matching counts (444/444 both engines) → warn=False."""
+    baseline_words = [
+        _word(f"w{i}", 0, "TestFont-Regular", 12.0, "#000000")
+        for i in range(444)
+    ]
+    preview_words = list(baseline_words)
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_style_audit(
+        preview_pdf, baseline_pdf, template="test",
+        text_render_audit_counts={"baseline": 444, "preview": 444},
+    )
+    eed = report["extraction_engine_disagreement"]
+    assert eed["warn"] is False
+    assert eed["baseline_delta_pct"] == 0.0
+    assert eed["preview_delta_pct"] == 0.0
+
+
+def test_engine_disagreement_field_absent_when_no_counts(tmp_path, monkeypatch):
+    """``text_render_audit_counts=None`` → field absent from report."""
+    baseline_words = [_word("a", 0)]
+    preview_words = [_word("a", 0)]
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_style_audit(preview_pdf, baseline_pdf, template="test")
+    assert "extraction_engine_disagreement" not in report
+
+
+def test_engine_disagreement_does_not_downgrade_ok_alone(tmp_path, monkeypatch):
+    """Disagreement alone (no large style drifts) keeps ok=True. The plan says
+    disagreement is a WARNING, not a FAIL — surfaced via issue_parts in
+    render_pipeline.py but not via the ok flag.
+    """
+    baseline_words = [
+        _word(f"w{i}", 0, "TestFont-Regular", 12.0, "#000000")
+        for i in range(464)
+    ]
+    preview_words = [
+        _word(f"w{i}", 0, "TestFont-Regular", 12.0, "#000000")
+        for i in range(458)
+    ]
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_style_audit(
+        preview_pdf, baseline_pdf, template="test",
+        text_render_audit_counts={"baseline": 444, "preview": 444},
+    )
+    # No font/size/color drift in synthetic input → no large drifts → ok=true
+    assert report["ok"] is True
+    assert report["extraction_engine_disagreement"]["warn"] is True
+
+
+def test_engine_disagreement_threshold_1pct_exclusive(tmp_path, monkeypatch):
+    """Exactly 1 % delta is not a warning; > 1 % is."""
+    # 1 % of 100 = 1 → at 1 % warn=False (threshold is strictly > 1.0)
+    baseline_words = [_word(f"w{i}", 0) for i in range(101)]
+    preview_words = [_word(f"w{i}", 0) for i in range(100)]
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_style_audit(
+        preview_pdf, baseline_pdf, template="test",
+        text_render_audit_counts={"baseline": 100, "preview": 100},
+    )
+    eed = report["extraction_engine_disagreement"]
+    # baseline 101 vs 100 → 1.0 % delta exactly → warn=False (boundary)
+    assert eed["baseline_delta_pct"] == 1.0
+    assert eed["warn"] is False

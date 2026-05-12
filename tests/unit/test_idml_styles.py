@@ -162,3 +162,106 @@ def test_unknown_justification_not_in_map():
     assert "BogusAlign" not in JUSTIFICATION_MAP
     # The converter raises UnhandledElement on unknown justification when it
     # tries to translate; that path is exercised in the end-to-end run.
+
+
+# ---------------------------------------------------------------------------
+# Issue #37 P1 task 5 — always-emit per-paragraph ALIGN (Backport 11 edge case)
+# ---------------------------------------------------------------------------
+
+from idml_to_dsl import _walk_story  # noqa: E402
+
+_STYLES_FIXTURE_TEMPLATE = {
+    "paragraph_style_map": {
+        "ParagraphStyle/$ID/NormalParagraphStyle": "idml/normal",
+    },
+    "color_map": {"Color/Paper": "White"},
+    "paragraph_styles": {
+        "ParagraphStyle/$ID/NormalParagraphStyle": {
+            "self_id": "ParagraphStyle/$ID/NormalParagraphStyle",
+            "applied_font": "Gotham Narrow",
+            "font_style": "Book",
+            "point_size": 11.0,
+            "based_on_self": None,
+        },
+    },
+}
+
+
+def _story_xml_mixed(justifications: list[str]) -> str:
+    psrs = []
+    for i, just in enumerate(justifications):
+        attr = f' Justification="{just}"' if just else ""
+        psrs.append(
+            f'<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle"{attr}>'
+            f'<CharacterStyleRange><Content>para {i}</Content></CharacterStyleRange>'
+            '</ParagraphStyleRange>'
+        )
+    return (
+        '<Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">'
+        + "".join(psrs)
+        + '</Story>'
+    )
+
+
+def test_mixed_align_emits_explicit_align_per_paragraph():
+    """Three PSRs (Center, Left, Right) → every separator emits explicit ALIGN."""
+    xml = _story_xml_mixed(["CenterAlign", "LeftAlign", "RightAlign"])
+    root = etree.fromstring(xml.encode("utf-8"))
+    runs = _walk_story(root, **_STYLES_FIXTURE_TEMPLATE)
+    seps = [r for r in runs if r.separator == "para"]
+    # Three PSRs → two inter-paragraph separators (first→second, second→third).
+    assert len(seps) == 2
+    assert seps[0].paragraph_attrs == {"ALIGN": "1"}, seps[0].paragraph_attrs
+    assert seps[1].paragraph_attrs == {"ALIGN": "0"}, seps[1].paragraph_attrs
+
+
+def test_single_psr_leftalign_emits_explicit_trail_align_zero():
+    """Single LeftAlign PSR — trail_attrs surfaces ALIGN=0 explicitly.
+
+    For a single-paragraph story, there is no inter-PSR ``Run(separator='para')``
+    on which to attach paragraph_attrs. The alignment surfaces via two places
+    in ``_emit_pageitem``:
+      (1) ``default_style_attrs`` on the TextFrame (the <DefaultStyle/> elt), and
+      (2) ``trail_attrs`` from ``_psr_trail_attrs_for_story`` (the <trail/> elt).
+    Issue #37 P1 task 5 makes both explicit even when ALIGN=0.
+    """
+    from idml_to_dsl import _psr_trail_attrs_for_story
+    xml = _story_xml_mixed(["LeftAlign"])
+    root = etree.fromstring(xml.encode("utf-8"))
+    trail = _psr_trail_attrs_for_story(root)
+    assert trail is not None
+    assert trail.get("ALIGN") == "0", trail
+
+
+def test_two_psrs_both_center_explicit_align_on_separator():
+    """Both PSRs CenterAlign → the inter-PSR separator emits ALIGN=1."""
+    xml = _story_xml_mixed(["CenterAlign", "CenterAlign"])
+    root = etree.fromstring(xml.encode("utf-8"))
+    runs = _walk_story(root, **_STYLES_FIXTURE_TEMPLATE)
+    seps = [r for r in runs if r.separator == "para"]
+    assert len(seps) == 1  # 2 PSRs → 1 inter-PSR separator
+    assert seps[0].paragraph_attrs == {"ALIGN": "1"}
+
+
+def test_psr_without_justification_inherits_parastyle_align():
+    """A PSR without inline Justification picks up its AppliedParagraphStyle's
+    resolved justification. With ``justification=FullyJustified`` on the
+    ParaStyle, the inherited ALIGN value is 3 on the inter-PSR separator.
+    """
+    styles_with_just = {
+        **_STYLES_FIXTURE_TEMPLATE,
+        "paragraph_styles": {
+            "ParagraphStyle/$ID/NormalParagraphStyle": {
+                **_STYLES_FIXTURE_TEMPLATE["paragraph_styles"][
+                    "ParagraphStyle/$ID/NormalParagraphStyle"
+                ],
+                "justification": "FullyJustified",
+            },
+        },
+    }
+    xml = _story_xml_mixed(["", ""])  # 2 PSRs, no inline Justification on either
+    root = etree.fromstring(xml.encode("utf-8"))
+    runs = _walk_story(root, **styles_with_just)
+    seps = [r for r in runs if r.separator == "para"]
+    assert len(seps) == 1
+    assert seps[0].paragraph_attrs == {"ALIGN": "3"}, seps[0].paragraph_attrs

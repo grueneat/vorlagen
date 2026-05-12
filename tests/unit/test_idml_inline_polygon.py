@@ -54,6 +54,9 @@ def _make_ctx(color_map: dict[str, str] | None = None) -> _Ctx:
     ctx.logo_map = {}
     ctx.asset_map = {}
     ctx.unmapped_assets = []
+    # Issue #37 P3 task 16: completeness-tracking state.
+    ctx.emitted_self_ids = set()
+    ctx.skipped_with_reason = []
     return ctx
 
 

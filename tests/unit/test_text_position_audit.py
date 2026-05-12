@@ -31,6 +31,7 @@ from text_position_audit import (  # noqa: E402
     extract_words_with_positions,
     run_text_position_audit,
     _yaml_dump,
+    _word_matches_pdftotext,
 )
 
 
@@ -392,3 +393,143 @@ def test_suppressed_count_reflects_filter(tmp_path, monkeypatch):
     assert report["suppressed_common_word_deltas_count"] == 15  # 3 words × 5 occurrences
     total = report["large_deltas_count"] + report["suppressed_common_word_deltas_count"]
     assert total == 17  # 15 suppressed + 2 reported
+
+
+# ---------------------------------------------------------------------------
+# Test 10 (#37 P1 task 2): reverse-glyph pdfplumber output filtered via pdftotext
+# ---------------------------------------------------------------------------
+
+def test_pdftotext_filter_drops_reversed_word(tmp_path, monkeypatch):
+    """``:musserpmI`` (the reversed form of ``Impressum:``) is dropped because
+    pdftotext does not emit it; the forward ``Impressum:`` survives."""
+    import text_position_audit as tpa_module
+
+    forward = _word("Impressum:", 0, 100.0, 200.0)
+    reversed_glyph = _word(":musserpmI", 0, 100.0, 200.0)
+    # Baseline has the reversed-glyph artefact AND the forward word; preview
+    # has only the forward word. Without the filter, pdfplumber's reversed
+    # version would have no preview match (D7-like skip) — but the test
+    # exercises the filter directly by checking that the reversed word never
+    # reaches the matcher.
+    baseline_words = [forward, reversed_glyph]
+    preview_words = [forward]
+
+    def fake_extract(pdf_path):
+        if "baseline" in str(pdf_path):
+            return baseline_words
+        return preview_words
+
+    monkeypatch.setattr(tpa_module, "extract_words_with_positions", fake_extract)
+
+    # pdftotext returns only the forward token on both pages.
+    monkeypatch.setattr(
+        tpa_module,
+        "_pdftotext_tokens_per_page",
+        lambda path: [{"impressum:"}],
+    )
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_text_position_audit(preview_pdf, baseline_pdf, template="test")
+    assert report["suppressed_unmatched_word_count"] == 1
+    # The reversed word must not appear anywhere in large_deltas
+    for d in report["large_deltas"]:
+        assert "musserp" not in d["text"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Test 11: matched-on-both-extractors word survives the filter
+# ---------------------------------------------------------------------------
+
+def test_matched_word_survives_pdftotext_filter(tmp_path, monkeypatch):
+    """``Leonore`` present in both pdfplumber and pdftotext output survives."""
+    import text_position_audit as tpa_module
+    leonore = _word("Leonore", 0, 100.0, 200.0)
+
+    monkeypatch.setattr(
+        tpa_module,
+        "extract_words_with_positions",
+        lambda path: [leonore],
+    )
+    monkeypatch.setattr(
+        tpa_module,
+        "_pdftotext_tokens_per_page",
+        lambda path: [{"leonore"}],
+    )
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_text_position_audit(preview_pdf, baseline_pdf, template="test")
+    # No drift, no suppression
+    assert report["large_deltas_count"] == 0
+    assert report["suppressed_unmatched_word_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Test 12: pdftotext unavailable → graceful fall-back, no crash, count = -1
+# ---------------------------------------------------------------------------
+
+def test_pdftotext_unavailable_no_crash(tmp_path, monkeypatch):
+    """When pdftotext is missing, the audit must NOT crash. The new
+    ``suppressed_unmatched_word_count`` reports -1 to signal unavailability."""
+    import text_position_audit as tpa_module
+    leonore = _word("Leonore", 0, 100.0, 200.0)
+    monkeypatch.setattr(
+        tpa_module,
+        "extract_words_with_positions",
+        lambda path: [leonore],
+    )
+    monkeypatch.setattr(
+        tpa_module,
+        "_pdftotext_tokens_per_page",
+        lambda path: None,
+    )
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_text_position_audit(preview_pdf, baseline_pdf, template="test")
+    assert report["suppressed_unmatched_word_count"] == -1
+    assert report["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# Test 13: YAML output is deterministic (filter additions don't break sort)
+# ---------------------------------------------------------------------------
+
+def test_yaml_deterministic_with_filter_fields():
+    report = {
+        "template": "tpl",
+        "threshold_pt": 2.0,
+        "common_word_threshold": 5,
+        "large_deltas_count": 0,
+        "suppressed_common_word_deltas_count": 0,
+        "suppressed_unmatched_word_count": -1,
+        "large_deltas": [],
+        "ok": True,
+        "baseline_pdf": "b",
+        "preview_pdf": "p",
+    }
+    assert _yaml_dump(report) == _yaml_dump(report)
+
+
+# ---------------------------------------------------------------------------
+# Test 14: _word_matches_pdftotext substring tolerance (trailing punctuation)
+# ---------------------------------------------------------------------------
+
+def test_word_matches_pdftotext_substring():
+    tokens = {"impressum:", "leonore", "the"}
+    assert _word_matches_pdftotext("Impressum:", tokens)
+    assert _word_matches_pdftotext("Impressum", tokens)  # punctuation tolerant
+    assert _word_matches_pdftotext("Leonore", tokens)
+    assert not _word_matches_pdftotext(":musserpmI", tokens)
+    assert not _word_matches_pdftotext("xyz123", tokens)
+    assert not _word_matches_pdftotext("", tokens)

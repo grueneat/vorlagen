@@ -17,3 +17,11 @@
 visual_diff:
   max_pixel_mismatch_pct: 1.0
   fuzz_pct: 25.0
+  # Per-region grid (Backport 12 / Issue #37 P2): the per-cell metric
+  # surfaces localised drift that the page-wide average washes out. 6×4
+  # cells on a DIN-Lang Falzflyer page (~99×210mm) is roughly slot-sized
+  # (~17×52mm per cell). No per_cell overrides yet — tune after the first
+  # measurement pass.
+  region_grid:
+    cols: 6
+    rows: 4

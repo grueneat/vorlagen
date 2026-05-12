@@ -187,6 +187,7 @@ def run_style_audit(
     template: str = "",
     threshold_size_pt: float = SIZE_SMALL_THRESHOLD_PT,
     common_word_threshold: int = 5,
+    text_render_audit_counts: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Compare per-word style (font, size, color) between preview and baseline.
 
@@ -198,11 +199,20 @@ def run_style_audit(
     on the same page in either PDF are excluded from style_drifts (ambiguous
     match; mirrors D8 logic).
 
+    When ``text_render_audit_counts`` is supplied (shape: ``{"baseline": int,
+    "preview": int}`` — Phase D7 totals from pdftotext), an
+    ``extraction_engine_disagreement`` block is added to the report. If the
+    pdfplumber word counts differ from the pdftotext counts by > 1 %, the
+    block's ``warn`` flag is set to True. This surfaces silent engine
+    disagreement (Issue #37 P1 task 3): pre-fix v2 falzflyer had pdftotext
+    444/444 and pdfplumber 464/458, an issue no audit caught.
+
     Returns a dict with:
         template, baseline_word_count, preview_word_count,
         threshold_size_pt, common_word_threshold,
         style_drift_count, suppressed_common_word_drifts_count,
-        style_drifts (list), ok (bool).
+        style_drifts (list), ok (bool),
+        extraction_engine_disagreement (dict, optional).
     """
     base_words = extract_words_with_style(baseline_pdf)
     prev_words = extract_words_with_style(preview_pdf)
@@ -287,7 +297,7 @@ def run_style_audit(
 
     large_count = sum(1 for d in filtered_drifts if d["severity"] == "large")
 
-    return {
+    report: dict[str, Any] = {
         "template": template,
         "baseline_word_count": len(base_words),
         "preview_word_count": len(prev_words),
@@ -298,6 +308,34 @@ def run_style_audit(
         "style_drifts": filtered_drifts,
         "ok": large_count == 0,
     }
+
+    # Issue #37 P1 task 3: cross-engine word-count sanity check. pdftotext is
+    # the engine D7 trusts; pdfplumber is the engine F (this audit) trusts.
+    # If they disagree by > 1 %, surface the disagreement so executors know
+    # to investigate rather than silently trusting one engine over the other.
+    if text_render_audit_counts is not None:
+        base_pdftotext = int(text_render_audit_counts.get("baseline", 0) or 0)
+        prev_pdftotext = int(text_render_audit_counts.get("preview", 0) or 0)
+        base_plumber = len(base_words)
+        prev_plumber = len(prev_words)
+        baseline_delta_pct = round(
+            abs(base_plumber - base_pdftotext) / max(base_pdftotext, 1) * 100, 2
+        )
+        preview_delta_pct = round(
+            abs(prev_plumber - prev_pdftotext) / max(prev_pdftotext, 1) * 100, 2
+        )
+        eed = {
+            "baseline_pdfplumber": base_plumber,
+            "preview_pdfplumber": prev_plumber,
+            "baseline_pdftotext": base_pdftotext,
+            "preview_pdftotext": prev_pdftotext,
+            "baseline_delta_pct": baseline_delta_pct,
+            "preview_delta_pct": preview_delta_pct,
+            "warn": baseline_delta_pct > 1.0 or preview_delta_pct > 1.0,
+        }
+        report["extraction_engine_disagreement"] = eed
+
+    return report
 
 
 # ---------------------------------------------------------------------------
