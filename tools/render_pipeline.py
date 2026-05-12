@@ -36,7 +36,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
-from visual_diff import render_sla_to_pdf, rasterise  # noqa: E402
+from visual_diff import render_sla_to_pdf, rasterise, compare_pages, montage_composite  # noqa: E402
 
 DEFAULT_DPI = 50
 # Hi-res rasterise pass for the gallery's click-through preview (Issue #28).
@@ -424,7 +424,12 @@ def _run_sla_diff_strict(tid: str, tdir: Path, meta: dict) -> int:
 
 
 def _run_visual_diff(tid: str, tdir: Path, args) -> int:
-    """Run tools/visual_diff.py against baseline.pdf. Returns exit code (0 = pass or skip)."""
+    """Run tools/visual_diff.py against baseline.pdf. Returns exit code (0 = pass or skip).
+
+    When meta.yml::reference_sla is set, also runs a second diff lane comparing
+    the DSL preview.pdf against the Scribus-imported reference SLA rendered to PDF.
+    The second lane is informational only (P3) — its exit code does NOT propagate.
+    """
     baseline = tdir / "baseline.pdf"
     diff_yml = tdir / "diff.yml"
     if not (baseline.exists() and diff_yml.exists()):
@@ -452,7 +457,158 @@ def _run_visual_diff(tid: str, tdir: Path, args) -> int:
         )
     else:
         print(f"[{tid}] visual_diff (150dpi): PASS")
+
+    # Print lane 1 summary from the written JSON.
+    vd_json = out_dir / "visual_diff.json"
+    lane1_pass, lane1_pcts = _summarise_diff_json(vd_json)
+    _print_lane_summary(tid, "visual_diff  ", "(cross-engine vs baseline.pdf)", lane1_pcts, lane1_pass)
+
+    # Lane 2: reference_sla diff (informational, P3 — does NOT affect return code).
+    meta = _read_template_meta(tdir)
+    _run_reference_diff_lane(tid, tdir, meta, out_dir)
+
     return r.returncode
+
+
+def _summarise_diff_json(json_path: Path) -> tuple[bool, list[float]]:
+    """Parse a visual_diff.json and return (overall_pass, [mismatch_pct_per_page])."""
+    if not json_path.exists():
+        return False, []
+    try:
+        import json
+        data = json.loads(json_path.read_text(encoding="utf-8"))
+        overall_pass = bool(data.get("pass", False))
+        pcts = [float(p.get("mismatch_pct", 0.0)) for p in data.get("pages", [])]
+        return overall_pass, pcts
+    except Exception:
+        return False, []
+
+
+def _print_lane_summary(tid: str, lane_label: str, context: str,
+                         pcts: list[float], overall_pass: bool) -> None:
+    """Print a single-line lane summary in the canonical format."""
+    verdict = "PASS" if overall_pass else "FAIL"
+    if not pcts:
+        print(f"[{tid}] {lane_label} {context}: n/a ({verdict})")
+        return
+    pct_parts = " ".join(f"p{i+1}={v:.2f}%" for i, v in enumerate(pcts))
+    print(f"[{tid}] {lane_label} {context}: {pct_parts} ({verdict})")
+
+
+def _run_reference_diff_lane(tid: str, tdir: Path, meta: dict, out_dir: Path) -> None:
+    """Render reference_sla → PDF, then diff preview.pdf vs reference-scribus.pdf.
+
+    Writes reference_diff/reference_diff.json (same schema as visual_diff.json).
+    Errors are printed but never propagate — this lane is informational (P3).
+    """
+    import json
+    import time
+
+    ref_sla_rel = meta.get("reference_sla", "")
+    if not ref_sla_rel:
+        return
+
+    ref_sla_abs = (tdir / ref_sla_rel).resolve()
+    if not ref_sla_abs.exists():
+        print(
+            f"[{tid}] reference_diff: SKIPPED (reference_sla not found: {ref_sla_abs})",
+            file=sys.stderr,
+        )
+        return
+
+    ref_dir = out_dir / "reference_diff"
+    ref_dir.mkdir(parents=True, exist_ok=True)
+    ref_pdf = out_dir / "reference-scribus.pdf"
+
+    # Step 1: render the Scribus SLA to PDF.
+    print(f"[{tid}] reference_diff: rendering reference SLA → reference-scribus.pdf …")
+    t0 = time.monotonic()
+    try:
+        render_sla_to_pdf(ref_sla_abs, ref_pdf)
+        elapsed = time.monotonic() - t0
+        print(f"[{tid}] reference_diff: reference SLA rendered in {elapsed:.1f}s")
+    except Exception as exc:
+        print(
+            f"[{tid}] reference_diff: FAILED to render reference SLA: {exc}",
+            file=sys.stderr,
+        )
+        return
+
+    # Step 2: rasterise both PDFs (preview.pdf = DSL output, reference-scribus.pdf).
+    preview_pdf = tdir / "preview.pdf"
+    if not preview_pdf.exists():
+        print(
+            f"[{tid}] reference_diff: SKIPPED (no preview.pdf — render must precede diff)",
+            file=sys.stderr,
+        )
+        return
+
+    dpi = 150
+    try:
+        ref_pages = rasterise(ref_pdf, ref_dir / "ref-page", dpi)
+        dsl_pages = rasterise(preview_pdf, ref_dir / "dsl-page", dpi)
+    except Exception as exc:
+        print(f"[{tid}] reference_diff: rasterise failed: {exc}", file=sys.stderr)
+        return
+
+    if len(ref_pages) != len(dsl_pages):
+        print(
+            f"[{tid}] reference_diff: page count mismatch "
+            f"(ref={len(ref_pages)}, dsl={len(dsl_pages)})",
+            file=sys.stderr,
+        )
+        return
+
+    # Step 3: compare pages.
+    fuzz_pct = 2.0  # no template-specific tolerance for the reference lane
+    results = []
+    overall_pass = True
+    for idx, (r_png, d_png) in enumerate(zip(ref_pages, dsl_pages)):
+        diff_png = ref_dir / f"diff-page-{idx + 1:02d}.png"
+        composite_png = ref_dir / f"composite-page-{idx + 1:02d}.png"
+        try:
+            mismatch, total = compare_pages(d_png, r_png, diff_png, fuzz_pct)
+            montage_composite(r_png, d_png, diff_png, composite_png)
+        except Exception as exc:
+            print(f"[{tid}] reference_diff: compare page {idx+1} failed: {exc}", file=sys.stderr)
+            overall_pass = False
+            results.append({
+                "page": idx,
+                "mismatch_pixels": -1,
+                "total_pixels": -1,
+                "mismatch_pct": 100.0,
+                "pass": False,
+            })
+            continue
+        mismatch_pct = (mismatch / total * 100.0) if total else 0.0
+        # Use same threshold as default visual_diff tolerance (1.0%).
+        page_pass = mismatch_pct <= 1.0
+        if not page_pass:
+            overall_pass = False
+        results.append({
+            "page": idx,
+            "mismatch_pixels": mismatch,
+            "total_pixels": total,
+            "mismatch_pct": round(mismatch_pct, 4),
+            "pass": page_pass,
+            "composite": str(composite_png.relative_to(ref_dir)),
+            "delta_png": str(diff_png.relative_to(ref_dir)),
+        })
+
+    # Step 4: write reference_diff.json.
+    summary = {
+        "template_sla": str(tdir / "template.sla"),
+        "reference_sla": str(ref_sla_abs),
+        "baseline_pdf": str(ref_pdf),
+        "dpi": dpi,
+        "pass": overall_pass,
+        "pages": results,
+    }
+    ref_json = ref_dir / "reference_diff.json"
+    ref_json.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    pcts = [p["mismatch_pct"] for p in results]
+    _print_lane_summary(tid, "reference_diff", "(same-engine vs reference.sla)", pcts, overall_pass)
 
 
 # ---------------------------------------------------------------------------
