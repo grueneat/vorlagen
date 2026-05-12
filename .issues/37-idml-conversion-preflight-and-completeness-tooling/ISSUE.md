@@ -188,10 +188,13 @@ hand-patch the template.
 
 When visual_diff shows drift, consult content-level audits FIRST:
 text_render_audit (presence), text_position_audit (per-word position deltas),
-font_audit (per-font embedding), image_audit (raster + vector counts). These
-answer "what's different" mechanically. Visual review answers "how it looks",
-which is a much narrower question. Reach for the rendered images only when
-all structured audits are clean and residual drift is sub-percent.
+font_audit (per-font embedding), image_audit (raster + vector counts),
+and per_element_drift (per-slot mismatch pixel contribution — tells you which
+named template slot is responsible for the largest share of page mismatch so
+fix dispatches target the highest-leverage element first). These answer "what's
+different" mechanically. Visual review answers "how it looks", which is a much
+narrower question. Reach for the rendered images only when all structured audits
+are clean and residual drift is sub-percent.
 
 ## Scope
 
@@ -508,6 +511,58 @@ ok: false
 Wired into `render_pipeline.py::_run_audit` after D7 (`text_render_audit`).
 Runs when both `preview.pdf` and `baseline.pdf` exist. Surfaced in `--audit` output.
 
+### Phase E — Per-element drift attribution (`tools/per_element_drift.py`)
+
+**Aggregation layer over diff_bboxes.json.** The bbox extractor (D6/issue #36)
+attributes each detected mismatch region to a named slot (`attributed_slot`).
+Phase E sums those per-slot, expresses each as a fraction of the page's total
+mismatch, and writes a ranked `per_element_drift.yml` so fix dispatches target
+the highest-leverage slots first.
+
+**Purpose:** answers "which template element is responsible for the most
+visual_diff mismatch?" without reading a single image. Complements P9
+(content-level diff before visual) — mismatch pixel distribution is a
+content-level signal derived from the bbox JSON oracle.
+
+**Output schema** (`build/validation/<slug>/per_element_drift.yml`):
+
+```yaml
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+pages:
+  - page: 0
+    total_mismatch_pct: 8.0916
+    total_mismatch_px: 176130
+    bbox_count: 327
+    top_contributors:
+      - slot: u1ae
+        mismatch_px_summed: 36951
+        pct_of_page_mismatch: 20.98   # fraction of page mismatch in this slot
+        pct_of_page_total_drift: 1.70  # fixing this slot drops page drift by ~1.7pp
+        bbox_count: 244
+      - slot: __unattributed__         # bboxes with no matching anname (background)
+        ...
+  - page: 1
+    ...
+```
+
+Key fields:
+- `pct_of_page_mismatch` — rank by this to choose what to fix next.
+- `pct_of_page_total_drift` — the leverage number: "fixing this slot drops
+  page drift by Xpp." Uses `visual_diff.json`'s authoritative `mismatch_pixels`
+  as denominator (not the sum of bbox areas, which can differ due to overlap).
+- `__unattributed__` — bboxes that didn't match any named slot; often
+  background-color drift or AA noise between large un-named areas.
+- Top 20 per page (long tail is sub-1% and not actionable).
+
+**Wire-up:** `render_pipeline.py::_run_audit` runs Phase E after D8 when
+`diff_bboxes.json` + `visual_diff.json` both exist. Prints a summary line per page:
+
+```
+[<slug>] per_element_drift: top contributor page 1 is u1ae (1.7pp of page drift)
+```
+
+Diagnostic only — never fails the audit (pass/fail is D8's job).
+
 ### Phase C — Workflow + agent discipline (low cost, high recall)
 
 #### C1. Single up-front visual review on import (`bin/idml-import`)
@@ -703,6 +758,22 @@ gaps become rare instead of routine.
 - [ ] V2 falzflyer `text_position_audit.yml` produced; `large_deltas_count`
       reported (non-zero count expected given current layout drift state;
       surfaced as signal for R8/R9 positioning fix work)
+
+### Phase E — Per-element drift attribution
+- [x] `tools/per_element_drift.py` exists; reads `diff_bboxes.json` + `visual_diff.json`;
+      emits `per_element_drift.yml` with ranked per-slot `mismatch_px_summed`,
+      `pct_of_page_mismatch`, `pct_of_page_total_drift`, `bbox_count`
+- [x] Percentages use `visual_diff.json`'s authoritative `mismatch_pixels` as
+      denominator (not summed bbox areas, which differ due to overlap)
+- [x] Bboxes with null `attributed_slot` collected under `__unattributed__`
+- [x] `top_contributors` sorted descending by `mismatch_px_summed`; capped at 20
+- [x] Wired into `render_pipeline.py::_run_audit` after D8; runs when
+      `diff_bboxes.json` + `visual_diff.json` both exist; diagnostic only (never fails audit)
+- [x] Prints summary line per page: top contributor slot + pp contribution to page drift
+- [x] V2 falzflyer `per_element_drift.yml` produced; top contributors on page 1 are
+      u1ae/u1c7/u1fd; on page 2 are u2cd/u295/u265/u3a2 (known hotspots)
+- [x] 9 unit tests + 4 integration tests; runtime <2s on v2 falzflyer data
+- [x] Deterministic YAML output (sort_keys=True, no timestamps)
 
 ### Cross-cutting
 - [ ] All new tools have pytest coverage (repo idiom, not unittest —
