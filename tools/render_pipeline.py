@@ -997,6 +997,63 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase D7: text presence audit (preview.pdf vs baseline.pdf).
+    # Catches words emitted to Scribus but suppressed at render time
+    # (frame clipping, off-page, color-on-color, hidden layer, etc.).
+    text_render_audit_path = out_dir / "text_render_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from text_render_audit import run_text_render_audit, _yaml_dump as _tra_yaml
+            tra_report = run_text_render_audit(preview_pdf, baseline, template=tid)
+            text_render_audit_path.write_text(_tra_yaml(tra_report), encoding="utf-8")
+            if not tra_report["ok"]:
+                n_missing = sum(tra_report["missing_in_preview"].values())
+                n_unique = len(tra_report["missing_in_preview"])
+                print(
+                    f"[{tid}] text_render_audit: {n_unique} unique words missing "
+                    f"({n_missing} occurrences) — silent suppression → FAIL",
+                    file=sys.stderr,
+                )
+                issue_parts.append(f"{n_unique} word(s) missing in render")
+            else:
+                print(f"[{tid}] text_render_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit D7 (text_render_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit D7 (text_render_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
+    # Phase D8: text position audit (per-word bounding-box drift).
+    # Catches words rendered but mis-positioned (alignment drift, group-transform
+    # gaps, off-by-margin bugs). Threshold: 2.0pt ≈ 0.7mm.
+    text_position_audit_path = out_dir / "text_position_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from text_position_audit import run_text_position_audit, _yaml_dump as _tpa_yaml
+            tpa_report = run_text_position_audit(preview_pdf, baseline, template=tid)
+            text_position_audit_path.write_text(_tpa_yaml(tpa_report), encoding="utf-8")
+            if not tpa_report["ok"]:
+                print(
+                    f"[{tid}] text_position_audit: "
+                    f"{tpa_report['large_deltas_count']} word(s) drifted "
+                    f"> {tpa_report['threshold_pt']}pt",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"{tpa_report['large_deltas_count']} word(s) with position drift"
+                )
+            else:
+                print(f"[{tid}] text_position_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit D8 (text_position_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit D8 (text_position_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
     if issue_parts:
         summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
     else:
