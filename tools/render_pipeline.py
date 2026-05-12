@@ -909,6 +909,67 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase D4: 3-way Venn audit (IDML / Scribus-SLA / build.py)
+    # Requires: inventory.yml (already written above) + sla_inventory.yml (from reference_sla)
+    three_way_path = out_dir / "three_way_audit.yml"
+    sla_inventory_path = out_dir / "sla_inventory.yml"
+    reference_sla_rel = meta.get("reference_sla", "")
+    if reference_sla_rel:
+        reference_sla_abs = (tdir / reference_sla_rel).resolve()
+        if not reference_sla_abs.exists():
+            print(
+                f"[{tid}] audit D4 (three_way): skipped (reference_sla not found at {reference_sla_abs})",
+                file=sys.stderr,
+            )
+        elif not inventory_path.exists():
+            print(
+                f"[{tid}] audit D4 (three_way): skipped (inventory.yml not produced by A1)",
+                file=sys.stderr,
+            )
+        elif not (tdir / "build.py").exists():
+            print(
+                f"[{tid}] audit D4 (three_way): skipped (no build.py)",
+                file=sys.stderr,
+            )
+        else:
+            try:
+                from sla_inventory import run_sla_inventory, _yaml_dump as _sla_yaml
+                from three_way_audit import run_three_way_audit, _yaml_dump as _twa_yaml
+
+                # Step 1: produce sla_inventory.yml if absent or stale.
+                sla_report = run_sla_inventory(reference_sla_abs, template=tid)
+                sla_inventory_path.write_text(_sla_yaml(sla_report), encoding="utf-8")
+
+                # Step 2: run 3-way audit.
+                twa_report = run_three_way_audit(
+                    inventory_path,
+                    sla_inventory_path,
+                    tdir / "build.py",
+                    template=tid,
+                )
+                three_way_path.write_text(_twa_yaml(twa_report), encoding="utf-8")
+
+                s = twa_report["summary"]
+                twa_line = (
+                    f"[{tid}] three_way_audit: "
+                    f"{s['converter_bug']} converter_bug, "
+                    f"{s['geometry_drift']} geometry_drift, "
+                    f"{s['suspicious_emit']} suspicious_emit"
+                )
+                print(twa_line)
+                if s["converter_bug"] or s["suspicious_emit"]:
+                    twa_line += " → REVIEW"
+                    issue_parts.append(
+                        f"{s['converter_bug']} converter_bug / {s['suspicious_emit']} suspicious_emit"
+                    )
+            except Exception as exc:
+                print(f"[{tid}] audit D4 (three_way) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit D4 (three_way): skipped (no reference_sla in meta.yml)",
+            file=sys.stderr,
+        )
+
     if issue_parts:
         summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
     else:
