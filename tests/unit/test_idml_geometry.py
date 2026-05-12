@@ -174,6 +174,43 @@ def test_page_geometric_bounds_offset():
     assert (w, h) == pytest.approx((841.89, 595.28), rel=1e-3)
 
 
+def test_two_level_nested_group():
+    """Three-level cascade: item inside inner Group inside outer Group.
+
+    Mirrors u50c (outer) → u508 (inner) → u477 (Rectangle) from the target
+    IDML, which is a 2-deep Group nesting for the BlueSky social icon.
+
+    Outer group: tx=7.37, ty=0  (u50c ItemTransform, simplified)
+    Inner group: tx=0, ty=0    (u508 identity)
+    Item:        tx=388.37, ty=249.00  (u477 ItemTransform, simplified)
+    Anchors:     (-87.90, -19.48) to (-78.40, -10.13)  (9.50×9.35 pt)
+
+    ancestor_transforms order: innermost-first → [inner_group, outer_group]
+    """
+    anchors = [
+        (-87.90, -19.48),
+        (-87.90, -10.13),
+        (-78.40, -10.13),
+        (-78.40, -19.48),
+    ]
+    # outer → inner → item cascade
+    x, y, w, h, rot = _compute_page_local_bbox_pt(
+        item_transform_str="1 0 0 1 388.37 249.00",
+        anchors=anchors,
+        # innermost first: inner group (identity), then outer group (tx=7.37)
+        ancestor_transforms=["1 0 0 1 0 0", "1 0 0 1 7.37 0"],
+        spread_item_transform_str=IDENT,
+        page_item_transform_str=IDENT,
+    )
+    # Width/height unchanged by pure translations
+    assert (w, h) == pytest.approx((9.50, 9.35), abs=0.01)
+    assert rot == pytest.approx(0, abs=1e-4)
+    # x: (-87.90 + 388.37) + 0 + 7.37 = 307.84
+    # y: (-19.48 + 249.00) + 0 + 0 = 229.52
+    assert x == pytest.approx(307.84, abs=0.1)
+    assert y == pytest.approx(229.52, abs=0.1)
+
+
 def test_parse_matrix_rejects_bad_token_count():
     with pytest.raises(UnhandledElement):
         _parse_matrix("1 0 0 1 0")  # only 5 tokens

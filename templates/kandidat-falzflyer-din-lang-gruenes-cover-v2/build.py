@@ -671,13 +671,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        # Pre-cropped to show the correct icon region (Instagram icon, rows/cols from IDML).
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3e7-crop.png',
-        # 948×932 @600dpi → natural_h_pt = 932 × (72/600) = 111.84pt
-        # frame_h_pt = 3.299mm × 2.83465 = 9.352pt
-        # LOCALSCX = 9.352 / 111.84 = 0.083615
-        scale_type=0,
-        local_scale=(0.083615, 0.083615),
+        # IDML-derived: full social-media-icons-weiss.png with local_offset to crop to icon.
+        # scale=0.09 from PDF child ItemTransform; offset from PDF origin vs frame anchor.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        local_scale=(0.09, 0.09),
+        local_offset_mm=(-12.1647, -0.7654),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -696,11 +694,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        # Pre-cropped to show Facebook icon region from the multi-icon PNG.
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f0-crop.png',
-        # 948×932 @600dpi → LOCALSCX = 9.352 / 111.84 = 0.083615
-        scale_type=0,
-        local_scale=(0.083615, 0.083615),
+        # IDML-derived: full social-media-icons-weiss.png offset to second icon row.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        local_scale=(0.09, 0.09),
+        local_offset_mm=(-4.5974, -0.7654),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -719,11 +716,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        # Pre-cropped to show TikTok icon region from the multi-icon PNG.
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f5-crop.png',
-        # 947×932 @600dpi → natural_h_pt = 111.84pt; LOCALSCX = 9.352 / 111.84 = 0.083615
-        scale_type=0,
-        local_scale=(0.083615, 0.083615),
+        # IDML-derived: full social-media-icons-weiss.png offset to third icon row.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
+        local_scale=(0.09, 0.09),
+        local_offset_mm=(-8.28, -0.7654),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -742,12 +738,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u477',
         layer=0,
+        # IDML-derived scale from PDF child ItemTransform (scale=0.09158896567421919).
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
-        # 865×865 @600dpi → natural_h_pt = 865 × (72/600) = 103.8pt
-        # frame_h_pt = 3.299mm × 2.83465 = 9.352pt
-        # LOCALSCX = 9.352 / 103.8 = 0.090092
-        scale_type=0,
-        local_scale=(0.090092, 0.090092),
+        local_scale=(0.091589, 0.091589),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -766,10 +759,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4a2',
         layer=0,
+        # IDML-derived scale (0.095788) + tiny offset from PDF child ItemTransform.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
-        # 865×865 @600dpi → LOCALSCX = 9.352 / 103.8 = 0.090092
-        scale_type=0,
-        local_scale=(0.090092, 0.090092),
+        local_scale=(0.095788, 0.095788),
+        local_offset_mm=(-0.0774, -0.0774),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -788,10 +781,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u4da',
         layer=0,
+        # IDML-derived scale (0.095787) + tiny offset from PDF child ItemTransform.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
-        # 865×865 @600dpi → LOCALSCX = 9.352 / 103.8 = 0.090092
-        scale_type=0,
-        local_scale=(0.090092, 0.090092),
+        local_scale=(0.095787, 0.095787),
+        local_offset_mm=(-0.0672, -0.0626),
     ))
     page1.add(TextFrame(
         x_mm=263.26,
