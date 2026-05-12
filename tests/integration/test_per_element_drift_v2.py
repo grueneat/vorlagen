@@ -83,3 +83,34 @@ def test_runtime_under_2s():
     aggregate_per_element(diff_bboxes, visual_diff)
     elapsed = time.monotonic() - t0
     assert elapsed < 2.0, f"aggregate_per_element took {elapsed:.2f}s (limit: 2s)"
+
+
+def test_top3_no_over_attribution():
+    """#37 P1 task 1 acceptance: top-3 contributors per page sum to ≤100 %
+    (was 139 % before the HSL-halo normalisation fix)."""
+    _skip_if_missing()
+    diff_bboxes = json.loads(DIFF_BBOXES.read_text(encoding="utf-8"))
+    visual_diff = json.loads(VISUAL_DIFF.read_text(encoding="utf-8"))
+    result = aggregate_per_element(diff_bboxes, visual_diff)
+    for page in result["pages"]:
+        top3 = page["top_contributors"][:3]
+        total = sum(c["pct_of_page_mismatch"] for c in top3)
+        assert total <= 100.5, (
+            f"page {page['page']}: top-3 sum {total:.2f}% (> 100.5% — HSL halo "
+            "over-attribution regressed)"
+        )
+
+
+def test_normalisation_factor_field_present():
+    """#37 P1 task 1: each page has a `normalisation_factor` field."""
+    _skip_if_missing()
+    diff_bboxes = json.loads(DIFF_BBOXES.read_text(encoding="utf-8"))
+    visual_diff = json.loads(VISUAL_DIFF.read_text(encoding="utf-8"))
+    result = aggregate_per_element(diff_bboxes, visual_diff)
+    for page in result["pages"]:
+        assert "normalisation_factor" in page
+        assert isinstance(page["normalisation_factor"], float)
+        # On v2 falzflyer, the bboxes over-cover the AE mismatch ~1.5-2× so
+        # the factor sits between 0.3 and 1.5. (0 only when total_mismatch_px=0
+        # which doesn't apply here.)
+        assert 0.0 < page["normalisation_factor"] < 5.0
