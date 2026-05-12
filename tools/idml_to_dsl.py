@@ -1944,32 +1944,41 @@ def _emit_pages(ctx: _Ctx) -> None:
             # bounds by more than _guard_pt. These are InDesign design artifacts
             # (guides, registration marks) that InDesign excludes from PDF export
             # even when placed on a printable layer.
-            child_t = child.get("ItemTransform", "1 0 0 1 0 0")
-            try:
-                child_anchors = _extract_anchors(child)
-                child_x_pt, child_y_pt, child_w_pt, child_h_pt, _ = _compute_page_local_bbox_pt(
-                    child_t, child_anchors, [], spread_t, page_t, page_gb
-                )
-                if (
-                    child_x_pt + child_w_pt < -_guard_pt
-                    or child_x_pt > page_w_pt + _guard_pt
-                    or child_y_pt + child_h_pt < -_guard_pt
-                    or child_y_pt > page_h_pt + _guard_pt
-                ):
-                    sid = child.get("Self", "?")
-                    print(
-                        f"  [skip] {tag} Self={sid!r}: entirely outside page "
-                        f"bounds (x={child_x_pt * PT_TO_MM:.1f}mm "
-                        f"y={child_y_pt * PT_TO_MM:.1f}mm "
-                        f"w={child_w_pt * PT_TO_MM:.1f}mm "
-                        f"h={child_h_pt * PT_TO_MM:.1f}mm) — "
-                        f"InDesign design artifact, not emitted",
-                        file=sys.stderr,
+            #
+            # Groups are EXCLUDED from this guard: InDesign Group containers
+            # store their PathGeometry anchors in a design-time local space that
+            # does not directly map to page coordinates via the Group's own
+            # ItemTransform. The guard would use the Group's container bbox
+            # (which can appear wildly off-page) while the Group's children are
+            # placed correctly via their own transforms. Skipping the guard for
+            # Groups lets recursion in _emit_pageitem handle child placement.
+            if tag != "Group":
+                child_t = child.get("ItemTransform", "1 0 0 1 0 0")
+                try:
+                    child_anchors = _extract_anchors(child)
+                    child_x_pt, child_y_pt, child_w_pt, child_h_pt, _ = _compute_page_local_bbox_pt(
+                        child_t, child_anchors, [], spread_t, page_t, page_gb
                     )
-                    continue
-            except UnhandledElement:
-                # If anchor extraction fails (e.g. for Groups), skip the guard.
-                pass
+                    if (
+                        child_x_pt + child_w_pt < -_guard_pt
+                        or child_x_pt > page_w_pt + _guard_pt
+                        or child_y_pt + child_h_pt < -_guard_pt
+                        or child_y_pt > page_h_pt + _guard_pt
+                    ):
+                        sid = child.get("Self", "?")
+                        print(
+                            f"  [skip] {tag} Self={sid!r}: entirely outside page "
+                            f"bounds (x={child_x_pt * PT_TO_MM:.1f}mm "
+                            f"y={child_y_pt * PT_TO_MM:.1f}mm "
+                            f"w={child_w_pt * PT_TO_MM:.1f}mm "
+                            f"h={child_h_pt * PT_TO_MM:.1f}mm) — "
+                            f"InDesign design artifact, not emitted",
+                            file=sys.stderr,
+                        )
+                        continue
+                except UnhandledElement:
+                    # If anchor extraction fails for a non-Group, skip the guard.
+                    pass
             layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
             _emit_pageitem(ctx.out, child, [], spread_t, page_t, page_gb,
                            page_var, ctx, layer_idx)
