@@ -1637,3 +1637,86 @@ fails the audit.
 **Total test suite: 248 passed (was 235)**
 **Phase E runtime:** <50ms for v2 falzflyer (327 bboxes page 0, 337 page 1)
 **Phase E completed:** 2026-05-12
+
+---
+
+## Phase B — text_render_audit missing words + social icon frames (2026-05-12)
+
+**Goal:** Eliminate the 13 missing words in `text_render_audit.yml::missing_in_preview`
+(B1) and fix the 3 social media icon frames (u3e7/u3f0/u3f5) that all rendered the
+same leftmost icon fragment (B2).
+
+### B1 — 13 missing words classification and fix
+
+All 13 missing words were classified as **real suppressions** (Scribus clipping or
+silent data loss), not lorem-wrap artifacts:
+
+| Word(s) | Frame | Root cause | Fix |
+|---------|-------|------------|-----|
+| `kasten` | u376 | h=7.62mm clips line 2 of 2-line bold title at 12pt leading (8.47mm needed) | h → 8.47mm |
+| `re`, `ped`, `exceptatur`, `sed`, `quia.` | u35f | h=23.28mm clips line 5 of 5-line body at 14.3pt leading (25.22mm needed) | h → 25.22mm |
+| `impressum` | u347 | Rotated frame: converter emitted w/h post-rotation (10mm column) instead of pre-rotation (53.4mm column); Scribus clips "Impressum" at 10mm column | swap w↔h |
+| `headline.` × 2 | u1b0, u1e6 | h=17.99mm clips line 2 at 27pt leading (19.05mm needed) | h → 19.05mm |
+| `conemporro`, `lia`, `vellam`, `ur`, `omniet` | u1fd (converter) | ACE PI tail text silently dropped: `<Content>	•	<?ACE 7?>Ur, omniet </Content>` — the PI.tail "Ur, omniet " was never read | Fix `_walk_csr()` to concat PI.tail |
+
+**Converter fixes in `tools/idml_to_dsl.py`:**
+
+1. **ACE PI tail text** (`_walk_csr()`): When a `<Content>` element contains
+   `<?ACE 7?>` children, `sub.tail` is now concatenated into the run text.
+   Previously only `child.text` was read, silently dropping any text after the PI.
+
+2. **Multi-line frame height auto-adjust** (`_maybe_widen_frame_h()`): Extended
+   with sub-case C (explicit breaklines: `explicit_line_count × line_h_mm`) and
+   sub-case B (single-paragraph char-count heuristic using
+   `_NARROW_CHAR_RATIO = 0.40`). Sub-case A (frame shorter than 1 line) was
+   already present. Fixed sub-case B condition: was `h < required - line_h + ε`
+   (only fired if deficit ≥ 1 full line), changed to `h < required - ε`.
+
+3. **Rotated frame column width** (call site): For frame u347 (Impressum, -90°
+   rotation), the converter was emitting post-rotation visual bbox dimensions
+   (w=10mm, h=53.4mm). Scribus uses WIDTH as text column width. Fix: swap to
+   w=53.4mm (pre-rotation long side), h=10mm.
+
+**`_NARROW_CHAR_RATIO = 0.40`** calibrated on Gotham Narrow Book 11pt:
+`~34 chars/149pt line → ratio = 149/(34×11) ≈ 0.40`.
+
+**build.py hand-corrections** (u376, u35f, u1b0, u1e6 h_mm; u347 w/h swap;
+u1fd bullet ACE PI tail text) preserved — these are now also output correctly
+by the converter for new imports.
+
+**Commit:** `1d3158d` — `35: fix(idml): multi-line overflow + ACE PI tail text + rotated frame column width`
+
+**Result:** `text_render_audit ok: true`, `missing_in_preview: {}`, 444/444 words matched.
+No regression: `font_audit ok: true`, 248 tests pass.
+
+### B2 — social icon frames u3e7/u3f0/u3f5
+
+**Root cause:** `Social Media Icons weiss.ai` is a composite strip (526pt wide,
+152pt tall = 4384×1267px at 600dpi). InDesign positions each icon using the AI
+file's ArtBox coordinate space. The IDML PDF-child `ItemTransform` tx values
+(-122.38, -100.93, -111.37pt) produce `local_offset_mm` of (-12.16, -4.60, -8.28mm)
+which all resolve to the leftmost 140pt of the 526pt strip — all three frames
+show overlapping fragments of icon #1.
+
+**Why the SLA had the wrong values too:** Scribus's InDesign importer copied
+the same LOCALX offsets from InDesign's PDF representation. The InDesign-rendered
+`baseline.pdf` shows correct icons because InDesign renders AI vectors natively
+using ArtBox positioning; once the AI is rasterised to a flat PNG by pdftocairo
+(which uses MediaBox origin), the ArtBox offset is lost.
+
+**Fix:** Replace composite-strip reference with individually pre-cropped PNGs
+(`social-media-icon-u{id}-crop.png`, 948×932px each), scaled by height to fit
+the 3.35×3.3mm frame:
+- Scale = `frame_h_pt / crop_h_pt = 9.351pt / 111.84pt = 0.083615`
+- `local_offset_mm = (0.0, 0.0)` (no offset needed; each crop is already the
+  correct icon)
+
+This matches the approach used in `site/public/templates/.../template.sla`.
+
+**Commit:** `9b62ea4` — `35: fix(build): social icon frames u3e7/u3f0/u3f5 → per-icon crop PNGs`
+
+**Result:** Each frame now renders a distinct social media icon. visual_diff
+p1=8.09%, p2=7.08% (unchanged — icon frames are 3.35mm × 3.3mm, contributing
+~0.02pp total; engine noise dominates). text_render_audit ok=true, 248 tests pass.
+
+**Phase B completed:** 2026-05-12
