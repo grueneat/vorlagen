@@ -109,3 +109,37 @@ def test_run_style_audit_deterministic():
     r1 = _yaml_dump(run_style_audit(PREVIEW_PDF, BASELINE_PDF, template=SLUG))
     r2 = _yaml_dump(run_style_audit(PREVIEW_PDF, BASELINE_PDF, template=SLUG))
     assert r1 == r2, "run_style_audit YAML is not deterministic across two runs"
+
+
+def test_run_style_audit_engine_disagreement_field(tmp_path):
+    """#37 P1 task 3: when text_render_audit counts are passed in, the report
+    includes an `extraction_engine_disagreement` block."""
+    _skip_if_missing()
+    # Read the live D7 yml if present, else use pdftotext directly to derive counts.
+    yml_path = OUT_DIR / "text_render_audit.yml"
+    if yml_path.exists():
+        tra = yaml.safe_load(yml_path.read_text(encoding="utf-8"))
+        counts = {
+            "baseline": int(tra.get("baseline_word_count", 0) or 0),
+            "preview": int(tra.get("preview_word_count", 0) or 0),
+        }
+    else:
+        # Derive from pdftotext live so the test is not coupled to a prior --audit run.
+        import subprocess, re
+        def _count(p):
+            r = subprocess.run(["pdftotext", "-layout", str(p), "-"],
+                               capture_output=True, text=True, check=True)
+            return len([t for t in re.split(r"\s+", r.stdout) if t])
+        counts = {"baseline": _count(BASELINE_PDF), "preview": _count(PREVIEW_PDF)}
+
+    report = run_style_audit(
+        PREVIEW_PDF, BASELINE_PDF, template=SLUG,
+        text_render_audit_counts=counts,
+    )
+    assert "extraction_engine_disagreement" in report
+    eed = report["extraction_engine_disagreement"]
+    for key in ("baseline_pdfplumber", "preview_pdfplumber",
+                "baseline_pdftotext", "preview_pdftotext",
+                "baseline_delta_pct", "preview_delta_pct", "warn"):
+        assert key in eed, f"missing key {key} in extraction_engine_disagreement"
+    assert isinstance(eed["warn"], bool)

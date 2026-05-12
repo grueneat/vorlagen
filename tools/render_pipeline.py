@@ -852,7 +852,25 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         try:
             from run_style_audit import run_style_audit as _rsa_run
             from run_style_audit import _yaml_dump as _rsa_yaml
-            rsa_report = _rsa_run(preview_pdf, baseline, template=tid)
+            # #37 P1 task 3: pass pdftotext word counts from D7 (if available)
+            # so run_style_audit can surface engine-disagreement warnings.
+            tra_counts: dict | None = None
+            if text_render_audit_path.exists():
+                try:
+                    import yaml as _yaml_mod
+                    tra_loaded = _yaml_mod.safe_load(
+                        text_render_audit_path.read_text(encoding="utf-8")
+                    ) or {}
+                    tra_counts = {
+                        "baseline": int(tra_loaded.get("baseline_word_count", 0) or 0),
+                        "preview": int(tra_loaded.get("preview_word_count", 0) or 0),
+                    }
+                except Exception:
+                    tra_counts = None
+            rsa_report = _rsa_run(
+                preview_pdf, baseline, template=tid,
+                text_render_audit_counts=tra_counts,
+            )
             run_style_audit_path.write_text(_rsa_yaml(rsa_report), encoding="utf-8")
             large = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "large")
             small = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "small")
@@ -870,6 +888,22 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                 )
             else:
                 print(f"[{tid}] run_style_audit: OK")
+            # Surface text-extraction-engine disagreement (Issue #37 P1 task 3).
+            eed = rsa_report.get("extraction_engine_disagreement")
+            if eed and eed.get("warn"):
+                print(
+                    f"[{tid}] run_style_audit: extraction engines disagree "
+                    f"({eed['preview_pdftotext']} vs "
+                    f"{eed['preview_pdfplumber']} preview words; "
+                    f"{eed['baseline_pdftotext']} vs "
+                    f"{eed['baseline_pdfplumber']} baseline words)",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"text extraction engines disagree "
+                    f"({eed['preview_pdftotext']} vs "
+                    f"{eed['preview_pdfplumber']} preview words)"
+                )
         except Exception as exc:
             print(f"[{tid}] audit F (run_style_audit) error: {exc}", file=sys.stderr)
     else:
