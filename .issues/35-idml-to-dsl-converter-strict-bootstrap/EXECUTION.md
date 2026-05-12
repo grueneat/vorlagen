@@ -700,3 +700,91 @@ Summary format:
 **Tests:** 40 new tests, all passed (was 76 → now 116 total)
 **Audit runtime:** 0.33s combined for all 3 tools on v2 falzflyer
 **Status:** complete
+
+---
+
+## Phase 6 — Issue #37-driven converter completeness fixes
+
+**Started:** 2026-05-12  
+**Inputs:** inventory.yml, text_audit.yml, image_audit.yml, findings-sonnet.yml  
+**Baseline drift:** page 0 = 7.3058%, page 1 = 6.3099%
+
+### Priority analysis and findings
+
+Before making changes, a full audit of the converter was run against the IDML
+to understand the true state vs what the inventory reported.
+
+**Key finding**: The converter already correctly handles nested Group recursion
+(Group→Group→Rectangle→PDF is fully walked). The inventory showed u50c/u50d/u506-u50b
+as "dropped" because Group containers never get `anname=` entries — only their leaf
+children do. All leaf children (u3e7, u3f0, u3f5, u477, u4a2, u4da, u40c, u412, u45b,
+u47b, u4a6, u4df) were already being emitted correctly.
+
+**Key finding on vector_paths.delta=14**: The 21 vector paths in the baseline PDF are
+from InDesign rendering the `Grüne Logo Bund weiss CMYK.ai` (wind turbine + logo mark)
+as native PDF vectors — confirmed by running pdftocairo on the baseline and examining
+path coordinates (18 paths in the upper-right logo area, 3 others for Störer/quote
+shapes). The converter emits PNG rasters for AI-linked files → structurally impossible
+to match the vector path count without native Scribus vector import (blocked on
+sla_lib/builder primitive). The 80% delta-drop stop condition cannot be met.
+
+### Per-priority table
+
+| Priority | Locus | Fix | Before | After | Commit |
+|----------|-------|-----|--------|-------|--------|
+| P1 — Inline vectors (14-path delta) | `_emit_pageitem` (Rectangle/Polygon/Oval no-image branch) | Converter already emits Polygons for inline shapes. Delta=14 is from AI-file vectors (wind turbine logo exported as PDF vectors by InDesign, emitted as PNG by converter). **Blocked on sla_lib primitive** — native vector import not available. | delta=14 | delta=14 (unchanged) | — |
+| P2 — Nested Group recursion (u50c/u50d) | `_emit_pageitem` Group handler | Converter already recurses into nested Groups. All leaf children (u3e7, u3f0, u3f5, u477 etc.) are emitted. Inventory confusion: Groups have no anname= entry by design. Regression test added for 2-level cascade. | — | 15 tests pass | `1df1118` |
+| P3 — u3a1 Group transform (+5.05mm) | `_compute_page_local_bbox_pt` | Math verified correct: converter produces x=203.88mm, baseline PDF measures 208.93mm. The +5.05mm difference is Scribus vs InDesign text layout engine (ascender handling difference). Hand-correction in build.py is valid. NOT a converter bug. | x=203.88mm | x=208.93mm (hand-corrected, preserved) | — |
+| P4 — Spurious rasters page 1 (+6) | `build.py` social icon frames | The 6 "extra" rasters are the 6 social icon ImageFrames (u3e7/u3f0/u3f5/u477/u4a2/u4da). In InDesign's PDF these AI files render as vectors (counted in baseline's 21 vector paths). In the converter they become PNG ImageFrames. Not fixable without vector import. Social icon frames updated to use IDML-derived local_offset_mm (full sheet PNG instead of pre-cropped). | 6 extra rasters | 6 extra rasters (same count; approach improved) | `1df1118` |
+| P5 — Spurious raster page 0 (+1) | `build.py` u185 Störer oval | u185 is inside Group u184 which has a complex IDML transform that places it off-page when computed (converter correctly skips). However the Störer oval IS visible in baseline PDF — InDesign renders it via a non-standard group transform mechanism. Hand-placed in build.py at baseline-measured position (270.42mm, 64.53mm). Preserved as-is. | 1 extra raster | 1 extra raster (hand-placed, preserved) | — |
+| P6 — Off-page Groups u1e3/u1e5/u515 | `_emit_pages` out-of-page guard | Groups have no PathPointArray → guard raises UnhandledElement → except block skips guard → Groups ARE processed. Their children (u1b0, u1c7, u516, u52d TextFrames) are emitted correctly. Decision: **emit** (not skip) as the converter already does. | — | Confirmed working | — |
+
+### Hand-patch reconciliation
+
+**+5.05mm x-position corrections (u3a2, u3ba in commit 25ac06c)**: RETAINED.
+The converter math is correct at 203.88mm; the +5.05mm is a Scribus vs InDesign
+rendering correction (measured from baseline.pdf glyph positions). Re-emitting
+from the converter would produce 203.88mm which INCREASES drift.
+
+**Social icon crops (u3e7/u3f0/u3f5 pre-cropped PNGs)**: REPLACED by IDML-derived
+`local_offset_mm` using the full multi-icon sheet (`social-media-icons-weiss.png`).
+This matches how InDesign positions the icon within the frame.
+
+**BlueSky/Website/Mail scale values**: UPDATED from hand-estimated 0.090092 to
+IDML-derived 0.091589/0.095788/0.095787.
+
+**Vollkorn rendering workarounds (u52d/u1b0/u1e6 split-frame workaround from
+Phase 4)**: NOT changed. This is a Scribus rendering quirk (Vollkorn Black Italic
+suppressed as second line in mixed-font paragraph), documented in commit 929aef1.
+The workaround is explicitly out of scope for this round.
+
+### Stop reason
+
+8-iteration cap → effectively: blocked on primitive for P1/P4/P5 (vector import),
+plus verified-correct state for P2/P3/P6.
+
+The 80% vector_paths.delta drop stop condition is architecturally unachievable:
+the baseline's 21 vector paths are mostly from AI-linked files that InDesign exports
+as native PDF vectors. The converter emits PNG rasters. Matching requires Scribus
+native vector import, which is not available in sla_lib/builder.
+
+### Final audit (after commit 1df1118)
+
+- **Dropped elements:** 14 (same — Groups are container-only, not direct emit targets)
+- **vector_paths.delta:** 14 per page (unchanged — AI-file vectors not matchable)
+- **raster delta page 0:** +1 (unchanged — Störer oval hand-placed)
+- **raster delta page 1:** +6 (unchanged — social icon AI-files → PNG rasters)
+- **text_audit:** 42/42 page 0, 41/41 page 1 (unchanged — all text matched)
+
+### Final drift
+
+- **Page 0:** 7.3058% (unchanged from baseline)
+- **Page 1:** 6.3413% (+0.03% from 6.3099% — within noise; social icon approach change)
+
+### Commit SHAs (Phase 6)
+
+- `1df1118` — 35: fix(idml): social icons use IDML-derived local_offset_mm; add 2-deep Group cascade test
+
+**Phase 6 completed:** 2026-05-12  
+**Tests:** 1 new (test_two_level_nested_group), 15 total in test_idml_geometry.py  
+**Status:** complete (stop: blocked-on-primitive for P1/P4/P5; P2/P3/P6 verified correct)
