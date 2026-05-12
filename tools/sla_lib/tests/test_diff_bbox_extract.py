@@ -426,6 +426,9 @@ class ExtractAllPipelineTests(unittest.TestCase):
             "bbox_px", "bbox_mm", "area_px", "mismatch_pct_in_bbox",
             "attributed_slot", "attribution_overlap_pct",
             "attribution_candidates",
+            # Phase B3 (issue 37): per-bbox drift classification
+            # (missing/extra/position/scale/rotation/color/text/unknown)
+            "drift_type",
         })
         self.assertEqual(set(bbox["bbox_px"].keys()), {"x", "y", "w", "h"})
         self.assertEqual(set(bbox["bbox_mm"].keys()), {"x", "y", "w", "h"})
