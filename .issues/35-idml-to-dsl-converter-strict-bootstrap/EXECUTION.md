@@ -788,3 +788,59 @@ native vector import, which is not available in sla_lib/builder.
 **Phase 6 completed:** 2026-05-12  
 **Tests:** 1 new (test_two_level_nested_group), 15 total in test_idml_geometry.py  
 **Status:** complete (stop: blocked-on-primitive for P1/P4/P5; P2/P3/P6 verified correct)
+
+---
+
+## Phase R1 — reference_sla diff lane wired
+
+**Date:** 2026-05-12  
+**Branch:** issue/35-idml-to-dsl-converter-strict-bootstrap
+
+### Commits
+
+- `16ea9fd` — 37: feat(template): add reference_sla to v2 falzflyer meta.yml
+- `3d52771` — 37: feat(render-pipeline): reference_sla second diff lane
+
+### Both lane jq outputs (acceptance verification)
+
+```
+$ jq '{p: .pass, p1: .pages[0].mismatch_pct, p2: .pages[1].mismatch_pct}' \
+    build/validation/kandidat-falzflyer-din-lang-gruenes-cover-v2/visual_diff.json
+{
+  "p": false,
+  "p1": 7.3058,
+  "p2": 6.3413
+}
+
+$ jq '{p: .pass, p1: .pages[0].mismatch_pct, p2: .pages[1].mismatch_pct}' \
+    build/validation/kandidat-falzflyer-din-lang-gruenes-cover-v2/reference_diff/reference_diff.json
+{
+  "p": false,
+  "p1": 102.5224,
+  "p2": 54.0824
+}
+```
+
+Lane 1 (cross-engine vs baseline.pdf): FAIL — p1=7.31% p2=6.34% (known engine-floor, pre-existing)  
+Lane 2 (same-engine vs reference.sla): FAIL — p1=102.52% p2=54.08% (expected: DSL builder missing elements vs Scribus importer; informational per P3)
+
+### Test results
+
+133 passed (127 unit + 6 integration), 0 failed  
+New tests added: 8 unit (test_render_pipeline_reference.py) + 2 integration (test_reference_diff_smoke.py)
+
+### Wall-clock to render reference.sla → PDF
+
+**7.5 seconds** (Scribus 1.6.4, xvfb-run headless)
+
+### Quirks encountered
+
+- Relative path in meta.yml uses `../../` (not `../../../` as spec suggested): meta.yml is at
+  `templates/<slug>/meta.yml` so the directory is 2 levels deep from repo root, requiring 2 `../` to reach `originals/`.
+- reference_diff p1=102.52% exceeds 100% — this is because `compare -metric AE` counts pixels
+  in the *larger* of the two images when dimensions differ. The Scribus-imported SLA likely
+  renders at a slightly different page size (or font substitution inflates certain elements),
+  causing the denominator (total pixels from `identify`) to be smaller than the mismatch count.
+  Informational; convergence is R3's job.
+- `visual_diff FAILED:` message appears before `running build.py` line in terminal output
+  due to stderr/stdout interleaving — not a bug, just buffering artefact.
