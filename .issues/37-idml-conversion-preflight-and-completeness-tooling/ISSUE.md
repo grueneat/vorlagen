@@ -434,8 +434,14 @@ After this, every converter change can be re-run via `bin/idml-import` and the r
 #### D7. `tools/text_render_audit.py` — render-side word presence audit (P8)
 
 Runs `pdftotext -layout` on both `preview.pdf` and `baseline.pdf`. Normalises
-Unicode (NFC) and lowercases. Builds per-word Counter dicts. Diffs to find words
+Unicode (NFC + Latin ligature folding: ﬁ→fi, ﬃ→ffi, ﬂ→fl, ﬀ→ff, ﬄ→ffl,
+ﬅ/ﬆ→st) and lowercases. Builds per-word Counter dicts. Diffs to find words
 present in baseline but missing (or under-counted) in preview.
+
+Ligature folding ensures that a baseline PDF embedding ﬃ (U+FB03) and a
+preview PDF using the decomposed sequence `ffi` tokenise to the same word —
+preventing false-positive missing-word reports from ligature encoding
+differences between renderers.
 
 Catches: text emitted to build.py but Scribus silently suppressed — frame-too-
 small clipping, off-page overflow, color-on-color invisibility, z-order occlusion,
@@ -469,6 +475,14 @@ are filed as AA noise / OK. Words absent from preview are skipped (D7 handles
 presence; D8 only audits position). Top 50 deltas by magnitude are included in
 the report.
 
+**Common-word filtering (default threshold=5):** Words appearing ≥ 5 times on
+the same page in either PDF are excluded from `large_deltas` after matching.
+These high-frequency words (lorem ipsum `et`, `qui`, `ut`, etc.) produce
+spurious large deltas because the greedy nearest-neighbour matcher cross-binds
+them across multi-column layouts. Unique content (candidate names, social
+handles) appears only once per page, making the match reliable. The
+`suppressed_common_word_deltas_count` field tracks how many were filtered.
+
 Catches: text rendered but mis-positioned — alignment drift, group-transform
 gaps (e.g. dx ≈ ±14.3pt = ±5.05mm from a missing Group ItemTransform cascade),
 off-by-margin bugs, panel-offset coordinate origin errors (dx ≈ ±59pt = ±20.8mm).
@@ -477,7 +491,9 @@ off-by-margin bugs, panel-offset coordinate origin errors (dx ≈ ±59pt = ±20.
 ```yaml
 template: kandidat-falzflyer-din-lang-gruenes-cover-v2
 threshold_pt: 2.0
+common_word_threshold: 5
 large_deltas_count: 12
+suppressed_common_word_deltas_count: 0
 large_deltas:
   - text: Leonore
     page: 1
@@ -639,24 +655,35 @@ gaps become rare instead of routine.
       paths + `--template` slug, emits `text_render_audit.yml` with
       `baseline_word_count`, `preview_word_count`, `missing_in_preview` (dict),
       `extra_in_preview` (dict), `ok` flag
-- [ ] Word extraction uses `pdftotext -layout`, NFC normalisation, lowercase;
-      tokenisation regex `[\w@.\-]+`
+- [ ] Word extraction uses `pdftotext -layout`, NFC normalisation + Latin
+      ligature folding (ﬁ→fi, ﬃ→ffi, ﬂ→fl, ﬀ→ff, ﬄ→ffl, ﬅ/ﬆ→st),
+      lowercase; tokenisation regex `[\w@.\-]+`
+- [ ] Ligature folding must be tested: baseline with ﬃ-ligature and preview
+      with decomposed `ffi` must count as the same word (no false positive)
 - [ ] `ok: true` iff `missing_in_preview` is empty
 - [ ] Wired into `render_pipeline.py::_run_audit` after D6; runs when both
       `preview.pdf` and `baseline.pdf` exist; failure surfaces in `--audit` output
 - [ ] YAML output is deterministic (byte-identical on re-run; `sort_keys=True`)
 - [ ] Pytest coverage: identical PDFs pass; missing word fails; extra word
       reported but ok=True; NFC normalisation; case insensitivity; subprocess
-      error on missing PDF raises CalledProcessError
+      error on missing PDF raises CalledProcessError; ﬃ→ffi ligature folding;
+      ﬁ→fi ligature folding; all 7 ligatures in U+FB00–U+FB06 range
 - [ ] Convergence loop MUST NOT declare success while `missing_in_preview`
       is non-empty (P8) — surfaced as `issue_parts` entry in `--audit-strict`
 
 ### Phase D8 — Per-word position drift
 - [ ] `tools/text_position_audit.py` exists; uses `pdfplumber.extract_words()`;
       takes `preview.pdf` + `baseline.pdf` paths + `--template` + `--threshold`
-      (default 2.0pt); emits `text_position_audit.yml`
+      (default 2.0pt) + `--common-word-threshold` (default 5);
+      emits `text_position_audit.yml`
 - [ ] Output keys: `template`, `baseline_pdf`, `preview_pdf`, `threshold_pt`,
-      `large_deltas_count`, `large_deltas` (list, max 50), `ok`
+      `common_word_threshold`, `large_deltas_count`,
+      `suppressed_common_word_deltas_count`, `large_deltas` (list, max 50), `ok`
+- [ ] Common-word filter: words appearing ≥ `common_word_threshold` times on the
+      same page in either PDF are excluded from `large_deltas` after matching;
+      `suppressed_common_word_deltas_count` records excluded count
+- [ ] Common-word filter must be tested: word appearing ≥ threshold times
+      excluded; unique words with large delta still reported
 - [ ] Each `large_delta` entry: `text`, `page`, `baseline_xy_pt`, `preview_xy_pt`,
       `dx_pt`, `dy_pt`, `severity: large`
 - [ ] Greedy nearest-neighbour match: one preview word is consumed at most once
@@ -670,7 +697,9 @@ gaps become rare instead of routine.
       `requirements.txt` — do not silently `pip install`
 - [ ] Pytest coverage: identical positions pass; >threshold shift reported with
       correct dx/dy; <threshold not reported; missing word skipped; multiple
-      instances of same word use greedy nearest-match without double-counting
+      instances of same word use greedy nearest-match without double-counting;
+      common-word filter excludes high-frequency words; unique word with large
+      delta still reported; `suppressed_common_word_deltas_count` matches count filtered
 - [ ] V2 falzflyer `text_position_audit.yml` produced; `large_deltas_count`
       reported (non-zero count expected given current layout drift state;
       surfaced as signal for R8/R9 positioning fix work)
