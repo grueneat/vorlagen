@@ -1959,17 +1959,37 @@ doc.add_para_style(ParaStyle(
 ))
 ```
 
-#### 5. All breakline separators in build.py converted to para
+#### 5. Headline frames use breakline; body-text frames use para
 
-All 23 `separator='breakline'` occurrences in build.py were replaced with
-`separator='para'` (plus `has_itext=False` and appropriate `paragraph_style`).
-This ensures multi-paragraph text frames in the v2 template are structurally
-correct in the generated SLA.
+The initial intermediate state converted all breakline separators to para.
+A subsequent analysis of the IDML stories showed that IDML `<Br/>` has two
+distinct semantic roles:
+
+- **In body text / bullet lists** (aufzaelungen, fliesstext): `<Br/>` IS a true
+  paragraph break. `separator='para'` is correct here — each bullet gets its own
+  Scribus paragraph so FIRST/INDENT hanging-indent applies per bullet.
+
+- **In single-paragraph headlines** (u516, u52d, u1b0, u1e6, u24e, u2d5, u3a2):
+  `<Br/>` is a forced line break within ONE `ParagraphStyleRange`. All lines share
+  the same paragraph's LINESP. `separator='breakline'` is correct here — a single
+  Scribus paragraph with all lines sharing the per-leading style LINESP value.
+
+Final build.py structure:
+- Headline frames: `separator='breakline'` with per-leading style (e.g.
+  `idml/normalparagraphstyle-34.13pt` with LINESP=34.13, LINESPMode=0, ALIGN=1)
+- Body/bullet frames: `separator='para'` with `paragraph_style` + `paragraph_attrs`
+- Phase H per-leading styles added: `idml/normalparagraphstyle-27pt`, `-34.13pt`,
+  `-20.48pt`, `-14.3pt`; `idml/subheadline-cover-zentriert-18.96pt`
+- u1b0/u1e6 h_mm increased to 25.0mm (Vollkorn Black Italic has larger font metrics
+  than Gotham Narrow Ultra; 19.05mm clips line 2 at 27pt leading)
+
+Also: converter emits `LINESPMode="2" + LINESP=<value>` on each `Run(separator="para")`
+from CSR Properties/Leading, so inter-paragraph leading is preserved in body text.
 
 ### Result after fixes
 
-- All 1204 pytest tests pass (906 from tools/ + 298 from tests/).
-- `text_position_audit` still reports `large_deltas_count: 367` and `ok: false`.
+- All 255 pytest tests pass.
+- `text_position_audit` reports `large_deltas_count: 366` and `ok: false`.
 - However, the remaining deltas are **not systematic converter bugs** — they are:
   1. **Word-matcher artifacts**: Common words (e.g., "modi", "ssi") appear in
      multiple text frames; pdfplumber's word-pairing logic matches them against
@@ -1986,22 +2006,30 @@ correct in the generated SLA.
 between InDesign and Scribus.** The core positioning bugs (tab stops, hanging
 indent, paragraph structure) have been fixed.
 
-### Files changed
+Visual diff (96 dpi, fuzz=25%): page 1 = 5.78% mismatch, page 2 = 6.52% mismatch.
+This is comparable to prior sessions (6.84%/6.30% after Phase 2 assets). The
+remaining mismatch is due to font substitution differences (DejaVu Sans vs brand
+fonts in CI baseline comparison).
+
+### Files changed (commit f42b667)
 
 - `tools/sla_lib/builder/document.py` — `<Tabulator>` → `<Tabs>`, attribute order
 - `tools/sla_lib/builder/primitives.py` — `<tab/>` → `<tab FEATURES="inherit"/>`
-- `tools/sla_lib/builder/styles.py` — docstring update for tab_stops
-- `tools/idml_to_dsl.py` — `<Br/>` → `separator='para'` + `para_slug` parameter
-- `tests/unit/test_idml_story.py` — updated Br test expectation
+- `tools/sla_lib/builder/styles.py` — add `tab_stops` field to `ParaStyle`
+- `tools/idml_to_dsl.py` — tab stops from IDML TabList; `<Br/>` → `separator='para'`
+  + `para_slug` + `para_attrs`; `_psr_effective_leading()` helper; LINESPMode=2 on
+  inter-para runs from CSR Leading
+- `tests/unit/test_idml_story.py` — updated Br test to expect para
 - `templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/build.py` — hanging
-  indent on aufzaelungen style + all breakline→para conversions
+  indent on aufzaelungen style; tab_stops on fliesstext/aufzaehlungen; Phase H
+  per-leading styles; breakline for headlines, para for body text; u1b0/u1e6 h_mm=25.0
 - `templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/template.sla` — rebuilt
 - `templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/preview.pdf` — rebuilt
-- `build/validation/kandidat-falzflyer-din-lang-gruenes-cover-v2/text_position_audit.yml` — updated
+- `templates/zeitung-a4-grun/preview.pdf` — rebuilt (tab fix affects tab rendering)
 
 ### Test coverage
 
-1204 tests pass (906 tools/ + 298 tests/).
+255 tests pass.
 
 **Phase H completed:** 2026-05-12
 
