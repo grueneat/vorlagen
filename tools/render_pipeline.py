@@ -1054,6 +1054,35 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E: per-element drift attribution.
+    # Aggregates diff_bboxes.json into a per-slot contribution table so the next
+    # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
+    diff_bboxes_path = out_dir / "diff_bboxes.json"
+    vd_json = out_dir / "visual_diff.json"
+    if diff_bboxes_path.exists() and vd_json.exists():
+        try:
+            import json as _json
+            from per_element_drift import aggregate_per_element as _ped_aggregate
+            from per_element_drift import _yaml_dump as _ped_yaml
+
+            _db = _json.loads(diff_bboxes_path.read_text(encoding="utf-8"))
+            _vd = _json.loads(vd_json.read_text(encoding="utf-8"))
+            _ped_result = _ped_aggregate(_db, _vd)
+            ped_path = out_dir / "per_element_drift.yml"
+            ped_path.write_text(_ped_yaml(_ped_result), encoding="utf-8")
+            for _page in _ped_result.get("pages", []):
+                _top = _page.get("top_contributors", [])
+                if _top:
+                    _leader = _top[0]
+                    print(
+                        f"[{tid}] per_element_drift: "
+                        f"top contributor page {_page['page'] + 1} is "
+                        f"{_leader['slot']} "
+                        f"({_leader['pct_of_page_total_drift']:.1f}pp of page drift)"
+                    )
+        except Exception as exc:
+            print(f"[{tid}] audit E (per_element_drift) error: {exc}", file=sys.stderr)
+
     if issue_parts:
         summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
     else:
