@@ -19,7 +19,7 @@ build:
 
 # Pinned by bin/check-stale-previews; updated by bin/render-gallery on
 # each rebuild. Initial value is the SHA of the converter-emitted SLA.
-previews_for_sla: 23c0ba8523d3ecdb2eb3d3c3ed353215b6125c5f84b0ba32661678fe6e279a24
+previews_for_sla: 01a737f648eba48e347a575ed5a35e05867b7ec26cffab66e42d35a52bc794cb
 brand_overrides: []
 
 ci_overrides:

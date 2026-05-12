@@ -1772,6 +1772,19 @@ def _emit_pageitem(
             kwargs["text"] = ""
         if trail_attrs:
             kwargs["trail_attrs"] = trail_attrs
+        # DefaultStyle ALIGN propagation: when the frame's first PSR's
+        # effective ParaStyle has non-Left Justification, emit ALIGN on the
+        # <DefaultStyle/> element. Scribus's trail/per-paragraph ALIGN does
+        # NOT propagate to the paragraph THEY terminate; only DefaultStyle
+        # ALIGN reliably applies to every paragraph in the StoryText,
+        # including auto-wrapped lines of the LAST paragraph. Issue 37
+        # Backport 11.
+        if _first_psr_style_self and _first_psr_style_self in ctx.paragraph_styles:
+            _eff_just = ctx.paragraph_styles[_first_psr_style_self].get("justification")
+            if _eff_just in JUSTIFICATION_MAP and JUSTIFICATION_MAP[_eff_just] != 0:
+                kwargs["default_style_attrs"] = {
+                    "ALIGN": str(JUSTIFICATION_MAP[_eff_just]),
+                }
         # Fill (frame background, rare on TextFrame but corpus has Color/Paper
         # cases — drop through the color map).
         fc = _resolve_fill(item.get("FillColor"), ctx.color_map)
@@ -1815,6 +1828,28 @@ def _emit_pageitem(
             }
             if abs(rot) > 1e-3:
                 pl_kwargs["rotation_deg"] = _round_rot(rot)
+            # IDML EndCap / EndJoin → Scribus PLINEEND / PLINEJOIN (Qt::PenCapStyle
+            # and Qt::PenJoinStyle integer values). Omitted when IDML default
+            # (Butt/Miter) — those map to Scribus default (0/0) which the
+            # ``PolyLine`` primitive emits as the absence of the attribute. See
+            # ``tools/sla_lib/builder/primitives.py:PolyLine.line_cap`` for the
+            # enum mapping.
+            end_cap = item.get("EndCap", "")
+            end_join = item.get("EndJoin", "")
+            cap_map = {
+                "ButtEndCap": 0,
+                "ProjectingEndCap": 16,
+                "RoundEndCap": 32,
+            }
+            join_map = {
+                "MiterEndJoin": 0,
+                "BevelEndJoin": 64,
+                "RoundEndJoin": 128,
+            }
+            if end_cap in cap_map and cap_map[end_cap] != 0:
+                pl_kwargs["line_cap"] = cap_map[end_cap]
+            if end_join in join_map and join_map[end_join] != 0:
+                pl_kwargs["line_join"] = join_map[end_join]
             _emit_call(
                 ctx.out, "PolyLine", pl_kwargs,
                 receiver=page_var, multiline=True,

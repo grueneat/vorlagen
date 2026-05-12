@@ -778,7 +778,15 @@ class ImageFrame(_Frame):
     local_scale: tuple[float, float] = (1.0, 1.0)
     local_offset_mm: tuple[float, float] = (0.0, 0.0)
     local_rotation_deg: float = 0.0
-    scale_type: int = 1       # SCALETYPE
+    # SCALETYPE: 0 = scale image to frame (fit-to-frame, preserves aspect),
+    # 1 = free scaling (use LOCALSCX/LOCALSCY). Default 0 because
+    #   (a) it matches the IDML convention (the image is sized to the frame
+    #       and any explicit ItemTransform scale is conceptually a
+    #       fit-to-frame adjustment Scribus reproduces automatically), and
+    #   (b) Scribus 1.6.x has a CMYK conversion bug that turns
+    #       white-on-transparent RGBA PNGs INVISIBLE when SCALETYPE=1 with a
+    #       high downscale ratio (frame << source). Issue 37 Backport 10.
+    scale_type: int = 0       # SCALETYPE
     ratio: int = 1            # RATIO
     pic_art: int = 1          # PICART (1=visible)
     fill: Optional[str] = None        # PCOLOR (frame background fill)
@@ -960,6 +968,14 @@ class PolyLine:
     layer: int = 0
     anname: str = ""
     rotation_deg: float = 0.0
+    # Stroke cap/join styles map to Qt::PenCapStyle / Qt::PenJoinStyle values:
+    #   PLINEEND: 0=FlatCap, 16=SquareCap, 32=RoundCap
+    #   PLINEJOIN: 0=MiterJoin, 64=BevelJoin, 128=RoundJoin
+    # IDML EndCap/EndJoin enum mapping (set by converter):
+    #   "ButtEndCap" → 0, "ProjectingEndCap" → 16, "RoundEndCap" → 32
+    #   "MiterEndJoin" → 0, "BevelEndJoin" → 64, "RoundEndJoin" → 128
+    line_cap: Optional[int] = None   # PLINEEND; omitted from SLA when None
+    line_join: Optional[int] = None  # PLINEJOIN; omitted from SLA when None
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x_pt = mm_to_pt(self.x_mm) + page.page_xpos_pt
@@ -993,6 +1009,10 @@ class PolyLine:
             "copath": self.sla_path,
             "fillRule": "0",
         }
+        if self.line_cap is not None:
+            attrs["PLINEEND"] = str(self.line_cap)
+        if self.line_join is not None:
+            attrs["PLINEJOIN"] = str(self.line_join)
         if self.anname:
             attrs["ANNAME"] = self.anname
         return etree.Element("PAGEOBJECT", attrib=attrs)

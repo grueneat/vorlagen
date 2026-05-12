@@ -466,6 +466,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         sla_path='M74.32 89.74 C80.8 89.74 86.06 84.41 86.06 77.83 C86.06 71.26 80.8 65.93 74.32 65.93 C67.83 65.93 62.58 71.26 62.58 77.83 C62.58 84.41 67.83 89.74 74.32 89.74 Z M69.21 59.74 L60.47 47.63 L82.33 0 L92.74 1.684 L84.21 62.24 M92.97 81.45 L107.8 79.68 L138.9 121.9 L132.3 130.2 L83.51 93.36 M61.92 91.68 L55.98 105.4 L3.87 110.9 L0 101.1 L56.4 77.51 M68.49 97.5 L64.13 150.3 M80.22 98.93 L85.14 157.8 L96.9 157.8 L96.9 168.6 M76.14 157.8 L51.78 157.8 L51.78 168.6',
         line_color='Gelb',
         line_width_pt=4.203916263369494,
+        # IDML EndCap="RoundEndCap" → Qt::RoundCap = 32 (PLINEEND)
+        # IDML EndJoin="RoundEndJoin" → Qt::RoundJoin = 128 (PLINEJOIN)
+        line_cap=32,
+        line_join=128,
         anname='u2b0',
         layer=0,
     ))
@@ -614,17 +618,21 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u376',
         layer=0,
         style='idml/headline-in-gruenem-kasten',
-        # P5/inject: split into 2 Runs with explicit breakline. Scribus's auto-wrap
-        # does NOT center the wrapped second line ('Kasten') despite ParaStyle
-        # align=1. With explicit <breakline/> between runs, both lines render as
-        # center-aligned. Backport candidate: when a ParaStyle has align=center +
-        # frame is narrow enough that the IDML's single-Content text WOULD wrap,
-        # the converter should pre-split at the natural wrap point (or emit
-        # additional layout hint).
+        # P5/inject: ALIGN=1 on DefaultStyle is required for Scribus to honor
+        # center alignment on ALL paragraphs of this StoryText. Without it,
+        # Scribus only applies ALIGN to the paragraph that most-recently CLOSED
+        # via <para ALIGN=.../>; the trail's ALIGN does NOT apply to the
+        # paragraph it terminates. This means line 2 ("Kasten") renders
+        # left-aligned despite trail_attrs={'ALIGN': '1'}. Backport candidate
+        # (issue 37, Backport 11): converter must read the IDML ParaStyle's
+        # Justification and emit it as a DefaultStyle attribute on the
+        # StoryText, NOT just as trail_attrs / paragraph_style. The two-Run
+        # split + <para ALIGN=1/> between is also kept so each paragraph is
+        # explicitly attributed.
+        default_style_attrs={'ALIGN': '1'},
         runs=[
-            Run(text='Headline in einem grünen', font='Gotham Narrow Bold', fontsize=12, fcolor='White', paragraph_style='idml/headline-in-gruenem-kasten'),
-            Run(text='', has_itext=False, separator='breakline'),
-            Run(text='Kasten', font='Gotham Narrow Bold', fontsize=12, fcolor='White', paragraph_style='idml/headline-in-gruenem-kasten'),
+            Run(text='Headline in einem grünen', font='Gotham Narrow Bold', fontsize=12, fcolor='White', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'}, separator='para'),
+            Run(text='Kasten', font='Gotham Narrow Bold', fontsize=12, fcolor='White', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'}, separator='para'),
         ],
         trail_attrs={'ALIGN': '1'},
     ))
@@ -746,8 +754,12 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         # frames showed leftmost fragment). Replaced with per-icon square crops (866×866px
         # @ 600dpi = 103.92pt natural; scale 9.354/103.92 ≈ 0.090 fits 3.3mm frame).
         # u3e7 = Facebook (top row); u3f0 = Instagram; u3f5 = TikTok per baseline.pdf.
+        # scale_type=0 (fit-to-frame) — SCALETYPE=1 (default, free scaling) renders these
+        # small white-on-transparent PNGs invisible in Scribus 1.6.x. Same fix applied to
+        # u3f0/u3f5/u477/u4a2/u4da. Backport candidate (issue 37): primitives default to 0.
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-facebook.png',
         local_scale=(0.091589, 0.091589),
+        scale_type=0,
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -769,6 +781,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-instagram.png',
         local_scale=(0.091589, 0.091589),
+        scale_type=0,
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -790,6 +803,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-tiktok.png',
         local_scale=(0.091589, 0.091589),
+        scale_type=0,
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -811,6 +825,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png',
         local_scale=(0.091589, 0.091589),
+        scale_type=0,
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -833,6 +848,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png',
         local_scale=(0.095788, 0.095788),
         local_offset_mm=(-0.0774, -0.0774),
+        scale_type=0,
     ))
     page1.add(TextFrame(
         x_mm=263.26,
@@ -855,6 +871,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png',
         local_scale=(0.095787, 0.095787),
         local_offset_mm=(-0.0672, -0.0626),
+        scale_type=0,
     ))
     page1.add(TextFrame(
         x_mm=263.26,

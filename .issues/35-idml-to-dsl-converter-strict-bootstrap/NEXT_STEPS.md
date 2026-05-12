@@ -10,7 +10,22 @@ Last updated: 2026-05-12
 
 ## Two remaining issues — concrete next steps
 
-### Issue 1 — u376 "Kasten" line 2 not centered
+### Issue 1 — u376 "Kasten" line 2 not centered  [RESOLVED 2026-05-12]
+
+**Resolution**: replaced `<breakline/>`-separated single-paragraph
+emission with per-paragraph emission (`separator='para'` +
+`paragraph_attrs={'ALIGN': '1'}` on the first Run). Scribus's
+trail/DefaultStyle ALIGN does NOT propagate to wrapped or
+breakline-preceding lines; only an explicit `<para ALIGN="1"/>`
+ending each visual line forces center-alignment per line. Backport
+candidate documented as Backport 11 in issue 37.
+
+After fix: both "Headline in einem grünen" and "Kasten" render
+centered in the green box. Visual-diff metric unchanged at the
+page-wide level (fix is within fuzz tolerance footprint), which
+motivated Backport 12 (per-region visual_diff) in issue 37.
+
+(Original investigation history retained below.)
 
 **Symptom**: The headline "Headline in einem grünen Kasten" wraps to 2
 lines in our render. Line 1 ("Headline in einem grünen") is centered
@@ -65,7 +80,22 @@ has `align=1`.
 **Drift impact**: ~0.1pp on page 2. Small numerically but visible to
 the human eye on baseline-vs-preview side-by-side comparison.
 
-### Issue 2 — Social-media icons render invisibly
+### Issue 2 — Social-media icons render invisibly  [RESOLVED 2026-05-12]
+
+**Resolution**: `SCALETYPE="1"` (free scaling, the converter default
+for ImageFrame) caused all 6 icons to render invisible due to
+Scribus 1.6.x CMYK conversion issues at high downscale ratios.
+Fixed by adding `scale_type=0` (fit-to-frame) to each of the 6 icon
+ImageFrame calls in `templates/kandidat-falzflyer-din-lang-gruenes-
+cover-v2/build.py`. Backport candidate documented as Backport 10
+in issue 37 (recommends flipping the `ImageFrame.scale_type`
+dataclass default to 0).
+
+Drift drop after fix: page 2 = 2.47% → 2.42% (−0.05pp); page 1
+unchanged at 3.21%. Visual confirmation: all 6 icons now render
+white-on-green like baseline.
+
+(Original investigation history retained below.)
 
 **Symptom**: All 6 social-media icons (u3e7/u3f0/u3f5 from composite
 strip + u477/u4a2/u4da as separate AI files) are visible in baseline.pdf
