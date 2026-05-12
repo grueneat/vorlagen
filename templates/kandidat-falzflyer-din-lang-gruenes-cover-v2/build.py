@@ -25,6 +25,7 @@ from sla_lib.builder import (  # noqa: E402
     TextFrame,
     ImageFrame,
     Polygon,
+    PolyLine,
     Run,
     ParaStyle,
     Anchor,
@@ -441,12 +442,37 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
         runs=[Run(text='\t•\t', font='Gotham Narrow'), Run(text='Scim rem ', font='Gotham Narrow Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='Uaerum ium ', font='Gotham Narrow Black'), Run(text='verior alicide liquuntio. ', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='vello modi ', font='Gotham Narrow Black'), Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='moditatque', font='Gotham Narrow Black'), Run(text=' nimil maxim voluptur.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='\t', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
     ))
-    # P5/inject: u2b0 (yellow wind-turbine outline) deliberately excluded.
-    # InDesign does not export this Polygon to PDF even though it sits on the
-    # Gestaltung (printable) layer — it is a design-workflow guide artifact.
-    # Including it adds a yellow mismatch of ~86k px vs baseline.pdf.
-    # Removed in Phase 3 (commit 3774a8a); re-emit must leave it out.
-    # See Phase R3 EXECUTION.md.
+    # u2b0 = yellow wind-turbine outline (IDML Polygon, Scribus PTYPE=7 PolyLine).
+    # The IDML element has multiple PathGeometry sub-paths (rotor circle + 3 blades + mast).
+    # Scribus imports it as PTYPE=7 (PolyLine) with the SVG path data verbatim.
+    # baseline.pdf has the turbine visible (yellow stroke), so we must emit it.
+    # PolyLine is added to sla_lib/builder in Phase R3.
+    #
+    # Path data sourced directly from reference SLA (local-pt coords, origin = bbox top-left).
+    # linescolor = C=0 M=0 Y=100 K=0 (yellow), line_width_pt=4.204 from SLA PWIDTH.
+    # Position from sla_inventory: x=123.507mm, y=127.956mm, w=48.986mm, h=59.48mm.
+    page0.add(PolyLine(
+        x_mm=123.507,
+        y_mm=127.956,
+        w_mm=48.986,
+        h_mm=59.48,
+        sla_path=(
+            "M74.3168 89.7351 C80.8011 89.7351 86.0571 84.4077 86.0571 77.8328 "
+            "C86.0571 71.2583 80.8011 65.9309 74.3168 65.9309 "
+            "C67.8323 65.9309 62.5764 71.2583 62.5764 77.8328 "
+            "C62.5764 84.4077 67.8323 89.7351 74.3168 89.7351 "
+            "M69.2094 59.7437 L60.4739 47.6303 L82.3313 0 L92.7383 1.68449 L84.2124 62.2429 "
+            "M92.9683 81.4475 L107.796 79.6769 L138.857 121.887 L132.341 130.172 L83.5083 93.3554 "
+            "M61.9238 91.6762 L55.9814 105.376 L3.87023 110.947 L0 101.142 L56.4025 77.5054 "
+            "M68.4867 97.5049 L64.1298 150.27 "
+            "M80.2182 98.9334 L85.142 157.784 L96.9028 157.784 L96.9028 168.605 "
+            "M76.1377 157.783 L51.7782 157.783 L51.7782 168.604"
+        ),
+        line_color="Gelb",   # C=0 M=0 Y=100 K=0 — from SLA PCOLOR2
+        line_width_pt=4.2039,
+        anname="u2b0",
+        layer=0,
+    ))
 
 
 def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
@@ -660,6 +686,16 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         fill='None',
         line_color='White',
         line_width_pt=0.75,
+        # Path data sourced from reference SLA (local-pt coords, Gänsefüsschen shape).
+        # Two closed Bezier sub-paths: left " and right " quotation mark symbols.
+        custom_path=(
+            "M20.175 28.125 C29.1 27.375 35.325 23.625 35.325 12.9 "
+            "L35.325 0 L19.575 0 L19.575 16.125 L26.175 16.125 "
+            "C26.025 19.35 23.775 21.525 18.9 22.275 L20.175 28.125 Z "
+            "M1.275 28.125 C10.125 27.375 16.35 23.625 16.35 12.9 "
+            "L16.35 0 L0.675 0 L0.675 16.125 L7.2 16.125 "
+            "C7.125 19.35 4.8 21.525 0 22.275 L1.275 28.125 Z"
+        ),
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
