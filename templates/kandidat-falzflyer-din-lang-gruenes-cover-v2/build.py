@@ -200,6 +200,16 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp=27,
         linesp_mode=0,
     ))
+    # Center-aligned text for Störer label in u186.
+    # IDML Justification="CenterAlign" → align=1 in Scribus.
+    doc.add_para_style(ParaStyle(
+        name='idml/stoerer-center',
+        parent='idml/normalparagraphstyle',
+        font='Gotham Narrow Ultra',
+        fontsize=11,
+        align=1,
+        fcolor='White',
+    ))
     return None
 
 
@@ -426,14 +436,16 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         shape='ellipse',
     ))
     page0.add(TextFrame(
+        # IDML u186 Störer text: Justification="CenterAlign" → use center-aligned style.
+        # Baseline PDF: "Störer" at x0=274.66mm (within 269.81-290.92mm frame → centered).
         x_mm=269.81,
         y_mm=71.28,
         w_mm=21.11,
         h_mm=6.33,
         anname='u186',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+        style='idml/stoerer-center',
+        runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/stoerer-center')],
     ))
     # u2b0 omitted: yellow-outline guide marker present in IDML Gestaltung layer
     # but excluded from InDesign PDF export (design workflow artifact, not content).
@@ -600,14 +612,27 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u3a0',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png',
-        # SCALETYPE=1 (auto-scale-to-frame): Scribus proportionally scales the landscape
-        # PNG (3894×2598px) to fill the portrait frame (280.63×596.34pt).
-        # This achieves the closest match to InDesign's baseline PDF rendering.
-        # Confirmed by prior session testing: SCALETYPE=1,local_scale=(1,1) → page2=7.60%
-        # (d9269f5 introduced scale_type=0 which regressed page2 to 27.22%).
+        # SCALETYPE=1 (manual scale), aspect-FILL ("cover") mode.
+        # Scribus 1.6 semantics:
+        #   SCALETYPE=0 = ScaleAuto (auto-fits WITHIN frame; ignores LOCALSCX)
+        #   SCALETYPE=1 = manual (LOCALSCX applied directly; treats image as 72dpi, 1px=1pt)
+        # PNG is 3894×2598px; at 72dpi: natural_w=3894pt, natural_h=2598pt.
+        # Frame: 99×210.3748mm = 280.63×596.34pt.
+        # Fill (cover): scale to LARGEST axis ratio:
+        #   sx = 280.63/3894 = 0.07207  (fills width, h=187.2pt << 596.34pt)
+        #   sy = 596.34/2598 = 0.22954  (fills height, w=893.8pt >> 280.63pt)
+        # s = 0.22954 → rendered 893.8×596.34pt; center horizontally:
+        #   LOCALX = -(893.8-280.63)/2 = -306.60pt = -108.16mm
+        scale_type=1,
+        local_scale=(0.229538, 0.229538),
+        local_offset_mm=(-108.1596, 0.0),
     ))
     page1.add(TextFrame(
-        x_mm=203.88,
+        # x_mm corrected: IDML-derived x=203.88mm but baseline PDF renders "Ich" at
+        # x0=592.3pt=208.93mm — 14.4pt=5.05mm difference. This gap is an InDesign↔IDML
+        # rendering discrepancy (u3a1 Group transform not fully propagating to final
+        # x in IDML export). Applying baseline-measured position.
+        x_mm=208.93,
         y_mm=97.4809,
         w_mm=87.24,
         h_mm=22.0927,
@@ -617,7 +642,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Ich bin ein Zitat. Ich bin ein prägnantes', font='Vollkorn Black Italic', fontsize=23, fcolor='White'), Run(text='', separator='breakline'), Run(text='Zitat.', font='Vollkorn Black Italic', fontsize=23, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
     ))
     page1.add(TextFrame(
-        x_mm=226.6686,
+        # x_mm corrected: baseline "Leonore" at x0=657.0pt=231.76mm (was 226.67mm).
+        # Same +5.05mm InDesign↔IDML group-transform gap as u3a2.
+        x_mm=231.76,
         y_mm=123.1736,
         w_mm=41.6629,
         h_mm=3.1044,
