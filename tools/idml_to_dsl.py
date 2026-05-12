@@ -970,7 +970,12 @@ def _emit_paragraph_styles(out: PythonRepr, ctx: _Ctx) -> dict[str, str]:
     """
     styles_xml = ctx.pkg.open("Resources/Styles.xml").read()
     styles = _read_paragraph_styles_from_xml(styles_xml)
-    ctx.paragraph_styles = styles
+    # Resolve the BasedOn chain for every style so that _walk_story can use
+    # ctx.paragraph_styles as a font-family fallback without a separate
+    # resolve() call per PSR.  The raw dict is kept as-is; we overwrite
+    # ctx.paragraph_styles with a fully-resolved copy.
+    resolved_styles = {k: _resolve_paragraph_style(v, styles) for k, v in styles.items()}
+    ctx.paragraph_styles = resolved_styles
 
     # Build slug map (Self-ID → idml/<slug>).
     slug_map: dict[str, str] = {}

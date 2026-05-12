@@ -154,3 +154,53 @@ def test_ace_7_preserves_tab_in_content():
     # The ACE 7 indent marker should not eat content; both Contents survive.
     assert any("•" in (r.text or "") for r in runs)
     assert any("bullet item" in (r.text or "") for r in runs)
+
+
+def test_font_cascade_via_based_on_chain():
+    """CSR FontStyle with no AppliedFont, paragraph style has no AppliedFont
+    either but inherits it via the BasedOn chain.  _walk_story must receive
+    the *resolved* paragraph_styles dict (BasedOn chain pre-resolved) so that
+    ps_family is populated even when it doesn't sit directly on the style.
+
+    Regression guard for the bug where _emit_paragraph_styles stored raw
+    (unresolved) styles in ctx.paragraph_styles, causing ps_family=None for
+    styles that inherit their font via BasedOn."""
+    xml = _story_xml(
+        # Aufzählungen has no AppliedFont of its own; it inherits from Fließtext.
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Aufzählungen auf grünem Hintergrund">'
+        '<CharacterStyleRange FontStyle="Black"><Content>lead-word </Content></CharacterStyleRange>'
+        '<CharacterStyleRange><Content>rest of text</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    # Simulate ctx.paragraph_styles built with PRE-RESOLVED styles (as fixed):
+    # Aufzählungen inherits applied_font from Fließtext via BasedOn.
+    resolved_paragraph_styles = {
+        "ParagraphStyle/Fließtext auf grünem Hintergrund": {
+            "self_id": "ParagraphStyle/Fließtext auf grünem Hintergrund",
+            "applied_font": "Gotham Narrow",
+            "font_style": "Book",
+            "point_size": 11.0,
+            "fill_color": "Color/Paper",
+            "based_on_self": None,
+        },
+        "ParagraphStyle/Aufzählungen auf grünem Hintergrund": {
+            "self_id": "ParagraphStyle/Aufzählungen auf grünem Hintergrund",
+            # No applied_font here — only set on the parent (Fließtext).
+            # After BasedOn resolution this becomes "Gotham Narrow".
+            "applied_font": "Gotham Narrow",  # resolved
+            "font_style": "Book",             # resolved
+            "point_size": 11.0,
+            "fill_color": "Color/Paper",
+            "based_on_self": "ParagraphStyle/Fließtext auf grünem Hintergrund",
+        },
+    }
+    d = _styles_dict()
+    d["paragraph_styles"] = resolved_paragraph_styles
+    d["paragraph_style_map"]["ParagraphStyle/Aufzählungen auf grünem Hintergrund"] = "idml/aufz"
+    runs = _walk_story(root, **d)
+    lead = next((r for r in runs if r.text == "lead-word "), None)
+    assert lead is not None
+    # With resolved styles, the CSR's "Black" style combines with the inherited
+    # family "Gotham Narrow" → "Gotham Narrow Black".
+    assert lead.font == "Gotham Narrow Black"
