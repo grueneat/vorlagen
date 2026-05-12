@@ -271,6 +271,223 @@ def test_inline_polygon_cmyk_yellow_maps_to_gelb():
     )
 
 
+def _complex_polygon_element(
+    self_id: str = "cpoly",
+    *,
+    stroke_color: str | None = None,
+    stroke_weight: str | None = None,
+    item_transform: str = IDENT,
+    sub_paths: list[dict] | None = None,
+) -> etree._Element:
+    """Build a <Polygon> element with multiple sub-paths (complex path).
+
+    sub_paths is a list of dicts with keys:
+      - path_open: bool (default False)
+      - points: list of (ax, ay, lx, ly, rx, ry) tuples
+        (anchor, leftDirection, rightDirection)
+    """
+    if sub_paths is None:
+        # Two closed sub-paths — enough to trigger _is_complex_polygon
+        sub_paths = [
+            {
+                "path_open": False,
+                "points": [
+                    (0, 0, 0, 0, 0, 0),
+                    (10, 0, 10, 0, 10, 0),
+                    (10, 5, 10, 5, 10, 5),
+                    (0, 5, 0, 5, 0, 5),
+                ],
+            },
+            {
+                "path_open": False,
+                "points": [
+                    (15, 0, 15, 0, 15, 0),
+                    (25, 0, 25, 0, 25, 0),
+                    (25, 5, 25, 5, 25, 5),
+                    (15, 5, 15, 5, 15, 5),
+                ],
+            },
+        ]
+
+    attrs: dict[str, str] = {"Self": self_id, "ItemTransform": item_transform}
+    if stroke_color:
+        attrs["StrokeColor"] = stroke_color
+    if stroke_weight:
+        attrs["StrokeWeight"] = stroke_weight
+
+    poly = etree.Element("Polygon", **attrs)
+    props = etree.SubElement(poly, "Properties")
+    pg = etree.SubElement(props, "PathGeometry")
+    for sp_def in sub_paths:
+        gpt = etree.SubElement(
+            pg, "GeometryPathType",
+            PathOpen="true" if sp_def.get("path_open") else "false"
+        )
+        ppa = etree.SubElement(gpt, "PathPointArray")
+        for ax, ay, lx, ly, rx, ry in sp_def["points"]:
+            etree.SubElement(
+                ppa, "PathPointType",
+                Anchor=f"{ax} {ay}",
+                LeftDirection=f"{lx} {ly}",
+                RightDirection=f"{rx} {ry}",
+            )
+    return poly
+
+
+def test_complex_polygon_multi_subpath_emits_polyline():
+    """A <Polygon> with two closed sub-paths must emit PolyLine (not Polygon)."""
+    color_map = {"Color/Paper": "White"}
+    ctx = _make_ctx(color_map)
+
+    poly = _complex_polygon_element(
+        self_id="u3d1",
+        stroke_color="Color/Paper",
+        stroke_weight="0.75",
+    )
+
+    _emit_pageitem(
+        ctx.out,
+        poly,
+        ancestor_transforms=[],
+        spread_t=IDENT,
+        page_t=IDENT,
+        page_gb=_PAGE_GB,
+        page_var="page1",
+        ctx=ctx,
+        layer_idx=0,
+    )
+
+    code = ctx.out.render()
+    # Must emit PolyLine, not Polygon
+    assert "PolyLine(" in code, f"Expected PolyLine() for complex polygon:\n{code}"
+    assert "Polygon(" not in code, f"Must NOT emit Polygon() for complex polygon:\n{code}"
+    assert "anname='u3d1'" in code
+    assert "line_color='White'" in code
+    assert "line_width_pt=0.75" in code
+    # sla_path must be non-empty
+    import re
+    m = re.search(r"sla_path='([^']*)'", code)
+    assert m is not None, f"No sla_path in output:\n{code}"
+    assert m.group(1).strip() != "", f"sla_path must not be empty:\n{code}"
+    # Must contain at least two M commands (two sub-paths)
+    assert code.count("M") >= 2, f"Expected >=2 M commands in sla_path:\n{code}"
+
+
+def test_complex_polygon_open_path_emits_polyline():
+    """A <Polygon> with a single open sub-path must emit PolyLine."""
+    color_map = {"Color/C=0 M=0 Y=100 K=0": "Gelb"}
+    ctx = _make_ctx(color_map)
+
+    sub_paths = [
+        {
+            "path_open": True,
+            "points": [
+                (0, 0, 0, 0, 0, 0),
+                (20, 0, 20, 0, 20, 0),
+                (20, 10, 20, 10, 20, 10),
+            ],
+        }
+    ]
+    poly = _complex_polygon_element(
+        self_id="open_path",
+        stroke_color="Color/C=0 M=0 Y=100 K=0",
+        stroke_weight="2.0",
+        sub_paths=sub_paths,
+    )
+
+    _emit_pageitem(
+        ctx.out,
+        poly,
+        ancestor_transforms=[],
+        spread_t=IDENT,
+        page_t=IDENT,
+        page_gb=_PAGE_GB,
+        page_var="page0",
+        ctx=ctx,
+        layer_idx=0,
+    )
+
+    code = ctx.out.render()
+    assert "PolyLine(" in code, f"Expected PolyLine() for open-path polygon:\n{code}"
+    assert "Polygon(" not in code
+
+
+def test_complex_polygon_bezier_emits_polyline():
+    """A <Polygon> with Bezier control points (non-trivial L/R directions) must
+    emit PolyLine, even with only a single sub-path."""
+    color_map = {"Color/C=85 M=35 Y=95 K=10": "Dunkelgrün"}
+    ctx = _make_ctx(color_map)
+
+    # Single sub-path with Bezier control points (LeftDirection ≠ Anchor)
+    sub_paths = [
+        {
+            "path_open": False,
+            "points": [
+                (0, 0, -5, 0, 5, 0),      # Bezier: L and R differ from anchor
+                (10, 5, 10, 0, 10, 10),
+                (0, 10, 5, 10, -5, 10),
+            ],
+        }
+    ]
+    poly = _complex_polygon_element(
+        self_id="bezier_poly",
+        stroke_color="Color/C=85 M=35 Y=95 K=10",
+        stroke_weight="1.5",
+        sub_paths=sub_paths,
+    )
+
+    _emit_pageitem(
+        ctx.out,
+        poly,
+        ancestor_transforms=[],
+        spread_t=IDENT,
+        page_t=IDENT,
+        page_gb=_PAGE_GB,
+        page_var="page0",
+        ctx=ctx,
+        layer_idx=0,
+    )
+
+    code = ctx.out.render()
+    assert "PolyLine(" in code, f"Expected PolyLine() for Bezier polygon:\n{code}"
+    assert "Polygon(" not in code
+    # Bezier sub-path should generate C commands
+    import re
+    m = re.search(r"sla_path='([^']*)'", code)
+    assert m is not None
+    assert "C" in m.group(1), f"Expected C (cubic Bezier) command in sla_path:\n{code}"
+
+
+def test_simple_polygon_four_rect_anchors_still_emits_polygon():
+    """A simple 4-point rectangular <Polygon> (all L=R=Anchor) still emits as
+    DSL Polygon, not PolyLine — the complex-path detection must not over-trigger."""
+    color_map = {"Color/C=85 M=35 Y=95 K=10": "Dunkelgrün"}
+    ctx = _make_ctx(color_map)
+
+    poly = _polygon_element(
+        self_id="rect_poly",
+        fill_color="Color/C=85 M=35 Y=95 K=10",
+        item_transform=IDENT,
+        anchors=[(0.0, 0.0), (30.0, 0.0), (30.0, 20.0), (0.0, 20.0)],
+    )
+
+    _emit_pageitem(
+        ctx.out,
+        poly,
+        ancestor_transforms=[],
+        spread_t=IDENT,
+        page_t=IDENT,
+        page_gb=_PAGE_GB,
+        page_var="page0",
+        ctx=ctx,
+        layer_idx=0,
+    )
+
+    code = ctx.out.render()
+    assert "Polygon(" in code, f"Simple 4-point polygon should emit Polygon:\n{code}"
+    assert "PolyLine(" not in code, f"Simple polygon must NOT emit PolyLine:\n{code}"
+
+
 def test_inline_polygon_ancestor_transform_cascades():
     """A <Polygon> inside a Group inherits the group's ItemTransform via
     ancestor_transforms, shifting position in page-local coordinates."""

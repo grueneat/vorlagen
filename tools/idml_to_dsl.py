@@ -111,6 +111,7 @@ from sla_lib.builder import (  # noqa: E402,F401
     ImageFrame,
     ParaStyle,
     Polygon,
+    PolyLine,
     Run,
     SoftShadow,
     TextFrame,
@@ -1173,6 +1174,150 @@ def _strict_no_threading(item: Any) -> None:
         )
 
 
+def _is_complex_polygon(item: Any) -> bool:
+    """Return True if the Polygon has multiple sub-paths or open paths.
+
+    A Polygon with only one closed sub-path and 4 or fewer straight-line anchors
+    (i.e. a simple rectangle or other convex shape) is emitted as ``Polygon``.
+    Complex paths — those with Bezier control points, open sub-paths (PathOpen=true),
+    or multiple sub-paths (e.g. compound shapes like the wind turbine, quotation marks)
+    — require ``PolyLine`` with verbatim SLA path data.
+
+    Note: IDML stores PathPointType inside a PathPointArray wrapper child of
+    GeometryPathType; use findall(".//PathPointType") to find them regardless
+    of nesting depth.
+    """
+    pg = item.find("Properties/PathGeometry")
+    if pg is None:
+        pg = item.find(".//PathGeometry")
+    if pg is None:
+        return False
+    sub_paths = pg.findall("GeometryPathType")
+    if len(sub_paths) > 1:
+        return True
+    for sp in sub_paths:
+        # Open path (PathOpen="true" or PathOpen="1")
+        path_open = sp.get("PathOpen", "false").lower()
+        if path_open in ("true", "1"):
+            return True
+        # Bezier: any PathPointType with non-trivial LeftDirection or RightDirection.
+        # Points may be under PathPointArray (IDML spec) — use .// to find them.
+        for pp in sp.findall(".//PathPointType"):
+            anchor_str = pp.get("Anchor", "")
+            left_str = pp.get("LeftDirection", anchor_str)
+            right_str = pp.get("RightDirection", anchor_str)
+            # If left/right differ from anchor, it's a Bezier curve point.
+            if left_str != anchor_str or right_str != anchor_str:
+                return True
+    return False
+
+
+def _extract_idml_sla_path(
+    item: Any,
+    item_transform_str: str,
+    ancestor_transforms: list[str],
+    spread_t: str,
+    page_t: str,
+    page_gb: tuple[float, float, float, float],
+    frame_x_pt: float,
+    frame_y_pt: float,
+) -> str:
+    """Convert IDML PathGeometry to a frame-local SLA path string (SVG-like).
+
+    The IDML PathGeometry stores anchors and Bezier control points in spread
+    coordinates. This function:
+    1. Applies the full transform chain (item → ancestors → spread-local)
+    2. Subtracts the page top-left to get page-local coords
+    3. Subtracts the frame top-left (frame_x_pt, frame_y_pt) to get frame-local coords
+    4. Builds the SVG path string using M/L/C/Z Scribus-SLA path commands
+
+    Returns a string suitable for ``PolyLine(sla_path=...)``.
+    """
+    # Build the same item-to-spread matrix as _compute_page_local_bbox_pt.
+    item_M = _parse_matrix(item_transform_str)
+    acc: tuple[float, float, float, float, float, float] = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    for ancestor_str in ancestor_transforms:
+        ancestor_M = _parse_matrix(ancestor_str)
+        acc = _matrix_compose(ancestor_M, acc)
+    item_to_spread = _matrix_compose(acc, item_M)
+
+    # Page top-left in spread coords.
+    _, _, _, _, ptx, pty = _parse_matrix(page_t)
+    if page_gb is not None:
+        y1, x1, _, _ = page_gb
+        page_tl = (ptx + x1, pty + y1)
+    else:
+        page_tl = (ptx, pty)
+
+    def _transform_pt(x: float, y: float) -> tuple[float, float]:
+        """Map an IDML spread-coord point to frame-local coords."""
+        sx, sy = _apply_matrix(item_to_spread, x, y)
+        px = sx - page_tl[0] - frame_x_pt
+        py = sy - page_tl[1] - frame_y_pt
+        return px, py
+
+    pg = item.find("Properties/PathGeometry")
+    if pg is None:
+        pg = item.find(".//PathGeometry")
+
+    path_parts: list[str] = []
+    for sub_path in pg.findall("GeometryPathType"):
+        path_open = sub_path.get("PathOpen", "false").lower() in ("true", "1")
+        # Points are wrapped in PathPointArray in IDML; use .// to find them
+        # regardless of nesting depth (direct or under PathPointArray).
+        pts = sub_path.findall(".//PathPointType")
+        if not pts:
+            continue
+
+        has_bezier = any(
+            pp.get("LeftDirection", pp.get("Anchor", "")) != pp.get("Anchor", "")
+            or pp.get("RightDirection", pp.get("Anchor", "")) != pp.get("Anchor", "")
+            for pp in pts
+        )
+
+        def _parse_pt_str(s: str) -> tuple[float, float]:
+            parts = s.split()
+            return (float(parts[0]), float(parts[1]))
+
+        # MoveTo first point.
+        first_anchor = _parse_pt_str(pts[0].get("Anchor", ""))
+        fx, fy = _transform_pt(*first_anchor)
+        path_parts.append(f"M{fx:.4g} {fy:.4g}")
+
+        if not has_bezier:
+            # All straight lines.
+            for pp in pts[1:]:
+                ax, ay = _transform_pt(*_parse_pt_str(pp.get("Anchor", "")))
+                path_parts.append(f"L{ax:.4g} {ay:.4g}")
+        else:
+            # Cubic Beziers: use RightDirection of current point and
+            # LeftDirection of next point as control points.
+            for i in range(1, len(pts)):
+                prev = pts[i - 1]
+                curr = pts[i]
+                p1 = _transform_pt(*_parse_pt_str(prev.get("RightDirection", prev.get("Anchor", ""))))
+                p2 = _transform_pt(*_parse_pt_str(curr.get("LeftDirection", curr.get("Anchor", ""))))
+                p3 = _transform_pt(*_parse_pt_str(curr.get("Anchor", "")))
+                path_parts.append(
+                    f"C{p1[0]:.4g} {p1[1]:.4g} {p2[0]:.4g} {p2[1]:.4g} {p3[0]:.4g} {p3[1]:.4g}"
+                )
+            # If closed, close the loop back to first point with Bezier.
+            if not path_open and has_bezier:
+                last = pts[-1]
+                curr = pts[0]
+                p1 = _transform_pt(*_parse_pt_str(last.get("RightDirection", last.get("Anchor", ""))))
+                p2 = _transform_pt(*_parse_pt_str(curr.get("LeftDirection", curr.get("Anchor", ""))))
+                p3 = _transform_pt(*_parse_pt_str(curr.get("Anchor", "")))
+                path_parts.append(
+                    f"C{p1[0]:.4g} {p1[1]:.4g} {p2[0]:.4g} {p2[1]:.4g} {p3[0]:.4g} {p3[1]:.4g}"
+                )
+
+        if not path_open:
+            path_parts.append("Z")
+
+    return " ".join(path_parts)
+
+
 def _emit_pageitem(
     out: PythonRepr,
     item: Any,
@@ -1345,6 +1490,43 @@ def _emit_pageitem(
         return
 
     if tag in ("Rectangle", "Polygon", "Oval"):
+        # Complex Polygon: multiple sub-paths, open paths, or Bezier curves.
+        # These cannot be expressed as a simple Scribus rectangle/polygon bbox;
+        # emit as PolyLine (PTYPE=7) with verbatim SLA path data extracted from
+        # the IDML PathGeometry (transform chain: item → ancestors → page-local).
+        if tag == "Polygon" and _is_complex_polygon(item):
+            sc = _resolve_fill(item.get("StrokeColor"), ctx.color_map)
+            if not sc:
+                sc = "Black"
+            sw = item.get("StrokeWeight", "0")
+            try:
+                sw_pt = float(sw)
+            except (ValueError, TypeError):
+                sw_pt = 0.0
+            sla_path = _extract_idml_sla_path(
+                item, item_t, ancestor_transforms,
+                spread_t, page_t, page_gb,
+                x_pt, y_pt,
+            )
+            pl_kwargs: dict[str, Any] = {
+                "x_mm": _round_mm(x_mm),
+                "y_mm": _round_mm(y_mm),
+                "w_mm": _round_mm(w_mm),
+                "h_mm": _round_mm(h_mm),
+                "sla_path": sla_path,
+                "line_color": sc,
+                "line_width_pt": sw_pt,
+                "anname": self_id,
+                "layer": layer_idx,
+            }
+            if abs(rot) > 1e-3:
+                pl_kwargs["rotation_deg"] = _round_rot(rot)
+            _emit_call(
+                ctx.out, "PolyLine", pl_kwargs,
+                receiver=page_var, multiline=True,
+            )
+            return
+
         # No nested image/pdf — emit as a Polygon.
         kwargs = {
             "x_mm": _round_mm(x_mm),
@@ -2068,6 +2250,7 @@ def _emit_header(out: PythonRepr, template_id: str, idml_name: str) -> None:
     out.w("    TextFrame,")
     out.w("    ImageFrame,")
     out.w("    Polygon,")
+    out.w("    PolyLine,")
     out.w("    Run,")
     out.w("    ParaStyle,")
     out.w("    Anchor,")
