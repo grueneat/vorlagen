@@ -2308,3 +2308,39 @@ Total session: 30+ commits across issue/35 + main. Converter improved
 substantially. Audit infrastructure complete. Issue 37 framework
 established. Ready to ship v2 falzflyer + move template-import work to a
 durable agent-orchestrated workflow.
+
+---
+
+## Baseline.pdf authoring bugs (NOT to chase as drift fixes)
+
+These are cases where our render is MORE CORRECT than `baseline.pdf` —
+do not attempt to make our output match baseline here. Documented so
+future agents don't mistake them for converter bugs.
+
+### u1fd page 1 middle bullets: missing inter-bullet blank line
+
+In `baseline.pdf` page 0's bullet list (`Scim rem...`, `Tissi luntem...`,
+`Uaerum ium...`, `Ur, omniet vello...`), the gap between bullets is:
+
+| Bullet pair (baseline) | Gap pt | Interpretation |
+|---|---|---|
+| Scim → Tissi | 64.00 | 3-line wrap + empty paragraph |
+| Tissi → Uaerum | 48.01 | 2-line wrap + empty paragraph |
+| **Uaerum → Ur,** | **15.39** | **= 1 line height, NO empty paragraph (authoring slip)** |
+| Ur, → ssi | ~16 | (same — Uaerum + Ur, + ssi run together) |
+
+The IDML's source story `Story_u200` likely has 4 paragraphs but the
+designer accidentally omitted the empty paragraph between Uaerum and
+Ur,. InDesign rendered the bug as authored.
+
+Our converter properly preserves separators between ALL bullets, so our
+render has them all evenly spaced. **This produces drift vs baseline
+but matches the intended design.** User confirmation 2026-05-12:
+> "a drift on the second third of the first page is actually an issue in
+> the original template ... so our template is actually more correct"
+
+**Backport guidance**: an audit could flag this kind of asymmetry by
+checking that all bullets in a list use the same gap pattern; mismatch
+suggests baseline authoring issue, not converter bug. Future skill
+should report such "render-better-than-baseline" cases as informational,
+not errors.
