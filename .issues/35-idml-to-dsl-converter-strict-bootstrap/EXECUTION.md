@@ -1348,3 +1348,123 @@ continues to render — confirmed visually.
 **Phase R7 completed:** 2026-05-12  
 **Status:** Pattern 9 in converter; 7 frames widened; u3ba hand-patch dropped;
 social handles render; p2 improved 7.28%→7.10%; 9 new tests; font_audit ok=true.
+
+---
+
+## Phase D7 + D8 — render-side text audits
+
+**Date:** 2026-05-12
+
+### Tool descriptions
+
+- **`tools/text_render_audit.py` (Phase D7):** runs `pdftotext -layout` on both preview.pdf and baseline.pdf, NFC-normalises and lowercases, builds per-word Counter dicts, diffs to surface words present in baseline but missing (suppressed) in preview. Catches frame clipping, off-page, color-on-color, hidden layers.
+- **`tools/text_position_audit.py` (Phase D8):** uses `pdfplumber.extract_words()` on both PDFs, greedy nearest-neighbour match per (page, text), computes (dx, dy) per word in PDF points, reports words drifted > 2.0pt threshold. Catches alignment drift, group-transform gaps, panel-offset origin errors.
+
+### Commit SHAs
+
+- D7 tool + unit tests: `5d82cc4`
+- D8 tool + unit tests: `ae7d1d0`
+- Pipeline wire-up + integration tests: `732ff9f`
+- Issue 37 update (P8 + P9 + D7/D8): `fd178a5` (on main branch)
+
+### v2 falzflyer audit outputs
+
+**text_render_audit.yml** (D7):
+```yaml
+baseline_pdf: templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/baseline.pdf
+baseline_word_count: 444
+extra_in_preview:
+  impressu: 1
+  m: 1
+  oﬃc: 3
+  oﬃcit: 3
+missing_in_preview:
+  conemporro: 1
+  exceptatur: 1
+  headline.: 2
+  impressum: 1
+  kasten: 1
+  lia: 1
+  offic: 3
+  officit: 3
+  omniet: 1
+  ped: 1
+  quia.: 1
+  re: 1
+  sed: 1
+  ur: 1
+  vellam: 1
+ok: false
+preview_pdf: templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/preview.pdf
+preview_word_count: 432
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+```
+
+**text_position_audit.yml** (D8):
+```yaml
+large_deltas_count: 405
+ok: false
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+threshold_pt: 2.0
+```
+(top 50 deltas written to file; full count 405)
+
+### Top 5 text_position deltas with interpretation
+
+| text | page | dx_pt | dy_pt | interpretation |
+|------|------|-------|-------|----------------|
+| `Ur,` | 0 | -293.64 | +66.84 | lorem ipsum body text — panel-to-panel layout shift; baseline page 0 vs preview page layout differs |
+| `omniet` | 0 | -293.43 | +66.84 | same pattern — lorem ipsum block displaced ~103mm horizontally between baseline panels |
+| `et` | 1 | +99.95 | -201.23 | lorem ipsum word "et" matched greedily to wrong occurrence across a column jump |
+| `quat.` | 1 | +128.90 | -141.13 | lorem ipsum word matched cross-column; large dx+dy = column layout mismatch |
+| `et` | 0 | +174.85 | -48.61 | same "et" word — greedy match to wrong occurrence on busy lorem ipsum page |
+
+**Interpretation:** The 405 large-delta count is dominated by lorem ipsum placeholder text whose multi-column layout differs structurally between InDesign (baseline) and Scribus (preview). The greedy word-matcher assigns each baseline occurrence to the nearest preview occurrence, but when the same common word ("et", "modi", "ssi") appears many times at different column positions, the nearest-match fails to pair them semantically. This is expected for a template in the active convergence loop — the position audit's primary value is for NAMED content (candidate names, handles, email addresses) where there's only one occurrence per word, making the match unambiguous. The `offic` / `oﬃc` pattern in D7's missing/extra is a ligature encoding difference (fi ligature in preview PDF) — the content IS present, just tokenised differently by pdftotext.
+
+**Signal for R8/R9:** `missing_in_preview` in D7 contains `headline.`, `kasten`, `impressum`, `conemporro`, `exceptatur` — these are lorem ipsum placeholder body-text words being clipped in Scribus frame layout. `offic`/`officit` appear in `extra_in_preview` as `oﬃc`/`oﬃcit` (ligature). Actual editorial content (candidate name, handles) is now rendered (R7 fix confirmed). D7 ok=false is driven by placeholder-text frame overflow — a R8 follow-up.
+
+### Audit pipeline runtime
+
+| Audit | Runtime |
+|-------|---------|
+| D7 text_render_audit | 0.05s |
+| D8 text_position_audit | 0.34s |
+| **Combined D7+D8** | **0.39s** |
+
+Both well within the ≤5s combined target.
+
+### Tests added (14 unit + 9 integration = 23 new tests)
+
+**tests/unit/test_text_render_audit.py** (7 tests):
+- `test_identical_pdfs_ok`
+- `test_missing_word_in_preview`
+- `test_extra_word_in_preview`
+- `test_nfc_normalisation`
+- `test_case_insensitive_matching`
+- `test_subprocess_error_on_missing_pdf`
+- `test_yaml_dump_deterministic`
+
+**tests/unit/test_text_position_audit.py** (7 tests):
+- `test_identical_positions_ok`
+- `test_large_shift_reported`
+- `test_sub_threshold_shift_not_reported`
+- `test_missing_word_skipped`
+- `test_greedy_no_double_counting`
+- `test_extract_words_real_pdf`
+- `test_yaml_dump_deterministic`
+
+**tests/integration/test_text_audits_v2.py** (9 tests):
+- `test_text_render_audit_produces_output`
+- `test_text_render_audit_word_counts_nonzero`
+- `test_text_render_audit_yaml_written`
+- `test_text_render_audit_known_words_present_after_r7`
+- `test_text_position_audit_produces_output`
+- `test_text_position_audit_threshold_correct`
+- `test_text_position_audit_large_deltas_bounded`
+- `test_text_position_audit_yaml_written`
+- `test_text_position_audit_delta_schema`
+- `test_text_position_audit_deltas_sorted_by_magnitude` (skipped when <2 deltas)
+
+**Total test suite: 223 passed.**
+
+**Phase D7 + D8 completed:** 2026-05-12
