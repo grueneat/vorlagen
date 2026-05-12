@@ -1905,9 +1905,10 @@ def _walk_story(
     for i, psr in enumerate(psrs):
         applied_ps = psr.get("AppliedParagraphStyle", "")
         para_slug = paragraph_style_map.get(applied_ps, "")
-        # Resolved family for font-cascade fallback.
+        # Resolved family + style for font-cascade fallback.
         ps_resolved = paragraph_styles.get(applied_ps, {})
         ps_family = ps_resolved.get("applied_font")
+        ps_font_style = ps_resolved.get("font_style")
 
         para_runs: list[Run] = []
         # Walk CharacterStyleRange children of the PSR in document order.
@@ -1917,7 +1918,7 @@ def _walk_story(
             ctag = etree.QName(child).localname
             if ctag == "CharacterStyleRange":
                 para_runs.extend(
-                    _walk_csr(child, ps_family, color_map)
+                    _walk_csr(child, ps_family, color_map, ps_font_style=ps_font_style)
                 )
                 continue
             if ctag in _ALLOWED_PSR_CHILDREN:
@@ -1968,11 +1969,21 @@ def _walk_csr(
     csr: Any,
     ps_family: Optional[str],
     color_map: dict[str, str],
+    ps_font_style: Optional[str] = None,
 ) -> list[Run]:
     """Convert a <CharacterStyleRange> into a list of Run primitives.
 
     Honors inline ``<Content>``, ``<Br/>``, and ``<?ACE 7?>`` markers in
     document order. ``<?ACE N?>`` with N != 7 raises.
+
+    Font cascade:
+    - ``csr_family``: explicit AppliedFont on this CSR (highest priority).
+    - ``csr_font_style``: explicit FontStyle attribute on this CSR.
+    - ``ps_family``: resolved AppliedFont from the parent ParagraphStyle.
+    - ``ps_font_style``: resolved FontStyle from the parent ParagraphStyle
+      (used as fallback when the CSR carries no FontStyle of its own — e.g.
+      ``ParagraphStyle/Headline in grünem Kasten`` has FontStyle="Bold" so
+      its CSRs render in Bold even without an explicit CSR-level attribute).
     """
     runs: list[Run] = []
     # Per-CSR style fields.
@@ -1982,7 +1993,11 @@ def _walk_csr(
     csr_fill = csr.get("FillColor")
 
     family = csr_family or ps_family
-    font_name = _make_font_name(family, csr_font_style, ctx_self_id=csr.get("Self", "?"))
+    # If the CSR has no explicit FontStyle, inherit the paragraph style's
+    # font_style so that paragraph-level weight overrides (e.g. "Bold") are
+    # not silently dropped.  CSR-explicit FontStyle always wins.
+    effective_font_style = csr_font_style if csr_font_style is not None else ps_font_style
+    font_name = _make_font_name(family, effective_font_style, ctx_self_id=csr.get("Self", "?"))
 
     fontsize: Optional[float] = None
     if csr_pt is not None:

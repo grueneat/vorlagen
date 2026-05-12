@@ -156,6 +156,60 @@ def test_ace_7_preserves_tab_in_content():
     assert any("bullet item" in (r.text or "") for r in runs)
 
 
+def test_para_style_font_style_inherited_by_csr_with_no_explicit_font_style():
+    """A CSR with NO FontStyle attribute must inherit the paragraph style's
+    font_style so that paragraph-level weight overrides are not silently dropped.
+
+    Regression guard for the bug where CSRs without an explicit FontStyle
+    attribute emitted font='Gotham Narrow' instead of 'Gotham Narrow Bold'
+    when the paragraph style had FontStyle="Bold". This caused GothamNarrow-Bold
+    to be absent from preview.pdf even though it is present in baseline.pdf.
+
+    Example: ParagraphStyle/Headline in grünem Kasten has FontStyle="Bold" and
+    AppliedFont="Gotham Narrow". Its only CSR carries no FontStyle attribute,
+    so the full font name must be "Gotham Narrow Bold"."""
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/HinGK">'
+        # CSR has NO FontStyle attribute — must inherit paragraph style's "Bold".
+        '<CharacterStyleRange><Content>Headline text</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    d = _styles_dict()
+    d["paragraph_style_map"]["ParagraphStyle/HinGK"] = "idml/headline-in-gruenem-kasten"
+    d["paragraph_styles"]["ParagraphStyle/HinGK"] = {
+        "self_id": "ParagraphStyle/HinGK",
+        "applied_font": "Gotham Narrow",
+        "font_style": "Bold",
+        "point_size": 14.0,
+        "fill_color": "Color/Paper",
+        "based_on_self": None,
+    }
+    runs = _walk_story(root, **d)
+    text_run = next((r for r in runs if r.text == "Headline text"), None)
+    assert text_run is not None
+    # The CSR has no explicit FontStyle; the paragraph style's "Bold" must cascade
+    # so the font name becomes "Gotham Narrow Bold" (not "Gotham Narrow").
+    assert text_run.font == "Gotham Narrow Bold"
+
+
+def test_csr_explicit_font_style_overrides_para_style_font_style():
+    """A CSR with an explicit FontStyle always wins over the paragraph style's
+    font_style, even when both differ."""
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Fließtext auf grünem Hintergrund">'
+        # Paragraph style says "Book", but CSR explicitly says "Black" — CSR wins.
+        '<CharacterStyleRange FontStyle="Black"><Content>lead-word</Content></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    runs = _walk_story(root, **_styles_dict())
+    text_run = next((r for r in runs if r.text == "lead-word"), None)
+    assert text_run is not None
+    # CSR FontStyle="Black" overrides paragraph style's FontStyle="Book".
+    assert text_run.font == "Gotham Narrow Black"
+
+
 def test_font_cascade_via_based_on_chain():
     """CSR FontStyle with no AppliedFont, paragraph style has no AppliedFont
     either but inherits it via the BasedOn chain.  _walk_story must receive

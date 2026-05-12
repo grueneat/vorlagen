@@ -156,20 +156,8 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp=14.3,
         linesp_mode=0,
     ))
-    # P5/inject: custom styles for hand-split Vollkorn frames + Störer label.
-    # These styles are not in the IDML style map but required for the multi-frame
-    # headline workaround (Vollkorn Black Italic rendering issue in Scribus).
-    # Re-emit drops them; restore here. See Phase 4 EXECUTION.md.
-    doc.add_para_style(ParaStyle(
-        name='idml/headline-cover-zentriert',
-        parent='idml/normalparagraphstyle',
-        font='Gotham Narrow Ultra',
-        fontsize=38,
-        align=1,
-        fcolor='White',
-        linesp=34.134,
-        linesp_mode=0,
-    ))
+    # P5/inject: custom styles for Störer label and subheadline.
+    # Re-emit drops these styles (not in IDML style map); restore here.
     doc.add_para_style(ParaStyle(
         name='idml/subheadline-cover-zentriert',
         parent='idml/normalparagraphstyle',
@@ -177,26 +165,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         fontsize=18,
         align=1,
         fcolor='White',
-    ))
-    doc.add_para_style(ParaStyle(
-        name='idml/headline-panel-weiss',
-        parent='idml/normalparagraphstyle',
-        font='Gotham Narrow Ultra',
-        fontsize=30,
-        align=0,
-        fcolor='White',
-        linesp=27,
-        linesp_mode=0,
-    ))
-    doc.add_para_style(ParaStyle(
-        name='idml/headline-panel-dunkelgruen',
-        parent='idml/normalparagraphstyle',
-        font='Gotham Narrow Ultra',
-        fontsize=30,
-        align=0,
-        fcolor='Dunkelgrün',
-        linesp=27,
-        linesp_mode=0,
     ))
     doc.add_para_style(ParaStyle(
         name='idml/stoerer-center',
@@ -262,59 +230,16 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         style='idml/subheadline-cover-zentriert',
         runs=[Run(text='Mehrzeilige Subheadline –', font='Gotham Narrow Book', fontsize=18, fcolor='White'), Run(text='', separator='breakline'), Run(text='mehr Info zum Thema', font='Gotham Narrow Book', fontsize=18, fcolor='White', paragraph_style='idml/subheadline-cover-zentriert')],
     ))
-    # u52d = cover headline (3 lines: Gotham "Das ist die" / Vollkorn "dreizeilige" /
-    # Gotham "Headline"). Same Vollkorn-rendering workaround as u1b0/u1e6: any line
-    # AFTER Vollkorn in a mixed-font paragraph is suppressed by Scribus. Split into
-    # three single-line frames positioned to match baseline.pdf glyph top positions.
-    #
-    # Positions calibrated from baseline.pdf (pdfplumber glyph tops, page-relative):
-    #   "Das ist die": 228.2pt = 80.51mm  (Gotham: glyph top = frame top)
-    #   "dreizeilige":  263.1pt = 92.81mm (Vollkorn 38pt: glyph top = frame_top+15.0pt)
-    #   "Headline":     296.4pt = 104.56mm (Gotham: glyph top = frame top)
-    #
-    # Frame 1: "Das ist die" (Gotham Narrow Ultra, centered).
     page0.add(TextFrame(
         x_mm=211.6719,
-        y_mm=80.51,
+        y_mm=79.2087,
         w_mm=71.6562,
-        # 14.5mm=41.1pt: enough for one 38pt Gotham line.
-        h_mm=14.5,
+        h_mm=34.7873,
         anname='u52d',
         layer=0,
-        style='idml/headline-cover-zentriert',
-        runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', fontsize=38, fcolor='White')],
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', fontsize=38, fcolor='White'), Run(text='', separator='breakline'), Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb'), Run(text='', separator='breakline'), Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
     ))
-    # Frame 2: "dreizeilige" (Vollkorn Black Italic, centered).
-    # Target glyph top = 263.1pt. Vollkorn 38pt offset=15.0pt → frame_top=248.1pt=87.52mm.
-    page0.add(TextFrame(
-        x_mm=211.6719,
-        y_mm=87.52,
-        w_mm=71.6562,
-        # 19mm=53.86pt: Vollkorn baseline_from_frame_top=15.0+36.18=51.18pt < 53.86pt ✓
-        h_mm=19,
-        anname='u52d_dreiz',
-        layer=0,
-        style='idml/headline-cover-zentriert',
-        runs=[Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb')],
-    ))
-    # Frame 3: "Headline" (Gotham Narrow Ultra, centered).
-    # Target glyph top = 296.4pt → frame_top=296.4pt=104.56mm.
-    page0.add(TextFrame(
-        x_mm=211.6719,
-        y_mm=104.56,
-        w_mm=71.6562,
-        # 14.5mm=41.1pt: Gotham 38pt baseline=0+30.4=30.4pt < 41.1pt ✓; ends at 119.06mm
-        # (u516 subheadline starts at 119.146mm, no overlap).
-        h_mm=14.5,
-        anname='u52d_hl',
-        layer=0,
-        style='idml/headline-cover-zentriert',
-        runs=[Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White')],
-    ))
-    # u184 = Störer group: Magenta oval + "Störer" text overlay.
-    # The oval is rotated -18° in IDML but since it's a circle, rotation is visual no-op.
-    # Bounding box computed from IDML spread coords → page coords:
-    #   oval x=270.42-290.32mm, y=64.53-84.42mm (≈19.9mm diameter circle)
     page0.add(Polygon(
         x_mm=270.42,
         y_mm=64.53,
@@ -364,42 +289,15 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         fill='Magenta',
     ))
-    # u1b0 = left-panel headline, two-frame workaround for Vollkorn rendering.
-    # Scribus cannot render Vollkorn Black Italic as a SECOND line in a mixed-font
-    # paragraph with LINESP < em-box; it is suppressed regardless of frame height
-    # (confirmed by testing with frames up to 141pt tall — still no rendering).
-    # Solution: emit each headline line as a separate single-line frame.
-    #
-    # Frame 1: Gotham Narrow Ultra "Ich bin eine " (line 1).
-    # y_mm=17.4mm: matches the original IDML frame position. Scribus BASEOF=0
-    # places Gotham glyph top at frame top. The 3pt offset vs InDesign is a
-    # rendering engine difference; correcting it increases mismatch elsewhere.
     page0.add(TextFrame(
         x_mm=16.8913,
         y_mm=17.4,
         w_mm=65.2174,
-        # 10.9mm = 30.9pt: enough for one 30pt Gotham line.
-        h_mm=10.9,
+        h_mm=17.9915,
         anname='u1b0',
         layer=0,
-        style='idml/headline-panel-weiss',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White')],
-    ))
-    # Frame 2: Vollkorn Black Italic "Headline." (line 2).
-    # Vollkorn glyph top in baseline.pdf = 79.9pt = 28.19mm.
-    # Empirical: Vollkorn first line glyph top = frame_top + 11.78pt.
-    # → frame top needed = 79.9 - 11.78 = 68.12pt = 24.03mm from page top.
-    page0.add(TextFrame(
-        x_mm=16.8913,
-        y_mm=24.03,
-        w_mm=65.2174,
-        # u1c7 starts at y=41.69mm. Height = 41.69-24.03 = 17.66mm.
-        # Vollkorn baseline at 40.34pt < 50.05pt (frame height) ✓.
-        h_mm=17.66,
-        anname='u1b0_hl',
-        layer=0,
-        style='idml/headline-panel-weiss',
-        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb')],
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
     ))
     page0.add(TextFrame(
         x_mm=16.8913,
@@ -409,28 +307,17 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         anname='u1c7',
         layer=0,
         style='idml/fliesstext-auf-gruenem-hintergrund',
-        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
+        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
     ))
-    # u1e6 = center-panel headline, same two-frame workaround as u1b0.
     page0.add(TextFrame(
         x_mm=115.8913,
         y_mm=17.4,
         w_mm=65.2174,
-        h_mm=10.9,
+        h_mm=17.9915,
         anname='u1e6',
         layer=0,
-        style='idml/headline-panel-weiss',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White')],
-    ))
-    page0.add(TextFrame(
-        x_mm=115.8913,
-        y_mm=24.03,
-        w_mm=65.2174,
-        h_mm=17.66,
-        anname='u1e6_hl',
-        layer=0,
-        style='idml/headline-panel-weiss',
-        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb')],
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
     ))
     page0.add(TextFrame(
         x_mm=115.8913,
@@ -440,37 +327,17 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         anname='u1fd',
         layer=0,
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
-        runs=[Run(text='\t•\t', font='Gotham Narrow'), Run(text='Scim rem ', font='Gotham Narrow Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='Uaerum ium ', font='Gotham Narrow Black'), Run(text='verior alicide liquuntio. ', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='vello modi ', font='Gotham Narrow Black'), Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow'), Run(text='moditatque', font='Gotham Narrow Black'), Run(text=' nimil maxim voluptur.', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='\t', font='Gotham Narrow'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
+        runs=[Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Scim rem ', font='Gotham Narrow Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='Uaerum ium ', font='Gotham Narrow Black'), Run(text='verior alicide liquuntio. ', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='vello modi ', font='Gotham Narrow Black'), Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='\t•\t', font='Gotham Narrow Book'), Run(text='moditatque', font='Gotham Narrow Black'), Run(text=' nimil maxim voluptur.', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='\t', font='Gotham Narrow Book'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='para')],
     ))
-    # u2b0 = yellow wind-turbine outline (IDML Polygon, Scribus PTYPE=7 PolyLine).
-    # The IDML element has multiple PathGeometry sub-paths (rotor circle + 3 blades + mast).
-    # Scribus imports it as PTYPE=7 (PolyLine) with the SVG path data verbatim.
-    # baseline.pdf has the turbine visible (yellow stroke), so we must emit it.
-    # PolyLine is added to sla_lib/builder in Phase R3.
-    #
-    # Path data sourced directly from reference SLA (local-pt coords, origin = bbox top-left).
-    # linescolor = C=0 M=0 Y=100 K=0 (yellow), line_width_pt=4.204 from SLA PWIDTH.
-    # Position from sla_inventory: x=123.507mm, y=127.956mm, w=48.986mm, h=59.48mm.
     page0.add(PolyLine(
-        x_mm=123.507,
-        y_mm=127.956,
-        w_mm=48.986,
+        x_mm=123.5071,
+        y_mm=127.9561,
+        w_mm=48.9858,
         h_mm=59.48,
-        sla_path=(
-            "M74.3168 89.7351 C80.8011 89.7351 86.0571 84.4077 86.0571 77.8328 "
-            "C86.0571 71.2583 80.8011 65.9309 74.3168 65.9309 "
-            "C67.8323 65.9309 62.5764 71.2583 62.5764 77.8328 "
-            "C62.5764 84.4077 67.8323 89.7351 74.3168 89.7351 "
-            "M69.2094 59.7437 L60.4739 47.6303 L82.3313 0 L92.7383 1.68449 L84.2124 62.2429 "
-            "M92.9683 81.4475 L107.796 79.6769 L138.857 121.887 L132.341 130.172 L83.5083 93.3554 "
-            "M61.9238 91.6762 L55.9814 105.376 L3.87023 110.947 L0 101.142 L56.4025 77.5054 "
-            "M68.4867 97.5049 L64.1298 150.27 "
-            "M80.2182 98.9334 L85.142 157.784 L96.9028 157.784 L96.9028 168.605 "
-            "M76.1377 157.783 L51.7782 157.783 L51.7782 168.604"
-        ),
-        line_color="Gelb",   # C=0 M=0 Y=100 K=0 — from SLA PCOLOR2
-        line_width_pt=4.2039,
-        anname="u2b0",
+        sla_path='M74.32 89.74 C80.8 89.74 86.06 84.41 86.06 77.83 C86.06 71.26 80.8 65.93 74.32 65.93 C67.83 65.93 62.58 71.26 62.58 77.83 C62.58 84.41 67.83 89.74 74.32 89.74 Z M69.21 59.74 L60.47 47.63 L82.33 0 L92.74 1.684 L84.21 62.24 M92.97 81.45 L107.8 79.68 L138.9 121.9 L132.3 130.2 L83.51 93.36 M61.92 91.68 L55.98 105.4 L3.87 110.9 L0 101.1 L56.4 77.51 M68.49 97.5 L64.13 150.3 M80.22 98.93 L85.14 157.8 L96.9 157.8 L96.9 168.6 M76.14 157.8 L51.78 157.8 L51.78 168.6',
+        line_color='Gelb',
+        line_width_pt=4.203916263369494,
+        anname='u2b0',
         layer=0,
     ))
 
@@ -484,8 +351,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=20.5,
         anname='u24e',
         layer=0,
-        style='idml/headline-panel-dunkelgruen',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/headline-panel-dunkelgruen')],
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle')],
     ))
     page1.add(TextFrame(
         x_mm=16.8913,
@@ -495,7 +362,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u265',
         layer=0,
         style='idml/fliesstext-auf-gruenem-hintergrund',
-        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Lia vellam, conemporro modi\u2028Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', separator='breakline')],
+        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Lia vellam, conemporro modi\u2028Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', separator='breakline')],
     ))
     page1.add(TextFrame(
         x_mm=115.3913,
@@ -505,7 +372,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u295',
         layer=0,
         style='idml/fliesstext-auf-gruenem-hintergrund',
-        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
+        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', separator='breakline'), Run(text='', separator='breakline'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
     ))
     page1.add(ImageFrame(
         x_mm=99.1764,
@@ -539,8 +406,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=20.5,
         anname='u2d5',
         layer=0,
-        style='idml/headline-panel-weiss',
-        runs=[Run(text='Ich bin auch ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='eine Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/headline-panel-weiss')],
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Ich bin auch ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White'), Run(text='', separator='breakline'), Run(text='eine Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
     ))
     page1.add(Polygon(
         x_mm=-17.3,
@@ -588,7 +455,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u35f',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(TextFrame(
         x_mm=21.6413,
@@ -598,7 +465,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u376',
         layer=0,
         style='idml/headline-in-gruenem-kasten',
-        runs=[Run(text='Headline in einem grünen Kasten ', font='Gotham Narrow', paragraph_style='idml/headline-in-gruenem-kasten')],
+        runs=[Run(text='Headline in einem grünen Kasten ', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten')],
     ))
     page1.add(Polygon(
         x_mm=-15.75,
@@ -716,7 +583,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u40c',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@diegruenen', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
@@ -737,7 +604,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u412',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@diegruenen', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=211.7191,
@@ -758,7 +625,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u45b',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@diegruenenaustria', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@diegruenenaustria', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
@@ -778,7 +645,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u47b',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='@gruene.at', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='@gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
@@ -799,7 +666,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4a6',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='gruene.at', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1')],
     ))
     page1.add(ImageFrame(
         x_mm=257.1,
@@ -820,7 +687,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u4df',
         layer=0,
         style='idml/absatzformat-1',
-        runs=[Run(text='gruene.at', font='Gotham Narrow', paragraph_style='idml/absatzformat-1')],
+        runs=[Run(text='gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1')],
     ))
 
 def build_preview() -> Document:
