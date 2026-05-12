@@ -1517,7 +1517,9 @@ are legitimate signals for future layout convergence work.
 
 ### Commit SHAs
 
-(To be filled in after commit)
+- `0e0e251` — 37: fix(text-render-audit): Unicode ligature normalization (ﬃ → ffi)
+- `a4758ef` — 37: fix(text-position-audit): filter common-word matches from large_deltas
+- `54f7e58` — 37: docs(issues): note ligature folding + common-word filter in Phase D7/D8
 
 ### Tests added
 
