@@ -920,6 +920,84 @@ class Polygon(_Frame):
 
 
 # ---------------------------------------------------------------------------
+# PolyLine  (PTYPE=7 — complex open/mixed path with stroke only)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PolyLine:
+    """A complex multi-segment polyline (PTYPE=7 in Scribus).
+
+    Used for complex open or mixed-open/closed vector paths emitted with a
+    stroke (linescolor) and no fill. The canonical use case is importing
+    InDesign Polygon elements whose PathGeometry has multiple sub-paths
+    (e.g. wind turbines, logos, icons).
+
+    ``sla_path`` is a verbatim Scribus SLA SVG-like path string in **local
+    points** (origin = frame top-left = 0,0). The frame bounding box
+    (x_mm / y_mm / w_mm / h_mm) gives the page-relative position.
+
+    Example::
+
+        page.add(PolyLine(
+            x_mm=123.507,
+            y_mm=127.956,
+            w_mm=48.986,
+            h_mm=59.48,
+            sla_path="M74.3 89.7 C80.8 89.7 ... L51.8 168.6",
+            line_color="Gelb",
+            line_width_pt=4.204,
+            anname="u2b0",
+        ))
+    """
+    x_mm: float = 0
+    y_mm: float = 0
+    w_mm: float = 10
+    h_mm: float = 10
+    sla_path: str = "M0 0 L10 10"  # local-pt SVG path string
+    line_color: str = "Black"
+    line_width_pt: float = 1.0
+    layer: int = 0
+    anname: str = ""
+    rotation_deg: float = 0.0
+
+    def to_pageobject(self, idgen, page) -> etree._Element:
+        x_pt = mm_to_pt(self.x_mm) + page.page_xpos_pt
+        y_pt = mm_to_pt(self.y_mm) + page.page_ypos_pt
+        w_pt = mm_to_pt(self.w_mm)
+        h_pt = mm_to_pt(self.h_mm)
+        attrs = {
+            "XPOS": _fmt_num(x_pt),
+            "YPOS": _fmt_num(y_pt),
+            "OwnPage": str(page.own_page),
+            "ItemID": str(idgen.next()),
+            "PTYPE": "7",
+            "WIDTH": _fmt_num(w_pt),
+            "HEIGHT": _fmt_num(h_pt),
+            "FRTYPE": "3",
+            "CLIPEDIT": "1",
+            "PCOLOR": "None",
+            "PCOLOR2": self.line_color,
+            "PWIDTH": _fmt_num(self.line_width_pt),
+            "PLINEART": "1",
+            "LOCALSCX": "1", "LOCALSCY": "1",
+            "LOCALX": "0", "LOCALY": "0", "LOCALROT": "0",
+            "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
+            "gXpos": _fmt_num(x_pt),
+            "gYpos": _fmt_num(y_pt),
+            "gWidth": "0", "gHeight": "0",
+            "LAYER": str(self.layer),
+            "NEXTITEM": "-1", "BACKITEM": "-1",
+            "ROT": _fmt_num(self.rotation_deg),
+            "path": self.sla_path,
+            "copath": self.sla_path,
+            "fillRule": "0",
+        }
+        if self.anname:
+            attrs["ANNAME"] = self.anname
+        return etree.Element("PAGEOBJECT", attrib=attrs)
+
+
+# ---------------------------------------------------------------------------
 # Line  (deprecated — kept for spec-input authoring only)
 # ---------------------------------------------------------------------------
 @dataclass
