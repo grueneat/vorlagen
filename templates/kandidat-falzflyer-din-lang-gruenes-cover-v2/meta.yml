@@ -20,7 +20,53 @@ build:
 # Pinned by bin/check-stale-previews; updated by bin/render-gallery on
 # each rebuild. Initial value is the SHA of the converter-emitted SLA.
 previews_for_sla: 01a737f648eba48e347a575ed5a35e05867b7ec26cffab66e42d35a52bc794cb
-brand_overrides: []
+brand_overrides:
+  - id: brand:line_spacing_0.9
+    reason: >-
+      IDML-imported template. The original InDesign ParagraphStyles
+      (Headline in grünem Kasten, Absatzformat 1, Fließtext auf grünem
+      Hintergrund, Aufzählungen auf grünem Hintergrund) carry leading
+      values that do NOT follow the Quickguide 0.9-factor convention
+      (e.g. headline-in-gruenem-kasten linesp=12 fontsize=12 = 1.0×,
+      fliesstext-auf-gruenem-hintergrund linesp=16 fontsize=11 = 1.45×,
+      absatzformat-1 linesp=14.3 fontsize=11 = 1.3×). The converter
+      emits these verbatim from the IDML Resources/Styles.xml; changing
+      them would diverge from the InDesign-authored baseline.pdf which
+      is the convergence target (issue 35 P1).
+  - id: brand:font_family
+    reason: >-
+      IDML-imported template. The IDML contains 2 text frames (u347,
+      u3ba) that the converter cannot resolve to a brand font and falls
+      back to Times Roman. Both are minor labels (impressum/credit
+      text). Verified empirically that baseline.pdf renders the same
+      fallback. Resolution path: extend tools/idml_to_dsl.py font
+      resolution for these 2 frame styles; tracked in issue 37 as a
+      converter completeness gap.
+  - id: brand:bleed_3mm
+    reason: >-
+      IDML-imported template. The IDML's InDesign document was authored
+      with bleed=0; converter respects the source page geometry. The
+      baseline.pdf (convergence target) also has bleed=0. Adjusting
+      bleed would force a deviation from the InDesign-authored output.
+      Brand-team review pending — the canonical Quickguide requires
+      3mm but the existing IDML asset predates that requirement.
+  - id: brand:inside_page
+    reason: >-
+      IDML-imported template. Multiple frames in the original IDML
+      extend slightly outside the trim box (u1ae background polygon
+      with 1.82mm overshoot; u151/u513/u19d small decorative shapes
+      with 10–17mm overshoot). These were intentional InDesign-side
+      bleed/extension marks in the source asset. The converter
+      preserves the source geometry verbatim per issue 35 P1
+      (baseline.pdf is the convergence target).
+  - id: brand:image_text_overlap
+    reason: >-
+      IDML-imported template. The IDML places the impressum text
+      (u30d) overlapping the green page-background polygon by design
+      — the impressum is white-on-green and visually correct in
+      baseline.pdf. The brand:image_text_overlap rule cannot
+      distinguish "text on a colored polygon backdrop" (intentional)
+      from "text on a raster image" (overlap concern).
 
 ci_overrides:
   non_ci_styles:
