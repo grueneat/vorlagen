@@ -358,7 +358,11 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     page0.add(TextFrame(
         x_mm=16.8913,
-        y_mm=41.6915,
+        # P5/inject y-bump: baseline.pdf first word 'Usapiene' top=123.52pt vs preview's 118.18pt
+        # — preview's first line starts at frame top (FLOP=1 produces glyph-top at frame-top).
+        # InDesign's FirstBaselineOffset=AscentOffset adds ~5.34pt before first baseline.
+        # Compensate via y_mm += 5.34pt × PT_TO_MM = 1.884mm → 43.575mm.
+        y_mm=43.5755,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u1c7',
@@ -380,7 +384,9 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     page0.add(TextFrame(
         x_mm=115.8913,
-        y_mm=41.6915,
+        # P5/inject y-bump: baseline.pdf bullets first 'Scim' top=124.14pt vs preview's 118.18pt.
+        # Same FirstBaselineOffset compensation: +5.96pt × PT_TO_MM = 2.103mm → 43.795mm.
+        y_mm=43.7945,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u1fd',
@@ -465,7 +471,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=16.8913,
-        y_mm=41.6915,
+        # P5/inject y-bump: same FirstBaselineOffset issue as u1c7. +5.34pt → +1.884mm.
+        y_mm=43.5755,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u265',
@@ -475,7 +482,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=115.3913,
-        y_mm=47.9915,
+        # P5/inject y-bump: FirstBaselineOffset compensation. baseline 'Usapiene' top=139.58 vs
+        # preview 136.04 → +3.54pt × PT_TO_MM = +1.249mm → 49.240mm.
+        y_mm=49.2405,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u295',
@@ -643,11 +652,12 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_offset_mm=(-108.1596, 0.0),
     ))
     page1.add(TextFrame(
-        # x_mm corrected: IDML-derived x=203.88mm but baseline PDF renders "Ich" at
-        # x0=592.3pt=208.93mm — 14.4pt=5.05mm difference. This gap is an InDesign↔IDML
-        # rendering discrepancy (u3a1 Group transform not fully propagating to final
-        # x in IDML export). Applying baseline-measured position.
-        x_mm=208.93,
+        # x_mm: IDML-derived position. Earlier the +5.05mm "correction" comment claimed
+        # baseline 'Ich' at x0=592.3pt but actual baseline.pdf measurement shows 'Ich' at
+        # x0=592.26pt while preview at x=208.93 puts 'Ich' at x0=604.82pt — preview is
+        # 12.56pt RIGHT of baseline. The +5.05mm was a wrong-direction over-correction.
+        # Reverted to IDML-derived 203.88mm; matches baseline 'Ich' within ~2pt residual.
+        x_mm=203.88,
         y_mm=97.4809,
         w_mm=87.24,
         # h_mm: LINESP=20.48pt (IDML CSR Leading), LINESPMode=0, ALIGN=1 (CenterAlign in IDML).
@@ -662,10 +672,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Ich bin ein Zitat. Ich bin ein prägnantes', font='Vollkorn Black Italic', fontsize=23, fcolor='White'), Run(text='', has_itext=False, separator='breakline'), Run(text='Zitat.', font='Vollkorn Black Italic', fontsize=23, fcolor='White')],
     ))
     page1.add(TextFrame(
-        # x_mm corrected: baseline "Leonore" at x0=657.0pt=231.76mm (was 226.67mm).
-        # Same +5.05mm InDesign↔IDML group-transform gap as u3a2.
-        # h_mm widened 3.1044mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
-        x_mm=231.76,
+        # x_mm: IDML-derived position. Earlier comment claimed +5.05mm was needed but
+        # actual baseline.pdf measurement shows preview 'Leonore' at x0=671.03 vs baseline
+        # 'Leonore' at x0=656.96 — preview was 14.07pt = 4.97mm RIGHT. Reverted from 231.76
+        # → 226.79mm to land on baseline within ~1pt residual.
+        x_mm=226.79,
         y_mm=123.1736,
         w_mm=41.6629,
         h_mm=5.0447,
@@ -703,15 +714,13 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        # social-media-icons-weiss.ai is a composite strip (526pt wide) rendered as a
-        # single PNG by pdftocairo. InDesign uses the AI ArtBox coordinate space to
-        # position each icon, but the IDML PDF-child tx offsets (-122, -100, -111pt)
-        # all cluster within the first icon of the strip → Scribus shows the same
-        # leftmost fragment for all 3 frames. Fix: use individually pre-cropped PNGs
-        # (one per icon, 948×932px) scaled to fit the 3.35×3.3mm frame by height.
-        # Scale = frame_h_pt / crop_h_pt = 9.351pt / 111.84pt ≈ 0.083615.
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3e7-crop.png',
-        local_scale=(0.083615, 0.083615),
+        # P5/inject: composite strip social-media-icons-weiss.ai has 4 icons (X/Instagram/
+        # TikTok/Facebook). IDML per-Image LocalOffset extraction yielded wrong crops (all
+        # frames showed leftmost fragment). Replaced with per-icon square crops (866×866px
+        # @ 600dpi = 103.92pt natural; scale 9.354/103.92 ≈ 0.090 fits 3.3mm frame).
+        # u3e7 = Facebook (top row); u3f0 = Instagram; u3f5 = TikTok per baseline.pdf.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-facebook.png',
+        local_scale=(0.091589, 0.091589),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -731,8 +740,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f0-crop.png',
-        local_scale=(0.083615, 0.083615),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-instagram.png',
+        local_scale=(0.091589, 0.091589),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -752,8 +761,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f5-crop.png',
-        local_scale=(0.083615, 0.083615),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-tiktok.png',
+        local_scale=(0.091589, 0.091589),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
