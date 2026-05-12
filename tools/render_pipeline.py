@@ -912,6 +912,44 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E2: line_spacing_audit — per-TextFrame baseline-to-baseline drift.
+    # Catches the LeadingModel-mismatch class (IDML CSR <Leading>14.3</Leading>
+    # rendered at 16.0pt in baseline.pdf). Issue #37 P3 task 14.
+    line_spacing_audit_path = out_dir / "line_spacing_audit.yml"
+    if preview_pdf.exists() and baseline.exists() and build_py.exists():
+        try:
+            from line_spacing_audit import (
+                run_line_spacing_audit as _lsa_run,
+                _yaml_dump as _lsa_yaml,
+            )
+            lsa_report = _lsa_run(preview_pdf, baseline, build_py, template=tid)
+            line_spacing_audit_path.write_text(
+                _lsa_yaml(lsa_report), encoding="utf-8",
+            )
+            if not lsa_report["ok"]:
+                print(
+                    f"[{tid}] line_spacing_audit: "
+                    f"{lsa_report['line_spacing_drift_count']} frame(s) with "
+                    f"|delta| > {lsa_report['threshold_pt']}pt → REVIEW",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"{lsa_report['line_spacing_drift_count']} line-spacing drift(s)"
+                )
+            else:
+                print(f"[{tid}] line_spacing_audit: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit E2 (line_spacing_audit) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit E2 (line_spacing_audit): skipped "
+            "(no preview.pdf, baseline.pdf, or build.py)",
+            file=sys.stderr,
+        )
+
     # Phase E: per-element drift attribution.
     # Aggregates diff_bboxes.json into a per-slot contribution table so the next
     # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
@@ -1032,6 +1070,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         run_style_audit_path=run_style_audit_path,
         color_audit_path=color_audit_path,
         visual_diff_regions_path=vd_region_path,
+        line_spacing_audit_path=line_spacing_audit_path,
     )
     preflight_path = out_dir / "preflight.yml"
     preflight_path.write_text(
