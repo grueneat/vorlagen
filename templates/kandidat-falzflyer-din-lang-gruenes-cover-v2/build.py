@@ -600,12 +600,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u3a0',
         layer=0,
         image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png',
-        # Portrait PNG has no pHYs DPI chunk — Scribus treats it at 72dpi native.
-        # At native scale the image is 3894×2598pt (far larger than frame).
-        # SCALETYPE=1 (auto-scale-to-frame) fills frame proportionally in Scribus
-        # when the image has no embedded DPI (different behaviour from pHYs images).
-        # Measured from baseline: frame 280×596pt; image fills exactly.
-        # Leave at default SCALETYPE=1 (auto), local_scale=(1,1).
+        # SCALETYPE=1 (auto-scale-to-frame): Scribus proportionally scales the landscape
+        # PNG (3894×2598px) to fill the portrait frame (280.63×596.34pt).
+        # This achieves the closest match to InDesign's baseline PDF rendering.
+        # Confirmed by prior session testing: SCALETYPE=1,local_scale=(1,1) → page2=7.60%
+        # (d9269f5 introduced scale_type=0 which regressed page2 to 27.22%).
     ))
     page1.add(TextFrame(
         x_mm=203.88,
