@@ -2101,3 +2101,210 @@ reasoning. Preserved D5 (inject overlay), D6/D7/D8/E/F/G audits intact.
 NOT produced: `sla_inventory.yml`, `three_way_audit.yml`, `reference_diff/`
 
 **Phase Clean completed:** 2026-05-12
+
+---
+
+## Phase Final — backport candidates + remaining work (2026-05-12)
+
+**Survival doc for compaction.** Captures everything we learned that should
+flow into `tools/idml_to_dsl.py` improvements for future templates, plus the
+issues we couldn't fix in this template.
+
+### Current state (committed)
+
+- visual_diff: **page 1 = 5.39%**, **page 2 = 5.27%** (down from session start
+  7.65%/7.10%; −2.26pp/−1.83pp combined)
+- text_render_audit `ok: True`, 0 missing words (all content renders)
+- font_audit `ok: True` (GothamNarrow-Book/Bold/Black/Ultra + Vollkorn-BlackItalic
+  all embedded)
+- text_position_audit: 327 large deltas (mostly word-spacing drift from
+  Adobe-vs-Scribus justified-text algorithm — engine artifact)
+- 9 audit YAMLs in `build/validation/<slug>/`
+
+### Confirmed converter backport candidates (would benefit ALL future IDML imports)
+
+#### Backport 1 — TextFrame FirstBaselineOffset compensation
+
+**Bug**: converter emits text such that first glyph-top sits at frame_top.
+InDesign's default `FirstBaselineOffset="AscentOffset"` puts first glyph-top
+at frame_top + font_ascent_offset. Per-frame measured drift:
+
+| Frame | Font / size | Measured Δ baseline-vs-preview |
+|---|---|---|
+| u24e, u2d5, u1b0, u1e6 | Gotham Narrow Ultra 30pt | +2.88pt |
+| u516 | Gotham Narrow Book 18pt | +3.54pt |
+| u1c7, u265 | Gotham Narrow Book 11pt | +5.34pt |
+| u1fd | Gotham Narrow Book 11pt (bullets) | +5.96pt |
+| u3a2 | Vollkorn Black Italic 23pt | −2.89pt (different direction) |
+
+**Fix**: in `tools/idml_to_dsl.py::_emit_pageitem` for TextFrames, read
+`<TextFramePreference FirstBaselineOffset="...">` from IDML. Map AscentOffset
+→ SLA `FLOP` attribute + per-frame y_mm offset that compensates so the
+first glyph-top in preview matches baseline. Likely formula: y_mm_offset_pt
+≈ (frame_h_emitted - baseline_first_top) where baseline_first_top is
+font.ascent at the run's point-size.
+
+Current state on v2 falzflyer: hand-patched per-frame y_mm in build.py
+(see Phase R-direct fix commit message). Backport replaces these
+hand-patches with converter logic.
+
+#### Backport 2 — Never emit "+5.05mm Group transform" hand-patch
+
+**Bug**: in Phase 3, an executor added `+5.05mm` to u3a2 and u3ba x_mm with
+comment "InDesign↔IDML group-transform gap". Multiple subsequent phases
+preserved this. Direct baseline.pdf measurement (Phase R-direct) showed:
+- u3a2 preview 'Ich' at x=604.82 vs baseline x=592.26 → preview was 12.56pt
+  RIGHT of baseline. The +5.05mm patch was wrong direction.
+- u3ba preview 'Leonore' at x=671.03 vs baseline x=656.96 → 14.07pt right.
+
+**Fix in converter**: the IDML-derived x_mm IS correct. The phase-3 agent
+made a measurement mistake (or measured against the wrong reference). The
+converter already emits the correct IDML position; no code change needed
+beyond removing the hand-patch from build.py (done in Phase R-direct).
+
+**Lesson**: any future "we need an X-offset hand-patch" must be validated
+with pdfplumber bbox extraction from baseline.pdf BEFORE committing. P3 +
+P5 (Issue #37) reinforced.
+
+#### Backport 3 — LINESP vs baseline grid mismatch (UNRESOLVED — needs investigation)
+
+**Bug**: IDML CSR `<Leading>14.3</Leading>` but baseline.pdf renders lines
+at exactly **16.00pt** baseline-to-baseline spacing for u1c7 (Gotham Narrow
+Book 11pt body text). Difference: 1.7pt per line, accumulates dramatically
+across multi-line paragraphs. Suspected cause: IDML has a BaselineGrid
+(designmap.xml mentions `LineAki="9"` and `LineAlignment="LeftOrTopLineJustify"`)
+and the Fließtext paragraph style probably has `AlignToBaselineGrid=true`,
+snapping lines to a 16pt grid regardless of CSR Leading.
+
+**Investigation needed**:
+- Parse `designmap.xml::BaselineFrameGridOption` and similar for the actual
+  grid increment.
+- Parse the ParagraphStyle's `AlignToBaselineGrid` attribute (defaults to
+  false).
+- When both grid is active AND paragraph aligns to it: emit Scribus
+  `LINESP=<grid_increment>` instead of CSR Leading.
+
+**Workaround in build.py** (not yet applied): change LINESP from 14.3 to
+16.0 for `idml/fliesstext-auf-gruenem-hintergrund` and
+`idml/aufzaehlungen-auf-gruenem-hintergrund` ParaStyles. Would fix
+cumulative line drift on the body text.
+
+**Drift contribution**: largest remaining converter-fixable bug. u1c7 alone
+contributes ~1.5pp on page 1 because each line drifts more than the last
+across the entire 30+ line paragraph.
+
+#### Backport 4 — Tight-frame auto-widening (already in converter, R7)
+
+R7's `_maybe_widen_frame_h` reads CSR Leading and widens TextFrame h_mm
+when leading > frame_h. Working. Covers u3ba (Leonore) + 6 social-handle
+frames. Leave intact.
+
+#### Backport 5 — Per-para LINESP from CSR Leading (already in converter, H'')
+
+H'' propagates CSR `<Leading>` to per-`<para>` `LINESPMode=0 LINESP=<v>`.
+Working. Covers u52d cover headline + Vollkorn headlines. Leave intact.
+
+#### Backport 6 — CSR FontStyle composition (already in converter, R5)
+
+R5 fixed family + FontStyle composition. font_audit confirms all 5 variants
+embed. Leave intact.
+
+#### Backport 7 — Inline Polygon PolyLine emission (already in converter, R3)
+
+R3 emits PolyLine for complex `<Polygon>` paths (windmill u2b0, curly
+quotes u3d1). Leave intact.
+
+#### Backport 8 — Group transform cascade (already in converter, R3)
+
+R3 fixed off-page Group guard. u184/u185/u186 (Störer) emit correctly.
+Leave intact.
+
+### Known unresolved bugs (NOT converter-fixable in current architecture)
+
+1. **Scribus PNG→CMYK icon inversion** — RGBA white-on-transparent PNGs
+   render as BLACK on white in Scribus's CMYK PDF output. Affects all 6
+   social-media-icon frames (u3e7/u3f0/u3f5 with Facebook/Instagram/TikTok;
+   u477/u4a2/u4da with bluesky/website/mail). Icons EMBED in PDF (visible
+   via `pdfimages`) but rendered as inverted glyphs. Not a converter bug.
+   
+   **Possible workarounds (untested)**: emit images as TIFF instead of PNG;
+   apply manual color profile to PNG before referencing; or bake icons into
+   the SLA as filled Polygons instead of ImageFrames.
+   
+   **Drift impact**: minimal (each icon is 3.35×3.3mm = ~0.05pp per frame).
+   Total <0.5pp combined. Not blocking convergence.
+
+2. **Adobe vs Scribus justified-text algorithm drift** — body-text frames
+   use `align=3` (justified-left). Adobe's H&J engine produces different
+   word-spacing and line-break decisions than Scribus's. Cumulative x drift
+   along each line + per-line break-point differences. Engine floor.
+   
+   **Mitigation**: switch body text to `align=0` (left-align, no
+   justification) — would produce cleaner per-word alignment but differ
+   structurally from baseline. Not recommended.
+
+3. **ICC color drift on backgrounds** — u1ae + u1fd on page 1 (1.7 + 1.26
+   = 2.96pp) and u295/u265 on page 2 (mixed ICC + content). Per G's
+   region_color_audit: `predominantly_icc_drift` pattern, mean RGB delta
+   ~4 units. Engine floor.
+
+### Remaining build.py hand-patches (P5 debt)
+
+Per fresh-re-emit diff, build.py has accumulated ~500 lines of hand-patches
+across the session. Some legitimate (Scribus rendering quirks), some
+backport candidates (per above). Suggested cleanup: build `tools/reconcile_build_py.py`
+(Phase D5 of Issue #37) to formalize the overlay system.
+
+### Audit pipeline state (Phase A + D6/D7/D8/E/F/G — fully working)
+
+All 9 audits produce deterministic YAML output in <5 seconds combined:
+
+- `inventory.yml` — IDML PageItems vs build.py annames
+- `text_audit.yml` — IDML story text vs build.py runs
+- `image_audit.yml` — IDML images/vectors vs build.py emits
+- `font_audit.yml` — pdffonts comparison (ok: True ✓)
+- `text_render_audit.yml` — render-side word presence (ok: True ✓)
+- `text_position_audit.yml` — per-word bbox drift
+- `per_element_drift.yml` — per-anname mismatch contribution
+- `run_style_audit.yml` — per-Run font/size/color (ok: True ✓)
+- `region_color_audit.yml` — per-region ICC-vs-fill classification
+
+Plus `visual_diff.json` for overall mismatch_pct.
+
+### Per-element drift contributors (current state, page 2 = 5.27%)
+
+| Slot | Contribution | Type | Action |
+|---|---|---|---|
+| u2cd | 2.01pp | pine-forest cropping | Backport: per-Image LocalScale/Offset for FillProportionally |
+| u295 | 1.36pp | body text — backport 3 (line-spacing) | Apply LINESP=16 |
+| u265 | 0.96pp | body text — backport 3 (line-spacing) | Apply LINESP=16 |
+| u3a2 | 0.88pp | pull-quote text shaping | Engine floor (Vollkorn Black Italic kerning) |
+| u3a0 | 0.22pp | small | n/a |
+
+### Page 1 (5.39%) top contributors
+
+| Slot | Contribution | Type |
+|---|---|---|
+| u1ae | 1.70pp | page background ICC (G: icc_likely) |
+| u1c7 | 1.49pp | body text — backport 3 (line-spacing) |
+| u1fd | 1.26pp | bullet text — backport 3 (line-spacing) |
+| u52d_dreiz | 0.49pp | cover headline (residual after H'') |
+
+After applying backport 3 (LINESP=16), expected reduction: u1c7 (1.49pp)
++ u1fd (1.26pp) + u265 (0.96pp) + u295 (1.36pp) = ~5pp combined reduction
+across both pages, IF line-spacing is the sole remaining issue. More
+likely 2-3pp because some drift is word-spacing.
+
+### Strategic recommendation
+
+After Phase Final lands:
+1. Apply backport 3 (LINESP=16) in build.py to body-text styles — quick win.
+2. Backport 1 (FirstBaselineOffset) to converter for future templates.
+3. Backport 3 (BaselineGrid investigation) for future templates.
+4. Accept current state as v2 ship-ready: ~5% drift represents engine
+   floor + minor remaining converter gaps.
+
+Total session: 30+ commits across issue/35 + main. Converter improved
+substantially. Audit infrastructure complete. Issue 37 framework
+established. Ready to ship v2 falzflyer + move template-import work to a
+durable agent-orchestrated workflow.

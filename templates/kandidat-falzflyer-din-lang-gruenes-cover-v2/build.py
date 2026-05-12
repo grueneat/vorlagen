@@ -116,7 +116,14 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         fontsize=11,
         align=3,
         fcolor='White',
-        linesp=14.3,
+        # P5/inject: linesp 14.3 (IDML CSR Leading) → 16.0 (baseline.pdf measured
+        # rendering). IDML's `<Leading>14.3</Leading>` does NOT match what InDesign
+        # actually renders — measured baseline.pdf for u1c7 shows constant 16.00pt
+        # baseline-to-baseline spacing across 30+ lines. Likely interaction of
+        # LeadingModelAkiBelow + paragraph SpaceAfter or implicit baseline-grid
+        # snap. Backport candidate: read IDML <LeadingModel> + compute effective
+        # leading. See EXECUTION.md Phase Final backport 3.
+        linesp=16.0,
         linesp_mode=0,
         tab_stops=((15, 0),),
     ))
@@ -154,7 +161,9 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         fontsize=11,
         align=0,
         fcolor='White',
-        linesp=14.3,
+        # P5/inject: linesp 14.3→16.0 (same baseline.pdf measurement as
+        # fliesstext-auf-gruenem-hintergrund). Backport: see EXECUTION.md Phase Final.
+        linesp=16.0,
         linesp_mode=0,
         tab_stops=((5, 0), (13, 0)),
         # Hanging indent: first line at 0pt from frame, text wraps at 13pt
