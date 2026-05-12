@@ -3,16 +3,19 @@
 These tests run against the actual IDML, SLA, and build.py artifacts.
 They verify that the converter_bug bucket identifies known missing elements.
 
-Known converter bugs in v2 falzflyer at the time of issue #37:
-  - u2b0: wind turbine polyline (IDML dropped, Scribus-SLA has it, not in build.py)
-  - u184: Störer group (IDML dropped, Scribus-SLA has it, not in build.py)
-  - u1e3, u1e5: social-icon strip groups (IDML dropped, Scribus-SLA has it)
-  - u515: top-right decoration group
+Phase R3 fix summary:
+  - Group containers (u184, u1e3, u1e5, u515, u3a1, u50c, u50d, u506-u50b) are
+    intentionally omitted from idml_inventory (the converter flattens Groups,
+    emitting their leaf children). They no longer appear in converter_bug.
+  - u2b0: wind turbine polyline — intentionally excluded from build.py because
+    baseline.pdf does not contain it. It remains in converter_bug (it's in SLA
+    but not in build.py) as a deliberate exclusion.
+  - sla_inventory now returns page-relative coordinates (PAGEXPOS/PAGEYPOS
+    subtracted) to match build.py coordinate origin (page top-left).
 
 Note: u185 (Störer oval) and u186 (Störer text) are in build.py and therefore
 appear in the 'match' or 'geometry_drift' bucket, not 'converter_bug'.
-They are children of u184 (which IS a converter_bug). The Scribus-SLA inventory
-correctly captures all of them.
+They are children of u184. The Scribus-SLA inventory correctly captures all.
 """
 from __future__ import annotations
 
@@ -131,8 +134,14 @@ def test_three_way_audit_converter_bug_contains_u2b0():
     )
 
 
-def test_three_way_audit_converter_bug_contains_u184():
-    """u184 (Störer group) must be in converter_bug bucket."""
+def test_three_way_audit_group_containers_not_converter_bug():
+    """Group containers (u184, u1e3, u1e5 etc.) must NOT be in converter_bug.
+
+    Phase R3: idml_inventory no longer marks Group containers as 'dropped'
+    because the converter intentionally flattens them (emits leaf children only).
+    Groups appearing in Scribus-SLA are an artefact of Scribus's import model,
+    not a converter omission.
+    """
     _skip_if_missing()
     if not SLA_INVENTORY_PATH.exists():
         pytest.skip(f"sla_inventory.yml not found: {SLA_INVENTORY_PATH}")
@@ -141,9 +150,12 @@ def test_three_way_audit_converter_bug_contains_u184():
         INVENTORY_PATH, SLA_INVENTORY_PATH, BUILD_PY_PATH, template=SLUG
     )
     bug_names = {e["anname"] for e in report["classification"]["converter_bug"]}
-    assert "u184" in bug_names, (
-        f"u184 (Störer group) must be in converter_bug; "
-        f"converter_bug has: {sorted(bug_names)}"
+    group_containers = {"u184", "u1e3", "u1e5", "u515", "u3a1", "u50c", "u50d",
+                        "u506", "u507", "u508", "u509", "u50a", "u50b"}
+    false_positives = group_containers & bug_names
+    assert not false_positives, (
+        f"Group containers should not be in converter_bug (they are intentionally "
+        f"flattened by the converter); found: {sorted(false_positives)}"
     )
 
 

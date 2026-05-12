@@ -254,6 +254,16 @@ def _collect_spread_items(
             continue
 
         parent_groups = _get_parent_group_chain(el, parent_map)
+
+        # Group containers are intentionally omitted from build.py: the
+        # converter flattens Groups, emitting only their leaf children.
+        # Marking Groups as "dropped" causes three_way_audit to falsely flag
+        # them as converter_bug (the children ARE emitted with their own
+        # annames). Skip Group elements here so they don't appear in the
+        # dropped inventory.
+        if tag == "Group":
+            continue
+
         bbox = _bbox_from_element(el)
         hint = _build_hint(el, tag, parent_groups, idml_zip)
 

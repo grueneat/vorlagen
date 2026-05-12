@@ -252,7 +252,7 @@ def test_real_v2_falzflyer_inventory():
     # Find spread 0 (Spread_ueb = cover page)
     spread0 = next(s for s in report["spreads"] if s["page"] == 0)
     dropped_selfs = {d["self"] for d in spread0.get("elements_dropped", [])}
-    # Bug #1: wind turbine u2b0 must be in dropped elements
+    # u2b0 (wind turbine Polygon) must be in dropped elements
     assert "u2b0" in dropped_selfs, (
         f"Expected u2b0 (wind turbine Polygon) in elements_dropped; "
         f"got: {dropped_selfs}"
@@ -260,3 +260,40 @@ def test_real_v2_falzflyer_inventory():
     # u2b0 hint must reference inline vector path
     u2b0_entry = next(d for d in spread0["elements_dropped"] if d["self"] == "u2b0")
     assert "inline vector path" in u2b0_entry["hint"]
+
+
+def test_real_v2_falzflyer_group_containers_not_dropped():
+    """Group containers (u184, u1e3, u515 etc.) must NOT appear in elements_dropped.
+
+    Phase R3: the converter flattens Groups (emits leaf children, not the Group
+    container itself). idml_inventory now skips Group elements so they don't
+    generate false-positive converter_bug entries in three_way_audit.
+    """
+    root = Path(__file__).resolve().parents[2]
+    idml = (
+        root
+        / "originals"
+        / "26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner"
+        / "26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2.idml"
+    )
+    build_py = (
+        root
+        / "templates"
+        / "kandidat-falzflyer-din-lang-gruenes-cover-v2"
+        / "build.py"
+    )
+    if not idml.exists() or not build_py.exists():
+        pytest.skip("Real IDML/build.py not available")
+
+    report = run_inventory(idml, build_py)
+    group_containers = {"u184", "u1e3", "u1e5", "u515", "u3a1",
+                        "u50c", "u50d", "u506", "u507", "u508",
+                        "u509", "u50a", "u50b"}
+
+    for spread in report["spreads"]:
+        dropped_selfs = {d["self"] for d in spread.get("elements_dropped", [])}
+        false_positives = group_containers & dropped_selfs
+        assert not false_positives, (
+            f"Group containers must not appear as dropped in page {spread['page']}; "
+            f"found: {sorted(false_positives)}"
+        )
