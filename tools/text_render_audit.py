@@ -6,9 +6,9 @@ at render time: frame-too-small clipping, off-page overflow, color-on-color
 invisibility, z-order occlusion, threaded-frame overflow, hidden layers, etc.
 
 Approach: run ``pdftotext -layout`` on both preview.pdf and baseline.pdf,
-normalise Unicode (NFC) and lowercase, tokenise into per-word Counters, then
-diff. Words in baseline but missing (or under-counted) in preview are surfaced
-as ``missing_in_preview``.
+normalise Unicode (NFC + ligature folding) and lowercase, tokenise into
+per-word Counters, then diff. Words in baseline but missing (or under-counted)
+in preview are surfaced as ``missing_in_preview``.
 
 Output schema (text_render_audit.yml):
     template: kandidat-falzflyer-din-lang-gruenes-cover-v2
@@ -44,6 +44,33 @@ import yaml
 
 
 # ---------------------------------------------------------------------------
+# Unicode ligature folding table
+# ---------------------------------------------------------------------------
+
+# pdftotext may output Latin ligature characters (U+FB00–U+FB06) from PDFs
+# that embed them as single glyphs (e.g. ﬃ → ffi). The counterpart PDF may
+# have the decomposed sequence. Fold all ligatures before NFC so both forms
+# map to identical tokens and are not treated as different words.
+_LIGATURE_FOLD: dict[str, str] = {
+    "ﬀ": "ff",   # ﬀ
+    "ﬁ": "fi",   # ﬁ
+    "ﬂ": "fl",   # ﬂ
+    "ﬃ": "ffi",  # ﬃ
+    "ﬄ": "ffl",  # ﬄ
+    "ﬅ": "st",   # ﬅ
+    "ﬆ": "st",   # ﬆ
+}
+
+
+def _normalize_text(s: str) -> str:
+    """NFC-normalise + fold Latin ligatures (U+FB00–U+FB06) + lowercase."""
+    s = unicodedata.normalize("NFC", s)
+    for lig, plain in _LIGATURE_FOLD.items():
+        s = s.replace(lig, plain)
+    return s.lower()
+
+
+# ---------------------------------------------------------------------------
 # Core extraction + audit logic
 # ---------------------------------------------------------------------------
 
@@ -51,7 +78,9 @@ def extract_pdf_words(pdf_path: Path) -> Counter:
     """Return a Counter of normalised words extracted from all pages of pdf_path.
 
     Uses ``pdftotext -layout`` to preserve multi-column spatial order.
-    Words are lowercased and Unicode-NFC-normalised.
+    Words are lowercased, Unicode-NFC-normalised, and Latin ligatures are
+    folded (ﬃ → ffi, ﬁ → fi, etc.) so baseline and preview tokenise
+    identically regardless of whether the PDF embeds ligature glyphs.
     Token definition: runs of \\w, @, ., - (covers handles, domains, names).
     """
     result = subprocess.run(
@@ -60,7 +89,7 @@ def extract_pdf_words(pdf_path: Path) -> Counter:
         text=True,
         check=True,
     )
-    text = unicodedata.normalize("NFC", result.stdout.lower())
+    text = _normalize_text(result.stdout)
     words = re.findall(r"[\w@.\-]+", text)
     return Counter(words)
 

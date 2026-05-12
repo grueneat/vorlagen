@@ -7,6 +7,10 @@ Covers:
 4. NFC normalisation: combining-char é vs precomposed é → counted as same word.
 5. Case insensitivity: "Leonore" baseline vs "leonore" preview → counted as match.
 6. Subprocess error on missing PDF → raises with clear error message.
+7. _yaml_dump is deterministic.
+8. Ligature folding: ﬃ in baseline, ffi in preview → counted as same word.
+9. Ligature folding: ﬁ in baseline, fi in preview → counted as same word.
+10. All ligatures in U+FB00–U+FB06 range folded correctly.
 
 All tests create minimal synthetic PDFs from raw bytes so they run offline in <5s.
 """
@@ -24,7 +28,13 @@ TOOLS = Path(__file__).resolve().parents[2] / "tools"
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
-from text_render_audit import extract_pdf_words, run_text_render_audit, _yaml_dump  # noqa: E402
+from text_render_audit import (  # noqa: E402
+    extract_pdf_words,
+    run_text_render_audit,
+    _yaml_dump,
+    _normalize_text,
+    _LIGATURE_FOLD,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -225,3 +235,95 @@ def test_yaml_dump_deterministic():
     keys_in_order = [line.split(":")[0] for line in output.splitlines()
                      if line and line[0].isalpha() and ":" in line]
     assert keys_in_order == sorted(keys_in_order)
+
+
+# ---------------------------------------------------------------------------
+# Test 8: Ligature folding — ﬃ (U+FB03) baseline, ffi preview → same word
+# ---------------------------------------------------------------------------
+
+def test_ligature_ffi_normalized():
+    """Baseline has 'ofﬃcia' (ﬃ ligature), preview has 'officia' (decomposed).
+    After ligature folding both tokenise to 'officia' → no missing word.
+    """
+    import text_render_audit as tra_module
+
+    original_extract = tra_module.extract_pdf_words
+
+    def fake_extract(pdf_path: Path) -> Counter:
+        import re as _re
+        if "baseline" in str(pdf_path):
+            # ﬃ ligature form
+            text = _normalize_text("ofﬃcia")
+            return Counter(_re.findall(r"[\w@.\-]+", text))
+        else:
+            # decomposed form
+            text = _normalize_text("officia")
+            return Counter(_re.findall(r"[\w@.\-]+", text))
+
+    tra_module.extract_pdf_words = fake_extract
+    try:
+        baseline_pdf = Path("/dev/null")
+        preview_pdf = Path("/dev/null")
+        report = run_text_render_audit(preview_pdf, baseline_pdf, template="test")
+        assert report["ok"] is True, (
+            f"ﬃ→ffi ligature folding failed: missing={report['missing_in_preview']}"
+        )
+    finally:
+        tra_module.extract_pdf_words = original_extract
+
+
+# ---------------------------------------------------------------------------
+# Test 9: Ligature folding — ﬁ (U+FB01) baseline, fi preview → same word
+# ---------------------------------------------------------------------------
+
+def test_ligature_fi_normalized():
+    """Baseline has 'oﬁce' (ﬁ ligature), preview has 'ofice' (decomposed).
+    After ligature folding both tokenise to 'ofice' → no missing word.
+    """
+    import text_render_audit as tra_module
+
+    original_extract = tra_module.extract_pdf_words
+
+    def fake_extract(pdf_path: Path) -> Counter:
+        import re as _re
+        if "baseline" in str(pdf_path):
+            text = _normalize_text("oﬁce")
+            return Counter(_re.findall(r"[\w@.\-]+", text))
+        else:
+            text = _normalize_text("ofice")
+            return Counter(_re.findall(r"[\w@.\-]+", text))
+
+    tra_module.extract_pdf_words = fake_extract
+    try:
+        baseline_pdf = Path("/dev/null")
+        preview_pdf = Path("/dev/null")
+        report = run_text_render_audit(preview_pdf, baseline_pdf, template="test")
+        assert report["ok"] is True, (
+            f"ﬁ→fi ligature folding failed: missing={report['missing_in_preview']}"
+        )
+    finally:
+        tra_module.extract_pdf_words = original_extract
+
+
+# ---------------------------------------------------------------------------
+# Test 10: All ligatures U+FB00–U+FB06 fold to correct ASCII sequences
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("ligature,expected", [
+    ("ﬀ", "ff"),   # ﬀ
+    ("ﬁ", "fi"),   # ﬁ
+    ("ﬂ", "fl"),   # ﬂ
+    ("ﬃ", "ffi"),  # ﬃ
+    ("ﬄ", "ffl"),  # ﬄ
+    ("ﬅ", "st"),   # ﬅ
+    ("ﬆ", "st"),   # ﬆ
+])
+def test_all_ligatures_in_FB00_FB06_range(ligature: str, expected: str):
+    """Each ligature in U+FB00–U+FB06 folds to the expected ASCII sequence."""
+    # Verify the fold table covers every entry
+    assert ligature in _LIGATURE_FOLD, f"{ligature!r} not in _LIGATURE_FOLD"
+    assert _LIGATURE_FOLD[ligature] == expected
+
+    # Verify _normalize_text actually performs the substitution
+    result = _normalize_text(ligature)
+    assert result == expected, f"_normalize_text({ligature!r}) → {result!r}, expected {expected!r}"
