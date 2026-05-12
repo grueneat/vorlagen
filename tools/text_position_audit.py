@@ -43,6 +43,8 @@ Exit code: 0 always (informational tool; --audit-strict controls CI gating).
 from __future__ import annotations
 
 import argparse
+import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
@@ -62,11 +64,23 @@ def extract_words_with_positions(pdf_path: Path) -> list[dict[str, Any]]:
     Each record contains:
         page (0-indexed int), text (str),
         x0_pt, y0_pt, x1_pt, y1_pt (float, in PDF points, top-down origin).
+
+    NOTE: pdfplumber's ``extract_words`` defaults walk glyphs in PDF
+    content-stream order, which on right-to-left composed text or columnar
+    layouts produces visually reversed words (e.g. ":musserpmI" for
+    "Impressum:"). Issue #37 P1 task 2 fixes this by forcing visual-order
+    glyph stitching via ``use_text_flow=False`` and small x/y tolerances.
     """
     records: list[dict[str, Any]] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page_idx, page in enumerate(pdf.pages):
-            for w in page.extract_words():
+            for w in page.extract_words(
+                use_text_flow=False,
+                keep_blank_chars=False,
+                x_tolerance=2,
+                y_tolerance=2,
+                extra_attrs=[],
+            ):
                 records.append({
                     "page": page_idx,
                     "text": w["text"],
@@ -76,6 +90,75 @@ def extract_words_with_positions(pdf_path: Path) -> list[dict[str, Any]]:
                     "y1_pt": round(float(w["bottom"]), 2),
                 })
     return records
+
+
+def _pdftotext_tokens_per_page(pdf_path: Path) -> list[set[str]] | None:
+    """Run ``pdftotext -layout`` and return one set of lowercased tokens per page.
+
+    Returns ``None`` if ``pdftotext`` is not available on the system. Caller
+    must fall back to no filtering in that case.
+    """
+    try:
+        proc = subprocess.run(
+            ["pdftotext", "-layout", str(pdf_path), "-"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+    pages_text = proc.stdout.split("\f")
+    pages_tokens: list[set[str]] = []
+    for page_text in pages_text:
+        tokens = {
+            t.strip().lower()
+            for t in re.split(r"\s+", page_text)
+            if t.strip()
+        }
+        pages_tokens.append(tokens)
+    return pages_tokens
+
+
+_PUNCT_STRIP_RE = re.compile(r"^[^\w]+|[^\w]+$", re.UNICODE)
+
+
+def _strip_punct(s: str) -> str:
+    """Strip leading and trailing punctuation; preserve internal punctuation."""
+    return _PUNCT_STRIP_RE.sub("", s)
+
+
+def _word_matches_pdftotext(text: str, page_tokens: set[str]) -> bool:
+    """True iff ``text`` (case-insensitive) appears in pdftotext's tokens on the
+    same page after punctuation-normalisation.
+
+    pdftotext is the canonical "did the glyph stream produce this token?"
+    oracle. We accept three kinds of match (in order of strictness):
+
+    1. Exact lowercase match.
+    2. Lowercase match after stripping leading/trailing punctuation on BOTH
+       sides — handles trailing colons, periods, parens.
+    3. The pdfplumber word equals a pdftotext token after both are
+       punctuation-stripped (covers e.g. ``"Impressum"`` vs ``"Impressum:"``).
+
+    We deliberately do NOT accept "any-substring" matches: those let
+    pdfplumber column-binding artefacts like ``"ssi"`` (a fragment of
+    ``"assis..."``) sneak through. The whole point of the filter is to drop
+    fragments and reversed-glyph words.
+    """
+    lower = text.lower()
+    if not lower:
+        return False
+    if lower in page_tokens:
+        return True
+    stripped = _strip_punct(lower)
+    if not stripped:
+        return False
+    if stripped in page_tokens:
+        return True
+    for token in page_tokens:
+        if _strip_punct(token) == stripped:
+            return True
+    return False
 
 
 def run_text_position_audit(
@@ -107,6 +190,36 @@ def run_text_position_audit(
     """
     base_words = extract_words_with_positions(baseline_pdf)
     prev_words = extract_words_with_positions(preview_pdf)
+
+    # Defense-in-depth: pdfplumber occasionally emits reverse-glyph "words" on
+    # right-to-left composed text or columnar layouts (Issue #37 P1 task 2).
+    # Cross-check each word against pdftotext (the same extractor D7 uses) and
+    # drop pdfplumber words that do not appear in pdftotext's output on the
+    # same page. When pdftotext isn't available, we don't filter — record -1
+    # in `suppressed_unmatched_word_count` to surface the unavailability.
+    base_pdftotext = _pdftotext_tokens_per_page(baseline_pdf)
+    prev_pdftotext = _pdftotext_tokens_per_page(preview_pdf)
+    suppressed_unmatched_word_count: int
+    if base_pdftotext is None or prev_pdftotext is None:
+        suppressed_unmatched_word_count = -1
+    else:
+        suppressed_unmatched_word_count = 0
+
+        def _filter(words: list[dict[str, Any]],
+                    pages_tokens: list[set[str]]) -> list[dict[str, Any]]:
+            kept: list[dict[str, Any]] = []
+            nonlocal suppressed_unmatched_word_count
+            for w in words:
+                page = w["page"]
+                tokens = pages_tokens[page] if page < len(pages_tokens) else set()
+                if _word_matches_pdftotext(w["text"], tokens):
+                    kept.append(w)
+                else:
+                    suppressed_unmatched_word_count += 1
+            return kept
+
+        base_words = _filter(base_words, base_pdftotext)
+        prev_words = _filter(prev_words, prev_pdftotext)
 
     # Count word frequencies per page in each PDF for the common-word filter.
     base_freq: Counter[tuple[int, str]] = Counter(
@@ -174,6 +287,7 @@ def run_text_position_audit(
         "common_word_threshold": common_word_threshold,
         "large_deltas_count": len(filtered_deltas),
         "suppressed_common_word_deltas_count": suppressed_count,
+        "suppressed_unmatched_word_count": suppressed_unmatched_word_count,
         "large_deltas": top_deltas,
         "ok": not filtered_deltas,
     }
