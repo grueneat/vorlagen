@@ -969,6 +969,56 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase H: per-region visual_diff (Backport 12 / Issue #37 P2).
+    # Runs ONLY when the page-wide rasterised PNGs already exist
+    # (baseline-page-N.png / dsl-page-N.png are produced by the page-wide
+    # visual_diff in _orchestrate_template). Diagnostic + failable; failing
+    # cells are surfaced to preflight via _build_preflight below.
+    vd_region_path = out_dir / "visual_diff_regions.yml"
+    if (out_dir / "baseline-page-1.png").exists() and (out_dir / "dsl-page-1.png").exists():
+        try:
+            from visual_diff import (
+                run_region_grid_audit as _vdr_run,
+                TemplateTolerance as _VDTol,
+            )
+            _vdr_tol = _VDTol.load(tdir / "diff.yml")
+            _vdr_result = _vdr_run(
+                baseline_png_dir=out_dir,
+                preview_png_dir=out_dir,
+                tolerance=_vdr_tol,
+                out_dir=out_dir,
+                template=tid,
+            )
+            vd_region_path.write_text(
+                yaml.dump(
+                    _vdr_result,
+                    sort_keys=True,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                ),
+                encoding="utf-8",
+            )
+            n_hot = sum(len(p["hot_regions"]) for p in _vdr_result["pages"])
+            if not _vdr_result["ok"]:
+                print(
+                    f"[{tid}] visual_diff_regions: {n_hot} hot region(s) → REVIEW",
+                    file=sys.stderr,
+                )
+                issue_parts.append(f"{n_hot} hot region(s)")
+            else:
+                print(f"[{tid}] visual_diff_regions: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit H (visual_diff_regions) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit H (visual_diff_regions): skipped "
+            "(no baseline/dsl page PNGs)",
+            file=sys.stderr,
+        )
+
     # Issue #37 P1 task 6: aggregated preflight.yml — one canonical
     # "are all sub-audits ok?" file that bin/render-gallery --audit hard-fails on.
     preflight = _build_preflight(
@@ -981,6 +1031,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         text_position_audit_path=text_position_audit_path,
         run_style_audit_path=run_style_audit_path,
         color_audit_path=color_audit_path,
+        visual_diff_regions_path=vd_region_path,
     )
     preflight_path = out_dir / "preflight.yml"
     preflight_path.write_text(
@@ -1015,6 +1066,8 @@ def _build_preflight(
     text_position_audit_path: Path,
     run_style_audit_path: Path,
     color_audit_path: Path,
+    visual_diff_regions_path: Path | None = None,
+    line_spacing_audit_path: Path | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
 
@@ -1123,6 +1176,33 @@ def _build_preflight(
         )
         _record("region_color_audit", True, fill_likely,
                 str(rca.get("pattern", "")))
+
+    # Phase H (Issue #37 P2 task 10): per-region visual_diff. Hot-region count
+    # comes from the audit's hot_regions list (capped at 10 per page).
+    if visual_diff_regions_path is not None:
+        vdr = _load_yml(visual_diff_regions_path)
+        if vdr is not None:
+            n_hot = sum(
+                len(p.get("hot_regions", []) or [])
+                for p in (vdr.get("pages") or [])
+            )
+            _record(
+                "visual_diff_regions",
+                bool(vdr.get("ok", True)),
+                n_hot,
+                "",
+            )
+
+    # Phase E2 (Issue #37 P3 task 14): line_spacing_audit drift count.
+    if line_spacing_audit_path is not None:
+        lsa = _load_yml(line_spacing_audit_path)
+        if lsa is not None:
+            _record(
+                "line_spacing_audit",
+                bool(lsa.get("ok", True)),
+                int(lsa.get("line_spacing_drift_count", 0) or 0),
+                "",
+            )
 
     preflight_ok = all(a["ok"] for a in audits_summary.values())
 

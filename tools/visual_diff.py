@@ -409,6 +409,110 @@ def render_grid_heatmap(
     composite.save(out_png, format="PNG")
 
 
+def run_region_grid_audit(
+    baseline_png_dir: Path,
+    preview_png_dir: Path,
+    tolerance: TemplateTolerance,
+    out_dir: Path,
+    template: str = "",
+) -> dict:
+    """Run per-cell visual diff on every page; emit heatmap PNGs + report dict.
+
+    Looks for ``baseline-page-{N}.png`` / ``dsl-page-{N}.png`` pairs (1-indexed)
+    in the given directories. Stops when a page's PNG pair isn't found.
+
+    ``tolerance.region_grid`` controls the grid shape; per-cell overrides are
+    resolved via ``tolerance.for_cell``. Heatmaps are saved into ``out_dir``
+    as ``visual_diff_heatmap-page-{N:02d}.png``.
+
+    Returns a dict::
+
+        {
+          template: str,
+          grid: {cols: int, rows: int},
+          pages: [
+            {page: int, regions: [...], hot_regions: [...], heatmap_png: str},
+            ...
+          ],
+          ok: bool,
+        }
+
+    Issue #37 P2 task 10 (Backport 12).
+    """
+    if not tolerance.region_grid:
+        tolerance.region_grid = {
+            "cols": DEFAULT_GRID_COLS,
+            "rows": DEFAULT_GRID_ROWS,
+            "per_cell": [],
+        }
+    cols = tolerance.region_grid["cols"]
+    rows = tolerance.region_grid["rows"]
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pages: list[dict] = []
+    page_idx = 0
+    while True:
+        base_p = baseline_png_dir / f"baseline-page-{page_idx + 1}.png"
+        prev_p = preview_png_dir / f"dsl-page-{page_idx + 1}.png"
+        if not base_p.exists() or not prev_p.exists():
+            break
+        page_max, page_fuzz = tolerance.for_page(page_idx)
+        cells = compare_grid(base_p, prev_p, cols, rows, fuzz_pct=page_fuzz)
+        # Apply per-cell tolerances (and recompute mismatch if per_cell fuzz
+        # differs from the page default — semantics MUST match the override).
+        for cell in cells:
+            cell_max, cell_fuzz = tolerance.for_cell(
+                page_idx, cell["col"], cell["row"]
+            )
+            cell["threshold_pct"] = cell_max
+            cell["fuzz_pct"] = cell_fuzz
+            if abs(cell_fuzz - page_fuzz) > 1e-6:
+                # Recompute this cell with the per-cell fuzz.
+                recomputed = compare_grid(
+                    base_p, prev_p, cols, rows, fuzz_pct=cell_fuzz,
+                )
+                for rc in recomputed:
+                    if rc["col"] == cell["col"] and rc["row"] == cell["row"]:
+                        cell["mismatch_pixels"] = rc["mismatch_pixels"]
+                        cell["total_pixels"] = rc["total_pixels"]
+                        cell["mismatch_pct"] = rc["mismatch_pct"]
+                        break
+            cell["pass"] = cell["mismatch_pct"] <= cell_max
+
+        hot_sorted = sorted(
+            (c for c in cells if not c["pass"]),
+            key=lambda c: -c["mismatch_pct"],
+        )[:10]
+        hot_regions = [
+            {
+                "col": c["col"],
+                "row": c["row"],
+                "mismatch_pct": c["mismatch_pct"],
+            }
+            for c in hot_sorted
+        ]
+
+        heatmap_name = f"visual_diff_heatmap-page-{page_idx + 1:02d}.png"
+        heatmap_path = out_dir / heatmap_name
+        render_grid_heatmap(base_p, cells, page_max, heatmap_path)
+
+        pages.append({
+            "page": page_idx,
+            "regions": cells,
+            "hot_regions": hot_regions,
+            "heatmap_png": heatmap_name,
+        })
+        page_idx += 1
+
+    page_ok = all(c["pass"] for page in pages for c in page["regions"])
+    return {
+        "template": template,
+        "grid": {"cols": cols, "rows": rows},
+        "pages": pages,
+        "ok": page_ok if pages else True,
+    }
+
+
 def crop_for_region(image: Path, dpi: int, page_w_pt: float, page_h_pt: float,
                      bbox_mm: dict) -> Path:
     """Use ImageMagick `convert -crop` to extract a sub-rectangle from a raster.
