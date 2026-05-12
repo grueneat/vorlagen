@@ -297,11 +297,13 @@ def test_psr_center_justification_emits_para_separator_with_align():
     )
 
 
-def test_psr_left_justification_emits_no_align_override():
-    """PSR Justification="LeftAlign" (the default) must NOT emit an ALIGN override.
+def test_psr_left_justification_emits_explicit_align_zero():
+    """PSR Justification="LeftAlign" emits explicit ALIGN="0" on the separator.
 
-    Scribus's default alignment is left (ALIGN=0); emitting an explicit ALIGN=0
-    would be redundant noise. Only non-default alignments produce paragraph_attrs.
+    Issue #37 P1 task 5: we always emit ALIGN explicitly (even ALIGN=0), so
+    that inner Left paragraphs cannot silently inherit a non-Left DefaultStyle
+    on mixed-Justification frames. The previous "skip emit when ALIGN=0"
+    policy was the source of silent regressions on Zeitung A4 templates.
     """
     xml = _story_xml(
         '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle"'
@@ -316,8 +318,8 @@ def test_psr_left_justification_emits_no_align_override():
     runs = _walk_story(root, **_styles_dict())
     sep = next((r for r in runs if r.separator == "para"), None)
     assert sep is not None
-    assert sep.paragraph_attrs is None, (
-        f"LeftAlign must not emit ALIGN override, got {sep.paragraph_attrs!r}"
+    assert sep.paragraph_attrs == {"ALIGN": "0"}, (
+        f"Expected explicit ALIGN=0 for LeftAlign, got {sep.paragraph_attrs!r}"
     )
 
 

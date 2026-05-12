@@ -1772,16 +1772,22 @@ def _emit_pageitem(
             kwargs["text"] = ""
         if trail_attrs:
             kwargs["trail_attrs"] = trail_attrs
-        # DefaultStyle ALIGN propagation: when the frame's first PSR's
-        # effective ParaStyle has non-Left Justification, emit ALIGN on the
-        # <DefaultStyle/> element. Scribus's trail/per-paragraph ALIGN does
-        # NOT propagate to the paragraph THEY terminate; only DefaultStyle
-        # ALIGN reliably applies to every paragraph in the StoryText,
-        # including auto-wrapped lines of the LAST paragraph. Issue 37
-        # Backport 11.
+        # DefaultStyle ALIGN propagation: emit ALIGN on the <DefaultStyle/>
+        # element so it pins the frame's default alignment EXPLICITLY,
+        # regardless of value. Scribus's trail/per-paragraph ALIGN does NOT
+        # propagate to the paragraph THEY terminate; only DefaultStyle ALIGN
+        # reliably applies to every paragraph in the StoryText, including
+        # auto-wrapped lines of the LAST paragraph. Issue #37 Backport 11.
+        #
+        # Issue #37 P1 task 5: ALWAYS emit (even when ALIGN==0). Previously
+        # we skipped Left because "Left is default", but on a frame whose
+        # first PSR is non-Left and a later PSR is Left, the later one would
+        # inherit DefaultStyle's non-Left value. Pinning DefaultStyle and
+        # also emitting per-paragraph ALIGN on EVERY PSR (below at line
+        # ~2283) gives Scribus an unambiguous answer for every paragraph.
         if _first_psr_style_self and _first_psr_style_self in ctx.paragraph_styles:
             _eff_just = ctx.paragraph_styles[_first_psr_style_self].get("justification")
-            if _eff_just in JUSTIFICATION_MAP and JUSTIFICATION_MAP[_eff_just] != 0:
+            if _eff_just in JUSTIFICATION_MAP:
                 kwargs["default_style_attrs"] = {
                     "ALIGN": str(JUSTIFICATION_MAP[_eff_just]),
                 }
@@ -2273,22 +2279,34 @@ def _walk_story(
         ps_family = ps_resolved.get("applied_font")
         ps_font_style = ps_resolved.get("font_style")
 
-        # PSR inline Justification override: a non-default Justification
-        # attribute on the PSR overrides the AppliedParagraphStyle's alignment.
-        # This is the same pattern as CSR FontStyle (R5) — an inline attribute
-        # that takes precedence over the applied style's defaults.
-        # LeftAlign (0) is the default; only non-zero values require an override.
+        # PSR inline Justification override: an explicit Justification on the
+        # PSR (or fallback to AppliedParagraphStyle's default when no inline)
+        # is emitted as paragraph_attrs.ALIGN on every paragraph. Issue #37
+        # P1 task 5: ALWAYS emit (even when ALIGN==0). The previous "only
+        # when != 0" policy let inner Left paragraphs silently inherit a
+        # non-Left DefaultStyle on mixed-Justification frames.
         psr_just = psr.get("Justification")
         psr_para_attrs: dict = {}
-        if psr_just and psr_just in JUSTIFICATION_MAP:
-            align_int = JUSTIFICATION_MAP[psr_just]
-            if align_int != 0:  # 0 = LeftAlign = default, no override needed
-                psr_para_attrs["ALIGN"] = str(align_int)
-        elif psr_just and psr_just not in JUSTIFICATION_MAP:
+        if psr_just and psr_just not in JUSTIFICATION_MAP:
             raise UnhandledElement(
                 f"ParagraphStyleRange Justification={psr_just!r} unknown "
                 f"(extend tools/idml_to_dsl.py:JUSTIFICATION_MAP)"
             )
+        # Resolve the effective ALIGN: explicit PSR Justification wins;
+        # otherwise fall back to the AppliedParagraphStyle's resolved
+        # justification (so a PSR without inline Justification still emits
+        # the ParaStyle's intended align rather than implicit Left).
+        align_int: Optional[int] = None
+        if psr_just and psr_just in JUSTIFICATION_MAP:
+            align_int = JUSTIFICATION_MAP[psr_just]
+        else:
+            ps_self = psr.get("AppliedParagraphStyle")
+            if ps_self and ps_self in paragraph_styles:
+                _ps_just = paragraph_styles[ps_self].get("justification")
+                if _ps_just in JUSTIFICATION_MAP:
+                    align_int = JUSTIFICATION_MAP[_ps_just]
+        if align_int is not None:
+            psr_para_attrs["ALIGN"] = str(align_int)
 
         # Per-para LINESPMode + LINESP from the CSR's Properties/Leading.
         # InDesign renders with the explicit Leading value from the first CSR in
@@ -2404,11 +2422,13 @@ def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
         return None
     last_psr = psrs[-1]
     trail: dict = {}
+    # Issue #37 P1 task 5: always emit ALIGN on the trail when the last PSR
+    # has any recognised Justification (including LeftAlign), so the trail
+    # explicitly pins the final paragraph rather than inheriting whatever
+    # DefaultStyle happens to be.
     psr_just = last_psr.get("Justification")
     if psr_just and psr_just in JUSTIFICATION_MAP:
-        align_int = JUSTIFICATION_MAP[psr_just]
-        if align_int != 0:
-            trail["ALIGN"] = str(align_int)
+        trail["ALIGN"] = str(JUSTIFICATION_MAP[psr_just])
     psr_ld = _psr_effective_leading(last_psr)
     if psr_ld is not None:
         if psr_ld == "Auto":
