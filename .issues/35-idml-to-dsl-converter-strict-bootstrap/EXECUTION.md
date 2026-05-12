@@ -2344,3 +2344,19 @@ checking that all bullets in a list use the same gap pattern; mismatch
 suggests baseline authoring issue, not converter bug. Future skill
 should report such "render-better-than-baseline" cases as informational,
 not errors.
+
+---
+
+## Backport 9 — Justification → Scribus align mapping (added 2026-05-12)
+
+**This was the largest single-fix drift drop of the session.**
+
+The converter currently emits `align=3` (Scribus "Justified", fully-fills
+line) for `idml/fliesstext-auf-gruenem-hintergrund` and
+`idml/absatzformat-1`. Baseline.pdf renders left-aligned (ragged right).
+Manual change `align 3→0` in build.py dropped:
+- page 1 drift by 1.18pp
+- page 2 drift by 1.29pp
+- text_position_audit large_deltas by 141
+
+Backport detail in `/workspace/.issues/37-.../ISSUE.md` Backport 9.
