@@ -988,3 +988,250 @@ and reduced text_position_audit large_deltas by 141.
   `LeftAlign` (verify before fixing — could be `LeftJustified` with
   design intent of left-align, in which case it's an IDML authoring
   issue rather than converter bug).
+
+## Backport 10 — ImageFrame SCALETYPE default for small icon PNGs (added 2026-05-12)
+
+**Bug class** discovered: small (< ~12pt frame) white-on-transparent RGBA
+PNGs render as INVISIBLE in Scribus 1.6.x exported PDF when
+`SCALETYPE="1"` (free scaling, the converter default via
+`tools/sla_lib/builder/primitives.py:ImageFrame.scale_type=1`). The image
+embeds as a CMYK JPEG + smask in the PDF stream, but the CMYK plane
+encodes the visible glyph pixels at `(63, 86, 93, 13)` instead of white
+`(0, 0, 0, 0)`, and the smask compositing produces no visible mark on
+the page. Switching the same frame to `SCALETYPE="0"` (scale-image-to-
+frame) renders the icon correctly white-on-transparent.
+
+**Symptom on v2 falzflyer**: all 6 social-media icons (u3e7 Facebook,
+u3f0 Instagram, u3f5 TikTok, u477 BlueSky, u4a2 website, u4da mail)
+invisible in preview.pdf despite being correctly embedded as CMYK
+images. Confirmed by pdfimages -list (6 cmyk 866×866/865×865 images
+with smasks) and visual inspection at 600 DPI.
+
+**Root cause**: Scribus's SCALETYPE=1 (free scaling) path applies a
+different ICC color-management pipeline when the source image is
+substantially larger than the destination frame (here, 866px source
+into 9.5pt = ~79px @ 600dpi frame, ~11× downscale via LOCALSCX). The
+SCALETYPE=0 path (auto fit-to-frame) avoids this pipeline and renders
+white pixels as white CMYK.
+
+Verified: same PNG renders correctly at SCALETYPE=0 with no other
+changes. PRFILE manipulation (removing the ICC profile entirely),
+re-cropping PNGs to match the working bluesky-weiss.png byte structure
+(865×865 RGBA + sRGB chunk), converting to CMYK TIFF, and using the
+source AI/PDF as ImageFrame all FAILED. Only SCALETYPE=0 fixed it.
+
+**Workaround already shipped** (2026-05-12, v2 falzflyer build.py):
+hand-patched `scale_type=0` on all 6 icon ImageFrames. P5/inject
+comment placed inline on u3e7 explaining the bug; same fix repeated
+verbatim on u3f0/u3f5/u477/u4a2/u4da.
+
+**Converter detection** (no visual review required):
+
+1. The IDML ItemTransform extraction in
+   `_emit_image_content` already derives `local_scale`. When the
+   derived `local_scale` falls below ~0.15 in either axis (i.e. the
+   IDML intent is to downscale the source by more than ~6×), emit
+   `scale_type=0` instead of relying on the SCALETYPE=1 default.
+   Threshold tunable; v2 falzflyer values are 0.091589 (icons) and
+   0.095788 (icons) — comfortably below 0.15.
+2. ALTERNATIVE: flip the `ImageFrame` dataclass default in
+   `tools/sla_lib/builder/primitives.py` from `scale_type=1` to
+   `scale_type=0`. Inventory of v2 falzflyer + existing templates
+   shows the vast majority of ImageFrames either already pass
+   `scale_type=0` explicitly OR omit it entirely (in which case
+   fit-to-frame is the intended behavior anyway). Only 1 of 60+
+   ImageFrames across all templates explicitly uses `scale_type=1`
+   (u3a0 plakat-dunkel in v2 falzflyer, which intentionally uses
+   free scaling for a fill-cover crop). Switching the default
+   would correctly capture the common case and isolate explicit
+   free-scaling to its single legitimate user.
+
+**Recommendation**: do BOTH — change the dataclass default to 0, AND
+have the converter set `scale_type=0` explicitly when emitting
+ImageFrames (so the SLA is explicit rather than relying on the
+default). The dataclass default change is the safety net.
+
+**Acceptance**:
+- `tools/sla_lib/builder/primitives.py:ImageFrame.scale_type` defaults
+  to 0.
+- `tools/idml_to_dsl.py` emits `scale_type=0` explicitly in all
+  ImageFrame calls (the IDML never expresses "free scaling vs fit-to-
+  frame" as a distinct concept; the local_scale alone captures intent).
+- Regression test renders a 10×10pt frame containing a 800×800 white-
+  on-transparent RGBA PNG and verifies the rendered region contains
+  white pixels (not dark CMYK invisibility).
+- v2 falzflyer test: all 6 icon ANNAMEs (u3e7/u3f0/u3f5/u477/u4a2/u4da)
+  emit `SCALETYPE="0"` in the generated SLA.
+
+**Drift impact**: small numerically (~0.05pp on page 2 of v2 falzflyer)
+but UX-critical — the icons are part of the contact-info row and are a
+visible regression noticed during human review. Page 2 drift dropped
+from 2.47% → 2.42% after the fix.
+
+## Backport 11 — Multi-line center-aligned headlines need per-paragraph ALIGN markers (added 2026-05-12)
+
+**Bug class**: when an IDML headline TextFrame contains a single
+`<Content>` text long enough that Scribus auto-wraps it across 2+
+lines AND the ParaStyle has `align=center` (Scribus `ALIGN="1"`),
+only the LAST line of the rendered output is actually center-aligned.
+Lines preceding the last (whether reached via auto-wrap OR explicit
+`<breakline/>`) render left-aligned despite the DefaultStyle PARENT
+declaring center alignment.
+
+**Symptom on v2 falzflyer**: u376 "Headline in einem grünen Kasten"
+wraps to 2 lines inside its 149.33pt-wide green box. Line 1
+("Headline in einem grünen") renders left-aligned at x0 ≈ 61pt; line
+2 ("Kasten") renders correctly centered at x0 ≈ 118pt. Baseline.pdf
+centers both. Splitting the single Content into 2 ITEXTs separated
+by `<breakline/>` did NOT fix it. Adding `trail_attrs={'ALIGN': '1'}`
+also did not fix it (the trail only applies to the last unterminated
+paragraph).
+
+**Fix that works**: set `ALIGN="1"` on the `<DefaultStyle/>` element
+of the StoryText. This is REQUIRED because the trail's ALIGN and the
+last-paragraph `<para ALIGN="1"/>` attributes do NOT propagate to the
+paragraph they terminate — only paragraphs that have been previously
+CLOSED via `<para ALIGN=.../>` get the attribute. The DefaultStyle's
+ALIGN attribute applies to every paragraph in the StoryText, fixing
+both the first paragraph (auto-wrap line 1) AND the last paragraph
+(line 2 "Kasten"). Tested 2026-05-12 on u376 — both lines render
+centered with x0 = 67.97 / 117.42 (matching baseline 68.54 / 117.99
+within rendering tolerance).
+
+```python
+# BEFORE — breakline-based, only line 2 centers
+runs=[
+    Run(text='Headline in einem grünen', ...),
+    Run(text='', has_itext=False, separator='breakline'),
+    Run(text='Kasten', ...),
+],
+trail_attrs={'ALIGN': '1'},
+
+# AFTER — DefaultStyle ALIGN + per-paragraph ALIGN, both lines center
+default_style_attrs={'ALIGN': '1'},
+runs=[
+    Run(text='Headline in einem grünen', ...,
+        paragraph_style='idml/headline-in-gruenem-kasten',
+        paragraph_attrs={'ALIGN': '1'},
+        separator='para'),
+    Run(text='Kasten', ...,
+        paragraph_style='idml/headline-in-gruenem-kasten',
+        paragraph_attrs={'ALIGN': '1'},
+        separator='para'),
+],
+trail_attrs={'ALIGN': '1'},
+```
+
+The `default_style_attrs={'ALIGN': '1'}` is the critical fix; the
+per-paragraph `paragraph_attrs={'ALIGN': '1'}` on each Run is
+defense-in-depth (explicit-over-default).
+
+**Converter detection** (no visual review required):
+
+1. Read the IDML ParagraphStyle's `Justification` (and inherited
+   defaults). Map the value (`CenterAlign`, `RightAlign`, etc.) to
+   the Scribus ALIGN integer (see Backport 9 for the mapping).
+2. ALWAYS emit the mapped ALIGN on the TextFrame's `<DefaultStyle/>`
+   element. This is the most reliable mechanism for non-left
+   alignment — covers single-paragraph auto-wrap, multi-paragraph
+   stories, and edge cases the per-paragraph `<para/>` attributes
+   don't cover.
+3. ADDITIONALLY emit `paragraph_attrs={'ALIGN': N}` on each `<para/>`
+   for any paragraph whose effective ALIGN differs from `LeftAlign`.
+   Defense-in-depth — Scribus reads per-paragraph attrs first, then
+   falls back to DefaultStyle; having both makes the SLA explicit
+   and survives future Scribus refactors.
+
+**Acceptance**:
+- `tools/idml_to_dsl.py` emits `default_style_attrs={'ALIGN': N}` on
+  every TextFrame whose ParaStyle's effective Justification maps to
+  non-left alignment.
+- ADDITIONALLY emits explicit `paragraph_attrs={'ALIGN': N}` per
+  `<para/>` for any paragraph whose effective ALIGN is non-zero.
+- Regression test: a 100pt-wide TextFrame containing a 150pt-wide
+  string with center-aligned ParaStyle produces 2 lines, both
+  center-aligned at x ≈ 25pt offset from frame left.
+- v2 falzflyer test: u376 renders "Headline in einem grünen" and
+  "Kasten" both centered (x0 of "Kasten" ≈ 118pt, ±2pt tolerance).
+
+**Drift impact**: small numerically (within fuzz_pct=25 tolerance,
+≈0.0pp on the page-wide diff metric) but UX-critical — the
+left-aligned wrap is a visible authoring bug. This finding
+motivates Backport 12 below (per-region visual_diff).
+
+## Backport 12 — Per-region visual_diff (added 2026-05-12)
+
+**Motivation**: the current `tools/visual_diff.py` reports a single
+page-wide `mismatch_pct` per page. Localized fidelity issues get
+washed out: the Kasten centering fix (Backport 11) and the icon
+visibility fix (Backport 10) BOTH produced visually obvious before/
+after differences that humans flagged on inspection, yet the
+page-wide metric moved by 0.0pp and 0.05pp respectively. Without a
+per-region signal it is hard to:
+
+1. **Detect regressions whose absolute pixel footprint is small but
+   whose semantic impact is large** (a misaligned headline, an
+   invisible icon row, a missing inline glyph). These are exactly
+   the issues human reviewers catch first.
+2. **Attribute drift to specific design slots** during convergence
+   loops. The existing per-element drift tooling
+   (`tools/per_element_drift.py`) works at the IDML PageItem level,
+   not at the rendered pixel level.
+3. **Prioritise fixes**: if region (col 2, row 3) shows 18%
+   mismatch and (col 1, row 1) shows 0.4%, the human knows where
+   to look. Page-wide 2.42% gives no spatial signal.
+
+**Proposed tool**: extend `tools/visual_diff.py` (or add a
+companion `tools/visual_diff_regions.py`) that:
+
+1. Renders preview and baseline at the same DPI (already done).
+2. Splits each page into a configurable grid (default: 6 columns
+   × 4 rows = 24 regions per page; tunable per-template via
+   `diff.yml`). Region size chosen so each region is roughly a
+   "design slot": headline, body column, image, contact row.
+3. For each region: computes `mismatch_pixels`, `mismatch_pct`,
+   plus the existing fuzz_pct tolerance check.
+4. Emits a per-region heatmap PNG (24 cells colored by
+   mismatch_pct) plus a per-region YAML report:
+   ```yaml
+   visual_diff_regions:
+     page: 0
+     grid: {cols: 6, rows: 4}
+     regions:
+       - {col: 0, row: 0, mismatch_pct: 0.4, pass: true}
+       - {col: 3, row: 2, mismatch_pct: 18.7, pass: false}  # likely problem area
+       - ...
+     hot_regions: [{col: 3, row: 2, mismatch_pct: 18.7}, ...]
+   ```
+5. Per-region thresholds: optional `diff.yml` per-cell override
+   (e.g. a region known to contain a halftone gradient can use
+   higher fuzz). Default = same threshold as page-wide.
+
+**Where it slots into Phase A**: this is a Phase A audit tool
+(structural/visual oracle) — it consumes preview.pdf + baseline.pdf
+and emits a YAML report. It runs AFTER per-element drift (which
+attributes to IDML elements) and BEFORE manual visual review.
+
+**Tie-in with `tools/diff_bbox_extract.py`** (issue #36/PR #75):
+the bbox extractor identifies geometric regions in the diff.
+Per-region visual_diff is the COMPLEMENT — it samples a regular
+grid rather than extracting dynamic bboxes. The two should be used
+together: bbox extractor surfaces ANOMALY shapes; grid sampling
+gives a stable spatial map you can diff across builds.
+
+**Acceptance**:
+- `bin/render-gallery` (or a follow-up `--audit` flag) produces
+  `visual_diff_regions.yml` alongside `visual_diff.json`.
+- The heatmap PNG renders to `templates/<slug>/visual_diff_regions-page-NN.png`.
+- A regression test with a controlled "small localized diff"
+  (e.g. shift a single 9pt headline by 50pt) produces a region
+  with > 10% mismatch even when page-wide is < 1%.
+- Default grid: 6×4. Configurable via `diff.yml`.
+- v2 falzflyer test (post-Backport 11 fix): the headline-Kasten
+  region shows mismatch_pct ≈ 0; before the Backport 11 fix, the
+  same region shows mismatch_pct > 5%. This demonstrates the
+  tool catches the fix that the page-wide metric missed.
+
+**Drift impact**: zero pixel impact (tool only); but unlocks the
+ability to MEASURE the impact of UX-critical small fixes, which
+is currently invisible to CI.
