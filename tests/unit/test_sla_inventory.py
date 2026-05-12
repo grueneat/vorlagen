@@ -197,3 +197,72 @@ def test_group_ptype_emitted_in_output(tmp_path):
 
     u103 = report["pageobjects_by_anname"]["u103"]
     assert u103["in_group"] == "u102"
+
+
+# ---------------------------------------------------------------------------
+# Tests: page-offset subtraction (Phase R3 fix)
+# ---------------------------------------------------------------------------
+
+PAGE_OFFSET_SLA = dedent("""\
+    <?xml version="1.0" encoding="UTF-8"?>
+    <SCRIBUSUTF8NEW Version="1.6.4">
+        <DOCUMENT ANZPAGES="2" PAGEWIDTH="595" PAGEHEIGHT="842">
+            <PAGE NUM="0" PAGEXPOS="100" PAGEYPOS="20" PAGEWIDTH="595" PAGEHEIGHT="842"/>
+            <PAGE NUM="1" PAGEXPOS="100" PAGEYPOS="882" PAGEWIDTH="595" PAGEHEIGHT="842"/>
+            <PAGEOBJECT XPOS="110" YPOS="40" WIDTH="72" HEIGHT="36"
+                        PTYPE="6" OwnPage="0" ANNAME="u200" ROT="0"/>
+            <PAGEOBJECT XPOS="150" YPOS="1000" WIDTH="50" HEIGHT="50"
+                        PTYPE="4" OwnPage="1" ANNAME="u201" ROT="0"/>
+        </DOCUMENT>
+    </SCRIBUSUTF8NEW>
+""")
+
+
+def test_page_offset_subtracted_from_xpos_ypos(tmp_path):
+    """XPOS/YPOS are converted to page-relative coords by subtracting PAGEXPOS/PAGEYPOS.
+
+    Page 0 has PAGEXPOS=100, PAGEYPOS=20.
+    u200 at absolute XPOS=110, YPOS=40 → page-relative x=10, y=20.
+    """
+    sla_path = tmp_path / "test.sla"
+    sla_path.write_text(PAGE_OFFSET_SLA, encoding="utf-8")
+
+    from sla_inventory import _collect_pageobjects
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(PAGE_OFFSET_SLA)
+    doc = root.find("DOCUMENT")
+    records = _collect_pageobjects(doc)
+
+    u200 = next(r for r in records if r["anname"] == "u200")
+    # absolute XPOS=110, PAGEXPOS=100 → page-relative x_pt=10
+    assert abs(u200["xpos_pt"] - 10.0) < 0.01, (
+        f"Expected page-relative x=10pt; got {u200['xpos_pt']}"
+    )
+    # absolute YPOS=40, PAGEYPOS=20 → page-relative y_pt=20
+    assert abs(u200["ypos_pt"] - 20.0) < 0.01, (
+        f"Expected page-relative y=20pt; got {u200['ypos_pt']}"
+    )
+
+
+def test_page_offset_correct_for_second_page(tmp_path):
+    """Page 1 offset (PAGEXPOS=100, PAGEYPOS=882) is subtracted correctly."""
+    sla_path = tmp_path / "test.sla"
+    sla_path.write_text(PAGE_OFFSET_SLA, encoding="utf-8")
+
+    from sla_inventory import _collect_pageobjects
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(PAGE_OFFSET_SLA)
+    doc = root.find("DOCUMENT")
+    records = _collect_pageobjects(doc)
+
+    u201 = next(r for r in records if r["anname"] == "u201")
+    # absolute XPOS=150, PAGEXPOS=100 → page-relative x_pt=50
+    assert abs(u201["xpos_pt"] - 50.0) < 0.01, (
+        f"Expected page-relative x=50pt; got {u201['xpos_pt']}"
+    )
+    # absolute YPOS=1000, PAGEYPOS=882 → page-relative y_pt=118
+    assert abs(u201["ypos_pt"] - 118.0) < 0.01, (
+        f"Expected page-relative y=118pt; got {u201['ypos_pt']}"
+    )

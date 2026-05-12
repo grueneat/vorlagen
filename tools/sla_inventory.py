@@ -69,6 +69,26 @@ def _color_or_none(val: Optional[str]) -> Optional[str]:
     return val
 
 
+def _build_page_offsets(doc_el: ET.Element) -> dict[int, tuple[float, float]]:
+    """Return {page_num: (pagexpos_pt, pageypos_pt)} from <PAGE> elements.
+
+    Scribus stores each PAGE at an absolute PAGEXPOS/PAGEYPOS offset within
+    the document coordinate space. PAGEOBJECT XPOS/YPOS values are also
+    document-absolute. Subtracting the page offset gives page-relative coords
+    that match what build.py emits (page-local, origin = page top-left).
+    """
+    offsets: dict[int, tuple[float, float]] = {}
+    for page_el in doc_el.findall("PAGE"):
+        try:
+            num = int(page_el.get("NUM", "0"))
+        except ValueError:
+            num = 0
+        px = _parse_float(page_el.get("PAGEXPOS"))
+        py = _parse_float(page_el.get("PAGEYPOS"))
+        offsets[num] = (px, py)
+    return offsets
+
+
 def _collect_pageobjects(
     doc_el: ET.Element,
 ) -> list[dict]:
@@ -81,6 +101,7 @@ def _collect_pageobjects(
       - ptype: int
       - ptype_label: str
       - xpos_pt / ypos_pt / width_pt / height_pt / rot: float
+        (page-relative: XPOS - PAGEXPOS, YPOS - PAGEYPOS)
       - fcolor / pcolor / linescolor: str | None
       - linewidth: float | None
       - own_page: int  (OwnPage, -1 = on multiple / scratch)
@@ -88,6 +109,7 @@ def _collect_pageobjects(
     """
     records: list[dict] = []
     unnamed_counter = 0
+    page_offsets = _build_page_offsets(doc_el)
 
     def _walk(el: ET.Element, parent_anname: Optional[str]) -> None:
         nonlocal unnamed_counter
@@ -105,11 +127,23 @@ def _collect_pageobjects(
             except ValueError:
                 ptype = 0
 
-            xpos = _parse_float(child.get("XPOS"))
-            ypos = _parse_float(child.get("YPOS"))
+            xpos_abs = _parse_float(child.get("XPOS"))
+            ypos_abs = _parse_float(child.get("YPOS"))
             width = _parse_float(child.get("WIDTH"))
             height = _parse_float(child.get("HEIGHT"))
             rot = _parse_float(child.get("ROT", "0"))
+
+            # Convert document-absolute XPos/YPos to page-relative coords by
+            # subtracting the page's own PAGEXPOS/PAGEYPOS. This matches the
+            # coordinate system used in build.py (origin = page top-left).
+            own_page_raw = child.get("OwnPage", "0")
+            try:
+                own_page_for_offset = int(own_page_raw)
+            except ValueError:
+                own_page_for_offset = 0
+            page_ox, page_oy = page_offsets.get(own_page_for_offset, (0.0, 0.0))
+            xpos = xpos_abs - page_ox
+            ypos = ypos_abs - page_oy
 
             fcolor = _color_or_none(child.get("FCOLOR"))
             # PCOLOR is the polygon/shape fill in Scribus SLA
@@ -127,11 +161,7 @@ def _collect_pageobjects(
                 except ValueError:
                     pass
 
-            own_page_raw = child.get("OwnPage", "0")
-            try:
-                own_page = int(own_page_raw)
-            except ValueError:
-                own_page = 0
+            own_page = own_page_for_offset
 
             record: dict = {
                 "anname": anname,
