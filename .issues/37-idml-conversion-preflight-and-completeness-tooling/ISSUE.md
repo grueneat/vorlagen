@@ -861,3 +861,91 @@ gaps become rare instead of routine.
 **Total: 2.5 days for the full ship.** Phase A alone (1 day) would have
 prevented the 5-hour multi-agent loss on issue #35; that's the
 highest-priority ship.
+
+## Phase E2 — Line-spacing reconciliation (added 2026-05-12 after v2 falzflyer work)
+
+**Bug class** discovered: IDML CSR `<Leading>` value does NOT match the
+actual line spacing InDesign renders. On v2 falzflyer, CSR `<Leading>14.3</Leading>`
+on body text → InDesign renders at constant **16.00pt** baseline-to-baseline.
+The 1.7pt-per-line difference accumulates to ~50pt drift by line 30, making
+multi-line body paragraphs the largest convergence obstacle.
+
+**Confirmed contributors** (none of these explain 16pt directly):
+- `<TextDefault AutoLeading="120">` (120% would give 13.2pt for 11pt font)
+- `<BaselineFrameGridIncrement="12">` with `UseCustomBaselineFrameGrid="false"`
+- `<LeadingModel>LeadingModelAkiBelow</LeadingModel>` (Japanese aki-below model)
+
+**Hypothesis**: the Fließtext ParagraphStyle has an implicit grid alignment
+or `LeadingAki`/`TrailingAki` that compounds with the CSR Leading to produce
+the rendered 16pt.
+
+### Converter-detection signal (no visual review required)
+
+The converter cannot rely on CSR `<Leading>` alone. **Detection mechanism**:
+
+1. **Parse ParagraphStyle's effective Leading**: read `<Leading>` from the
+   ParagraphStyle AND its `BasedOn` chain. If any ancestor explicitly
+   overrides Leading, that wins.
+
+2. **Read LeadingAki / TrailingAki**: in IDML CSR Properties, look for
+   `<LeadingAki type="unit">N</LeadingAki>` and `<TrailingAki>` on the
+   relevant ParagraphStyle and CSR. These add extra leading above/below
+   the line. Effective leading = `<Leading>` + `<LeadingAki>` + `<TrailingAki>`
+   (if positive, else 0).
+
+3. **Read LeadingModel**: `LeadingModelAkiBelow` means aki applies AFTER
+   the line (vs centered). Compute effective baseline-to-baseline distance:
+   ```
+   if LeadingModel == "LeadingModelAkiBelow":
+       effective_linesp_pt = CSR.Leading + max(0, CSR.TrailingAki)
+   else:  # Default "above" model
+       effective_linesp_pt = CSR.Leading + max(0, CSR.LeadingAki)
+   ```
+
+4. **Pragmatic fallback** (when computation doesn't match observed):
+   measure baseline.pdf's first 3 consecutive lines in a body-text frame
+   via pdfplumber. Compute baseline-to-baseline gap. If gap differs from
+   computed effective_linesp by >1pt, emit the measured value as
+   `linesp_override_pt` in the ParaStyle.
+
+### Skill-level rule for `/idml-import`
+
+> When emitting body-text ParaStyles, the skill MUST verify the rendered
+> line spacing matches the IDML's intent. Concretely: after the first
+> `bin/render-gallery --audit` run on a new template, the skill compares
+> the first body-text frame's measured line spacing (from pdfplumber on
+> baseline.pdf) against the emitted `LINESP`. If they differ by >0.5pt,
+> override the ParaStyle's `linesp` to match the baseline measurement
+> and document it as a per-template injection in `inject.yml` (or
+> equivalent) with the measurement evidence.
+
+### New Phase E2 audit tool — `tools/line_spacing_audit.py`
+
+Sibling to D7/D8/F/G. Per body-text frame:
+- Extract first 3 consecutive word lines from baseline.pdf via pdfplumber
+- Compute baseline-to-baseline pt gap (median of pairs)
+- Compute same for preview.pdf
+- Report frames where `|preview_linesp - baseline_linesp| > 0.5pt`
+- For each flagged frame: report the frame's anname, ParaStyle, IDML CSR
+  Leading, baseline measured spacing, preview measured spacing,
+  recommendation (LINESP override value).
+
+Output `line_spacing_audit.yml`:
+```yaml
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+line_spacing_drift:
+  - anname: u1c7
+    para_style: idml/fliesstext-auf-gruenem-hintergrund
+    idml_csr_leading_pt: 14.3
+    baseline_linesp_pt: 16.0
+    preview_linesp_pt: 14.3
+    delta_pt: 1.7
+    recommendation: "override ParaStyle linesp to 16.0"
+ok: false
+```
+
+**Acceptance**:
+- `tools/line_spacing_audit.py` exists, runs in <2s
+- Wired into `bin/render-gallery --audit`
+- For each ParaStyle with `>0.5pt` drift, emits a clear override recommendation
+- v2 falzflyer test: must flag the original 14.3pt mismatch before the fix
