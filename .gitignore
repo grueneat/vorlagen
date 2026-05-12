@@ -8,6 +8,14 @@ node_modules/
 .DS_Store
 .worktrees/
 
+# InDesign/IDML source artifacts — never commit. Designers' source files
+# live in originals/ as local-only references: .idml/.indd authoring files,
+# baseline PDFs, Scribus's IDML imports (.sla), Links/ assets. They're
+# inputs to tools/idml_to_dsl.py + tools/links_export.py + Phase D's
+# reference_sla diff lane; the build pipeline reads them via meta.yml
+# paths but the binaries themselves stay out of git.
+/originals/
+
 # Brand fonts — proprietary, never commit to public repo.
 # Local copies live at /root/workspace/fonts/; they're installed into
 # fontconfig during dev-container build (see Dockerfile.claude).
