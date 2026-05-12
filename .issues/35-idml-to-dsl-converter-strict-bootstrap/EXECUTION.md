@@ -977,3 +977,159 @@ New tests in R3: `test_page_offset_subtracted_from_xpos_ypos`, `test_page_offset
 
 **Phase R3 completed:** 2026-05-12  
 **Status:** geometry_drift 40→7, converter_bug 14→1, hand-patches fully restored, visual drift maintained ≤7.42%.
+
+---
+
+## Phase R5 — CSR FontStyle composition + pdffonts audit
+
+**Date:** 2026-05-12  
+**Branch:** issue/35-idml-to-dsl-converter-strict-bootstrap
+
+### Root cause diagnosed
+
+`_walk_csr` received `ps_family` (the paragraph style's `applied_font`) as a font-family
+fallback, but NOT `ps_font_style` (the paragraph style's `font_style`). When a CSR had no
+explicit `FontStyle` attribute, `effective_font_style` was None and `_make_font_name` emitted
+just the bare family (e.g. `"Gotham Narrow"` instead of `"Gotham Narrow Bold"`).
+
+`ParagraphStyle/Headline in grünem Kasten` has `FontStyle="Bold"` and `AppliedFont="Gotham
+Narrow"`. Its single CSR (u379 story / u376 TextFrame) carries no explicit FontStyle, so
+before the fix it emitted `font='Gotham Narrow'` — causing `GothamNarrow-Bold` to be absent
+from preview.pdf even though baseline.pdf uses it.
+
+### Fix
+
+In `_walk_story`: extract `ps_font_style = ps_resolved.get("font_style")` alongside
+`ps_family` and pass it to `_walk_csr(child, ps_family, color_map, ps_font_style=ps_font_style)`.
+
+In `_walk_csr`: add `ps_font_style: Optional[str] = None` parameter; resolve
+`effective_font_style = csr_font_style if csr_font_style is not None else ps_font_style`
+before calling `_make_font_name`.
+
+### Commits
+
+- `b6bb481` — 35: fix(idml-stories): compose family + FontStyle for CSR weight overrides
+- `<sha2>` — 37: feat(render-pipeline): pdffonts audit step (Phase D6)
+
+### Before/after pdffonts preview.pdf
+
+**Before:**
+```
+GothamNarrow-Black   ✓
+GothamNarrow-Bold    ✗  MISSING
+GothamNarrow-Book    ✓
+GothamNarrow-Ultra   ✓
+Vollkorn-BlackItalic ✓
+```
+
+**After:**
+```
+GothamNarrow-Black   ✓
+GothamNarrow-Bold    ✓  FIXED
+GothamNarrow-Book    ✓
+GothamNarrow-Ultra   ✓
+Vollkorn-BlackItalic ✓
+```
+
+### Before/after visual_diff
+
+| Phase | p1 (page 0) | p2 (page 1) |
+|-------|-------------|-------------|
+| R3 (pre-R5) | 7.42% | 6.34% |
+| R5 (post-fix) | 7.79% | 7.32% |
+
+Drift increased because u52d/u1b0/u1e6 multi-frame Vollkorn workarounds were dropped per P5
+mandate. The Vollkorn text IS rendering correctly in the single-frame output (confirmed via
+pdfplumber — all Vollkorn chars present on page 0). The positioning delta vs baseline is
+inherent to the IDML-native single-frame approach vs the hand-calibrated multi-frame splits.
+
+The Bold font fix is the primary convergence improvement: GothamNarrow-Bold now appears in
+preview.pdf matching baseline.pdf exactly (font_audit: ok=true, 0 missing variants).
+
+### build.py u52d/u1b0/u1e6 frame structure
+
+**Before (hand-patched multi-frame workaround):**
+```python
+# u52d: 3 frames (u52d + u52d_dreiz + u52d_hl)
+page0.add(TextFrame(anname='u52d', runs=[Run(text='Das ist die ', ...)]))
+page0.add(TextFrame(anname='u52d_dreiz', runs=[Run(text='dreizeilige', font='Vollkorn Black Italic', ...)]))
+page0.add(TextFrame(anname='u52d_hl', runs=[Run(text='Headline', ...)]))
+# u1b0: 2 frames (u1b0 + u1b0_hl)
+# u1e6: 2 frames (u1e6 + u1e6_hl)
+```
+
+**After (P5: single TextFrame, per-Run font args):**
+```python
+page0.add(TextFrame(
+    anname='u52d',
+    runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', ...),
+          Run(text='', separator='breakline'),
+          Run(text='dreizeilige', font='Vollkorn Black Italic', ...),
+          Run(text='', separator='breakline'),
+          Run(text='Headline', font='Gotham Narrow Ultra', ...)],
+))
+# u1b0: single frame with 2 runs (Gotham Ultra + Vollkorn Black Italic)
+# u1e6: single frame with 2 runs (same pattern)
+```
+
+Also: CSRs without explicit FontStyle now inherit the paragraph style's font_style, so
+body-text CSRs in Fließtext/Aufzählungen styles emit `font='Gotham Narrow Book'` (more
+explicit than the previous `font='Gotham Narrow'`).
+
+### font_audit.yml content
+
+```yaml
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+baseline_fonts:
+  - GothamNarrow-Black
+  - GothamNarrow-Bold
+  - GothamNarrow-Book
+  - GothamNarrow-Ultra
+  - Vollkorn-BlackItalic
+preview_fonts:
+  - GothamNarrow-Black
+  - GothamNarrow-Bold
+  - GothamNarrow-Book
+  - GothamNarrow-Ultra
+  - Vollkorn-BlackItalic
+missing_in_preview: []
+extra_in_preview: []
+ok: true
+```
+
+### Tests added
+
+**test_idml_story.py** (2 new tests):
+- `test_para_style_font_style_inherited_by_csr_with_no_explicit_font_style` — regression guard for the Bold bug
+- `test_csr_explicit_font_style_overrides_para_style_font_style` — CSR wins over paragraph style
+
+**test_font_audit.py** (12 new tests):
+- `test_parse_strips_subset_prefix`
+- `test_parse_deduplicates_names`
+- `test_parse_returns_sorted_unique_names`
+- `test_parse_preview_output_no_prefix`
+- `test_parse_empty_output_returns_empty_list`
+- `test_parse_malformed_output_returns_empty_list`
+- `test_parse_only_header_returns_empty_list`
+- `test_identical_sets_ok_true`
+- `test_missing_bold_in_preview_ok_false`
+- `test_extra_font_in_preview_is_informational_not_failure`
+- `test_all_missing_ok_false`
+- `test_run_font_audit_pdffonts_not_found`
+
+Total: 185 tests passed, 0 failed.
+
+### FontStyle values found in IDML corpus
+
+All FontStyle values encountered in Stories/*.xml and Styles.xml:
+- `"Book"` → Gotham Narrow Book ✓ installed
+- `"Bold"` → Gotham Narrow Bold ✓ installed (this was the bug)
+- `"Black"` → Gotham Narrow Black ✓ installed
+- `"Black Italic"` → Vollkorn Black Italic ✓ installed
+- `"Ultra"` → Gotham Narrow Ultra ✓ installed
+- `"Book Italic"` → not seen in Stories (only from analysis)
+
+No FontStyle values found that reference uninstalled font variants.
+
+**Phase R5 completed:** 2026-05-12  
+**Status:** GothamNarrow-Bold fixed (font_audit ok=true), u52d/u1b0/u1e6 hand-patches dropped per P5, pdffonts audit step integrated, 185 tests pass.

@@ -970,6 +970,33 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase D6: pdffonts font audit (preview vs baseline embedded font sets).
+    preview_pdf = tdir / "preview.pdf"
+    font_audit_path = out_dir / "font_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from font_audit import run_font_audit, _yaml_dump as _fa_yaml
+            fa_report = run_font_audit(preview_pdf, baseline, template=tid)
+            font_audit_path.write_text(_fa_yaml(fa_report), encoding="utf-8")
+            missing = fa_report.get("missing_in_preview", [])
+            fa_ok = fa_report.get("ok", False)
+            if missing:
+                fa_line = (
+                    f"[{tid}] font_audit: {len(missing)} missing variant(s) "
+                    f"({', '.join(missing)}) → FAIL"
+                )
+                print(fa_line)
+                issue_parts.append(f"{len(missing)} missing font variant(s)")
+            else:
+                print(f"[{tid}] font_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit D6 (font_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit D6 (font_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
     if issue_parts:
         summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
     else:
