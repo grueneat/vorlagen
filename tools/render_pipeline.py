@@ -1054,6 +1054,41 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase F: run_style_audit — per-Run font/size/color fidelity.
+    # Catches wrong font assigned to a Run (e.g. Gotham where Vollkorn was expected),
+    # wrong PointSize (fractional rounding artifacts), wrong color (bad brand mapping).
+    # D6 only checks embedding; D7 only checks presence; F checks per-word style.
+    run_style_audit_path = out_dir / "run_style_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from run_style_audit import run_style_audit as _rsa_run
+            from run_style_audit import _yaml_dump as _rsa_yaml
+            rsa_report = _rsa_run(preview_pdf, baseline, template=tid)
+            run_style_audit_path.write_text(_rsa_yaml(rsa_report), encoding="utf-8")
+            large = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "large")
+            small = sum(1 for d in rsa_report["style_drifts"] if d["severity"] == "small")
+            suppressed = rsa_report.get("suppressed_common_word_drifts_count", 0)
+            if large:
+                print(
+                    f"[{tid}] run_style_audit: {large} large style drifts, "
+                    f"{small} small drifts → REVIEW"
+                )
+                issue_parts.append(f"{large} word(s) with large style drift")
+            elif small:
+                print(
+                    f"[{tid}] run_style_audit: 0 large drifts, {small} small drifts "
+                    f"(ICC/rounding, suppressed={suppressed})"
+                )
+            else:
+                print(f"[{tid}] run_style_audit: OK")
+        except Exception as exc:
+            print(f"[{tid}] audit F (run_style_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit F (run_style_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
     # Phase E: per-element drift attribution.
     # Aggregates diff_bboxes.json into a per-slot contribution table so the next
     # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
@@ -1082,6 +1117,34 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                     )
         except Exception as exc:
             print(f"[{tid}] audit E (per_element_drift) error: {exc}", file=sys.stderr)
+
+    # Phase G: region_color_audit — per-region ICC-vs-fill-bug classification.
+    # Runs when both preview.pdf and baseline.pdf exist. Diagnostic only (never
+    # blocks audit). Writes region_color_audit.yml and prints a one-line summary.
+    color_audit_path = out_dir / "region_color_audit.yml"
+    preview_pdf_path = tdir / "preview.pdf"
+    if preview_pdf_path.exists() and baseline.exists() and build_py.exists():
+        try:
+            from region_color_audit import run_region_color_audit as _rca_run
+            from region_color_audit import _yaml_dump as _rca_yaml
+            _rca_result = _rca_run(build_py, baseline, preview_pdf_path, tid)
+            color_audit_path.write_text(_rca_yaml(_rca_result), encoding="utf-8")
+            _bs = _rca_result["by_severity"]
+            print(
+                f"[{tid}] region_color_audit: "
+                f"{_bs.get('ok', 0)} ok, "
+                f"{_bs.get('icc_likely', 0)} icc_likely, "
+                f"{_bs.get('fill_likely', 0)} fill_likely "
+                f"— pattern: {_rca_result['pattern']}"
+            )
+        except Exception as exc:
+            print(f"[{tid}] audit G (region_color_audit) error: {exc}", file=sys.stderr)
+    else:
+        print(
+            f"[{tid}] audit G (region_color_audit): skipped "
+            f"(no preview.pdf or baseline.pdf or build.py)",
+            file=sys.stderr,
+        )
 
     if issue_parts:
         summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
