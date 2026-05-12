@@ -1719,4 +1719,73 @@ This matches the approach used in `site/public/templates/.../template.sla`.
 p1=8.09%, p2=7.08% (unchanged — icon frames are 3.35mm × 3.3mm, contributing
 ~0.02pp total; engine noise dominates). text_render_audit ok=true, 248 tests pass.
 
+---
+
+## Phase F — run_style_audit (2026-05-12)
+
+**Scope:** Ship `tools/run_style_audit.py` — per-Run font/size/color fidelity
+audit (Issue 37 Phase F). Catches wrong-font-per-word bugs that D6
+(font_audit, document-level) and D7 (text_render_audit, presence-only) miss.
+Wire into `render_pipeline.py::_run_audit` after D8 (text_position_audit).
+
+### Commit SHAs
+
+- `441b4ce` — `37: feat(tools): run_style_audit — per-Run font/size/color fidelity (Phase F)`
+  - tools/run_style_audit.py (Phase F tool)
+  - tools/render_pipeline.py (Phase F wire-up after D8)
+  - Also bundled region_color_audit.py (Tool G, parallel work already staged)
+- `f7a0a66` — `37: feat(tests): run_style_audit — 15 unit + 6 integration tests (Phase F)`
+  - tests/unit/test_run_style_audit.py (15 tests)
+  - tests/integration/test_run_style_audit_v2.py (6 tests)
+- Issue 37 update (main branch): `6288fe0` — `37: docs(issues): add Phase F (run_style_audit) to issue 37`
+
+### v2 Falzflyer — Acceptance Verification Output
+
+```
+ok: True
+style_drifts: 0 (suppressed common: 0)
+top 5 large-severity drifts:
+  (none)
+```
+
+Interpretation: 0 style drifts on the current v2 preview.pdf — confirms that
+the R4/R5 CSR FontStyle converter fix correctly assigned the right font per
+Run. The audit is a green baseline; it will surface drifts if a future build
+regresses the font encoding.
+
+### Tests Added
+
+**15 unit tests** (`tests/unit/test_run_style_audit.py`):
+1. `test_subset_prefix_stripped` — DAZTTR+GothamNarrow-Bold → GothamNarrow-Bold
+2. `test_size_within_tolerance_no_large_drift` — 37.93 vs 38.0 → not reported (0.07pt < 0.5pt)
+3. `test_size_small_drift_in_small_range` — 0.7pt diff → small severity
+4. `test_size_outside_tolerance_drift_reported` — 11.0 vs 14.0 → large severity
+5. `test_color_normalize_rgb_tuple` — (1.0, 0.84, 0.0) → #ffd600
+6. `test_color_normalize_rgb_tuple_gold` — exact #ffd700 round-trip
+7. `test_color_normalize_gray` — 0.5 → gray:128
+8. `test_color_normalize_cmyk` — (0, 0, 1.0, 0) → cmyk:0.0,0.0,1.0,0.0
+9. `test_common_word_filter_excludes_high_frequency` — et×6 → suppressed (count=6)
+10. `test_unique_word_drift_reported` — unique word with font drift reported
+11. `test_severity_classification` — wrong-font=large; 0.7pt=small; sub-threshold=None
+12. `test_empty_word_lists` — both empty → ok=True, no crash
+13. `test_yaml_dump_deterministic` — sorted keys, stable output
+14. `test_word_missing_from_preview_skipped` — absent words skipped (D7 handles presence)
+15. `test_greedy_no_double_counting` — each preview word consumed at most once
+
+**6 integration tests** (`tests/integration/test_run_style_audit_v2.py`):
+- `test_run_style_audit_produces_output` — expected schema keys present
+- `test_run_style_audit_word_counts_nonzero` — both PDFs have substantial text
+- `test_run_style_audit_runtime_under_3s` — completes in < 3s on v2 falzflyer
+- `test_run_style_audit_yaml_written` — valid YAML, re-parseable
+- `test_run_style_audit_drift_schema` — all style_drift entries have required keys
+- `test_run_style_audit_deterministic` — byte-identical YAML on two consecutive runs
+
+**Total tests:** 298 pass (was 248 before Phase F).
+
+### Issue 37 Update SHA on Main
+
+`6288fe0` (on main branch) — adds Phase F scope section, Phase F acceptance
+criteria (all checked), and updates P9 to list run_style_audit as a
+content-level diff source.
+
 **Phase B completed:** 2026-05-12
