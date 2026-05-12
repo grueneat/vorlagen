@@ -13,6 +13,8 @@ description: >
   (u-prefixed); a human will refactor them to semantic slot names
   post-bootstrap.
 
+reference_sla: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2.sla
+
 build:
   script: build.py
   output: template.sla
