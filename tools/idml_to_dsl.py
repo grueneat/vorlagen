@@ -384,6 +384,76 @@ def _pt_to_mm(value_pt: float) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Pattern 9 — Frame-height auto-adjust for Scribus rendering.
+#
+# Scribus suppresses entire lines of text when the TextFrame's h_pt is
+# smaller than the effective line height. InDesign silently overflows;
+# Scribus clips. The converter widens h_mm to the minimum required by
+# Scribus so the first line is always visible. This is a geometry
+# translation concern (IDML→Scribus), not a content edit.
+#
+# Required effective line height:
+#   - If the paragraph style sets an explicit Leading (not "Auto"):
+#       line_h_pt = leading_pt
+#   - Otherwise (auto-leading): line_h_pt = point_size_pt * 1.2
+#     (standard auto-leading multiplier, matching InDesign and Scribus).
+# ---------------------------------------------------------------------------
+
+def _required_text_frame_height_mm(
+    point_size_pt: float,
+    leading_pt: Optional[float],
+) -> float:
+    """Minimum h_mm Scribus needs to render one line without clipping.
+
+    Scribus suppresses lines when frame_h_pt < effective_line_height_pt.
+    Effective line height is ``leading_pt`` (if explicitly set) else
+    ``point_size_pt * 1.2`` (standard auto-leading multiplier).
+
+    InDesign tolerates frame_h < line_height by silently overflowing;
+    Scribus does not. The converter compensates by widening h_mm when needed.
+    """
+    line_h_pt = leading_pt if leading_pt is not None else point_size_pt * 1.2
+    return line_h_pt * PT_TO_MM
+
+
+def _maybe_widen_frame_h(
+    idml_h_mm: float,
+    max_fontsize_pt: Optional[float],
+    leading_pt: Optional[float],
+) -> tuple[float, Optional[str]]:
+    """If the frame's h_mm is too small for the text content, return widened h_mm
+    and a comment explaining the adjustment. Otherwise return idml_h_mm unchanged.
+
+    Args:
+        idml_h_mm: height from the IDML PathPointArray (already in mm).
+        max_fontsize_pt: maximum font size across all runs in this frame (pt).
+            Pass None if the frame has no text runs.
+        leading_pt: explicit leading from the paragraph style (pt), or None
+            when leading is "Auto" or not set.
+
+    Returns:
+        ``(h_mm, comment_or_None)`` — if widening occurred, comment is a
+        human-readable string suitable for a ``# ...`` comment in build.py.
+    """
+    if max_fontsize_pt is None:
+        return idml_h_mm, None
+    required_mm = _required_text_frame_height_mm(max_fontsize_pt, leading_pt)
+    epsilon_mm = 0.05  # avoid flapping on sub-mm rounding
+    if idml_h_mm < required_mm - epsilon_mm:
+        leading_desc = (
+            f"leading={leading_pt:.2f}pt" if leading_pt is not None
+            else f"auto-leading={max_fontsize_pt:.0f}pt×1.2"
+        )
+        comment = (
+            f"h_mm widened {idml_h_mm:.4f}mm→{required_mm:.4f}mm: "
+            f"Scribus clips lines when frame_h < effective line height "
+            f"({leading_desc}; IDML overflows silently)"
+        )
+        return required_mm, comment
+    return idml_h_mm, None
+
+
+# ---------------------------------------------------------------------------
 # Code-emitter primitives — mirror tools/sla_to_dsl.py:140-195 verbatim in
 # spirit (4-space indent, double-quoted strings, repr() for floats for
 # byte-stable round-trip).
@@ -1450,6 +1520,7 @@ def _emit_pageitem(
         style_slug = ""
         runs: list[Run] = []
         trail_attrs: Optional[dict] = None
+        _first_psr_style_self: Optional[str] = None  # for Pattern-9 leading lookup
         if parent_story:
             story_root = _resolve_story_xml(ctx.pkg, parent_story)
             first_psr = story_root.find(".//ParagraphStyleRange")
@@ -1457,6 +1528,8 @@ def _emit_pageitem(
                 ap = first_psr.get("AppliedParagraphStyle")
                 if ap and ap in ctx.paragraph_style_map:
                     style_slug = ctx.paragraph_style_map[ap]
+                if ap:
+                    _first_psr_style_self = ap
             runs = _walk_story(
                 story_root,
                 paragraph_style_map=ctx.paragraph_style_map,
@@ -1467,11 +1540,59 @@ def _emit_pageitem(
             # _walk_story handles <para> separators for non-final PSRs; the final
             # PSR's alignment goes here so TextFrame.trail_attrs emits it correctly.
             trail_attrs = _psr_trail_attrs_for_story(story_root)
+
+        # Pattern 9 — auto-widen h_mm when Scribus would clip the first line.
+        # Scribus clips text when frame_h < effective line height; InDesign
+        # overflows silently. Widen to the required minimum so every line renders.
+        _max_fontsize_pt: Optional[float] = None
+        if runs:
+            _fontsizes = [r.fontsize for r in runs if r.fontsize is not None]
+            if _fontsizes:
+                _max_fontsize_pt = max(_fontsizes)
+            # Fallback: if no run carries an explicit fontsize, use the
+            # paragraph style's point_size (auto-leading uses this as the base).
+            if _max_fontsize_pt is None and _first_psr_style_self:
+                _ps_data = ctx.paragraph_styles.get(_first_psr_style_self, {})
+                _max_fontsize_pt = _ps_data.get("point_size")
+
+        # Effective leading: prefer CSR-level leading (Properties/Leading) over
+        # paragraph-style leading, since CSR-level overrides take precedence in
+        # InDesign. Read max leading across all CSRs in the story.
+        _leading_pt: Optional[float] = None
+        if parent_story and runs:
+            # story_root is already resolved above; use it directly.
+            for _csr in story_root.findall(".//CharacterStyleRange"):
+                _ld_el = _csr.find("Properties/Leading")
+                if _ld_el is not None and _ld_el.text and _ld_el.text.strip() != "Auto":
+                    try:
+                        _csr_ld = float(_ld_el.text.strip())
+                        if _leading_pt is None or _csr_ld > _leading_pt:
+                            _leading_pt = _csr_ld
+                    except (ValueError, TypeError):
+                        pass
+        # Fall back to paragraph-style leading if no CSR-level leading found.
+        if _leading_pt is None and _first_psr_style_self:
+            _ps_data = ctx.paragraph_styles.get(_first_psr_style_self, {})
+            _ld_str = _ps_data.get("leading")
+            if _ld_str and _ld_str != "Auto":
+                try:
+                    _leading_pt = float(_ld_str)
+                except (ValueError, TypeError):
+                    pass
+
+        emitted_h_mm = _round_mm(h_mm)
+        _widened_h_mm, _widen_comment = _maybe_widen_frame_h(
+            emitted_h_mm, _max_fontsize_pt, _leading_pt
+        )
+        if _widen_comment:
+            ctx.out.w(f"# {_widen_comment}")
+            emitted_h_mm = _round_mm(_widened_h_mm)
+
         kwargs: dict[str, Any] = {
             "x_mm": _round_mm(x_mm),
             "y_mm": _round_mm(y_mm),
             "w_mm": _round_mm(w_mm),
-            "h_mm": _round_mm(h_mm),
+            "h_mm": emitted_h_mm,
             "anname": self_id,
             "layer": layer_idx,
         }
