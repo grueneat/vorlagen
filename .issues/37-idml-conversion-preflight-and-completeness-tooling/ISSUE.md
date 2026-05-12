@@ -623,6 +623,88 @@ Prints a one-line summary:
 
 Large drifts are added to `issue_parts` so `--audit-strict` surfaces them.
 
+### Phase G — Per-region ICC-vs-fill-bug classification (`tools/region_color_audit.py`)
+
+**Separates engine-floor noise from fixable fill-color bugs.** After per-element
+drift attribution identifies which slots account for the most mismatch, Phase G
+answers the next question: *is the remaining colour delta in a given region due
+to ICC profile rendering drift (unfixable engine floor) or a wrong fill-color
+emitted by the converter (fixable bug)?*
+
+**Motivation:** Page 1 of the v2 falzflyer shows `visual_diff` at 8.09%.
+Per-element drift names `u1ae` (1.70pp) and `u1fd` (1.26pp) as top contributors.
+Without Phase G, these can't be distinguished from ICC drift — the agent might
+waste cycles "fixing" something that's irreducible. Phase G samples the mean RGB
+of each frame's bounding box in both baseline.pdf and preview.pdf (at 150 dpi)
+and classifies the delta magnitude.
+
+**Classification rubric (RGB units, 0-255 scale):**
+- `ok`:          mean_delta < 3   — within rasterisation noise floor
+- `icc_likely`:  3 ≤ delta < 15  — uniform small offset consistent with
+                 CMYK→sRGB ICC profile rendering drift; engine floor, unfixable
+- `fill_likely`: delta ≥ 15      — large concentrated delta; likely wrong fill-color
+                 emitted by the converter; fixable
+
+**Document-level pattern:**
+- `predominantly_icc_drift`: icc_likely count ≥ 3× fill_likely count
+- `concentrated_fill_bugs`:  fill_likely count ≥ 3
+- `mixed`:                   neither dominates
+
+**Output schema** (`build/validation/<slug>/region_color_audit.yml`):
+
+```yaml
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+by_severity:
+  ok: 16
+  icc_likely: 15
+  fill_likely: 5
+pattern: predominantly_icc_drift
+frames:
+  - anname: u1ae
+    page: 0
+    type: Polygon
+    bbox_mm: [-1.8236, -1.8236, 298.8236, 213.6472]
+    baseline_rgb: [55.7, 124.3, 66.8]
+    preview_rgb:  [60.7, 127.9, 70.5]
+    mean_delta: 4.09     # icc_likely: small uniform offset → engine floor
+    rms_delta: 7.17
+    severity: icc_likely
+  - anname: u4da
+    page: 1
+    type: Polygon
+    baseline_rgb: [156.9, 188.0, 164.8]
+    preview_rgb:  [45.0, 108.3, 58.5]
+    mean_delta: 99.3     # fill_likely: large delta → wrong fill color
+    severity: fill_likely
+```
+
+**Wire-up:** `render_pipeline.py::_run_audit` runs Phase G after Phase E when
+`preview.pdf` and `baseline.pdf` both exist. Prints summary line:
+
+```
+[<slug>] region_color_audit: 16 ok, 15 icc_likely, 5 fill_likely — pattern: predominantly_icc_drift
+```
+
+Diagnostic only — never fails the audit.
+
+**Acceptance criteria:**
+- [x] `tools/region_color_audit.py` exists; takes `--build-py`, `--baseline`,
+      `--preview`, `--template`, `--out`; emits `region_color_audit.yml`
+- [x] Per-frame mean RGB delta computed from pdftocairo 150dpi rasterisation
+- [x] Severity classification: ok / icc_likely / fill_likely per threshold rubric above
+- [x] Document pattern: predominantly_icc_drift / concentrated_fill_bugs / mixed
+- [x] Frames sorted: fill_likely first, then icc_likely, then ok; within each group
+      descending by mean_delta; top 40 emitted
+- [x] Wired into `render_pipeline.py::_run_audit`; runs when both PDFs exist
+- [x] YAML output deterministic (sort_keys=True, byte-identical on re-run)
+- [x] 25 unit tests + 4 integration tests; all pass; runtime <5s on synthetic PDFs
+- [x] V2 falzflyer `region_color_audit.yml` produced; u1ae and u1fd classified as
+      `icc_likely` (mean_delta ~4) — background drift confirmed as engine floor
+
+**Note for P9:** Phase G completes the content-level diff suite alongside
+per_element_drift (Phase E). Together they answer "which element, what severity,
+and what root cause?" before any pixel-level investigation.
+
 ### Phase C — Workflow + agent discipline (low cost, high recall)
 
 #### C1. Single up-front visual review on import (`bin/idml-import`)
@@ -861,6 +943,26 @@ gaps become rare instead of routine.
 - [x] 15 unit tests + 6 integration tests; runtime <3s on v2 falzflyer
 - [x] V2 falzflyer `run_style_audit.yml` produced; `ok: true` with 0 style
       drifts — confirms current font encoding is correct after R4/R5 fixes
+
+### Phase G — Per-region ICC-vs-fill-bug classification
+- [x] `tools/region_color_audit.py` exists; takes `--build-py`, `--baseline`,
+      `--preview`, `--template`, `--dpi` (default 150), `--out`;
+      emits `region_color_audit.yml`
+- [x] Per-frame mean RGB delta computed from pdftocairo 150dpi rasterisation
+- [x] Severity thresholds: ok (< 3), icc_likely (3-14), fill_likely (≥ 15)
+- [x] Pattern classification: predominantly_icc_drift / concentrated_fill_bugs / mixed
+- [x] Frames sorted fill_likely → icc_likely → ok; descending by mean_delta;
+      top 40 emitted
+- [x] Wired into `render_pipeline.py::_run_audit` after Phase E; diagnostic only
+      (never fails audit); runs when preview.pdf + baseline.pdf + build.py exist
+- [x] YAML output deterministic (sort_keys=True, byte-identical on re-run)
+- [x] 25 unit tests + 4 integration tests; all pass
+- [x] V2 falzflyer result: 16 ok, 15 icc_likely, 5 fill_likely;
+      pattern: predominantly_icc_drift
+- [x] u1ae (page 1 background): severity icc_likely, mean_delta=4.09 — engine floor
+- [x] u1fd (page 1 overlay): severity icc_likely, mean_delta=4.28 — engine floor
+- [x] The 1.7pp + 1.26pp background contribution to visual_diff is UNFIXABLE
+      ICC drift, not a converter fill-color bug
 
 ### Cross-cutting
 - [ ] All new tools have pytest coverage (repo idiom, not unittest —
