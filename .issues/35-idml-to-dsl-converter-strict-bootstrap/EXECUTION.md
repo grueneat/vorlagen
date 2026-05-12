@@ -1133,3 +1133,117 @@ No FontStyle values found that reference uninstalled font variants.
 
 **Phase R5 completed:** 2026-05-12  
 **Status:** GothamNarrow-Bold fixed (font_audit ok=true), u52d/u1b0/u1e6 hand-patches dropped per P5, pdffonts audit step integrated, 185 tests pass.
+
+---
+
+## Phase R6 — PSR/CSR inline override extraction
+
+**Goal:** Fix two silent inline-override bugs producing incorrect alignment and invisible text.
+
+### Bug R6-1: PSR `Justification="CenterAlign"` silently dropped
+
+**Affected frames:** u52d (cover headline), u3a2 (pull-quote), u3ba (Leonore attribution),
+u516 (subheadline), u186 (Störer).
+
+**Root cause:** `_walk_story` read `AppliedParagraphStyle` from `<ParagraphStyleRange>` but
+ignored the PSR's inline `Justification` attribute, so CenterAlign/RightAlign overrides were
+dropped. The emitted `<para>` and `<trail>` elements had no `ALIGN=` attribute, defaulting to
+left-aligned text in Scribus.
+
+**Fix in `tools/idml_to_dsl.py`:**
+
+1. In `_walk_story` (inner `for psr in psrs` loop): extract `psr.get("Justification")`, map
+   via `JUSTIFICATION_MAP`, build `psr_align_override = {"ALIGN": str(align_int)}` when
+   non-zero. Pass it as `paragraph_attrs=psr_align_override` on the inter-paragraph
+   `Run(separator="para")` element.
+
+2. New helper `_psr_trail_attrs_for_story(story_root)`: walks the last PSR in the story and
+   returns `{"ALIGN": str(align_int)}` or `None`. Called from `_emit_pageitem` in the TextFrame
+   branch; result stored as `trail_attrs` kwarg passed to `TextFrame(trail_attrs=...)`.
+
+**Manual build.py patch (P5 constraint — converter is one-shot bootstrap):**
+
+- u52d: added `trail_attrs={'ALIGN': '1'}` → CenterAlign on cover headline trail paragraph.
+- u3ba: added `trail_attrs={'ALIGN': '1'}` via the same mechanism (PSR has CenterAlign).
+- u3a2: **NOT patched** — x_mm=208.93 was calibrated for left-aligned rendering; adding
+  CenterAlign trail_attrs caused p2 to regress (7.32%→7.45%). Left as-is; needs x_mm
+  recalibration if center alignment is required.
+
+**Per-group test results:**
+
+| Frame | Before | After | Note |
+|-------|--------|-------|------|
+| u52d  | left   | center | trail_attrs={'ALIGN': '1'} added |
+| u3a2  | left   | left   | skipped — x_mm recalibration needed |
+| u3ba  | left   | center | trail_attrs from PSR (+ frame height fix, see Bug R6-2) |
+| u516  | converter fix | converter fix | aligned via para_attrs in multi-PSR story |
+| u186  | converter fix | converter fix | Störer-center style already carries alignment |
+
+### Bug R6-2: u3ba "Leonore Gewessler" text invisible
+
+**Root cause:** IDML TextFrame u3ba has geometric bounds h=8.8pt, but the CSR `<Properties>`
+carries `<Leading type="unit">14.3</Leading>` and `PointSize=11`. Scribus clips text whose
+first baseline falls outside the frame height. The frame was too small to render any text.
+
+**What was tried:**
+- `default_linesp_mode=0` (proportional auto): no change with h=3.1mm
+- `default_linesp_mode=1` (auto from font metrics): no change with h=3.1mm
+- Root cause confirmed: frame height clips before leading even matters
+
+**Fix:** Expanded `build.py` `h_mm` for u3ba from 3.1044 (=8.8pt) to 5.0mm. This gives
+Scribus enough room to place the first baseline at ~11pt from the top edge.
+
+**Verification:**
+- Scanned `dsl-page-2.png` with PIL for yellow pixels in the u3ba region — confirmed
+  "Leonore Gewessler" is visible post-fix at y≈123.3mm (matching baseline.pdf).
+- `build/validation/kandidat-falzflyer-din-lang-gruenes-cover-v2/font_audit.yml`: ok=true.
+
+**Baseline position reference:** baseline-page-2.png shows Leonore yellow pixels at
+y=123.3–126.0mm (per PIL scan). Our frame: y_mm=123.1736, h_mm=5.0 → renders at ≈123.3mm ✓
+
+### Visual drift before/after
+
+| Phase | p1 (page 0) | p2 (page 1) |
+|-------|-------------|-------------|
+| Start of R6 (R5 end) | 7.79% | 7.32% |
+| Bug R6-1 applied (u52d trail_attrs) | 7.65% | 7.32% |
+| Bug R6-2 applied (u3ba h_mm=5.0) | 7.65% | 7.28% |
+
+### Commits
+
+- `011fd13` — 35: fix(idml-stories): extract PSR Justification inline override for trail alignment
+- `bb19549` — 35: fix(u3ba): expand frame height so Leonore Gewessler text renders
+
+### Tests added
+
+**test_idml_story.py** (5 new tests):
+
+- `test_psr_center_justification_emits_para_separator_with_align` — CenterAlign PSR emits
+  `paragraph_attrs={"ALIGN": "1"}` on inter-paragraph `Run(separator="para")`
+- `test_psr_left_justification_emits_no_align_override` — LeftAlign PSR produces no override
+- `test_psr_trail_attrs_for_story_center_align` — helper returns `{"ALIGN": "1"}`
+- `test_psr_trail_attrs_for_story_no_justification` — helper returns None when no Justification
+- `test_csr_leading_in_properties_does_not_raise_and_emits_correct_run` — regression pin for
+  Story_u3bd (u3ba): Leading=14.3pt in Properties is silently skipped; font/fontsize/fcolor
+  resolved correctly as `Gotham Narrow Book` / 11 / `Gelb`
+
+Total: 14 tests pass in test_idml_story.py.
+
+### Surprises
+
+1. **u3a2 x_mm regression:** Adding `trail_attrs={'ALIGN': '1'}` to u3a2 caused p2 to go from
+   7.32% to 7.45%. The x_mm=208.93 hand-calibration was done against left-aligned rendering;
+   centering the text within a different bounding box shifts the visible text position.
+   Decision: skip u3a2 center-align patch; requires separate x_mm recalibration pass.
+
+2. **Leading mode ineffective:** Changing `default_linesp_mode` (0 or 1) had no visible effect
+   when the frame height was 3.1mm < 11pt font. The frame height was the true gating blocker.
+
+3. **IDML Leading vs frame height:** InDesign renders text with overflow; the 8.8pt frame in
+   IDML shows "Leonore Gewessler" in baseline.pdf because InDesign ignores height for
+   single-line text frames (or uses overflow). Scribus clips strictly. The h_mm expansion is
+   a known InDesign↔Scribus fidelity gap.
+
+**Phase R6 completed:** 2026-05-12  
+**Status:** PSR CenterAlign inline overrides extracted into converter; u3ba text rendered;
+14 story tests pass; p1=7.65%, p2=7.28%.
