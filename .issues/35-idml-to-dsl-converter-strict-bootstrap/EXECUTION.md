@@ -546,3 +546,157 @@ Scribus→InDesign color profile match is achieved.
 **Tests:** 76 passed (was 75 — added 1 regression test)
 **Drift:** page1=7.3058%, page2=6.3099% (unchanged — converter fix is converter-only; build.py unchanged)
 **Status:** complete
+
+---
+
+## Phase 5 — Issue #37 Phase A pre-flight inventory MVP
+
+**Started:** 2026-05-12
+**Completed:** 2026-05-12
+**Branch:** issue/35-idml-to-dsl-converter-strict-bootstrap
+
+### Overview
+
+Three new CLI audit tools + render-gallery integration. All tools are
+standalone, token-free, and run in <0.4s combined on the v2 falzflyer.
+
+### Per-Tool Summary
+
+| File | Lines | Tests | Purpose |
+|---|---|---|---|
+| `tools/idml_inventory.py` | 429 | 10 | IDML spread element inventory vs build.py annames |
+| `tools/baseline_text_audit.py` | 348 | 16 | PDF text vs build.py TextFrame run text |
+| `tools/baseline_image_audit.py` | 453 | 14 | PDF raster+vector counts vs build.py ImageFrame/Polygon |
+| `tests/unit/test_idml_inventory.py` | 262 | 10 | — |
+| `tests/unit/test_baseline_text_audit.py` | 204 | 16 | — |
+| `tests/unit/test_baseline_image_audit.py` | 248 | 14 | — |
+
+All 40 tests pass in 0.33s.
+
+### Validation Results — v2 Falzflyer Audit Reports
+
+Runtime of all 3 audits combined: **0.33s** (well within <10s target).
+
+#### Bug #1 — Wind turbine illustration missing (cover, page 0)
+
+**Caught by:** `inventory.yml` → `elements_dropped` on page 0
+
+```yaml
+spreads:
+- spread_id: Spread_ueb
+  page: 0
+  elements_dropped:
+  - bbox_pt: [-8.27, 131.003, 23.481, 23.804]
+    hint: inline vector path (no <Image>/<PDF> child)
+    self: u2b0
+    type: Polygon
+```
+
+`u2b0` is a Polygon in the Gestaltung layer with `StrokeColor` but no
+`<Image>/<PDF>` child. The inventory tool correctly flags it as an inline
+vector path that was not emitted in build.py.
+
+#### Bug #3 — Decorative curly quote marks missing (page 1)
+
+**Caught by:** `image_audit.yml` → `vector_paths.delta` on page 1
+
+```yaml
+pages:
+- page: 1
+  vector_paths:
+    baseline_count: 21
+    build_py_polygon_count: 7
+    delta: 14
+    hint: '14 vector path(s) in baseline have no Polygon emit in build.py
+      (likely inline vector elements: wind turbine, curly quotes, etc.)'
+```
+
+The curly quote decoration paths appear in the baseline SVG content section
+but have no corresponding `Polygon(...)` in build.py. The delta of 14 on
+page 1 flags this class of missing vector content.
+
+#### Bug #4 — "Leonore Gewessler" attribution text missing
+
+**Status: Known-not-caught by text_audit (already fixed in current build.py).**
+
+The text `'Leonore Gewessler'` IS present in `build.py` at `anname='u3ba'`
+(added by hand-editing during issue #35 convergence sessions). The
+`text_audit.yml` correctly reports 0 unmatched lines on page 1 — there is
+no missing text content in the current build.py.
+
+The attribution bug WAS a valid issue at IDML import time before manual
+fixing. The text_audit tool DOES catch it when build.py lacks the frame:
+the `test_text_audit_unmatched_line` test verifies this by running against
+an empty build.py and confirming "Leonore Gewessler" appears as unmatched.
+
+#### Bug #5 — Social-media-icons strip per-icon crop broken
+
+**Status: Known-not-caught by image_audit (workaround already applied in current build.py).**
+
+The current build.py uses individually pre-cropped PNG files
+(`social-media-icon-u3e7-crop.png`, etc.) rather than referencing a single
+shared icon strip with per-frame `local_offset_mm`. The composite-strip
+detection requires N ImageFrames sharing the same `image=` path; since the
+workaround uses separate images, no composite_strips entry fires.
+
+The `test_detect_composite_strips_flags_shared_image_same_offset` test
+verifies the detection logic works correctly for the original bug pattern
+(N frames, same image, identical offset = LocalOffset bug flag).
+
+#### Bugs #2, #6, #7 — Known-not-caught (needs Phase B drift_type)
+
+- **Bug #2 (body bullets unformatted):** Text content IS in build.py; this
+  is a CSR Bold-within-Regular styling issue, not a missing element. Out of
+  scope for structural audits. Needs Phase B `drift_type=text`.
+- **Bug #6 (pine-forest u2cd crop offset):** ImageFrame IS emitted; position
+  drift only. Needs Phase B `drift_type=position`.
+- **Bug #7 (IDML Group transform gap u3a2/u3ba +5.05mm hardcode):** Frames
+  ARE emitted with corrected positions. Needs Phase B `drift_type=position`.
+
+### render-gallery --audit Integration
+
+`tools/render_pipeline.py` extended with:
+- `--audit`: runs A1+A2+A3 after render, writes
+  `build/validation/<slug>/{inventory,text_audit,image_audit}.yml`,
+  prints per-template summary line. Informational — no exit-code impact.
+- `--audit-strict`: same as `--audit` but exits non-zero on any audit
+  issue (for CI).
+
+Summary format:
+```
+[<slug>] audit: 14 dropped element(s), 28 vector-path delta → REVIEW REQUIRED
+```
+
+### Deviations from Spec
+
+1. **elements_extra is global, not per-spread.** The spec shows per-spread
+   `elements_extra`, but since build.py mixes all pages in one file, per-
+   spread classification is unreliable. The report uses `elements_extra_global`
+   at the top level for truly bare hex annames not found in any spread.
+
+2. **render-gallery audit wires IDML lookup as a search, not meta.yml key.**
+   The spec assumes `meta.yml::idml_source` exists; the v2 falzflyer does not
+   have this key. The pipeline falls back to scanning `originals/` for any
+   `.idml` file. A future cleanup: add `idml_source:` to each template's
+   `meta.yml` for deterministic lookup.
+
+3. **Composite strip not fired on current build.py** (as documented above).
+   The detection logic is correct and tested; the current build.py has already
+   worked around the bug.
+
+4. **Raster count comparison is noisy** for templates where the baseline PDF
+   embeds source images as vectors (PDF/EPS children in IDML → vector in
+   baseline, but PNG in build.py). The delta is noted in the report but not
+   the primary signal. The `vector_paths.delta` is the reliable signal.
+
+### Commit SHAs
+
+- `71496cf` — 37: feat(tools): idml_inventory — spread element inventory vs build.py annames
+- `1951773` — 37: feat(tools): baseline_text_audit — PDF text vs build.py TextFrame run audit
+- `7de8190` — 37: feat(tools): baseline_image_audit — PDF raster+vector inventory vs build.py
+- `398210a` — 37: feat(render-gallery): add --audit and --audit-strict flags for A1+A2+A3
+
+**Phase 5 completed:** 2026-05-12
+**Tests:** 40 new tests, all passed (was 76 → now 116 total)
+**Audit runtime:** 0.33s combined for all 3 tools on v2 falzflyer
+**Status:** complete
