@@ -535,10 +535,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     page1.add(TextFrame(
         # x_mm corrected: baseline "Leonore" at x0=657.0pt=231.76mm (was 226.67mm).
         # Same +5.05mm InDesign↔IDML group-transform gap as u3a2.
+        # h_mm widened 3.1044mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
         x_mm=231.76,
         y_mm=123.1736,
         w_mm=41.6629,
-        h_mm=5.0,
+        h_mm=5.0447,
         anname='u3ba',
         layer=0,
         style='idml/normalparagraphstyle',
@@ -580,7 +581,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=217.8791,
         y_mm=186.0667,
         w_mm=26.5209,
-        h_mm=3.1044,
+        # h_mm widened 3.1044mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+        h_mm=5.0447,
         anname='u40c',
         layer=0,
         style='idml/absatzformat-1',
@@ -601,7 +603,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=217.8791,
         y_mm=191.6586,
         w_mm=29.1209,
-        h_mm=3.2017,
+        # h_mm widened 3.2017mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+        h_mm=5.0447,
         anname='u412',
         layer=0,
         style='idml/absatzformat-1',
@@ -622,7 +625,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=217.8791,
         y_mm=197.2992,
         w_mm=36.0209,
-        h_mm=3.3522,
+        # h_mm widened 3.3522mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+        h_mm=5.0447,
         anname='u45b',
         layer=0,
         style='idml/absatzformat-1',
@@ -642,7 +646,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=263.26,
         y_mm=186.0667,
         w_mm=26.4583,
-        h_mm=3.1044,
+        # h_mm widened 3.1044mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+        h_mm=5.0447,
         anname='u47b',
         layer=0,
         style='idml/absatzformat-1',
@@ -663,7 +668,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=263.26,
         y_mm=191.7073,
         w_mm=27.74,
-        h_mm=3.1044,
+        # h_mm widened 3.1044mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+        h_mm=5.0447,
         anname='u4a6',
         layer=0,
         style='idml/absatzformat-1',
@@ -684,7 +690,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=263.26,
         y_mm=197.4231,
         w_mm=27.74,
-        h_mm=3.1044,
+        # h_mm widened 3.1044mm→5.0447mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+        h_mm=5.0447,
         anname='u4df',
         layer=0,
         style='idml/absatzformat-1',

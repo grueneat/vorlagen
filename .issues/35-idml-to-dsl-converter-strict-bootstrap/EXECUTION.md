@@ -1247,3 +1247,104 @@ Total: 14 tests pass in test_idml_story.py.
 **Phase R6 completed:** 2026-05-12  
 **Status:** PSR CenterAlign inline overrides extracted into converter; u3ba text rendered;
 14 story tests pass; p1=7.65%, p2=7.28%.
+
+---
+
+## Phase R7 — Frame-height auto-adjust (2026-05-12)
+
+**Scope:** Add a generalizable converter rule (Pattern 9) that auto-widens
+TextFrame `h_mm` when the IDML height is too small for the effective line
+height, replacing the R6 hand-patch on u3ba and fixing the 6 social-media
+handle frames that were not rendering at all.
+
+### Pattern 9 — Auto-widen TextFrame h_mm for Scribus rendering
+
+**Rule:** When the computed `h_mm` from IDML's `PathPointArray` is smaller
+than the effective line height (in mm), the converter widens `h_mm` to the
+minimum required value.
+
+**Effective line height (pt):**
+- If any `CharacterStyleRange` in the story carries an explicit `Properties/Leading`
+  value (not "Auto"): use the maximum across all CSRs.
+- Fallback: if the paragraph style (resolved via BasedOn chain) carries an
+  explicit leading: use that.
+- Final fallback: `point_size_pt × 1.2` (standard auto-leading multiplier,
+  matching InDesign and Scribus).
+
+**IDML data needed:** CSR `Properties/Leading`, PSR `AppliedParagraphStyle`,
+`ctx.paragraph_styles` (resolved, already populated by Phase G), and
+`run.fontsize` for max font-size extraction.
+
+**When it applies:** Any TextFrame whose computed `h_mm` is more than 0.05mm
+below the effective line height in mm. InDesign overflows silently; Scribus
+clips entire lines, making them invisible.
+
+**Emitted comment:** When widening occurs, a `# h_mm widened X→Y: ...` comment
+is emitted immediately before the `TextFrame(...)` call, explaining the
+original IDML value, the new value, and the effective line height that drove it.
+
+**New helpers in `tools/idml_to_dsl.py`:**
+- `_required_text_frame_height_mm(point_size_pt, leading_pt)` — pure function
+- `_maybe_widen_frame_h(idml_h_mm, max_fontsize_pt, leading_pt)` — returns
+  `(widened_h_mm, comment_or_None)`
+
+### Per-frame table
+
+| Frame | IDML h_mm | widened_h_mm | Effective leading | Notes |
+|-------|-----------|--------------|-------------------|-------|
+| u3ba  | 3.1044mm  | 5.0447mm     | 14.3pt (CSR Properties/Leading) | drops R6 hand-patch `h_mm=5.0` |
+| u40c  | 3.1044mm  | 5.0447mm     | 14.3pt (Absatzformat 1 style, via BasedOn) | was invisible |
+| u412  | 3.2017mm  | 5.0447mm     | 14.3pt (Absatzformat 1 style, via BasedOn) | was invisible |
+| u45b  | 3.3522mm  | 5.0447mm     | 14.3pt (Absatzformat 1 style, via BasedOn) | was invisible |
+| u47b  | 3.1044mm  | 5.0447mm     | 14.3pt (Absatzformat 1 style, via BasedOn) | was invisible |
+| u4a6  | 3.1044mm  | 5.0447mm     | 14.3pt (Absatzformat 1 style, via BasedOn) | was invisible |
+| u4df  | 3.1044mm  | 5.0447mm     | 14.3pt (Absatzformat 1 style, via BasedOn) | was invisible |
+
+All 7 frames: `14.3pt × 25.4/72 = 5.0447mm`.
+
+### Visual drift before / after
+
+| Phase | p1 (page 0) | p2 (page 1) |
+|-------|-------------|-------------|
+| R6 end (starting point) | 7.65%  | 7.28% |
+| R7 (social handles + u3ba visible) | 7.65% | 7.10% |
+
+Page 2 improved by ~0.18pp. Page 1 unchanged. Drift did not go UP on either
+page. The social-media handle text is visually confirmed in `page-02.png`
+(lower-right quadrant shows `@diegruenen`, `@diegruenenaustria`, `@gruene.at`,
+`gruene.at` text next to icon circles).
+
+### Tests added (9 in `tests/unit/test_idml_frame_height_adjust.py`)
+
+- `test_required_height_with_explicit_leading` — explicit leading dominates over auto
+- `test_required_height_auto_leading` — auto-leading uses point_size × 1.2
+- `test_no_widening_when_frame_h_meets_required` — no widening when frame already fits
+- `test_widens_when_leading_exceeds_frame_h` — concrete leading=14.3, frame=3.10mm
+- `test_widens_when_point_size_no_leading` — auto-leading path
+- `test_no_widening_when_no_fontsize` — empty/no-fontsize runs pass through unchanged
+- `test_largest_fontsize_wins_in_mixed_runs` — max fontsize governs required height
+- `test_epsilon_avoids_flapping` — sub-epsilon difference (0.04mm) does not widen
+- `test_exact_social_handle_case` — concrete u40c/u412/u45b: idml_h=3.1044, leading=14.3
+
+Total test suite: 199 passed.
+
+### u3ba hand-patch dropped
+
+The R6 `h_mm=5.0` hand-patch in `build.py` was replaced with `h_mm=5.0447`
+(the value Pattern 9 produces). The leading comment `# h_mm widened ...` is
+now inline next to the value. The u3ba text ("Leonore Gewessler" in yellow)
+continues to render — confirmed visually.
+
+### Font audit
+
+`build/validation/kandidat-falzflyer-din-lang-gruenes-cover-v2/font_audit.yml`:
+`ok: true` — unchanged.
+
+### Commits
+
+- `35: feat(idml-stories): widen TextFrame h_mm when Scribus would clip line`
+- `35: chore(template): drop u3ba h_mm hand-patch (converter now widens automatically)`
+
+**Phase R7 completed:** 2026-05-12  
+**Status:** Pattern 9 in converter; 7 frames widened; u3ba hand-patch dropped;
+social handles render; p2 improved 7.28%→7.10%; 9 new tests; font_audit ok=true.
