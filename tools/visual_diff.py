@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 
 PT_PER_INCH = 72.0
@@ -259,6 +260,81 @@ def montage_composite(baseline: Path, dsl: Path, diff: Path, out: Path) -> None:
         "-tile", "3x1", "-geometry", "+4+4",
         str(out),
     ])
+
+
+def compare_grid(
+    baseline_png: Path,
+    preview_png: Path,
+    cols: int,
+    rows: int,
+    fuzz_pct: float = 25.0,
+) -> list[dict]:
+    """Per-cell pixel diff over a ``cols × rows`` grid laid on both rasters.
+
+    Both images MUST be the same pixel dimensions (caller's responsibility to
+    ensure DPI-matched pdftoppm rasterisation). Returns a list of dicts in
+    (row, col) reading order::
+
+        {col, row, mismatch_pixels, total_pixels, mismatch_pct,
+         bbox_px: {x, y, w, h}}
+
+    Mismatch semantics approximate ImageMagick ``compare -metric AE -fuzz N%``:
+    per pixel, the maximum per-channel absolute delta is compared to
+    ``threshold = round(255 * fuzz_pct / 100)`` and counted as mismatched if
+    strictly greater. Cell totals do NOT exactly equal the page-wide
+    ImageMagick AE value (Euclidean vs max-channel semantics; ~1-2 % drift),
+    which is expected — see ``ecosystem.md`` §10.5.
+
+    Implementation uses Pillow (``ImageChops.difference`` + ``lighter``) so
+    there are no fork-cost overheads from 24+ subprocess calls per page.
+
+    Issue #37 P2 task 8 (Backport 12).
+    """
+    base = Image.open(baseline_png).convert("RGB")
+    prev = Image.open(preview_png).convert("RGB")
+    if base.size != prev.size:
+        raise ValueError(
+            f"image size mismatch: baseline={base.size}, preview={prev.size}"
+        )
+    w_px, h_px = base.size
+
+    # Integer cell sizes; the LAST column/row absorbs the modulus so we
+    # always cover the full image without overlap or gap.
+    col_widths = [w_px // cols] * cols
+    col_widths[-1] += w_px % cols
+    row_heights = [h_px // rows] * rows
+    row_heights[-1] += h_px % rows
+
+    threshold = round(255 * fuzz_pct / 100.0)
+
+    results: list[dict] = []
+    y = 0
+    for row in range(rows):
+        x = 0
+        for col in range(cols):
+            cell_w = col_widths[col]
+            cell_h = row_heights[row]
+            b_crop = base.crop((x, y, x + cell_w, y + cell_h))
+            p_crop = prev.crop((x, y, x + cell_w, y + cell_h))
+            diff = ImageChops.difference(b_crop, p_crop)
+            r, g, b = diff.split()
+            max_chan = ImageChops.lighter(ImageChops.lighter(r, g), b)
+            hist = max_chan.histogram()  # 256 bins
+            mismatch_px = sum(hist[threshold + 1:])
+            total_px = cell_w * cell_h
+            results.append({
+                "col": col,
+                "row": row,
+                "mismatch_pixels": int(mismatch_px),
+                "total_pixels": int(total_px),
+                "mismatch_pct": (
+                    round(mismatch_px / total_px * 100, 4) if total_px else 0.0
+                ),
+                "bbox_px": {"x": x, "y": y, "w": cell_w, "h": cell_h},
+            })
+            x += cell_w
+        y += row_heights[row]
+    return results
 
 
 def crop_for_region(image: Path, dpi: int, page_w_pt: float, page_h_pt: float,
