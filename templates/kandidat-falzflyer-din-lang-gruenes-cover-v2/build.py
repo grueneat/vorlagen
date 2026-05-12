@@ -597,9 +597,15 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3e7',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
-        local_scale=(0.09, 0.09),
-        local_offset_mm=(-12.1647, -0.7654),
+        # social-media-icons-weiss.ai is a composite strip (526pt wide) rendered as a
+        # single PNG by pdftocairo. InDesign uses the AI ArtBox coordinate space to
+        # position each icon, but the IDML PDF-child tx offsets (-122, -100, -111pt)
+        # all cluster within the first icon of the strip → Scribus shows the same
+        # leftmost fragment for all 3 frames. Fix: use individually pre-cropped PNGs
+        # (one per icon, 948×932px) scaled to fit the 3.35×3.3mm frame by height.
+        # Scale = frame_h_pt / crop_h_pt = 9.351pt / 111.84pt ≈ 0.083615.
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3e7-crop.png',
+        local_scale=(0.083615, 0.083615),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -619,9 +625,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f0',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
-        local_scale=(0.09, 0.09),
-        local_offset_mm=(-4.5974, -0.7654),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f0-crop.png',
+        local_scale=(0.083615, 0.083615),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -641,9 +646,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=3.299,
         anname='u3f5',
         layer=0,
-        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png',
-        local_scale=(0.09, 0.09),
-        local_offset_mm=(-8.28, -0.7654),
+        image='/workspace/.worktrees/35-idml-to-dsl-converter-strict-bootstrap/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icon-u3f5-crop.png',
+        local_scale=(0.083615, 0.083615),
     ))
     page1.add(TextFrame(
         x_mm=217.8791,
