@@ -341,3 +341,50 @@ def test_psr_trail_attrs_for_story_no_justification():
     root = etree.fromstring(xml)
     result = _psr_trail_attrs_for_story(root)
     assert result is None, f"Expected None for no Justification, got {result!r}"
+
+
+def test_csr_leading_in_properties_does_not_raise_and_emits_correct_run():
+    """CSR <Properties><Leading type="unit">14.3</Leading></Properties> must NOT
+    raise and the Run must carry font/fontsize/fcolor from the CSR attributes.
+
+    Regression pin for u3ba (Story_u3bd) — "Leonore Gewessler" attribution frame
+    on page 2.  The IDML frame height is 8.8pt but the CSR Leading is 14.3pt and
+    the font size is 11pt.  The converter skips Leading (no Scribus equivalent in
+    the Run DSL); frame height is expanded in build.py to h_mm=5.0 so that Scribus
+    can place the first baseline within the frame.
+
+    This test pins that _walk_story:
+    - emits exactly one text Run for the content;
+    - resolves font="Gotham Narrow Book" (family + FontStyle="Book");
+    - resolves fontsize=11 (CSR PointSize="11");
+    - resolves fcolor="Gelb" (color_map lookup of Color/C=0 M=0 Y=100 K=0).
+    """
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle"'
+        ' Justification="CenterAlign">'
+        '<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"'
+        ' FillColor="Color/C=0 M=0 Y=100 K=0" FontStyle="Book" PointSize="11">'
+        '<Properties>'
+        '<Leading type="unit">14.3</Leading>'
+        '<AppliedFont type="string">Gotham Narrow</AppliedFont>'
+        '</Properties>'
+        '<Content>Leonore Gewessler</Content>'
+        '</CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    styles = _styles_dict()
+    # NormalParagraphStyle needs a font for the cascade; set one that would be
+    # overridden by the CSR's own AppliedFont in Properties.
+    styles["paragraph_styles"]["ParagraphStyle/$ID/NormalParagraphStyle"][
+        "applied_font"
+    ] = "Times"
+
+    runs = _walk_story(root, **styles)
+
+    text_runs = [r for r in runs if r.text == "Leonore Gewessler"]
+    assert len(text_runs) == 1, f"Expected exactly 1 run with 'Leonore Gewessler', got {runs!r}"
+    r = text_runs[0]
+    assert r.font == "Gotham Narrow Book", f"Expected 'Gotham Narrow Book', got {r.font!r}"
+    assert r.fontsize == 11, f"Expected fontsize=11, got {r.fontsize!r}"
+    assert r.fcolor == "Gelb", f"Expected fcolor='Gelb', got {r.fcolor!r}"

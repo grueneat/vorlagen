@@ -538,7 +538,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         x_mm=231.76,
         y_mm=123.1736,
         w_mm=41.6629,
-        h_mm=3.1044,
+        h_mm=5.0,
         anname='u3ba',
         layer=0,
         style='idml/normalparagraphstyle',
