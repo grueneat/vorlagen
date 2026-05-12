@@ -42,6 +42,11 @@ import yaml
 
 PT_PER_INCH = 72.0
 
+# Default per-region grid shape (Issue #37 Backport 12 / P2 task 7).
+# 6x4 cells per page is ~ "design-slot sized" on A4 (35×74 mm per cell).
+DEFAULT_GRID_COLS = 6
+DEFAULT_GRID_ROWS = 4
+
 
 @dataclass
 class TemplateTolerance:
@@ -53,11 +58,29 @@ class TemplateTolerance:
     ``fuzz_pct=25`` absorbs most of that noise; per-template configs raise
     ``max_pixel_mismatch_pct`` for body-text-heavy templates (e.g. Zeitung)
     where the sum of glyph-edge hinting drift naturally exceeds 1%.
+
+    The ``region_grid`` block (Issue #37 P2 / Backport 12) adds a per-cell
+    diff metric so semantically large but pixel-small drift (e.g. a centred
+    headline shifted 5 mm) is no longer washed out by the page-wide average.
+    Schema::
+
+        region_grid:
+          cols: int (default 6)
+          rows: int (default 4)
+          default_max_pixel_mismatch_pct: float (defaults to max_pixel_mismatch_pct)
+          default_fuzz_pct: float (defaults to fuzz_pct)
+          per_cell:
+            - page: int
+              col: int
+              row: int
+              max_pixel_mismatch_pct: float (optional)
+              fuzz_pct: float (optional)
     """
     max_pixel_mismatch_pct: float = 1.0
     fuzz_pct: float = 25.0
     per_page: dict = field(default_factory=dict)   # int -> {max_pixel_mismatch_pct?, fuzz_pct?}
     per_region: list = field(default_factory=list) # list of {page, bbox_mm, max_pixel_mismatch_pct?, fuzz_pct?}
+    region_grid: dict = field(default_factory=dict)
 
     @classmethod
     def load(cls, path: Optional[Path]) -> "TemplateTolerance":
@@ -72,11 +95,25 @@ class TemplateTolerance:
             page = int(entry.get("page"))
             per_page[page] = {k: v for k, v in entry.items() if k != "page"}
         per_region = block.get("per_region", []) or []
+        region_grid = block.get("region_grid", {}) or {}
+        if region_grid:
+            region_grid.setdefault("cols", DEFAULT_GRID_COLS)
+            region_grid.setdefault("rows", DEFAULT_GRID_ROWS)
+            region_grid.setdefault("per_cell", [])
+            cols = region_grid["cols"]
+            rows = region_grid["rows"]
+            assert isinstance(cols, int) and cols > 0, (
+                f"region_grid.cols must be a positive int, got {cols!r}"
+            )
+            assert isinstance(rows, int) and rows > 0, (
+                f"region_grid.rows must be a positive int, got {rows!r}"
+            )
         return cls(
             max_pixel_mismatch_pct=float(block.get("max_pixel_mismatch_pct", 1.0)),
             fuzz_pct=float(block.get("fuzz_pct", 2.0)),
             per_page=per_page,
             per_region=per_region,
+            region_grid=region_grid,
         )
 
     def for_page(self, page_index: int) -> tuple[float, float]:
@@ -85,6 +122,31 @@ class TemplateTolerance:
             float(cfg.get("max_pixel_mismatch_pct", self.max_pixel_mismatch_pct)),
             float(cfg.get("fuzz_pct", self.fuzz_pct)),
         )
+
+    def for_cell(self, page_index: int, col: int, row: int) -> tuple[float, float]:
+        """Resolve (max_pixel_mismatch_pct, fuzz_pct) for one grid cell.
+
+        Resolution order:
+        1. per_cell override matching (page, col, row) keys
+        2. region_grid.default_{max_pixel_mismatch_pct,fuzz_pct}
+        3. per-page tolerance (via ``for_page``)
+
+        Issue #37 P2 task 7.
+        """
+        page_max, page_fuzz = self.for_page(page_index)
+        grid = self.region_grid or {}
+        max_pct = float(grid.get("default_max_pixel_mismatch_pct", page_max))
+        fuzz = float(grid.get("default_fuzz_pct", page_fuzz))
+        for cell in grid.get("per_cell", []) or []:
+            if (
+                cell.get("page") == page_index
+                and cell.get("col") == col
+                and cell.get("row") == row
+            ):
+                max_pct = float(cell.get("max_pixel_mismatch_pct", max_pct))
+                fuzz = float(cell.get("fuzz_pct", fuzz))
+                break
+        return max_pct, fuzz
 
 
 @dataclass
