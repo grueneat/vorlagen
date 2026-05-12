@@ -174,6 +174,25 @@ font face the IDML references (verified by enumerating `<AppliedFont>`
 is not installed, the import workflow stops with a clear
 human-actionable message — never proceeds with a different face.
 
+### P8 — Render-side content fidelity is non-negotiable.
+
+pdftotext over preview.pdf MUST contain every word that appears in baseline.pdf
+(modulo hyphenation tolerance — count tokens, not lines). Any word in baseline
+but not preview signals Scribus suppression (frame-too-small, off-page,
+color-on-color, z-order, threaded overflow, hidden layer, etc.). The convergence
+loop MUST NOT declare success while text_render_audit.yml::missing_in_preview
+is non-empty. Fix the converter to prevent the class of suppression — don't
+hand-patch the template.
+
+### P9 — Content-level diff before visual diff.
+
+When visual_diff shows drift, consult content-level audits FIRST:
+text_render_audit (presence), text_position_audit (per-word position deltas),
+font_audit (per-font embedding), image_audit (raster + vector counts). These
+answer "what's different" mechanically. Visual review answers "how it looks",
+which is a much narrower question. Reach for the rendered images only when
+all structured audits are clean and residual drift is sub-percent.
+
 ## Scope
 
 Five tools + two workflow changes, organised in three phases by
@@ -412,6 +431,67 @@ The committed `build.py` accumulated 373 lines of hand-edits across issue #35's 
 
 After this, every converter change can be re-run via `bin/idml-import` and the result is a fresh re-emit with documented overlays — no silent drift, no lost hand-patches.
 
+#### D7. `tools/text_render_audit.py` — render-side word presence audit (P8)
+
+Runs `pdftotext -layout` on both `preview.pdf` and `baseline.pdf`. Normalises
+Unicode (NFC) and lowercases. Builds per-word Counter dicts. Diffs to find words
+present in baseline but missing (or under-counted) in preview.
+
+Catches: text emitted to build.py but Scribus silently suppressed — frame-too-
+small clipping, off-page overflow, color-on-color invisibility, z-order occlusion,
+threaded-frame overflow, hidden layers.
+
+**Output:** `build/validation/<slug>/text_render_audit.yml`
+```yaml
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+baseline_word_count: 384
+preview_word_count: 312
+missing_in_preview:
+  diegruenen: 2
+  diegruenenaustria: 1
+extra_in_preview: {}
+ok: false
+```
+
+Wired into `render_pipeline.py::_run_audit` after D6 (`font_audit`). Runs
+when both `preview.pdf` and `baseline.pdf` exist. Surfaced in `--audit` output.
+
+#### D8. `tools/text_position_audit.py` — per-word position drift audit
+
+Uses `pdfplumber.extract_words()` to get per-word bounding boxes from both
+`preview.pdf` and `baseline.pdf`. For each baseline word, finds the nearest
+matching preview word (same page, same text content) via greedy nearest-neighbour.
+Computes (dx, dy) displacement in PDF points.
+
+Default threshold: 2.0pt (≈ 0.7mm). Words with |dx| > threshold or
+|dy| > threshold are reported as positioning bugs. Sub-threshold displacements
+are filed as AA noise / OK. Words absent from preview are skipped (D7 handles
+presence; D8 only audits position). Top 50 deltas by magnitude are included in
+the report.
+
+Catches: text rendered but mis-positioned — alignment drift, group-transform
+gaps (e.g. dx ≈ ±14.3pt = ±5.05mm from a missing Group ItemTransform cascade),
+off-by-margin bugs, panel-offset coordinate origin errors (dx ≈ ±59pt = ±20.8mm).
+
+**Output:** `build/validation/<slug>/text_position_audit.yml`
+```yaml
+template: kandidat-falzflyer-din-lang-gruenes-cover-v2
+threshold_pt: 2.0
+large_deltas_count: 12
+large_deltas:
+  - text: Leonore
+    page: 1
+    baseline_xy_pt: [659.8, 1004.4]
+    preview_xy_pt: [645.5, 1004.4]
+    dx_pt: -14.3
+    dy_pt: 0.0
+    severity: large
+ok: false
+```
+
+Wired into `render_pipeline.py::_run_audit` after D7 (`text_render_audit`).
+Runs when both `preview.pdf` and `baseline.pdf` exist. Surfaced in `--audit` output.
+
 ### Phase C — Workflow + agent discipline (low cost, high recall)
 
 #### C1. Single up-front visual review on import (`bin/idml-import`)
@@ -553,6 +633,47 @@ gaps become rare instead of routine.
       Stories — stops with human-readable error if any face missing
 - [ ] V2 falzflyer's `font_audit.yml` shows `ok: true` after the CSR
       FontStyle converter fix (Phase R5)
+
+### Phase D7 — Render-side text presence (P8 enforcement)
+- [ ] `tools/text_render_audit.py` exists; takes `preview.pdf` + `baseline.pdf`
+      paths + `--template` slug, emits `text_render_audit.yml` with
+      `baseline_word_count`, `preview_word_count`, `missing_in_preview` (dict),
+      `extra_in_preview` (dict), `ok` flag
+- [ ] Word extraction uses `pdftotext -layout`, NFC normalisation, lowercase;
+      tokenisation regex `[\w@.\-]+`
+- [ ] `ok: true` iff `missing_in_preview` is empty
+- [ ] Wired into `render_pipeline.py::_run_audit` after D6; runs when both
+      `preview.pdf` and `baseline.pdf` exist; failure surfaces in `--audit` output
+- [ ] YAML output is deterministic (byte-identical on re-run; `sort_keys=True`)
+- [ ] Pytest coverage: identical PDFs pass; missing word fails; extra word
+      reported but ok=True; NFC normalisation; case insensitivity; subprocess
+      error on missing PDF raises CalledProcessError
+- [ ] Convergence loop MUST NOT declare success while `missing_in_preview`
+      is non-empty (P8) — surfaced as `issue_parts` entry in `--audit-strict`
+
+### Phase D8 — Per-word position drift
+- [ ] `tools/text_position_audit.py` exists; uses `pdfplumber.extract_words()`;
+      takes `preview.pdf` + `baseline.pdf` paths + `--template` + `--threshold`
+      (default 2.0pt); emits `text_position_audit.yml`
+- [ ] Output keys: `template`, `baseline_pdf`, `preview_pdf`, `threshold_pt`,
+      `large_deltas_count`, `large_deltas` (list, max 50), `ok`
+- [ ] Each `large_delta` entry: `text`, `page`, `baseline_xy_pt`, `preview_xy_pt`,
+      `dx_pt`, `dy_pt`, `severity: large`
+- [ ] Greedy nearest-neighbour match: one preview word is consumed at most once
+      per baseline word (prevents double-counting when the same word repeats)
+- [ ] Words absent from preview are skipped (D7 handles presence)
+- [ ] `large_deltas` list sorted by total magnitude `|dx| + |dy|` (largest first)
+- [ ] Wired into `render_pipeline.py::_run_audit` after D7; runs when both
+      `preview.pdf` and `baseline.pdf` exist; failure surfaces in `--audit` output
+- [ ] YAML output is deterministic (byte-identical on re-run; `sort_keys=True`)
+- [ ] `pdfplumber` must be a declared dependency in `Dockerfile.claude` or
+      `requirements.txt` — do not silently `pip install`
+- [ ] Pytest coverage: identical positions pass; >threshold shift reported with
+      correct dx/dy; <threshold not reported; missing word skipped; multiple
+      instances of same word use greedy nearest-match without double-counting
+- [ ] V2 falzflyer `text_position_audit.yml` produced; `large_deltas_count`
+      reported (non-zero count expected given current layout drift state;
+      surfaced as signal for R8/R9 positioning fix work)
 
 ### Cross-cutting
 - [ ] All new tools have pytest coverage (repo idiom, not unittest —
