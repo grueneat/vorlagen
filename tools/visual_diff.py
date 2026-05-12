@@ -337,6 +337,78 @@ def compare_grid(
     return results
 
 
+def _heatmap_color(mismatch_pct: float, threshold_pct: float) -> tuple[int, int, int, int]:
+    """Linear ramp green → amber → red, RGBA tuple. Alpha fixed at 180/255.
+
+    - ``pct <= 0``           → green  (76, 175, 80)
+    - ``pct == threshold``   → amber  (255, 193, 7)
+    - ``pct >= 2*threshold`` → red    (244, 67, 54)
+
+    Linear interpolation between segments. Threshold = 0 (defensive) makes
+    every positive pct red.
+
+    Issue #37 P2 task 9 (Backport 12).
+    """
+    green = (76, 175, 80)
+    amber = (255, 193, 7)
+    red = (244, 67, 54)
+    if mismatch_pct <= 0:
+        rgb = green
+    elif threshold_pct <= 0:
+        rgb = red
+    elif mismatch_pct >= 2 * threshold_pct:
+        rgb = red
+    elif mismatch_pct <= threshold_pct:
+        t = mismatch_pct / threshold_pct
+        rgb = tuple(int(green[i] + (amber[i] - green[i]) * t) for i in range(3))
+    else:
+        t = (mismatch_pct - threshold_pct) / threshold_pct
+        rgb = tuple(int(amber[i] + (red[i] - amber[i]) * t) for i in range(3))
+    return (rgb[0], rgb[1], rgb[2], 180)
+
+
+def render_grid_heatmap(
+    baseline_png: Path,
+    cells: list[dict],
+    threshold_pct: float,
+    out_png: Path,
+) -> None:
+    """Render an RGBA heatmap overlaying ``cells`` on a grayscale baseline.
+
+    Each cell is filled with a green→amber→red ramped color (per
+    ``_heatmap_color``) and labelled with its ``mismatch_pct``. Output is
+    saved as a PNG with the same pixel dimensions as ``baseline_png``.
+
+    Issue #37 P2 task 9 (Backport 12).
+    """
+    base = Image.open(baseline_png).convert("L").convert("RGBA")
+    overlay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    try:
+        font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size=14,
+        )
+    except Exception:
+        font = ImageFont.load_default()
+    for cell in cells:
+        bx = cell["bbox_px"]["x"]
+        by = cell["bbox_px"]["y"]
+        bw = cell["bbox_px"]["w"]
+        bh = cell["bbox_px"]["h"]
+        color = _heatmap_color(cell["mismatch_pct"], threshold_pct)
+        draw.rectangle(
+            [bx, by, bx + bw - 1, by + bh - 1],
+            fill=color,
+            outline=(0, 0, 0, 255),
+            width=1,
+        )
+        label = f"{cell['mismatch_pct']:.1f}%"
+        draw.text((bx + 4, by + 4), label, fill=(0, 0, 0, 255), font=font)
+    composite = Image.alpha_composite(base, overlay)
+    out_png.parent.mkdir(parents=True, exist_ok=True)
+    composite.save(out_png, format="PNG")
+
+
 def crop_for_region(image: Path, dpi: int, page_w_pt: float, page_h_pt: float,
                      bbox_mm: dict) -> Path:
     """Use ImageMagick `convert -crop` to extract a sub-rectangle from a raster.
