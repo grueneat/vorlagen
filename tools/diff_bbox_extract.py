@@ -393,6 +393,62 @@ def attribute_diff_bbox(
     return None, 0.0, candidates
 
 
+def _classify_drift_type(
+    bbox: dict,
+    baseline_png: Optional[Path],
+    dsl_png: Optional[Path],
+) -> str:
+    """Best-effort drift-type classifier for one bbox.
+
+    Returns one of: ``missing`` (baseline ink, no preview ink), ``extra``
+    (no baseline ink, preview ink), ``position`` (similar ink in both —
+    layout shifted), ``text`` (large ink-density delta — glyph/wording
+    changed), or ``unknown`` (no ink in either side, or images missing).
+
+    The classifier crops both baseline and preview rasterised pages to the
+    bbox region and computes the fraction of pixels darker than 250/255 in
+    each. Issue #37 P3 task 15.
+
+    Note: ``scale``/``rotation``/``color`` would require richer signal
+    (edge orientation histograms or HSL deltas); they are reserved values
+    in the schema but not yet emitted by this heuristic. A follow-up may
+    refine.
+    """
+    if baseline_png is None or dsl_png is None:
+        return "unknown"
+    try:
+        from PIL import Image  # lazy import
+        base = Image.open(baseline_png).convert("L")
+        prev = Image.open(dsl_png).convert("L")
+    except Exception:
+        return "unknown"
+    bb = bbox.get("bbox_px") or {}
+    x = int(bb.get("x", 0))
+    y = int(bb.get("y", 0))
+    w = max(1, int(bb.get("w", 0)))
+    h = max(1, int(bb.get("h", 0)))
+    base_crop = base.crop((x, y, x + w, y + h))
+    prev_crop = prev.crop((x, y, x + w, y + h))
+
+    def _ink(img) -> float:
+        hist = img.histogram()
+        dark = sum(hist[:250])
+        total = sum(hist) or 1
+        return dark / total
+
+    base_ink = _ink(base_crop)
+    prev_ink = _ink(prev_crop)
+    if base_ink > 0.05 and prev_ink < 0.01:
+        return "missing"
+    if base_ink < 0.01 and prev_ink > 0.05:
+        return "extra"
+    if base_ink > 0.05 and prev_ink > 0.05:
+        if abs(base_ink - prev_ink) / max(base_ink, prev_ink) > 0.5:
+            return "text"
+        return "position"
+    return "unknown"
+
+
 def extract_all(
     out_dir: Path,
     *,
@@ -401,6 +457,7 @@ def extract_all(
     min_area_px: int = 100,
     coverage_threshold: float = 0.5,
     overlay_out: bool = False,
+    classify_drift: bool = True,
 ) -> dict:
     """Top-level pipeline: iterate ``visual_diff.json``'s pages, run the
     connected-components extractor on each delta PNG, attribute against
@@ -434,6 +491,19 @@ def extract_all(
         bboxes_px = extract_bboxes_px(delta_path, threshold, min_area_px)
         page_slots = slots.get(page_idx, {})
 
+        # Issue #37 P3 task 15: derive baseline/dsl PNG paths (same dir as
+        # the delta PNGs, 1-indexed without padding) so the drift_type
+        # classifier can sample ink density per bbox. Use the path-by-
+        # convention rather than a JSON field because visual_diff.json
+        # doesn't currently expose them and this keeps the change scoped.
+        page_num = page_idx + 1
+        baseline_png_path: Optional[Path] = out_dir / f"baseline-page-{page_num}.png"
+        dsl_png_path: Optional[Path] = out_dir / f"dsl-page-{page_num}.png"
+        if not baseline_png_path.exists():
+            baseline_png_path = None
+        if not dsl_png_path.exists():
+            dsl_png_path = None
+
         bbox_records: list[dict] = []
         for bpx in bboxes_px:
             bmm = px_to_mm_bbox(bpx, dpi)
@@ -446,7 +516,7 @@ def extract_all(
             attr_slot, overlap_pct, candidates = attribute_diff_bbox(
                 bmm, page_slots, coverage_threshold,
             )
-            bbox_records.append({
+            record = {
                 "bbox_px": {
                     "x": bpx["x_px"], "y": bpx["y_px"],
                     "w": w_px, "h": h_px,
@@ -457,7 +527,12 @@ def extract_all(
                 "attributed_slot": attr_slot,
                 "attribution_overlap_pct": overlap_pct,
                 "attribution_candidates": candidates,
-            })
+            }
+            if classify_drift:
+                record["drift_type"] = _classify_drift_type(
+                    record, baseline_png_path, dsl_png_path,
+                )
+            bbox_records.append(record)
 
         # Sort per-page bboxes by (y_mm, x_mm, w_mm, h_mm) — decision 5a.
         bbox_records.sort(key=lambda r: (
@@ -601,6 +676,10 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Also write diff-page-NN-overlay.png (red rectangle outlines over the DSL render).",
     )
     ap.add_argument(
+        "--no-drift-type", action="store_true",
+        help="Skip per-bbox drift_type classification (PIL ink-density heuristic). Default: classify.",
+    )
+    ap.add_argument(
         "--json-out", type=Path, default=None,
         help="JSON output path. Default: <out_dir>/diff_bboxes.json.",
     )
@@ -620,6 +699,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             min_area_px=args.min_area_px,
             coverage_threshold=args.coverage_threshold,
             overlay_out=args.overlay_out,
+            classify_drift=not args.no_drift_type,
         )
     except DiffBBoxError as exc:
         # Strict-mode raise — print a clean error and return non-zero so
