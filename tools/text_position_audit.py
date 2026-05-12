@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +83,7 @@ def run_text_position_audit(
     baseline_pdf: Path,
     template: str = "",
     large_delta_threshold_pt: float = 2.0,
+    common_word_threshold: int = 5,
 ) -> dict[str, Any]:
     """Compare per-word positions between preview_pdf and baseline_pdf.
 
@@ -89,13 +91,30 @@ def run_text_position_audit(
     preview (same page, same text content) and compute (dx, dy). Words with
     |dx| > threshold or |dy| > threshold are reported in ``large_deltas``.
 
-    ``ok`` is True when large_deltas is empty.
+    Common words (appearing >= common_word_threshold times on the same page
+    in EITHER PDF) are excluded from ``large_deltas`` after matching. These
+    high-frequency words (e.g. lorem ipsum "et", "ur", "modi") produce
+    spurious large deltas because the greedy nearest-neighbour matcher
+    cross-binds them across multi-column layouts. Unique words (candidate
+    names, social handles) are reliably matched and are always reported.
+
+    ``ok`` is True when the filtered ``large_deltas`` list is empty.
 
     The top 50 deltas by magnitude are included in the report (sufficient for
     human review; the full count is always reported in ``large_deltas_count``).
+    ``suppressed_common_word_deltas_count`` records how many deltas were
+    excluded by the common-word filter.
     """
     base_words = extract_words_with_positions(baseline_pdf)
     prev_words = extract_words_with_positions(preview_pdf)
+
+    # Count word frequencies per page in each PDF for the common-word filter.
+    base_freq: Counter[tuple[int, str]] = Counter(
+        (r["page"], r["text"]) for r in base_words
+    )
+    prev_freq: Counter[tuple[int, str]] = Counter(
+        (r["page"], r["text"]) for r in prev_words
+    )
 
     # Build lookup: (page, text) → list of preview word records.
     prev_by_key: dict[tuple[int, str], list[dict[str, Any]]] = {}
@@ -135,18 +154,28 @@ def run_text_position_audit(
         # Greedy removal: prevent the same preview word from matching twice.
         candidates.remove(nearest)
 
+    # Filter: exclude common words from large_deltas (ambiguous match).
+    filtered_deltas = [
+        d for d in deltas
+        if base_freq.get((d["page"], d["text"]), 0) < common_word_threshold
+        and prev_freq.get((d["page"], d["text"]), 0) < common_word_threshold
+    ]
+    suppressed_count = len(deltas) - len(filtered_deltas)
+
     # Sort by total displacement magnitude (descending), keep top 50.
-    deltas.sort(key=lambda d: -(abs(d["dx_pt"]) + abs(d["dy_pt"])))
-    top_deltas = deltas[:50]
+    filtered_deltas.sort(key=lambda d: -(abs(d["dx_pt"]) + abs(d["dy_pt"])))
+    top_deltas = filtered_deltas[:50]
 
     return {
         "template": template,
         "baseline_pdf": str(baseline_pdf),
         "preview_pdf": str(preview_pdf),
         "threshold_pt": large_delta_threshold_pt,
-        "large_deltas_count": len(deltas),
+        "common_word_threshold": common_word_threshold,
+        "large_deltas_count": len(filtered_deltas),
+        "suppressed_common_word_deltas_count": suppressed_count,
         "large_deltas": top_deltas,
-        "ok": not deltas,
+        "ok": not filtered_deltas,
     }
 
 
@@ -184,6 +213,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--template", default="", help="Template slug (for report label)")
     parser.add_argument("--threshold", type=float, default=2.0,
                         help="Large-delta threshold in PDF points (default: 2.0pt ≈ 0.7mm)")
+    parser.add_argument("--common-word-threshold", type=int, default=5,
+                        help="Words appearing >= this many times per page in either PDF "
+                             "are excluded from large_deltas (default: 5)")
     parser.add_argument("--out", type=Path, default=None,
                         help="Write YAML report to this path (prints to stdout if omitted)")
     args = parser.parse_args(argv)
@@ -199,6 +231,7 @@ def main(argv: list[str] | None = None) -> int:
         args.preview, args.baseline,
         template=args.template,
         large_delta_threshold_pt=args.threshold,
+        common_word_threshold=args.common_word_threshold,
     )
     yaml_text = _yaml_dump(report)
 

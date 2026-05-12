@@ -7,6 +7,9 @@ Covers:
 4. Word missing from preview → skipped (D7 catches presence, D8 only does position).
 5. Multiple instances of same word → greedy nearest-match, no double-counting.
 6. _yaml_dump produces deterministic sorted-key output.
+7. Common-word filter excludes high-frequency words from large_deltas.
+8. Unique word delta still reported when common-word filter applied.
+9. suppressed_common_word_deltas_count reflects number of filtered deltas.
 
 Tests use monkeypatching of extract_words_with_positions to avoid real PDFs
 for the parametric position tests; a real minimal PDF is used for the extract
@@ -250,7 +253,9 @@ def test_yaml_dump_deterministic():
     report = {
         "template": "test",
         "threshold_pt": 2.0,
+        "common_word_threshold": 5,
         "large_deltas_count": 1,
+        "suppressed_common_word_deltas_count": 0,
         "large_deltas": [
             {
                 "text": "Foo",
@@ -272,3 +277,118 @@ def test_yaml_dump_deterministic():
     top_level_keys = [line.split(":")[0] for line in output.splitlines()
                       if line and line[0].isalpha() and ":" in line]
     assert top_level_keys == sorted(top_level_keys)
+
+
+# ---------------------------------------------------------------------------
+# Test 7: Common-word filter — high-frequency word excluded from large_deltas
+# ---------------------------------------------------------------------------
+
+def test_common_word_filter_excludes_high_frequency_word(tmp_path, monkeypatch):
+    """Word 'et' appears 6 times in baseline → freq >= 5 → excluded from large_deltas.
+
+    Even though greedy matching produces a large delta for each 'et', none
+    appear in large_deltas because the word is above the common_word_threshold.
+    """
+    threshold = 2.0
+    common_threshold = 5
+
+    # 6 "et" words in baseline, each at x=100; 6 "et" in preview at x=500
+    # (cross-column binding → large dx for every instance)
+    baseline_words = [_word("et", 0, 100.0 + i * 0.1, 200.0) for i in range(6)]
+    preview_words = [_word("et", 0, 500.0 + i * 0.1, 200.0) for i in range(6)]
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_text_position_audit(
+        preview_pdf, baseline_pdf, template="test",
+        large_delta_threshold_pt=threshold,
+        common_word_threshold=common_threshold,
+    )
+    # All 6 "et" deltas should be suppressed
+    assert report["large_deltas"] == []
+    assert report["large_deltas_count"] == 0
+    assert report["suppressed_common_word_deltas_count"] == 6
+    assert report["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# Test 8: Unique word delta still reported alongside common-word suppression
+# ---------------------------------------------------------------------------
+
+def test_unique_word_delta_still_reported(tmp_path, monkeypatch):
+    """High-frequency 'et' is suppressed; unique 'Leonore' with large shift IS reported."""
+    threshold = 2.0
+    common_threshold = 5
+
+    # 6 "et" words → will be suppressed
+    baseline_words = [_word("et", 0, 100.0 + i * 0.1, 200.0) for i in range(6)]
+    preview_words = [_word("et", 0, 500.0 + i * 0.1, 200.0) for i in range(6)]
+
+    # 1 unique "Leonore" with large shift → should be reported
+    baseline_words.append(_word("Leonore", 0, 300.0, 400.0))
+    preview_words.append(_word("Leonore", 0, 314.3, 400.0))  # dx=14.3 > threshold
+
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_text_position_audit(
+        preview_pdf, baseline_pdf, template="test",
+        large_delta_threshold_pt=threshold,
+        common_word_threshold=common_threshold,
+    )
+    # "Leonore" should appear
+    assert report["large_deltas_count"] == 1
+    assert report["large_deltas"][0]["text"] == "Leonore"
+    assert abs(report["large_deltas"][0]["dx_pt"] - 14.3) < 0.05
+    # "et" suppressed
+    assert report["suppressed_common_word_deltas_count"] == 6
+    assert report["ok"] is False
+
+
+# ---------------------------------------------------------------------------
+# Test 9: suppressed_common_word_deltas_count matches number filtered
+# ---------------------------------------------------------------------------
+
+def test_suppressed_count_reflects_filter(tmp_path, monkeypatch):
+    """suppressed_common_word_deltas_count == total large deltas minus filtered deltas."""
+    threshold = 2.0
+    common_threshold = 5
+
+    # 3 common words with 5+ occurrences each → all suppressed
+    # 2 unique words with large deltas → both reported
+    baseline_words = []
+    preview_words = []
+
+    for word in ("et", "ut", "ad"):
+        for i in range(5):
+            baseline_words.append(_word(word, 0, 50.0 + i * 0.1, 100.0))
+            preview_words.append(_word(word, 0, 400.0 + i * 0.1, 100.0))  # large dx
+
+    for i, word in enumerate(("Kandidat", "Gruenen")):
+        baseline_words.append(_word(word, 0, 200.0, 300.0 + i * 50))
+        preview_words.append(_word(word, 0, 215.0, 300.0 + i * 50))  # dx=15 > threshold
+
+    _patch_extract(monkeypatch, baseline_words, preview_words)
+
+    baseline_pdf = tmp_path / "baseline.pdf"
+    preview_pdf = tmp_path / "preview.pdf"
+    baseline_pdf.write_bytes(b"%PDF dummy")
+    preview_pdf.write_bytes(b"%PDF dummy")
+
+    report = run_text_position_audit(
+        preview_pdf, baseline_pdf, template="test",
+        large_delta_threshold_pt=threshold,
+        common_word_threshold=common_threshold,
+    )
+    assert report["large_deltas_count"] == 2
+    assert report["suppressed_common_word_deltas_count"] == 15  # 3 words × 5 occurrences
+    total = report["large_deltas_count"] + report["suppressed_common_word_deltas_count"]
+    assert total == 17  # 15 suppressed + 2 reported
