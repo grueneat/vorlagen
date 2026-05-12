@@ -151,8 +151,14 @@ def test_sla_inventory_ownpage_minus1_uses_nearest_page_offset():
 # three_way_audit integration
 # ---------------------------------------------------------------------------
 
-def test_three_way_audit_converter_bug_contains_u2b0():
-    """u2b0 (wind turbine) must be in converter_bug bucket."""
+def test_three_way_audit_u2b0_not_converter_bug():
+    """u2b0 (wind turbine) must NOT be in converter_bug — it is emitted in build.py.
+
+    Phase R3: u2b0 is now emitted as a PolyLine (P5/inject) in build.py.
+    The auto-converter still marks it as 'dropped' (inline vector path),
+    but the hand-coded PolyLine emission covers it. The three_way_audit
+    therefore sees u2b0 as 'in_build=True' and moves it to match/geometry_drift.
+    """
     _skip_if_missing()
     if not SLA_INVENTORY_PATH.exists():
         pytest.skip(f"sla_inventory.yml not found: {SLA_INVENTORY_PATH}")
@@ -161,9 +167,9 @@ def test_three_way_audit_converter_bug_contains_u2b0():
         INVENTORY_PATH, SLA_INVENTORY_PATH, BUILD_PY_PATH, template=SLUG
     )
     bug_names = {e["anname"] for e in report["classification"]["converter_bug"]}
-    assert "u2b0" in bug_names, (
-        f"u2b0 (wind turbine) must be in converter_bug; "
-        f"converter_bug has: {sorted(bug_names)}"
+    assert "u2b0" not in bug_names, (
+        f"u2b0 (wind turbine) is emitted as PolyLine in build.py and "
+        f"must not be in converter_bug; got: {sorted(bug_names)}"
     )
 
 
@@ -193,7 +199,7 @@ def test_three_way_audit_group_containers_not_converter_bug():
 
 
 def test_three_way_audit_converter_bug_entries_have_bbox_mm():
-    """Every converter_bug entry must include bbox_mm for R3 extraction."""
+    """Every converter_bug entry (if any) must include bbox_mm for extraction."""
     _skip_if_missing()
     if not SLA_INVENTORY_PATH.exists():
         pytest.skip(f"sla_inventory.yml not found: {SLA_INVENTORY_PATH}")
@@ -211,27 +217,21 @@ def test_three_way_audit_converter_bug_entries_have_bbox_mm():
         assert "h" in entry["bbox_mm"]
 
 
-def test_three_way_audit_u2b0_has_color_for_r3():
-    """u2b0 converter_bug entry includes linescolor for R3 DSL extraction."""
-    _skip_if_missing()
-    if not SLA_INVENTORY_PATH.exists():
-        pytest.skip(f"sla_inventory.yml not found: {SLA_INVENTORY_PATH}")
+def test_three_way_audit_u2b0_in_sla_has_linescolor():
+    """u2b0 (wind turbine) in sla_inventory has linescolor (yellow stroke)."""
+    if not SLA_PATH.exists():
+        pytest.skip(f"SLA not found: {SLA_PATH}")
 
-    report = run_three_way_audit(
-        INVENTORY_PATH, SLA_INVENTORY_PATH, BUILD_PY_PATH, template=SLUG
-    )
-    u2b0 = next(
-        (e for e in report["classification"]["converter_bug"] if e["anname"] == "u2b0"),
-        None,
-    )
-    assert u2b0 is not None, "u2b0 not found in converter_bug"
+    report = run_sla_inventory(SLA_PATH, template=SLUG)
+    u2b0 = report["pageobjects_by_anname"].get("u2b0")
+    assert u2b0 is not None, "u2b0 not found in sla_inventory"
     assert u2b0.get("linescolor") is not None, (
         f"u2b0 must have linescolor; entry: {u2b0}"
     )
 
 
-def test_three_way_audit_summary_counts_nonzero():
-    """Audit summary for v2 falzflyer must report nonzero converter_bug count."""
+def test_three_way_audit_summary_total_nonzero():
+    """Audit summary for v2 falzflyer must report nonzero total elements."""
     _skip_if_missing()
     if not SLA_INVENTORY_PATH.exists():
         pytest.skip(f"sla_inventory.yml not found: {SLA_INVENTORY_PATH}")
@@ -239,10 +239,12 @@ def test_three_way_audit_summary_counts_nonzero():
     report = run_three_way_audit(
         INVENTORY_PATH, SLA_INVENTORY_PATH, BUILD_PY_PATH, template=SLUG
     )
-    assert report["summary"]["converter_bug"] > 0, (
-        "Expected at least 1 converter_bug in v2 falzflyer"
-    )
     assert report["summary"]["total"] > 0
+    # converter_bug count is 0: all IDML elements are now emitted in build.py
+    # (u2b0 is emitted as PolyLine P5/inject).
+    assert report["summary"]["converter_bug"] == 0, (
+        f"All elements should now be emitted; converter_bug={report['summary']['converter_bug']}"
+    )
 
 
 def test_three_way_audit_u185_u186_in_sla_inventory():

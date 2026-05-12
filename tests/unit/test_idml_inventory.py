@@ -231,7 +231,15 @@ def test_yaml_output_is_deterministic(tmp_path):
 
 
 def test_real_v2_falzflyer_inventory():
-    """Integration test: run against the real IDML + build.py — must detect u2b0 (wind turbine)."""
+    """Integration test: run against the real IDML + build.py.
+
+    Phase R3: u2b0 (wind turbine) is now emitted in build.py as a PolyLine
+    (P5/inject). The IDML converter still marks it as 'dropped' (it's a
+    complex inline vector path the auto-converter cannot handle), but because
+    build.py emits it via hand-coded PolyLine, it counts as 'emitted' in the
+    inventory reconciliation. This test now verifies that all page-0 IDML
+    elements are either emitted or accounted for.
+    """
     root = Path(__file__).resolve().parents[2]
     idml = (
         root
@@ -251,15 +259,19 @@ def test_real_v2_falzflyer_inventory():
     report = run_inventory(idml, build_py)
     # Find spread 0 (Spread_ueb = cover page)
     spread0 = next(s for s in report["spreads"] if s["page"] == 0)
+    # u2b0 is now emitted as a PolyLine P5/inject in build.py —
+    # it should NOT appear in elements_dropped (it's counted as emitted).
     dropped_selfs = {d["self"] for d in spread0.get("elements_dropped", [])}
-    # u2b0 (wind turbine Polygon) must be in dropped elements
-    assert "u2b0" in dropped_selfs, (
-        f"Expected u2b0 (wind turbine Polygon) in elements_dropped; "
-        f"got: {dropped_selfs}"
+    assert "u2b0" not in dropped_selfs, (
+        f"u2b0 (wind turbine) is now emitted via PolyLine in build.py; "
+        f"it should not be in elements_dropped. Got dropped: {dropped_selfs}"
     )
-    # u2b0 hint must reference inline vector path
-    u2b0_entry = next(d for d in spread0["elements_dropped"] if d["self"] == "u2b0")
-    assert "inline vector path" in u2b0_entry["hint"]
+    # All page-0 IDML elements should be emitted (no drops after PolyLine addition).
+    assert spread0.get("elements_emitted", 0) == spread0.get("elements_total", -1), (
+        f"Expected all IDML page-0 elements emitted; "
+        f"total={spread0.get('elements_total')}, emitted={spread0.get('elements_emitted')}, "
+        f"dropped={dropped_selfs}"
+    )
 
 
 def test_real_v2_falzflyer_group_containers_not_dropped():
