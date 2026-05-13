@@ -472,6 +472,25 @@ def _process_one(
         )
         return 1
 
+    # 7.5. Asset-policy audit (issue #39 Phase B). Hard-fails on
+    # shipped:-non-empty, missing-policy-when-assets-on-disk, or
+    # coverage drift. Silent-skip when no shared/assets/<slug>/ exists.
+    try:
+        from asset_policy_audit import run_asset_policy_audit
+        policy_report = run_asset_policy_audit(slug, root=ROOT)
+    except ValueError as exc:
+        print(
+            f"idml-import: asset_policy schema error: {exc}", file=sys.stderr
+        )
+        return 1
+    if not policy_report.get("ok") and not policy_report.get("skipped"):
+        print(
+            f"idml-import: asset_policy_audit FAILED "
+            f"({policy_report.get('issue')}): {policy_report.get('message', '')}",
+            file=sys.stderr,
+        )
+        return 1
+
     # 8. Scaffold.
     _scaffold_template_dir(slug, baseline, tdir)
 
