@@ -1,6 +1,6 @@
 """Mutation tests for the inventory gate.
 
-Three mutations on a tmp-copy of the anchor template's build.py:
+Six mutations on a tmp-copy of the anchor template's build.py and template.sla:
 
 - **M1**: drop a ``Run(text='...')`` entry → comparator reports the missing
   word under ``text_runs.missing`` and exits 2.
@@ -8,6 +8,15 @@ Three mutations on a tmp-copy of the anchor template's build.py:
   reports ``u514`` missing under ``frames.image_frames`` and exits 2.
 - **M3**: drop one ``add_color(...)`` call → comparator reports the color's
   missing build.py emit and exits 2.
+- **M4**: drop one ``doc.add_para_style(...)`` call → comparator reports
+  the dropped paragraph style under ``paragraph_styles.build_py`` and
+  exits 2 (review fix F12 for F7's new gate path).
+- **M5**: flip ``PFILE=`` to empty on one SLA PAGEOBJECT → comparator
+  reports the affected frame anname under
+  ``frames.image_frames.sla_pfile`` and exits 2.
+- **M6**: drop a CharacterStyleRange text run on the IDML side via a
+  synthetic IDML → ``every_idml_run_present_in_build_py: false`` triggers
+  the Stage-1 gate (F9) at rc=2.
 
 Each test compares against the committed baseline at
 ``templates/<slug>/SCAFFOLD_INVENTORY.yml`` (anchor path).
@@ -222,6 +231,211 @@ class InventoryGateMutationTest(unittest.TestCase):
             self._dropped_color, joined,
             f"dropped color {self._dropped_color!r} not in "
             f"diff.missing.colors.build_py ({color_missing})",
+        )
+
+    # ------- M4: drop one add_para_style(...) call (F7 → F12) -----------
+
+    def test_m4_drop_add_para_style_is_detected(self) -> None:
+        """Verify the comparator catches a dropped add_para_style() call.
+
+        Mirrors the M3 (drop add_color) approach: find the
+        ``doc.add_para_style(ParaStyle(name='idml/aufzaehlungen-...'))``
+        call (a real paragraph style that maps to an IDML counterpart —
+        NOT the sentinel "idml/no-paragraph-style"), extract the style
+        name, and excise the entire call. The fresh inventory should
+        report the dropped style under ``missing.paragraph_styles.build_py``
+        and the comparator should exit 2.
+        """
+        # The anchor calls add_para_style for several styles; pick
+        # "aufzaehlungen-auf-gruenem-hintergrund" because it maps directly to
+        # the IDML "Aufzählungen auf grünem Hintergrund" entry (no sentinel
+        # filtering needed). If that style isn't in build.py for some
+        # reason, fall back to any non-sentinel style.
+        target_name = "idml/aufzaehlungen-auf-gruenem-hintergrund"
+
+        def transform(text: str) -> str:
+            # Find the add_para_style call that has the target name. Match
+            # the WHOLE STATEMENT including the leading indentation so the
+            # surrounding indentation block is preserved when the call is
+            # excised.
+            anchor_re = re.compile(
+                r"^([ \t]*)(?:doc\.)?add_para_style\(",
+                re.MULTILINE,
+            )
+            found_start: int | None = None
+            found_name: str | None = None
+            for m in anchor_re.finditer(text):
+                call_start = m.start()
+                paren_open = text.index("(", call_start)
+                depth = 0
+                i = paren_open
+                while i < len(text):
+                    if text[i] == "(":
+                        depth += 1
+                    elif text[i] == ")":
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    i += 1
+                call_end = i + 1
+                call_text = text[call_start:call_end]
+                name_match = re.search(
+                    r"name=['\"]([^'\"]+)['\"]|add_para_style\(\s*['\"]([^'\"]+)['\"]",
+                    call_text,
+                )
+                if name_match is None:
+                    continue
+                name = name_match.group(1) or name_match.group(2)
+                # Prefer the target, otherwise the first non-sentinel.
+                if name == target_name:
+                    found_start = call_start
+                    found_name = name
+                    break
+                if found_start is None and name and "no-paragraph-style" not in name:
+                    found_start = call_start
+                    found_name = name
+            if found_start is None or found_name is None:
+                self.fail("no non-sentinel add_para_style(...) found")
+            # Recompute end for the chosen call.
+            paren_open = text.index("(", found_start)
+            depth = 0
+            i = paren_open
+            while i < len(text):
+                if text[i] == "(":
+                    depth += 1
+                elif text[i] == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                i += 1
+            call_end = i + 1
+            # Eat the trailing newline so we don't leave a blank line of
+            # whitespace alone (build.py is Python — stray indent at top
+            # level breaks the parse).
+            if call_end < len(text) and text[call_end] == "\n":
+                call_end += 1
+            self._dropped_pstyle = found_name
+            return text[:found_start] + text[call_end:]
+
+        self._patch_build_py(transform)
+        actual = self._extract_mutated()
+        rc, diff = self._compare(actual)
+        self.assertEqual(rc, 2, f"expected regression (rc=2), got {rc}; diff={diff}")
+        missing = diff.get("missing", {}) or {}
+        ps_missing = missing.get("paragraph_styles.build_py", []) or []
+        # The comparator reports the IDML key (e.g. "ParagraphStyle/Aufzählungen...").
+        # The dropped build.py name is e.g. "idml/aufzaehlungen-auf-...".
+        # Match via the canonical slugifier so the two sides line up
+        # byte-for-byte (umlauts folded the same way).
+        from tools.idml_to_dsl import _idml_style_slug
+        ps_slugged = [
+            _idml_style_slug(p.split("/", 1)[-1]).lower()
+            for p in ps_missing
+        ]
+        self.assertIn(
+            self._dropped_pstyle.lower(), ps_slugged,
+            f"dropped paragraph style {self._dropped_pstyle!r} not in "
+            f"slugified diff.missing.paragraph_styles.build_py "
+            f"(IDML rows: {ps_missing}, slugs: {ps_slugged})",
+        )
+
+    # ------- M5: flip PFILE='' on one SLA PAGEOBJECT (F7) ----------------
+
+    def test_m5_drop_pfile_on_sla_image_is_detected(self) -> None:
+        """Verify the comparator catches a removed PFILE on a SLA PAGEOBJECT.
+
+        Mutates the tmp SLA: finds the first PAGEOBJECT with
+        ``PFILE="..."`` and ``ANNAME="..."``, sets PFILE to an empty
+        string. The fresh inventory should report
+        ``sla_pfile_present: false`` for that frame, and the comparator
+        should report the affected anname under
+        ``missing.frames.image_frames.sla_pfile`` with rc=2.
+        """
+        sla_path = self.template_dir / "template.sla"
+        sla_text = sla_path.read_text(encoding="utf-8")
+        # Find first PAGEOBJECT with both PFILE and ANNAME set.
+        m = re.search(
+            r"<PAGEOBJECT\b[^>]*?ANNAME=\"([^\"]+)\"[^>]*?PFILE=\"[^\"]+\"",
+            sla_text,
+        )
+        if m is None:
+            # Try with ANNAME after PFILE.
+            m = re.search(
+                r"<PAGEOBJECT\b[^>]*?PFILE=\"[^\"]+\"[^>]*?ANNAME=\"([^\"]+)\"",
+                sla_text,
+            )
+        self.assertIsNotNone(
+            m, "no SLA PAGEOBJECT with both ANNAME= and PFILE= found",
+        )
+        anname = m.group(1)
+        # Patch: erase the PFILE on JUST that pageobject.
+        new_text = re.sub(
+            r'(<PAGEOBJECT\b[^>]*?ANNAME="' + re.escape(anname) + r'"[^>]*?PFILE=)"[^"]+"',
+            r'\1""',
+            sla_text,
+            count=1,
+        )
+        # Also handle the PFILE-before-ANNAME order.
+        if new_text == sla_text:
+            new_text = re.sub(
+                r'(<PAGEOBJECT\b[^>]*?PFILE=)"[^"]+"([^>]*?ANNAME="' + re.escape(anname) + r'")',
+                r'\1""\2',
+                sla_text,
+                count=1,
+            )
+        self.assertNotEqual(
+            new_text, sla_text,
+            "PFILE-flip patch produced an identical SLA — regex didn't bite",
+        )
+        sla_path.write_text(new_text, encoding="utf-8")
+        actual = self._extract_mutated()
+        rc, diff = self._compare(actual)
+        self.assertEqual(rc, 2, f"expected regression (rc=2), got {rc}; diff={diff}")
+        missing = diff.get("missing", {}) or {}
+        pfile_missing = missing.get("frames.image_frames.sla_pfile", []) or []
+        self.assertIn(
+            anname, pfile_missing,
+            f"flipped-PFILE anname {anname!r} not in "
+            f"diff.missing.frames.image_frames.sla_pfile ({pfile_missing})",
+        )
+
+    # ------- M6: synthetic IDML CSR drop, Stage-1 gate path (F9) ---------
+
+    def test_m6_idml_run_dropped_triggers_stage1_gate(self) -> None:
+        """Verify the Stage-1 gate fires when an IDML CSR text is missing
+        from build.py (the every_idml_run_present_in_build_py contract).
+
+        Uses the real anchor as the baseline. Mutation: drop a Run() text
+        on the build.py side (same as M1, but the assertion targets the
+        Stage-1 gate rather than the comparator). Re-runs the in-process
+        ``build_inventory + _stage1_gate_check`` pair and asserts a
+        descriptive failure string.
+        """
+        def transform(text: str) -> str:
+            # Same regex as M1: drop the first non-empty Run text.
+            pattern = re.compile(
+                r"(Run\(\s*text=')([^']{2,})(')",
+                re.DOTALL,
+            )
+            return pattern.sub(lambda m: m.group(1) + m.group(3), text, count=1)
+        self._patch_build_py(transform)
+        # Invoke the gate function directly — no need to shell out twice.
+        from tools.inventory_extract import build_inventory
+        from tools.idml_import_driver import _stage1_gate_check
+        inv = build_inventory(
+            ANCHOR_SLUG,
+            templates_dir=self.tmpdir / "templates",
+            originals_dir=ORIGINALS_DIR,
+            repo_root=REPO_ROOT,
+        )
+        result = _stage1_gate_check(inv, ANCHOR_SLUG)
+        self.assertIsNotNone(
+            result, "Stage-1 gate did not fire on dropped IDML run",
+        )
+        self.assertIn(
+            "every_idml_run_present_in_build_py",
+            result,
+            f"Stage-1 gate failure does not name the rule: {result!r}",
         )
 
 
