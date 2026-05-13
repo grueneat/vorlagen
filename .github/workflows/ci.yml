@@ -35,6 +35,14 @@ jobs:
           # required for the diff to find the base commit.
           fetch-depth: 0
 
+      - name: Install system deps (poppler-utils, imagemagick)
+        # Audit tools subprocess to pdfinfo / pdftocairo / pdftotext (poppler-utils)
+        # and ImageMagick `compare` (visual_diff, region_color_audit).
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            poppler-utils imagemagick
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
