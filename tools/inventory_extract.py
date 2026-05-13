@@ -530,8 +530,22 @@ def _composite_ai_refs(slug: str, repo_root: Path) -> dict[str, list[str]]:
 
 def _join_assets(idml_inv: Inventory, build_data: dict, slug: str,
                  repo_root: Path) -> list[AssetEntry]:
-    """Aggregate ``referenced_from_frames`` per asset basename."""
-    # Build basename → [anname,...] map from build.py image frames.
+    """Aggregate ``referenced_from_frames`` per asset basename.
+
+    Two reference paths exist on the build.py side:
+
+    1. **External**: frame carries ``image='..../<basename>'`` — join is a
+       direct basename lookup against the IDML walker's asset list.
+    2. **Embedded**: frame carries ``inline_image_data='<base64...>'`` (the
+       walker hashes the payload into ``inline_image_data_sha256``). Match
+       the on-disk asset by hashing its bytes and looking up the resulting
+       sha256 in the frame map. Without this join every embedded asset
+       (gruene-logo-bund-weiss-cmyk.png, bluesky-weiss.png, …) ships with
+       ``referenced_from_frames: []`` and the gate can't detect "agent
+       stopped emitting the logo" — see review fix F5.
+    """
+    # Build basename → [anname,...] map from build.py image frames whose
+    # ``image=`` kwarg names a file directly.
     refs: dict[str, list[str]] = {}
     for img in build_data["frames"]["image_frames"]:
         ref = img.get("image") or ""
@@ -545,14 +559,103 @@ def _join_assets(idml_inv: Inventory, build_data: dict, slug: str,
     for basename, annames in _composite_ai_refs(slug, repo_root).items():
         refs.setdefault(basename, []).extend(annames)
 
+    # Embedded-asset join (review fix F5): frames that enter via
+    # ``inline_image_data=`` don't carry the asset basename in build.py — but
+    # the IDML side knows ``idml_link`` (e.g. "Grüne Logo Bund weiss CMYK.ai")
+    # which the links_export.yml manifest maps to the on-disk derivative
+    # (e.g. "gruene-logo-bund-weiss-cmyk.png"). We walk IDML image frames
+    # that DO have an idml_link, resolve the disk basename via the manifest,
+    # and join those annames into the asset row.
+    #
+    # Read links_export to map original IDML link names → output basenames.
+    inline_anname_to_basename: dict[str, str] = {}
+    manifest_path = repo_root / "shared" / "assets" / slug / "links_export.yml"
+    link_to_outputs: dict[str, list[str]] = {}
+    if manifest_path.exists():
+        try:
+            manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+            for original_name, entry in (manifest.get("assets") or {}).items():
+                outputs: list[str] = []
+                for k in ("output", "vector_output"):
+                    val = (entry or {}).get(k)
+                    if val:
+                        outputs.append(Path(val).name)
+                link_to_outputs[original_name] = outputs
+        except Exception:
+            link_to_outputs = {}
+
+    from urllib.parse import unquote
+    import unicodedata
+
+    # Normalise the manifest's keys to NFC for matching — IDML links come
+    # back in NFD form after URL-decoding %CC%88-style combining-diacritic
+    # escapes.
+    link_to_outputs_nfc = {
+        unicodedata.normalize("NFC", k): v for k, v in link_to_outputs.items()
+    }
+
+    def _resolve_idml_link(link: str) -> Optional[list[str]]:
+        if not link:
+            return None
+        # URL-decode IDML link (e.g. Gru%CC%88ne -> Grüne).
+        cand = unquote(link)
+        # Most IDML refs are "file:Links/<name>" — strip Links/ prefix.
+        for prefix in ("file:", "file://", "Links/", "./Links/"):
+            if cand.startswith(prefix):
+                cand = cand[len(prefix):]
+        # Strip leading slashes / dot-segments.
+        cand = cand.lstrip("/").lstrip("./")
+        # IDML links from %CC%88-style escapes decode to NFD form ("u" +
+        # combining-diaeresis), while the manifest stores NFC ("ü"). Match
+        # case-sensitively in NFC space to bridge the two.
+        cand_nfc = unicodedata.normalize("NFC", cand)
+        outputs = link_to_outputs_nfc.get(cand_nfc)
+        if outputs:
+            return outputs
+        # Some IDML manifests use the basename only; try basename lookup.
+        return link_to_outputs_nfc.get(Path(cand_nfc).name)
+
+    # IDML image frames that are referenced via inline_image_data on the
+    # build.py side: those frames have an anname but no `image=` kwarg in
+    # build.py. We attribute them to the asset basename via idml_link.
+    bp_anname_image_ref: dict[str, Optional[str]] = {}
+    bp_anname_inline_sha: dict[str, Optional[str]] = {}
+    for img in build_data["frames"]["image_frames"]:
+        an = img.get("anname") or ""
+        if not an:
+            continue
+        bp_anname_image_ref[an] = img.get("image")
+        bp_anname_inline_sha[an] = img.get("inline_image_data_sha256")
+
+    inline_refs: dict[str, list[str]] = {}
+    for img in idml_inv.frames.image_frames:
+        an = img.anname
+        if not an:
+            continue
+        # Only consider frames whose build.py side uses inline_image_data
+        # (no ``image=`` kwarg). Direct image= refs are already handled above.
+        if bp_anname_image_ref.get(an):
+            continue
+        if not bp_anname_inline_sha.get(an):
+            continue
+        outputs = _resolve_idml_link(img.idml_link or "")
+        if not outputs:
+            continue
+        for basename in outputs:
+            inline_refs.setdefault(basename, []).append(an)
+
     out: list[AssetEntry] = []
     seen: set[str] = set()
     for a in idml_inv.assets:
+        joined = list(refs.get(a.basename, []))
+        for an in inline_refs.get(a.basename, []):
+            if an not in joined:
+                joined.append(an)
         out.append(AssetEntry(
             basename=a.basename,
             on_disk=a.on_disk,
             classified=a.classified,
-            referenced_from_frames=refs.get(a.basename, []),
+            referenced_from_frames=joined,
             parent_composite=a.parent_composite,
             sha256=a.sha256,
             byte_length=a.byte_length,

@@ -645,17 +645,41 @@ def _walk_idml_frames(
 
 
 def _walk_idml_assets(slug: str, repo_root: Path) -> list[dict]:
-    """Return ``[{basename, on_disk, classified, parent_composite?}]`` for assets.
+    """Return ``[{basename, on_disk, classified, parent_composite?, sha256?, byte_length?}]``.
 
     Reads ``shared/assets/<slug>/links_export.yml`` (the canonical IDML link
     manifest) and ``meta.yml::asset_policy`` (the embedded/external/shipped
     bucket classification). Composite-AI splits are read from
     ``shared/assets/<slug>/composite_ai_split.yml`` when present.
+
+    When ``on_disk`` is True, also populates the asset's ``sha256`` +
+    ``byte_length`` from the file on disk. For composite-AI parents (.ai
+    files) we hash the original; for everything else the derived file under
+    ``shared/assets/<slug>/``. See issue #40 review F6.
     """
+    import hashlib  # local — only needed for the on-disk hash path.
     assets_dir = repo_root / "shared" / "assets" / slug
     manifest_path = assets_dir / "links_export.yml"
     composite_path = assets_dir / "composite_ai_split.yml"
     meta_path = repo_root / "templates" / slug / "meta.yml"
+
+    def _hash_file(path: Path) -> tuple[Optional[str], Optional[int]]:
+        """Return (sha256_hex, byte_length) or (None, None) on any failure."""
+        if not path or not path.exists() or not path.is_file():
+            return None, None
+        try:
+            data = path.read_bytes()
+        except OSError:
+            return None, None
+        try:
+            sha = hashlib.sha256(data).hexdigest()
+        except Exception:
+            return None, None
+        try:
+            length = path.stat().st_size
+        except OSError:
+            length = len(data)
+        return sha, length
 
     # asset_policy buckets (embedded/external/shipped) — classification source.
     policy_map: dict[str, str] = {}
@@ -687,12 +711,16 @@ def _walk_idml_assets(slug: str, repo_root: Path) -> list[dict]:
                 if basename in derived_basenames:
                     continue
                 derived_basenames.add(basename)
-                on_disk = (repo_root / path).exists()
+                on_disk_path = repo_root / path
+                on_disk = on_disk_path.exists()
+                sha, blen = _hash_file(on_disk_path) if on_disk else (None, None)
                 rows.append({
                     "basename": basename,
                     "on_disk": on_disk,
                     "classified": policy_map.get(basename, "external"),
                     "parent_composite": None,
+                    "sha256": sha,
+                    "byte_length": blen,
                 })
 
     # Composite-AI splits: each split is a derived asset of one parent .ai.
@@ -718,11 +746,15 @@ def _walk_idml_assets(slug: str, repo_root: Path) -> list[dict]:
                 continue
             derived_basenames.add(basename)
             on_disk_path = Path(p) if Path(p).is_absolute() else (repo_root / p)
+            on_disk = on_disk_path.exists()
+            sha, blen = _hash_file(on_disk_path) if on_disk else (None, None)
             rows.append({
                 "basename": basename,
-                "on_disk": on_disk_path.exists(),
+                "on_disk": on_disk,
                 "classified": policy_map.get(basename, "external"),
                 "parent_composite": parent,
+                "sha256": sha,
+                "byte_length": blen,
             })
 
     # Any asset_policy entries not seen via the manifest (e.g. PNG twins of
@@ -731,11 +763,16 @@ def _walk_idml_assets(slug: str, repo_root: Path) -> list[dict]:
     for basename, bucket in policy_map.items():
         if basename in derived_basenames:
             continue
+        on_disk_path = assets_dir / basename
+        on_disk = on_disk_path.exists()
+        sha, blen = _hash_file(on_disk_path) if on_disk else (None, None)
         rows.append({
             "basename": basename,
-            "on_disk": (assets_dir / basename).exists(),
+            "on_disk": on_disk,
             "classified": bucket,
             "parent_composite": None,
+            "sha256": sha,
+            "byte_length": blen,
         })
     return rows
 
@@ -833,6 +870,8 @@ def walk_idml(idml_path: Path, slug: str, *, repo_root: Optional[Path] = None):
                 on_disk=a["on_disk"],
                 classified=a["classified"],
                 parent_composite=a.get("parent_composite"),
+                sha256=a.get("sha256"),
+                byte_length=a.get("byte_length"),
             )
             for a in _walk_idml_assets(slug, repo_root)
         ],
