@@ -11,9 +11,12 @@ from __future__ import annotations
 from typing import List
 
 from .base import Pattern
+from .justification_to_align import JustificationToAlign
 
 
-PATTERNS: List[Pattern] = []
+PATTERNS: List[Pattern] = [
+    JustificationToAlign(),
+]
 
 
 def pattern_by_id(pattern_id: str) -> Pattern | None:

@@ -10,7 +10,7 @@ pattern module for the regression test path.
 
 | id | description | source | target | test | last_fired_on_template |
 |----|-------------|--------|--------|------|------------------------|
-| _(populated by Tasks 10-14)_ | | | | | |
+| `justification_to_align` | Map IDML Justification to ALIGN int (Backport 9) | ParaStyle.Justification | PARAGRAPHSTYLE.ALIGN | `tests/unit/test_pattern_justification_to_align.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
 
 ## How to add a new pattern
 

@@ -988,16 +988,13 @@ def _emit_colors(ctx: _Ctx) -> None:
 #
 # IDML Justification → Scribus ParaStyle.align int.
 # (0=left, 1=center, 2=right, 3=block, per tools/sla_lib/builder/styles.py)
+#
+# JUSTIFICATION_MAP is sourced from the pattern registry (issue #38 Task 10);
+# re-exported here so the inline call sites in this module need no change.
 # ---------------------------------------------------------------------------
-JUSTIFICATION_MAP = {
-    "LeftAlign": 0,
-    "CenterAlign": 1,
-    "RightAlign": 2,
-    "FullyJustified": 3,
-    "LeftJustified": 3,
-    "RightJustified": 3,
-    "CenterJustified": 3,
-}
+from idml_to_dsl_patterns.justification_to_align import (  # noqa: E402
+    JUSTIFICATION_MAP,
+)
 
 # Brand-recognised Scribus font family+style combinations. The converter
 # does NOT raise on unrecognised fonts (Scribus's fontconfig will fall back),
