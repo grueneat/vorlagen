@@ -641,6 +641,15 @@ def _walk_idml_frames(
                     continue
                 seen_groups.add(self_id)
                 out["group_frames"].append(row)
+            elif tag in ("Image", "PDF"):
+                # Top-level Image/PDF (not wrapped in a Rectangle/Polygon/Oval
+                # — these are skipped earlier by the CHILD_CONTENT_TAGS
+                # filter when they appear as children). In the corpus IDML
+                # always wraps Image in a Rectangle so this branch is
+                # defensive (review fix L3); without it a free-standing
+                # raster placement would fall through both the image_frames
+                # and polygon_frames buckets silently.
+                out["image_frames"].append(row)
     return out
 
 
