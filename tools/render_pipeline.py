@@ -690,6 +690,63 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             idml_source = candidate
             break
 
+    # Phase E (Issue #38 Task 2): asset_extraction_audit runs FIRST so missing
+    # links / composite-AI strips fail fast before downstream audits.
+    asset_audit_path = out_dir / "asset_audit.yml"
+    if idml_source is not None:
+        # Locate the manifest. Convention: shared/assets/<slug>/links_export.yml.
+        manifest_candidates = [
+            ROOT / "shared" / "assets" / tid / "links_export.yml",
+            idml_source.parent / "links_export.yml",
+        ]
+        manifest_path = next(
+            (p for p in manifest_candidates if p.exists()), None
+        )
+        allow_composite_ai = bool(getattr(args, "allow_composite_ai", False))
+        if manifest_path is not None:
+            try:
+                from asset_extraction_audit import audit as run_asset_audit
+                report = run_asset_audit(
+                    slug=tid,
+                    idml_path=idml_source,
+                    links_export_yml=manifest_path,
+                    repo_root=ROOT,
+                    allow_composite_ai=allow_composite_ai,
+                    out_dir=out_dir,
+                )
+                if not report["ok"]:
+                    issue_parts.append(
+                        f"{len(report.get('links_missing', []))} missing link(s), "
+                        f"{len(report.get('links_unconverted', []))} unconverted, "
+                        f"{len(report.get('composite_ai_detected', []))} composite-AI"
+                    )
+                    print(
+                        f"[{tid}] asset_extraction_audit: FAIL "
+                        f"({len(report.get('links_missing', []))} missing, "
+                        f"{len(report.get('links_unconverted', []))} unconverted, "
+                        f"{len(report.get('composite_ai_detected', []))} composite-AI)",
+                        file=sys.stderr,
+                    )
+                else:
+                    print(f"[{tid}] asset_extraction_audit: OK")
+            except Exception as exc:
+                print(
+                    f"[{tid}] asset_extraction_audit error: {exc}",
+                    file=sys.stderr,
+                )
+        else:
+            print(
+                f"[{tid}] asset_extraction_audit: skipped "
+                f"(no links_export.yml at shared/assets/{tid}/ or "
+                f"alongside IDML)",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] asset_extraction_audit: skipped (no IDML source)",
+            file=sys.stderr,
+        )
+
     inventory_path = out_dir / "inventory.yml"
     if idml_source is not None and (tdir / "build.py").exists():
         try:
@@ -1071,6 +1128,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         color_audit_path=color_audit_path,
         visual_diff_regions_path=vd_region_path,
         line_spacing_audit_path=line_spacing_audit_path,
+        asset_audit_path=asset_audit_path,
     )
     preflight_path = out_dir / "preflight.yml"
     preflight_path.write_text(
@@ -1107,6 +1165,7 @@ def _build_preflight(
     color_audit_path: Path,
     visual_diff_regions_path: Path | None = None,
     line_spacing_audit_path: Path | None = None,
+    asset_audit_path: Path | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
 
@@ -1243,6 +1302,30 @@ def _build_preflight(
                 "",
             )
 
+    # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the
+    # chain logically (missing links cascade into every other audit). We
+    # record it last in this builder for ordering symmetry with the other
+    # blocks; the audit itself runs first in _run_audit.
+    if asset_audit_path is not None:
+        aa = _load_yml(asset_audit_path)
+        if aa is not None:
+            missing = len(aa.get("links_missing", []) or [])
+            unconv = len(aa.get("links_unconverted", []) or [])
+            comp = len(aa.get("composite_ai_detected", []) or [])
+            issues = missing + unconv + comp
+            detail = (
+                f"{missing} missing, {unconv} unconverted, "
+                f"{comp} composite-AI"
+                if issues
+                else ""
+            )
+            _record(
+                "asset_extraction",
+                bool(aa.get("ok", True)),
+                issues,
+                detail,
+            )
+
     preflight_ok = all(a["ok"] for a in audits_summary.values())
 
     # Hot-issues list: top 5 failing audits by issue count.
@@ -1317,6 +1400,16 @@ def main(argv=None) -> int:
             "Same as --audit but also exits non-zero if any audit-summary "
             "issue_parts are reported (a stricter superset of preflight failure). "
             "Implies --audit. Intended for CI."
+        ),
+    )
+    parser.add_argument(
+        "--allow-composite-ai",
+        action="store_true",
+        help=(
+            "Downgrade asset_extraction_audit composite-AI findings to warnings "
+            "instead of hard failures. Use when you have intentionally chosen "
+            "raster fallback for a composite .ai strip (degraded vector quality). "
+            "Issue #38 Task 14 introduces a per-page splitter that obsoletes this."
         ),
     )
 
