@@ -27,3 +27,9 @@ repos:
         entry: bash -c 'set -e; for d in templates/*/; do slug=$(basename "$d"); if [ -f "$d/inject.yml" ] && [ -f "$d/build.py.generated" ]; then python3 tools/reconcile_build_py.py "$slug" --check || exit 1; fi; done'
         language: system
         pass_filenames: false
+      - id: check-no-absolute-paths-in-sla
+        name: Reject absolute filesystem paths in committed template.sla files
+        entry: python3 tools/check_no_absolute_paths_in_sla.py
+        language: system
+        pass_filenames: false
+        always_run: true
