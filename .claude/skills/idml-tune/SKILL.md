@@ -150,11 +150,16 @@ Tuning is complete when:
   issue is classified `human-review` or `authoring-bug` (NEVER
   `converter-bug` — those go through `/idml-scaffold`).
 
-## Banned phrases
+## Banned phrases (advisory)
 
-Inherited from Stage 1 — see `idml-scaffold/SKILL.md`. The phrases are
-ADVISORY in Stage 2; the inventory gate is the hard signal. They
-still apply to commit messages, EXECUTION logs, and authored prose.
+Inherited from Stage 1 — see `idml-scaffold/SKILL.md`. The phrases
+catch symptoms (cosmetic over-claims like "false-convergence-plateau",
+"good enough", "accept the drift") that the inventory diff does not.
+
+**In Stage 2 these are ADVISORY.** The inventory gate is the only
+HARD signal — see "Per-iteration inventory gate" above. Banned
+phrases still apply to commit messages, EXECUTION logs, and authored
+prose; `tools/sop_lint.py` enforces them on commit.
 
 ## See also
 
