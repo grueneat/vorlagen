@@ -12,19 +12,32 @@ public surface with stdlib imports (argparse, re, sys, zipfile, yaml,
 xml.etree.ElementTree, pathlib, typing) that the old ``for n in dir(_impl)``
 loop swept in.
 """
-from tools.walkers.walk_idml_inventory import (  # noqa: F401
-    # Public surface.
-    main,
-    run_inventory,
-    walk_idml,
-    # Private helpers consumed by tools/render_pipeline.py + tests.
-    _build_hint,
-    _collect_spread_items,
-    _extract_annames_from_build_py,
-    _load_printable_layers,
-    _load_spread_order,
-    _yaml_dump,
-)
+try:
+    from tools.walkers.walk_idml_inventory import (  # noqa: F401
+        # Public surface.
+        main,
+        run_inventory,
+        walk_idml,
+        # Private helpers consumed by tools/render_pipeline.py + tests.
+        _build_hint,
+        _collect_spread_items,
+        _extract_annames_from_build_py,
+        _load_printable_layers,
+        _load_spread_order,
+        _yaml_dump,
+    )
+except ImportError:
+    from walkers.walk_idml_inventory import (  # noqa: F401
+        main,
+        run_inventory,
+        walk_idml,
+        _build_hint,
+        _collect_spread_items,
+        _extract_annames_from_build_py,
+        _load_printable_layers,
+        _load_spread_order,
+        _yaml_dump,
+    )
 
 __all__ = [
     "main",
