@@ -30,13 +30,13 @@ asset_policy:
     - green-pine-trees-covered-with-fog.jpg
     - gruene-logo-bund-weiss-cmyk.png
     - mail-weiss.png
+    - plakat-dunkel-fuer-flyer.png
     - social-media-icon-facebook.png
     - social-media-icon-instagram.png
     - social-media-icon-tiktok.png
     - social-media-icons-weiss.png
     - website-weiss.png
-  external:
-    - plakat-dunkel-fuer-flyer.png
+  external: []
   shipped: []
 
 build:
@@ -45,7 +45,7 @@ build:
 
 # Pinned by bin/check-stale-previews; updated by bin/render-gallery on
 # each rebuild. Initial value is the SHA of the converter-emitted SLA.
-previews_for_sla: a6e38bd866ec6ee8da9efffd2a8f409f2df6f5a9dfec264221e261a905ff475f
+previews_for_sla: b9a00e3c2142e21556ad4a20878fe12058ecce5360439af9a471dba2946e6a87
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
