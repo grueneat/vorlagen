@@ -1,0 +1,168 @@
+# Hand-patches for kandidat-falzflyer-din-lang-gruenes-cover-v2.
+# Migrated from inline # P5/inject comments in build.py per issue #38 Task 17.
+# Validated against shared/inject.schema.yaml.
+#
+# These entries catalogue every hand-edit applied on top of the converter-
+# emitted build.py. Some entries target kwargs inside conditional / dict
+# contexts that the current tools/reconcile_build_py.py regex-based
+# applier cannot safely round-trip; those are marked with
+# follow_up_issue tracking the converter extension that would obsolete
+# them.
+hand_patches:
+  - target:
+      element: SLA
+      anname: document
+    field: useDocBleeds
+    set: "0"
+    classification: authoring-bug
+    reason: >-
+      v2 baseline.pdf was exported with bleed=0. The converter emits the
+      IDML's BleedTop/BleedBottom/BleedLeft/BleedRight verbatim which produces
+      a non-zero bleed in template.sla. Suppress at the Document.extra_pdf_attrs
+      level to match the baseline.
+    follow_up_issue: null
+
+  - target:
+      element: ParaStyle
+      anname: fliesstext_auf_gruenem_hintergrund
+    field: align
+    set: 0
+    classification: converter-bug
+    reason: >-
+      IDML ParagraphStyle 'fliesstext auf grünem Hintergrund' has Justification
+      LeftAlign which should map to align=0, but the converter emitted align=3
+      (justified) for this style. Pattern justification_to_align in issue #38
+      Task 10 fixes the mapping; remove this entry after the converter is
+      re-run against the IDML with the pattern active.
+    follow_up_issue: null
+
+  - target:
+      element: ParaStyle
+      anname: fliesstext_auf_gruenem_hintergrund
+    field: linesp
+    set: 16.0
+    classification: scribus-engine-bug
+    reason: >-
+      IDML CSR Leading is 14.3pt but baseline.pdf measured rendering shows
+      constant 16.0pt baseline-to-baseline spacing. Likely interaction of
+      LeadingModelAkiBelow + paragraph SpaceAfter or implicit baseline-grid
+      snap. Converter cannot recover the rendered leading without parsing
+      InDesign's LeadingModel; bump explicitly until the converter extension
+      lands.
+    follow_up_issue: null
+
+  - target:
+      element: ParaStyle
+      anname: absatzformat_1
+    field: align
+    set: 0
+    classification: converter-bug
+    reason: >-
+      Same fix as fliesstext-auf-gruenem-hintergrund — converter emitted
+      align=3 instead of 0. justification_to_align pattern in Task 10
+      obsoletes this entry.
+    follow_up_issue: null
+
+  - target:
+      element: ParaStyle
+      anname: aufzaehlungen_auf_gruenem_hintergrund
+    field: linesp
+    set: 16.0
+    classification: scribus-engine-bug
+    reason: >-
+      Same baseline.pdf 16.0pt rendering as fliesstext-auf-gruenem-hintergrund;
+      IDML <Leading>14.3</Leading> does not match what InDesign renders. Engine
+      bug; no upstream Scribus issue yet.
+    follow_up_issue: null
+
+  - target:
+      element: ParaStyle
+      anname: subheadline_cover_zentriert
+    field: name
+    set: "idml/subheadline-cover-zentriert"
+    classification: authoring-bug
+    reason: >-
+      Custom paragraph style for Stoerer/subheadline that the converter drops
+      because it does not appear in the IDML's style map directly. Restore
+      explicitly until the converter walks Resources/Styles.xml for ALL
+      orphan ParagraphStyles.
+    follow_up_issue: null
+
+  - target:
+      element: TextFrame
+      anname: u1c7
+    field: y_mm
+    delta: 1.884
+    classification: scribus-engine-bug
+    reason: >-
+      Scribus FirstBaselineOffset rendering differs from InDesign by +5.34pt
+      (+1.884mm); y-coord bumped to match baseline.pdf. Baseline's 'Usapiene'
+      top=123.52pt vs preview's 118.18pt (+5.34pt). Engine bug; no upstream
+      issue yet.
+    follow_up_issue: null
+
+  - target:
+      element: TextFrame
+      anname: u1fd
+    field: y_mm
+    delta: 2.103
+    classification: scribus-engine-bug
+    reason: >-
+      Same FirstBaselineOffset compensation as u1c7 but slightly different
+      magnitude (+5.96pt → +2.103mm) because the bullet list has a different
+      AscentOffset. Baseline 'Scim' top=124.14pt vs preview 118.18pt. Engine
+      bug; no upstream issue yet.
+    follow_up_issue: null
+
+  - target:
+      element: TextFrame
+      anname: u265
+    field: y_mm
+    delta: 1.884
+    classification: scribus-engine-bug
+    reason: >-
+      Same FirstBaselineOffset issue as u1c7 on page 2. +5.34pt → +1.884mm.
+      Engine bug; no upstream issue yet.
+    follow_up_issue: null
+
+  - target:
+      element: TextFrame
+      anname: u295
+    field: y_mm
+    delta: 1.249
+    classification: scribus-engine-bug
+    reason: >-
+      FirstBaselineOffset compensation for the page-2 column. Baseline
+      'Usapiene' top=139.58pt vs preview 136.04pt (+3.54pt → +1.249mm).
+      Smaller magnitude than u1c7 because the column starts in a different
+      vertical context. Engine bug.
+    follow_up_issue: null
+
+  - target:
+      element: TextFrame
+      anname: u376
+    field: default_style_attrs
+    set: {"ALIGN": "1"}
+    classification: converter-bug
+    reason: >-
+      Backport 11 edge case: Scribus's ALIGN-on-trail does NOT propagate to
+      the paragraph it terminates; only DefaultStyle ALIGN does. Without
+      default_style_attrs.ALIGN=1, line 2 ('Kasten') renders left-aligned
+      despite trail_attrs={ALIGN:1}. Pattern default_style_align_inheritance
+      in issue #38 Task 11 obsoletes this entry.
+    follow_up_issue: null
+
+  - target:
+      element: ImageFrame
+      anname: u3e7
+    field: scale_type
+    set: 0
+    classification: scribus-engine-bug
+    reason: >-
+      Composite strip social-media-icons-weiss.ai contains 4 icons. SCALETYPE=1
+      (free scaling) renders the small white-on-transparent PNGs invisible in
+      Scribus 1.6.x. scale_type=0 (fit-to-frame) makes them visible. Issue #38
+      Task 14 ships image_frame_pdf_source_for_vectors + composite_ai_split
+      which together obsolete this entry by emitting per-icon PDFs the
+      converter scales correctly.
+    follow_up_issue: null
