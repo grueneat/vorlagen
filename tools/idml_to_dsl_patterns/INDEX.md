@@ -11,6 +11,7 @@ pattern module for the regression test path.
 | id | description | source | target | test | last_fired_on_template |
 |----|-------------|--------|--------|------|------------------------|
 | `justification_to_align` | Map IDML Justification to ALIGN int (Backport 9) | ParaStyle.Justification | PARAGRAPHSTYLE.ALIGN | `tests/unit/test_pattern_justification_to_align.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
+| `default_style_align_inheritance` | Propagate DefaultStyle ALIGN to per-paragraph paragraph_attrs even when ALIGN==0 (Backport 11) | ParagraphStyleRange.Justification + AppliedParagraphStyle | paragraph_attrs.ALIGN | `tests/unit/test_pattern_default_style_align.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
 
 ## How to add a new pattern
 
