@@ -1,7 +1,7 @@
 ---
 id: '33'
 title: Email submission for votes — mailto + copy button + inline body view
-status: in_progress
+status: done
 priority: high
 labels:
 - enhancement
