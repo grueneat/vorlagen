@@ -75,7 +75,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
         _write_meta(
             tmp,
             _SLUG,
-            {"embedded": ["logo.png", "icon.png"], "shipped": []},
+            {"embedded": ["logo.png", "icon.png"], "external": [], "shipped": []},
         )
         out_dir = tmp / "out"
         result = apa.run_asset_policy_audit(_SLUG, root=tmp, out_dir=out_dir)
@@ -115,7 +115,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
         _write_meta(
             tmp,
             _SLUG,
-            {"embedded": ["logo.png"], "shipped": ["photo.jpg"]},
+            {"embedded": ["logo.png"], "external": [], "shipped": ["photo.jpg"]},
         )
         result = apa.run_asset_policy_audit(_SLUG, root=tmp)
         self.assertFalse(result["ok"])
@@ -130,7 +130,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
         _write_meta(
             tmp,
             _SLUG,
-            {"embedded": ["logo.png"], "shipped": []},
+            {"embedded": ["logo.png"], "external": [], "shipped": []},
         )
         result = apa.run_asset_policy_audit(_SLUG, root=tmp)
         self.assertFalse(result["ok"])
@@ -145,7 +145,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
         _write_meta(
             tmp,
             _SLUG,
-            {"embedded": ["logo.png", "ghost.png"], "shipped": []},
+            {"embedded": ["logo.png", "ghost.png"], "external": [], "shipped": []},
         )
         result = apa.run_asset_policy_audit(_SLUG, root=tmp)
         self.assertFalse(result["ok"])
@@ -167,7 +167,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
         _write_meta(
             tmp,
             _SLUG,
-            {"embedded": ["logo.png"], "shipped": []},
+            {"embedded": ["logo.png"], "external": [], "shipped": []},
         )
         result = apa.run_asset_policy_audit(_SLUG, root=tmp)
         self.assertTrue(result["ok"], result)
@@ -193,8 +193,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
                     "title": "demo",
                     "idml_source": "Some IDML Stem.idml",
                     "asset_policy": {
-                        "embedded": ["logo.png"],
-                        "shipped": [],
+                        "embedded": ["logo.png"], "external": [], "shipped": [],
                     },
                 },
                 sort_keys=False,
@@ -214,7 +213,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
         _write_meta(
             tmp,
             _SLUG,
-            {"embedded": ["logo.png"], "shipped": []},
+            {"embedded": ["logo.png"], "external": [], "shipped": []},
         )
         self.assertEqual(apa.main(["--slug", _SLUG, "--root", str(tmp)]), 0)
 
@@ -226,7 +225,7 @@ class AssetPolicyAuditTests(unittest.TestCase):
         _write_meta(
             tmp,
             _SLUG,
-            {"embedded": ["logo.png", "extra.png"], "shipped": ["x.png"]},
+            {"embedded": ["logo.png", "extra.png"], "external": [], "shipped": ["x.png"]},
         )
         (tmp / "shared" / "assets" / _SLUG / "x.png").write_bytes(b"X")
         self.assertEqual(apa.main(["--slug", _SLUG, "--root", str(tmp)]), 3)

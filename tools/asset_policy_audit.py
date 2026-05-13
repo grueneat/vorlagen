@@ -10,18 +10,28 @@ Sibling of ``tools/asset_extraction_audit.py`` — different inputs, different
 failure semantics, different invocation timing. Per RESEARCH.md §7 the two
 audits stay independent.
 
+Buckets:
+
+  * ``embedded:`` — brand-locked assets inlined in the SLA. Each entry's
+    basename must exist in shared/assets/<slug>/.
+  * ``external:`` — content assets the SLA REFERENCES via repo-relative
+    paths but does NOT ship. Used for preview rendering only; the
+    downloaded SLA shows missing-image placeholders for these. Brand-team
+    decision (2026-05-13): AI / supplementary content stays in the
+    preview templates and is NEVER bundled in the downloadable artifact.
+  * ``shipped:`` — reserved for a future zip flow. MUST be empty today;
+    this audit rejects non-empty entries.
+
 Hard-fail conditions (returns ``ok=False`` with ``issue`` set):
 
-  * ``shipped_non_empty`` — the ``shipped:`` list contains entries.
-    First-PR rule (issue #39): every asset goes in ``embedded:``; the
-    brand-team has not yet decided on the zip flow that ``shipped:`` would
-    drive. Schema (``shared/asset-policy.schema.yaml``) intentionally stays
-    permissive; only this audit rejects.
+  * ``shipped_non_empty`` — the ``shipped:`` list contains entries. Brand
+    team has not approved any zip flow; schema stays permissive for forward
+    compat, only the audit rejects.
   * ``missing`` — the asset directory exists but ``meta.yml::asset_policy``
     is absent (templates with assets MUST declare a policy).
-  * ``coverage`` — basenames on disk differ from ``embedded:``:
-      - ``unclassified`` files (on disk, not in ``embedded:``).
-      - ``stale`` entries (in ``embedded:``, not on disk).
+  * ``coverage`` — disk basenames differ from ``embedded ∪ external``:
+      - ``unclassified`` files (on disk, in neither bucket).
+      - ``stale`` entries (in policy, not on disk).
 
 Silent skip (returns ``ok=True, skipped=True``): the template has no
 ``shared/assets/<slug>/`` directory. Eight of nine templates today fall in
@@ -29,8 +39,7 @@ this branch; only v2-falzflyer has an asset directory.
 
 The audit walks the filesystem as truth: every ``*.png/*.jpg/*.jpeg/*.psd/
 *.eps/*.svg/*.tif/*.tiff/*.ai/*.pdf`` is an asset; ``links_export.yml`` and
-other ``*.yml/*.md`` are metadata and excluded. This matches pitfalls.md §5
-(composite-AI per-icon PNGs land on disk without manifest rows).
+other ``*.yml/*.md`` are metadata and excluded.
 
 CLI: ``python3 tools/asset_policy_audit.py --slug <template_slug>``
 Exit codes:
@@ -65,29 +74,33 @@ from sla_lib.builder.meta_schema import load_asset_policy  # noqa: E402
 # verbatim text and so the audit emits a uniform UX across CLI / driver / pipeline.
 # ---------------------------------------------------------------------------
 _SHIPPED_REJECTED_MSG = (
-    "Shipped assets are pending brand-team review. The first PR "
-    "for issue #39 only supports `embedded:`. Move the asset to "
-    "`embedded:` (it will be inlined in the SLA) or remove it from "
-    "the template until the brand team decides on the zip flow."
+    "Shipped assets are not supported. Brand-team decision (2026-05-13): "
+    "AI / supplementary content stays in the preview templates only and is "
+    "never bundled in the downloadable artifact. Move the asset to "
+    "`embedded:` (brand-locked, inlined in the SLA) or `external:` "
+    "(content, referenced by the SLA, NOT shipped). See "
+    ".claude/skills/idml-import/asset_policy.md."
 )
 
 _MISSING_POLICY_MSG = (
     "meta.yml::asset_policy is required when shared/assets/<slug>/ exists. "
-    "Add an `asset_policy:` block listing every file in shared/assets/<slug>/ "
-    "under `embedded:`. See .claude/skills/idml-import/asset_policy.md."
+    "Add an `asset_policy:` block listing every file under `embedded:` "
+    "(brand) or `external:` (content). See "
+    ".claude/skills/idml-import/asset_policy.md."
 )
 
 _UNCLASSIFIED_MSG = (
     "Assets on disk at shared/assets/<slug>/ are missing from "
-    "meta.yml::asset_policy::embedded. First-PR rule (issue #39): every "
-    "asset goes in `embedded:`. Add the missing basenames or remove the "
-    "files from disk."
+    "meta.yml::asset_policy. Every disk asset must be classified as "
+    "`embedded:` (brand-locked, inlined in the SLA) or `external:` "
+    "(content, referenced by the SLA, NOT shipped). Add the missing "
+    "basenames or remove the files from disk."
 )
 
 _STALE_MSG = (
-    "meta.yml::asset_policy::embedded references basenames that do not "
-    "exist on disk at shared/assets/<slug>/. Either restore the files or "
-    "remove the entries from `embedded:`."
+    "meta.yml::asset_policy references basenames that do not exist on "
+    "disk at shared/assets/<slug>/. Either restore the files or remove "
+    "the entries from the policy."
 )
 
 
@@ -236,12 +249,32 @@ def _list_disk_assets(asset_dir: Path) -> list[str]:
     """Return the sorted basenames of files in ``asset_dir`` whose suffix
     is in ``_ASSET_EXTS``. Subdirectories and metadata files (``*.yml``,
     ``*.md``) are excluded.
+
+    Also excludes ``.pdf`` files whose stem matches a sibling raster
+    (``.png`` or ``.jpg``). ``tools/links_export.py::_convert_ai`` emits a
+    raster output AND a vector ``.pdf`` passthrough for every ``.ai``
+    source; the ``.pdf`` is forward-compat (the SLA never references it
+    today). Treating both as primary assets would force the user to
+    classify two identical assets in ``meta.yml::asset_policy``.
     """
+    raster_stems: set[str] = set()
+    for child in asset_dir.iterdir():
+        if not child.is_file():
+            continue
+        if child.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+            raster_stems.add(child.stem)
+
     items: list[str] = []
     for child in sorted(asset_dir.iterdir()):
         if not child.is_file():
             continue
-        if child.suffix.lower() not in _ASSET_EXTS:
+        ext = child.suffix.lower()
+        if ext not in _ASSET_EXTS:
+            continue
+        # Skip derived .pdf siblings (links_export.py emits these from .ai
+        # sources for forward-compat vector use; the SLA references the
+        # raster sibling, not the .pdf).
+        if ext == ".pdf" and child.stem in raster_stems:
             continue
         items.append(child.name)
     return items
@@ -276,11 +309,12 @@ def run_asset_policy_audit(
         message     (str)   — issue-specific message text.
         asset_dir   (str)   — repo-relative path to the asset directory,
                               or None when no directory was found.
-        embedded    (list[str]) — entries declared in the policy.
-        shipped     (list[str]) — entries declared in the policy.
+        embedded    (list[str]) — brand-locked assets declared in the policy.
+        external    (list[str]) — content assets declared in the policy.
+        shipped     (list[str]) — zip-flow entries (must be empty today).
         on_disk     (list[str]) — basenames found on disk.
-        unclassified (list[str]) — on disk but not in embedded:.
-        stale       (list[str]) — in embedded: but not on disk.
+        unclassified (list[str]) — on disk but in neither embedded nor external.
+        stale       (list[str]) — in policy but not on disk.
 
     Raises:
         ValueError — re-raised from ``load_asset_policy`` when meta.yml's
@@ -303,6 +337,7 @@ def run_asset_policy_audit(
             "reason": "no shared/assets/<slug>/ directory",
             "asset_dir": None,
             "embedded": [],
+            "external": [],
             "shipped": [],
             "on_disk": [],
             "unclassified": [],
@@ -326,6 +361,7 @@ def run_asset_policy_audit(
             "message": _MISSING_POLICY_MSG,
             "asset_dir": rel_asset_dir,
             "embedded": [],
+            "external": [],
             "shipped": [],
             "on_disk": on_disk,
             "unclassified": list(on_disk),
@@ -335,6 +371,7 @@ def run_asset_policy_audit(
         return report
 
     embedded: list[str] = sorted(policy.get("embedded", []) or [])
+    external: list[str] = sorted(policy.get("external", []) or [])
     shipped: list[str] = sorted(policy.get("shipped", []) or [])
 
     if shipped:
@@ -346,6 +383,7 @@ def run_asset_policy_audit(
             "message": _SHIPPED_REJECTED_MSG,
             "asset_dir": rel_asset_dir,
             "embedded": embedded,
+            "external": external,
             "shipped": shipped,
             "on_disk": on_disk,
             "unclassified": [],
@@ -354,10 +392,10 @@ def run_asset_policy_audit(
         _maybe_write(report, out_dir)
         return report
 
-    embedded_set = set(embedded)
+    classified_set = set(embedded) | set(external)
     disk_set = set(on_disk)
-    unclassified = sorted(disk_set - embedded_set)
-    stale = sorted(embedded_set - disk_set)
+    unclassified = sorted(disk_set - classified_set)
+    stale = sorted(classified_set - disk_set)
 
     if unclassified or stale:
         parts: list[str] = []
@@ -373,6 +411,7 @@ def run_asset_policy_audit(
             "message": "; ".join(parts),
             "asset_dir": rel_asset_dir,
             "embedded": embedded,
+            "external": external,
             "shipped": shipped,
             "on_disk": on_disk,
             "unclassified": unclassified,
@@ -387,6 +426,7 @@ def run_asset_policy_audit(
         "skipped": False,
         "asset_dir": rel_asset_dir,
         "embedded": embedded,
+        "external": external,
         "shipped": shipped,
         "on_disk": on_disk,
         "unclassified": [],

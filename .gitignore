@@ -26,3 +26,8 @@ node_modules/
 *.otf
 *.ttf
 *.ttc
+
+# tools/links_export.py emits .pdf siblings to .ai/.psd raster outputs for
+# forward-compat vector use. The SLA references the raster, not the .pdf.
+# The audit (tools/asset_policy_audit.py) filters them as derived.
+shared/assets/**/*.pdf

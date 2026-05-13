@@ -206,17 +206,15 @@ Re-read at every iteration boundary per RESEARCH.md 1.2:
   produces per-icon PDFs; the pattern emits PDF-source ImageFrames.
 - **P10.** Every render cycle is logged. The user can replay the loop
   from `iteration.jsonl` without re-running the renders.
-- **P11.** Templates are self-contained downloads. Brand assets
-  (logos, social icons, decorative backgrounds) are embedded INLINE in
-  the SLA; content assets (portraits, photos, AI-generated images)
-  ship as files in `<slug>.zip::assets/` with the SLA referencing them
-  via REPO-RELATIVE paths. Absolute worktree paths in committed SLAs
-  are a hard error. Every asset must be explicitly classified in
-  `meta.yml::asset_policy`. See `asset_policy.md`.
-  **First-PR rule (issue #39):** every asset goes in `embedded:`;
-  `shipped:` MUST be empty. The eventual brand-vs-content split lands
-  in a follow-up PR with Phases D / E / G. See the banner at the top
-  of `asset_policy.md`.
+- **P11.** Brand assets embedded, content external, nothing shipped
+  (brand-team decision 2026-05-13). `meta.yml::asset_policy` has three
+  buckets: `embedded:` (brand-locked, inlined in the SLA via
+  `ImageFrame.inline_image_data`), `external:` (content / AI /
+  supplementary assets the SLA references via SLA-relative paths
+  but does NOT bundle), `shipped:` (reserved, MUST be empty —
+  audit-enforced). Absolute paths in committed SLAs are a hard
+  error. Every disk asset must land in `embedded:` or `external:`.
+  See `asset_policy.md`.
 
 ## See also
 
@@ -224,7 +222,7 @@ Re-read at every iteration boundary per RESEARCH.md 1.2:
 - `pattern_library.md` — how to add a new pattern to `tools/idml_to_dsl_patterns/`.
 - `tolerance_protocol.md` — the P4 confirmation flow.
 - `inject_protocol.md` — the P5 hand-patch workflow.
-- `asset_policy.md` — the P11 brand-vs-content split + zip packaging.
+- `asset_policy.md` — the P11 three-bucket model (embedded/external/shipped).
 - `docs/idml-import-workflow.md` — user-facing CLI walkthrough.
 - `tools/sop_lint.py` — banned-phrase guard.
 - `tools/check_overrides_growth.py` — tolerance-growth gate.

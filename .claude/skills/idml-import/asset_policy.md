@@ -1,106 +1,86 @@
-# Asset policy — what gets embedded, what stays in `assets/`
+# Asset policy — brand embedded, content external, nothing shipped
 
-> **Active rule (issue #39, first PR — landed):** every asset goes in
-> `embedded:`. The `shipped:` list MUST be empty in every committed
-> `meta.yml::asset_policy`. The audit (`tools/asset_policy_audit.py`)
-> rejects non-empty `shipped:` with a clear message pointing at this rule.
-> The eventual `embedded:` / `shipped:` split described below becomes
-> active in a follow-up PR after the brand-team decision on Phase D (zip),
-> Phase E (gallery flip), and Phase G (AI watermark). Until then, treat
-> every example showing `shipped:` entries as **eventual; not yet active**.
-> See `.issues/39-…/CONTEXT.md` for the single source of truth on the
-> first-PR scope lock.
+> **Active rule (brand-team decision 2026-05-13, locked):** brand-locked
+> assets are EMBEDDED inline in the SLA. Content / AI / supplementary
+> assets are referenced via repo-relative paths but NOT bundled (the
+> SLA references them, the render pipeline resolves them from
+> `shared/assets/<slug>/` for preview generation, the downloaded SLA
+> shows missing-image placeholders the user replaces with their own
+> content). NO ZIP. NO BUNDLED CONTENT.
 
-Downloadable templates must be self-contained. Templates today reference
-assets via absolute worktree paths (`/workspace/.worktrees/…/shared/assets/…`),
-which break the moment a user downloads the SLA. Every committed
-`template.sla` must use **repo-relative** paths, and every downloadable
-artifact must carry the files those paths resolve to.
+## Three buckets
 
-This document is the policy. The implementation is tracked in issue #39.
+Every template's `meta.yml::asset_policy` classifies each asset into
+one of three buckets:
 
-## Two asset classes
+### `embedded:` — brand-locked, inlined in the SLA
 
-The skill classifies every IDML-referenced asset into one of two buckets:
-
-### Brand assets — **embedded inline in the SLA**
-
-These are part of the template's identity and must never change without
-brand-team sign-off:
+These are part of the template's identity and must never change
+without brand-team sign-off:
 
 - Party / organisation logos (`gruene-logo-*`, `bund-logo-*`, …)
 - Social-media icon glyphs (`social-media-icon-facebook.png`,
   `bluesky-weiss.png`, etc.)
 - Decorative background polygons / textures that define a panel
-  (e.g. the green crinkled-paper background of v2-falzflyer page 2)
 - Brand-locked illustrations (`wahlkreuz.*`, fold-mark crosshatches)
-- Any asset listed in `shared/logos/` or marked
-  `kind: brand` in `links_export.yml`
 
-These are **embedded inline** in the SLA via
-`ImageFrame(inline_image_data=…, inline_image_ext=…)` (`primitives.py`
-already supports this — see `pack_inline_image()`). The user cannot
-accidentally remove or replace them.
+The converter emits these as
+`ImageFrame(inline_image_data=…, inline_image_ext=…)` via
+`tools/sla_lib/builder/primitives.py::pack_inline_image`. They become
+part of the SLA's bytes; the downloaded file is self-contained for
+brand.
 
-### Content assets — **shipped in `<slug>.zip::assets/`**
+### `external:` — content referenced, not bundled
 
-These are template-specific demo content the user is expected to
-replace:
+User-replaceable content the SLA references via a path relative to
+the SLA's directory:
 
-- Candidate portraits (`portraits/*.jpg`)
-- AI-generated demo illustrations (**watermarked** — see below)
-- Photo backgrounds the user would swap for their own
-- QR codes, addresses, captions tied to a specific campaign
+- Candidate portraits, headshots
+- AI-generated demo illustrations
+- Stock photo backgrounds the user would swap for their own
+- Anything brand-team has NOT signed off as brand-locked
 
-**AI-generated subset — strict red watermark required.**
+The converter emits these as
+`ImageFrame(image='../../shared/assets/<asset-dir>/<basename>')`. When
+Scribus opens the SLA at `templates/<slug>/template.sla` it `chdir`s
+to the SLA's parent, then resolves the path to
+`shared/assets/<asset-dir>/<basename>` — the preview pipeline finds
+the file and renders the demo content.
 
-Content assets that are AI-generated MUST carry a diagonal red
-watermark `KI-GENERIERT MUSS ERSETZT WERDEN` running across the
-image when shipped. The source file at
-`shared/assets/<slug>/<basename>` stays clean (the rendering
-pipeline uses it); the watermark is applied at zip-build time by
-`tools/watermark_ai_image.py` (issue #39 Phase G).
+When the user downloads the SLA standalone, the relative path
+resolves to nothing (no `../../shared/assets/…` alongside their
+download) — Scribus shows a missing-image placeholder where each
+external asset should be. The user replaces with their own image.
 
-The watermark is opt-out-free: every `shipped` asset flagged
-`ai_generated: true` is watermarked. Users see the demo placeholder
-status loudly the moment they open the zip. The brand-team rule
-behind this is: AI imagery must NEVER ship to print without explicit
-human review and replacement.
+This matches the brand-team's intent: **content assets and AI
+imagery must NEVER ship to print without explicit human replacement.**
+Not bundling them is the strongest possible enforcement of that rule.
 
-Schema (Phase G — **eventual; not yet active** — extends `shipped`
-entries to support both forms):
+### `shipped:` — reserved (must be empty)
+
+Reserved for a hypothetical future zip-packaging flow. Brand-team
+has decided NOT to ship content assets at all, so this list MUST be
+empty in every committed template. The schema accepts non-empty
+values for forward compatibility; `tools/asset_policy_audit.py`
+rejects them with an actionable error message.
+
+## Schema
 
 ```yaml
-# EVENTUAL Phase G shape — DO NOT use today. The first-PR rule
-# requires `shipped: []` and the schema as committed only accepts the
-# `list[str]` form. Phase G extends both the schema and the audit.
+# shared/asset-policy.schema.yaml — jsonschema Draft 2020-12
 asset_policy:
-  embedded: [...]
-  shipped:                                       # ← eventual; today is `shipped: []`
-    - photo.jpg                                  # plain string = ai_generated: false
-    - {name: ai-portrait.jpg, ai_generated: true}  # object form = watermarked
+  embedded: [list of basenames]   # required, may be empty
+  external: [list of basenames]   # required, may be empty
+  shipped:  [list of basenames]   # required, MUST be empty (audit-enforced)
 ```
 
-These ship in a ZIP next to the SLA with a documented folder
-convention. The SLA references them via **relative paths**:
-
-```
-<slug>.zip
-├── template.sla
-├── assets/
-│   ├── portrait.jpg
-│   ├── photo-1.jpg
-│   └── README.txt        # explains the convention
-```
-
-The SLA's `PFILE` attribute becomes `assets/portrait.jpg` (relative to
-the SLA file). Users replace the file at that path with their own image.
+The three lists are PAIRWISE DISJOINT — no basename in more than one
+bucket. Together `embedded ∪ external` must cover every asset on
+disk in `shared/assets/<slug>/` that the SLA actually references.
 
 ## Where the classification lives
 
-Every template's `meta.yml` carries an `asset_policy:` block. Under
-the first-PR rule (issue #39), every asset goes in `embedded:` and the
-`shipped:` list MUST be empty:
+Each template's `meta.yml` carries an `asset_policy:` block:
 
 ```yaml
 asset_policy:
@@ -108,129 +88,88 @@ asset_policy:
     - gruene-logo-bund-weiss-cmyk.png
     - social-media-icon-facebook.png
     - social-media-icon-instagram.png
-    - social-media-icon-tiktok.png
     - bluesky-weiss.png
-    - mail-weiss.png
-    - website-weiss.png
-    - green-pine-trees-covered-with-fog-crop.png    # decorative background
-    - plakat-dunkel-fuer-flyer.png                  # content (poster placeholder)
-    - green-pine-trees-covered-with-fog.jpg         # content (page-2 photo)
+    # ...brand assets...
+  external:
+    - plakat-dunkel-fuer-flyer.png         # content placeholder
+    - green-pine-trees-covered-with-fog-crop.png  # photo placeholder
   shipped: []
 ```
 
-The two lists must be disjoint AND must cover every asset in
-`shared/assets/<slug>/`. `bin/idml-import` audits this — if an asset
-is unclassified, the skill STOPS and asks the user which bucket it
-belongs in. **First-PR (issue #39) constraint:** every asset must
-land in `embedded:`. The audit rejects non-empty `shipped:` with the
-message pointing at this rule. The schema (`shared/asset-policy.schema.yaml`)
-stays permissive (forward-compat); the audit enforces emptiness.
+`tools/asset_policy_audit.py` enforces:
 
-Defaults (when the user hasn't classified an asset yet) — **eventual
-rule, not yet active**:
+1. **Coverage** — every disk file is in `embedded:` OR `external:`.
+2. **Disjoint** — same basename in only one bucket.
+3. **Shipped-empty** — non-empty `shipped:` rejected with the
+   brand-team-decision error message.
 
-- Files matching `*logo*`, `*social-media-icon*`, `wahlkreuz*`,
-  `*-weiss.png`, `*-cmyk.png` → presumed brand → embed.
-- Files matching `portrait*`, `photo*`, `themen-*`, `kandidat-*` →
-  presumed content → ship.
+## Auto-classification heuristic
+
+When the user hasn't classified an asset yet, `bin/idml-import` MAY
+suggest a bucket based on filename:
+
+- `*logo*`, `*social-media-icon*`, `wahlkreuz*`, `*-weiss.png`,
+  `*-cmyk.png` → presume **embedded** (brand).
+- `portrait*`, `photo*`, `themen-*`, `kandidat-*`, `*ai-*`,
+  `*generated-*` → presume **external** (content).
 - Anything else → STOP, ask.
 
-**Today (first PR), the `ship` column is empty;** every heuristic
-result lands in `embedded:`. The `ship` column becomes active when
-Phase D (zip pipeline) / Phase E (gallery flip) / Phase G (AI
-watermark) land in a follow-up PR.
+The skill MAY auto-classify based on the regex but MUST surface the
+proposed classification for user confirmation before writing it to
+`meta.yml`. No silent classification.
 
-The skill MAY auto-classify based on the regex above but MUST surface
-the proposed classification for user confirmation before writing it
-to `meta.yml`.
+## v2-falzflyer (the canonical case)
 
-## When the skill enforces the policy
-
-`bin/idml-import` runs an asset-policy check during Step 1
-(asset extraction):
-
-1. Read `shared/assets/<slug>/links_export.yml` for the asset list.
-2. Read `templates/<slug>/meta.yml::asset_policy`.
-3. **STOP** if any asset is unclassified — present the regex-guessed
-   bucket to the user, get explicit yes/no.
-4. After classification: emit SLA with **relative paths** to shipped
-   assets and **inline data** for embedded ones.
-5. The build step produces `templates/<slug>/<slug>.zip` containing
-   the SLA + the `assets/` directory.
-
-## Migration of v2-falzflyer (the seed case)
-
-`templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/` has 12
-assets in `shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/`.
-The first-PR policy (issue #39) puts ALL of them in `embedded:`; the
-`shipped:` list is empty:
+`templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/` references
+12 assets in `shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/`:
 
 ```yaml
 asset_policy:
-  embedded:
+  embedded:                                          # 8 brand-locked
     - bluesky-weiss.png
-    - green-pine-trees-covered-with-fog-crop.png
-    - green-pine-trees-covered-with-fog-srgb.png
-    - green-pine-trees-covered-with-fog.jpg
     - gruene-logo-bund-weiss-cmyk.png
     - mail-weiss.png
-    - plakat-dunkel-fuer-flyer.png
     - social-media-icon-facebook.png
     - social-media-icon-instagram.png
     - social-media-icon-tiktok.png
     - social-media-icons-weiss.png
     - website-weiss.png
+  external:                                          # 4 content / photos
+    - green-pine-trees-covered-with-fog-crop.png    # page-2 page-background photo
+    - green-pine-trees-covered-with-fog-srgb.png    # derivative (kept for build reproducibility)
+    - green-pine-trees-covered-with-fog.jpg         # source (kept for reference)
+    - plakat-dunkel-fuer-flyer.png                  # cover placeholder
   shipped: []
 ```
 
-The v2 migration is the proof-of-concept for the policy. Once Phase D /
-E / G land, the photo (`green-pine-trees-…fog.jpg`) and the plakat
-(`plakat-dunkel-fuer-flyer.png`) move to `shipped:` — but that is
-**eventual; not yet active**. For the first PR they live in `embedded:`.
-
-The 3 files that aren't directly PFILE'd from the IDML
-(`social-media-icons-weiss.png` — the composite reference;
-`green-pine-trees-covered-with-fog-srgb.png` — derivative;
-`green-pine-trees-covered-with-fog.jpg` — the original photo) are
-listed in `embedded:` for forward-compat: the audit walks the
-filesystem as truth and requires every disk file to be classified.
+Resulting SLA: 7 inline ImageFrames (one anname per logo / icon) +
+2 PFILE references (the 2 actually-referenced photos at u2cd and
+u3a0; the other 2 are derived / unused). SLA size: 391 KB
+(down from 18 MB when content was inlined under PR #83's transitional
+embed-everything rule). Self-contained for brand; placeholder for
+content.
 
 ## What does NOT happen
 
-- The skill does NOT silently embed everything (would balloon SLA
-  files into 10MB blobs that are painful to edit).
-- The skill does NOT silently ship everything (loses brand integrity
-  — users could replace the Grüne logo with anything).
-- The skill does NOT skip the classification step (every asset
-  must end up in `embedded:` or `shipped:`).
+- The skill does NOT silently embed AI imagery — that would ship a
+  fake-as-real placeholder into print. Brand team explicitly rejected.
+- The skill does NOT silently ship content (no zip) — brand team
+  decided users get the BRAND template and put their own content in.
+- The skill does NOT skip the classification step — every asset must
+  land in `embedded:` or `external:`.
 
 ## Rationale
 
-The policy split matches the actual editing intent. Brand assets are
-part of the template identity and editing them is a brand-team
-decision, not an end-user one. Content assets are exactly what the
-end user came here to swap. Encoding the split mechanically in
-`meta.yml` keeps the discipline as code, not as documentation that
-gets ignored. Issue #39 ships the implementation; this document
-ships the policy.
+Three groups of stakeholders are protected by the bucket structure:
 
-## Related
+- **Brand team:** brand assets are unchangeable in the user's hands.
+  Inlining via base64 is the strongest possible enforcement.
+- **Designers / template users:** they get a template that opens and
+  shows brand exactly, with explicit "your content goes here"
+  placeholders where their own portraits / photos belong.
+- **Print operators:** they never receive an SLA where placeholder
+  AI content ships as real content — the SLA simply doesn't carry
+  the placeholders.
 
-- `tools/asset_policy_audit.py` — enforces this policy at build time.
-  Hard-fails on shipped-non-empty (first-PR rule), missing-policy-
-  when-assets-on-disk, and coverage drift (unclassified or stale
-  basenames). Silent-skip when no `shared/assets/<slug>/` exists.
-- `tools/check_no_absolute_paths_in_sla.py` — Phase A guard. Rejects
-  every committed `template.sla` whose `PFILE` attribute is absolute
-  (`/...`, `file://...`, Windows drive letters).
-- `shared/asset-policy.schema.yaml` — the schema (JSON Schema draft
-  2020-12). Permissive on `shipped:` for forward compat; the audit
-  enforces emptiness for the first PR per CONTEXT.md.
-- `.issues/39-…/CONTEXT.md` — single source of truth for the
-  first-PR scope lock. The eventual `embedded:` / `shipped:` split
-  + the AI watermark machinery move from "eventual" to "active" only
-  in the follow-up PR.
-- `tools/sla_lib/builder/meta_schema.py::load_asset_policy` — the
-  read-only loader the audit + converter both consume.
-- `tools/sla_lib/builder/primitives.py::pack_inline_image` — the
-  qCompress-encoder behind `ImageFrame(inline_image_data=…)`.
+The split matches the actual editing intent and is enforced
+mechanically (audit + converter); no documentation that gets ignored.

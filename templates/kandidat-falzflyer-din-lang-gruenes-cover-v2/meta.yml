@@ -13,25 +13,30 @@ description: >
   (u-prefixed); a human will refactor them to semantic slot names
   post-bootstrap.
 
-# Issue #39 first-PR policy: every asset goes in `embedded:`. The 12
-# disk files in shared/assets/26-03-leporello-z-falz-99x210-6-seitig-
-# gruenes-cover-2/ are inlined into the SLA via
-# ImageFrame.inline_image_data. `shipped:` must remain empty until the
-# brand team decides on the zip flow (Phase D / E / G follow-up).
+# Asset policy (issue #39 + brand-team decision 2026-05-13):
+# - `embedded:` brand-locked assets inlined in the SLA. Users cannot
+#   replace them by editing the downloaded file.
+# - `external:` content / AI / supplementary assets the SLA references
+#   via repo-relative paths but does NOT bundle. The render pipeline
+#   resolves them from shared/assets/<asset-dir>/ for preview
+#   generation; the downloaded SLA shows missing-image placeholders.
+# - `shipped:` reserved for a future zip flow; brand-team decision is
+#   to NOT ship content assets in the downloadable artifact.
 asset_policy:
   embedded:
     - bluesky-weiss.png
-    - green-pine-trees-covered-with-fog-crop.png
-    - green-pine-trees-covered-with-fog-srgb.png
-    - green-pine-trees-covered-with-fog.jpg
     - gruene-logo-bund-weiss-cmyk.png
     - mail-weiss.png
-    - plakat-dunkel-fuer-flyer.png
     - social-media-icon-facebook.png
     - social-media-icon-instagram.png
     - social-media-icon-tiktok.png
     - social-media-icons-weiss.png
     - website-weiss.png
+  external:
+    - green-pine-trees-covered-with-fog-crop.png
+    - green-pine-trees-covered-with-fog-srgb.png
+    - green-pine-trees-covered-with-fog.jpg
+    - plakat-dunkel-fuer-flyer.png
   shipped: []
 
 build:
@@ -40,7 +45,7 @@ build:
 
 # Pinned by bin/check-stale-previews; updated by bin/render-gallery on
 # each rebuild. Initial value is the SHA of the converter-emitted SLA.
-previews_for_sla: b9a00e3c2142e21556ad4a20878fe12058ecce5360439af9a471dba2946e6a87
+previews_for_sla: 3a460ba46054025a0127ebcebb850d88dda56dbc90e23dd41fc6b42a8b7a19ee
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
