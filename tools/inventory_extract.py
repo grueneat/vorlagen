@@ -136,10 +136,25 @@ def _join_text_runs(idml_inv: Inventory, build_data: dict, sla_data: dict,
         and sum(bp_counts.values()) >= idml_inv.text_runs.total_idml
     )
 
+    # Flattened build_py runs for the comparator's mutation gate.
+    from tools.walkers.schema import TextRun as _TextRun
+    build_py_runs = [
+        _TextRun(
+            text=r.get("text", ""),
+            font=r.get("font", "") or "",
+            fontsize=float(r.get("fontsize") or 0),
+            fcolor=r.get("fcolor", "") or "",
+            paragraph_style=r.get("paragraph_style", "") or "",
+            text_source=r.get("text_source") or "build_py",
+        )
+        for r in build_data.get("text_runs", [])
+    ]
+
     return TextRunBucket(
         total_idml=idml_inv.text_runs.total_idml,
         by_paragraph_style=by_style,
         every_idml_run_present_in_build_py=every_idml_present,
+        build_py_runs=build_py_runs,
     )
 
 

@@ -50,6 +50,9 @@ class TextRunBucket:
     total_idml: int = 0
     by_paragraph_style: list[TextRunByStyle] = field(default_factory=list)
     every_idml_run_present_in_build_py: bool = False
+    # Flattened list of build.py-side Run() text-rows. Used by inventory_compare
+    # to surface "dropped words" between snapshots (mutation tests M1).
+    build_py_runs: list[TextRun] = field(default_factory=list)
 
 
 @dataclass
@@ -211,6 +214,7 @@ def _coerce_field(cls: type, name: str, value: Any) -> Any:
     }
     LIST_OF = {
         ("TextRunBucket", "by_paragraph_style"): TextRunByStyle,
+        ("TextRunBucket", "build_py_runs"): TextRun,
         ("Frames", "text_frames"): TextFrame,
         ("Frames", "image_frames"): ImageFrame,
         ("Frames", "polygon_frames"): PolygonFrame,
