@@ -1,7 +1,7 @@
 ---
 id: '35'
 title: IDML to DSL converter — strict bootstrap (idml_to_dsl.py)
-status: in_progress
+status: done
 priority: medium
 labels:
 - templates
