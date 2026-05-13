@@ -3,8 +3,10 @@
 
 For each frame in build.py with a bounding box, sample the corresponding region
 from baseline.pdf and preview.pdf (rasterised at 150 dpi). Compute mean and max
-RGB delta. Classify by severity: uniform small offset (icc_likely — engine floor,
-unfixable) vs concentrated large delta (fill_likely — converter fill-color bug).
+RGB delta. Classify by severity: uniform small offset (icc_likely —
+icc_drift_uniform_small, sub-percent uniform RGB delta from CMYK to sRGB ICC
+profile rendering) vs concentrated large delta (fill_likely — converter
+fill-color bug).
 
 Usage:
     python3 tools/region_color_audit.py \\
@@ -242,7 +244,7 @@ def classify_severity(mean_delta: float) -> str:
     Thresholds (RGB units, 0-255 scale):
     - ok:          mean_delta < 3   → within rasterisation noise floor
     - icc_likely:  3 ≤ delta < 15  → uniform small offset, consistent with
-                   CMYK→sRGB ICC profile rendering drift (engine floor)
+                   CMYK→sRGB ICC profile rendering drift (icc_drift_uniform_small)
     - fill_likely: delta ≥ 15      → large concentrated delta, likely a
                    wrong fill-color emitted by the converter (fixable)
     """

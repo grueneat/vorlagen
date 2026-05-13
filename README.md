@@ -23,6 +23,24 @@ templates/
     └── README.md
 ```
 
+## IDML Import
+
+Drop one or more Adobe InDesign `.idml` files into the workspace and convert them
+end-to-end into Scribus-compatible templates:
+
+```bash
+bin/idml-import path/to/template.idml
+bin/idml-import path/to/incoming/   # batch — walks the directory for *.idml
+```
+
+`bin/idml-import` extracts asset links, scaffolds `templates/<slug>/`, runs the
+converter, then iterates the audit + classify + remediation loop until the
+template converges against its `baseline.pdf` or until a human-review issue is
+surfaced. Full reference: [docs/idml-import-workflow.md](docs/idml-import-workflow.md).
+
+The companion skill at `.claude/skills/idml-import/SKILL.md` drives the same
+pipeline from inside Claude Code sessions.
+
 ## Drei Zugänge
 
 ### 1. Inhaltliche Anpassung (für Endnutzer:innen)

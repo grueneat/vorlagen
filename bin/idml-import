@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""bin/idml-import — one-command IDML to template pipeline (issue #38).
+
+See tools/idml_import_driver.py for the implementation.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+from idml_import_driver import main  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
