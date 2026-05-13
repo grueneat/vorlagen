@@ -2,76 +2,62 @@
 #
 # Source: /workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/
 #         (untracked in main checkout; this file is the committed snapshot.)
-# Generated: python3 tools/inventory_extract.py --slug 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 #
-# Hand-verification log (issue #40 Task 9):
+# Regenerate: python3 tools/inventory_extract.py \
+#               --slug 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover \
+#               --output templates/26-03-.../SCAFFOLD_INVENTORY.yml
+#
+# Self-compare: python3 tools/inventory_compare.py \
+#                  --expected templates/26-03-.../SCAFFOLD_INVENTORY.yml \
+#                  --actual /tmp/inv-actual.yml
+#               # → exit 0
+#
+# Hand-verification log (issue #40 + review-fix regeneration):
 # - schema_version: 1, template slug matches directory name
-# - frames: 23 text + 10 image + 52 polygon (18 IDML + 34 manual PolyLine fold-lines) + 12 group
-# - paragraph_styles: 6 (matches IDML Resources/Styles.xml count)
-# - colors: 15 (matches IDML Resources/Graphic.xml; includes brand + builtin + Process inks)
-# - assets: 20 (8 IDML-linked originals + 9 PNG/PDF derivatives + 3 composite-AI splits)
+# - text_runs.total_idml: 55 (was 36 — walker now emits one run per Content
+#   child instead of folding multi-Run paragraphs into one string)
+# - by_paragraph_style buckets unified across IDML / build.py / SLA sides
+#   (F2: slugifier normalises identities; F1: SLA reads PARENT not PSTYLE)
+# - frames: 23 text + 10 image + 52 polygon + 12 group
+# - paragraph_styles: 6 rows, every style has its build_py + sla_pstyle_present
+#   populated (F2)
+# - colors: 15 (matches IDML Resources/Graphic.xml)
+# - assets: 20 (8 IDML-linked originals + 9 PNG/PDF derivatives + 3
+#   composite-AI splits); embedded brand assets now report
+#   referenced_from_frames via links_export.yml join (F5); sha256 +
+#   byte_length populated for every on-disk asset (F6)
+# - frames.image_frames[].pdf_image_present per-frame via page lookup (F4)
 # - words: 444 preview/baseline (NFC+ligature-folded; raw pdftotext gives 450)
 # - parse_warnings: [] (no non-literal kwargs in build.py)
-#
-# To re-validate:
-#   python3 tools/inventory_extract.py --slug 26-03-... --output /tmp/inv-actual.yml
-#   python3 tools/inventory_compare.py --expected templates/26-03-.../SCAFFOLD_INVENTORY.yml \
-#       --actual /tmp/inv-actual.yml
-#   # → exit 0
 schema_version: 1
 template: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 text_runs:
-  total_idml: 36
+  total_idml: 55
   by_paragraph_style:
-  - style: ParagraphStyle/$ID/NormalParagraphStyle
-    idml_count: 14
-    build_py_count: 0
-    sla_itext_count: 0
-    pdf_word_count: 0
   - style: ParagraphStyle/Absatzformat 1
     idml_count: 7
-    build_py_count: 0
-    sla_itext_count: 0
+    build_py_count: 7
+    sla_itext_count: 7
     pdf_word_count: 0
   - style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
-    idml_count: 11
-    build_py_count: 0
-    sla_itext_count: 0
+    idml_count: 15
+    build_py_count: 17
+    sla_itext_count: 29
     pdf_word_count: 0
   - style: ParagraphStyle/Fließtext auf grünem Hintergrund
-    idml_count: 3
-    build_py_count: 0
-    sla_itext_count: 0
+    idml_count: 14
+    build_py_count: 14
+    sla_itext_count: 14
     pdf_word_count: 0
   - style: ParagraphStyle/Headline in grünem Kasten
     idml_count: 1
-    build_py_count: 0
-    sla_itext_count: 0
-    pdf_word_count: 0
-  - style: idml/absatzformat-1
-    idml_count: 0
-    build_py_count: 7
-    sla_itext_count: 0
-    pdf_word_count: 0
-  - style: idml/aufzaehlungen-auf-gruenem-hintergrund
-    idml_count: 0
-    build_py_count: 17
-    sla_itext_count: 0
-    pdf_word_count: 0
-  - style: idml/fliesstext-auf-gruenem-hintergrund
-    idml_count: 0
-    build_py_count: 14
-    sla_itext_count: 0
-    pdf_word_count: 0
-  - style: idml/headline-in-gruenem-kasten
-    idml_count: 0
     build_py_count: 1
-    sla_itext_count: 0
+    sla_itext_count: 1
     pdf_word_count: 0
-  - style: idml/normalparagraphstyle
-    idml_count: 0
+  - style: ParagraphStyle/$ID/NormalParagraphStyle
+    idml_count: 18
     build_py_count: 18
-    sla_itext_count: 0
+    sla_itext_count: 18
     pdf_word_count: 0
   every_idml_run_present_in_build_py: true
   build_py_runs:
@@ -432,6 +418,353 @@ text_runs:
     fontsize: 0.0
     fcolor: ''
     paragraph_style: idml/absatzformat-1
+    text_source: build_py
+  idml_runs:
+  - text: gruene.at
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Absatzformat 1
+    text_source: build_py
+  - text: gruene.at
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Absatzformat 1
+    text_source: build_py
+  - text: '@gruene.at'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Absatzformat 1
+    text_source: build_py
+  - text: '@diegruenenaustria'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Absatzformat 1
+    text_source: build_py
+  - text: '@diegruenen'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Absatzformat 1
+    text_source: build_py
+  - text: '@diegruenen'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Absatzformat 1
+    text_source: build_py
+  - text: Leonore Gewessler
+    font: Gotham Narrow
+    fontsize: 11.0
+    fcolor: Color/C=0 M=0 Y=100 K=0
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Ich bin ein Zitat. Ich bin ein prägnantes
+    font: Vollkorn
+    fontsize: 22.756203150929352
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Zitat.
+    font: Vollkorn
+    fontsize: 22.756203150929352
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Headline in einem grünen Kasten '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Headline in grünem Kasten
+    text_source: build_py
+  - text: Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et
+      ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Absatzformat 1
+    text_source: build_py
+  - text: 'Impressum: xxxxxx'
+    font: Gotham Narrow
+    fontsize: 6.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Ich bin auch '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: eine Headline.
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Tinvend igenis ute voloria qui cus '
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'et ut optate vendam ilis volorias       pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que
+      parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.'
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit,
+      unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut
+      vollitatem ipitae comnim imodignatis estem quat.
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit,
+      unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut
+      vollitatem ipitae comnim imodignatis estem quat.
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Tinvend igenis ute voloria qui cus '
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'et ut optate vendam ilis volorias       pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que
+      parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.'
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Lia vellam, conemporro modi       Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate
+      rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto
+      consent. Nam quatur.'
+    font: ''
+    fontsize: 0.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Ich bin eine '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Headline.
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: "\t•\t"
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Scim rem '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui
+      beat audit re.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\t"
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Tissi iuntem ressiti '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: orerovi tectotmusaqui tota nis quam.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\t"
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Uaerum ium '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'verior alicide liquuntio. '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\tUr, omniet "
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'vello modi '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: aceprate pem ssi iuntem ilis
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\tLia vellam, conemporro "
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: moditatque
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: ' nimil maxim voluptur.'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Ich bin eine '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Headline.
+    font: Vollkorn
+    fontsize: 30.0
+    fcolor: Color/C=0 M=0 Y=100 K=0
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Tinvend igenis ute voloria qui cus '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'et ut optate vendam ilis volorias       pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que
+      parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Lia vellam, conemporro modi       tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita
+      dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib
+      eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis
+      eosenihicto consent. Nam quatur.'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit,
+      unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut
+      vollitatem ipitae comnim imodignatis estem quat.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Ich bin eine '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Headline.
+    font: Vollkorn
+    fontsize: 30.0
+    fcolor: Color/C=0 M=0 Y=100 K=0
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Störer
+    font: Gotham Narrow
+    fontsize: 10.973171336882315
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Das ist die '
+    font: Gotham Narrow
+    fontsize: 37.92700525154892
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: dreizeilige
+    font: Vollkorn
+    fontsize: 37.92700525154892
+    fcolor: Color/C=0 M=0 Y=100 K=0
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Headline
+    font: Gotham Narrow
+    fontsize: 37.92700525154892
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Mehrzeilige Subheadline –
+    font: Gotham Narrow
+    fontsize: 17.55879872756895
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: mehr Info zum Thema
+    font: Gotham Narrow
+    fontsize: 17.55879872756895
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
     text_source: build_py
 frames:
   text_frames:
@@ -1641,23 +1974,29 @@ frames:
     source: idml
 paragraph_styles:
 - idml: ParagraphStyle/$ID/[No paragraph style]
-  build_py: null
-  sla_pstyle_present: false
+  build_py: idml/no-paragraph-style
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
 - idml: ParagraphStyle/$ID/NormalParagraphStyle
-  build_py: null
-  sla_pstyle_present: false
+  build_py: idml/normalparagraphstyle
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
 - idml: ParagraphStyle/Fließtext auf grünem Hintergrund
-  build_py: null
-  sla_pstyle_present: false
+  build_py: idml/fliesstext-auf-gruenem-hintergrund
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
 - idml: ParagraphStyle/Absatzformat 1
   build_py: idml/absatzformat-1
   sla_pstyle_present: true
+  build_py_extra_pstyle: true
 - idml: ParagraphStyle/Aufzählungen auf grünem Hintergrund
-  build_py: null
-  sla_pstyle_present: false
-- idml: ParagraphStyle/Headline in grünem Kasten
-  build_py: null
+  build_py: idml/aufzaehlungen-auf-gruenem-hintergrund
   sla_pstyle_present: true
+  build_py_extra_pstyle: true
+- idml: ParagraphStyle/Headline in grünem Kasten
+  build_py: idml/headline-in-gruenem-kasten
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
 colors:
 - idml: Color/Black
   cmyk:
@@ -1783,97 +2122,111 @@ assets:
 - basename: bluesky-weiss.png
   on_disk: true
   classified: embedded
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u477
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 859fc19e9525f3344ecfb28c47d8b314b574c5dafc21d33ddf5090c28c7c979e
+  byte_length: 29217
 - basename: bluesky-weiss.pdf
   on_disk: true
   classified: external
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u477
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: a1ab1faa1aaacdfd8323023422d65dbcb52871a62ac2ce8cd4033fbf8af0cb6e
+  byte_length: 720912
 - basename: gruene-logo-bund-weiss-cmyk.png
   on_disk: true
   classified: embedded
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u141
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 71c5da46d36e308b4afa53e06b929fbda9d19fff648458f48075f49a42048eee
+  byte_length: 49604
 - basename: gruene-logo-bund-weiss-cmyk.pdf
   on_disk: true
   classified: external
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u141
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 152dcdea289ffc33102d5e169894486a61fce3a717cf9d41d7ce13d7d80a660c
+  byte_length: 101374
 - basename: mail-weiss.png
   on_disk: true
   classified: embedded
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u4da
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: f53700771557b983bc5ac1bfbea2d7951405011067cb4c20635aa4a84d29003c
+  byte_length: 25524
 - basename: mail-weiss.pdf
   on_disk: true
   classified: external
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u4da
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: da9a295f4487bc81d158539a80a22210f02743d0612cae245bbb184819982c92
+  byte_length: 1773655
 - basename: plakat-dunkel-fuer-flyer.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u3a0
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 7322fb3409a5d5eb2dc223bface1552a9622bfb47f11cc37c9d145c00290aa1c
+  byte_length: 8558653
 - basename: social-media-icons-weiss.png
   on_disk: true
   classified: embedded
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u3e7
+  - u3f0
+  - u3f5
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 757673ca9ef031a157c66e85ef3efc9c3d024222ec204dc469c87bee4c295aee
+  byte_length: 116981
 - basename: social-media-icons-weiss.pdf
   on_disk: true
   classified: external
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u3e7
+  - u3f0
+  - u3f5
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
+  byte_length: 1774462
 - basename: website-weiss.png
   on_disk: true
   classified: embedded
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u4a2
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 9c2f048cc68c17c0c2b99c1b79526baa5926c1e49eb1b085ac679c66bf77d2ce
+  byte_length: 40426
 - basename: website-weiss.pdf
   on_disk: true
   classified: external
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u4a2
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: f01096a280160cf4f76dcab54ed149774eaf50478fc56ab33b6710aaec69fb94
+  byte_length: 1772511
 - basename: ziesel.jpg
   on_disk: true
   classified: external
   referenced_from_frames:
   - u514
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: e73d2e5e1750ae0a832de7b3d534c3c3562f6824853bda3ef79f0818f579161c
+  byte_length: 11713327
 - basename: green-pine-trees-covered-with-fog.jpg
   on_disk: true
   classified: external
   referenced_from_frames:
   - u2cd
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
+  byte_length: 6896771
 - basename: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
     Media Icons weiss--0.pdf
   on_disk: true
@@ -1881,8 +2234,8 @@ assets:
   referenced_from_frames:
   - u3e7
   parent_composite: Social Media Icons weiss.ai
-  sha256: null
-  byte_length: null
+  sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
+  byte_length: 1774462
 - basename: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
     Media Icons weiss--1.pdf
   on_disk: true
@@ -1890,8 +2243,8 @@ assets:
   referenced_from_frames:
   - u3f0
   parent_composite: Social Media Icons weiss.ai
-  sha256: null
-  byte_length: null
+  sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
+  byte_length: 1774462
 - basename: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
     Media Icons weiss--2.pdf
   on_disk: true
@@ -1899,36 +2252,36 @@ assets:
   referenced_from_frames:
   - u3f5
   parent_composite: Social Media Icons weiss.ai
-  sha256: null
-  byte_length: null
+  sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
+  byte_length: 1774462
 - basename: social-media-icon-facebook.png
   on_disk: true
   classified: embedded
   referenced_from_frames: []
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 674719499cf5a27aadd862a9250c8192899771328329cefcde5983ac4ad5653a
+  byte_length: 7979
 - basename: social-media-icon-instagram.png
   on_disk: true
   classified: embedded
   referenced_from_frames: []
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 1f6321928819857cad67af611a1df3e40166b7d8921b302499e020987d074ab5
+  byte_length: 13569
 - basename: social-media-icon-tiktok.png
   on_disk: true
   classified: embedded
   referenced_from_frames: []
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 707cce01ad0cf4f4a6e96c1a36c313ac6e952fde1c1ac21aaf9969ac6067d901
+  byte_length: 11644
 - basename: social-media-icon-x.png
   on_disk: true
   classified: embedded
   referenced_from_frames: []
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: ca928484af99e9e06667d352a2b23608564b5a45644de1808690b01f8570e31c
+  byte_length: 14262
 words:
   baseline_pdf_count: 444
   preview_pdf_count: 444
