@@ -10,6 +10,9 @@ labels:
 - skills
 - workflow
 - visual-qa
+source: github
+source_id: '78'
+source_url: 'https://github.com/GrueneAT/vorlagen/issues/78'
 ---
 
 ## Context
