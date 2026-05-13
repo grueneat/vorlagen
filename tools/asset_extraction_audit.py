@@ -29,6 +29,7 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import unquote, urlparse
 
 import yaml
 from lxml import etree
@@ -47,17 +48,20 @@ _DISTINCT_OFFSETS_THRESHOLD = 2
 
 
 def _basename_from_uri(uri: str) -> str:
-    """Strip file:// prefixes and return the final path component (NFC-normalised)."""
+    """Return the basename of a ``file:`` URI, URL-decoded and NFC-normalised.
+
+    macOS InDesign emits URIs with percent-encoded UTF-8 and NFD (decomposed)
+    Unicode for accented chars (e.g. ``u%CC%88`` for ``ü``); the rest of the
+    toolchain assumes NFC, so decode + normalise here to keep filesystem and
+    manifest lookups stable.
+    """
     if not uri:
         return ""
-    cleaned = uri
-    for prefix in ("file://", "file:"):
-        if cleaned.startswith(prefix):
-            cleaned = cleaned[len(prefix):]
-            break
-    # The URI may use forward slashes regardless of source OS.
-    name = cleaned.rsplit("/", 1)[-1]
-    return unicodedata.normalize("NFC", name)
+    parsed = urlparse(uri)
+    if parsed.scheme not in ("file", ""):
+        return ""
+    raw_path = unquote(parsed.path)
+    return unicodedata.normalize("NFC", Path(raw_path).name)
 
 
 def _iter_idml_link_uris(idml_path: Path) -> list[tuple[str, str]]:
@@ -84,6 +88,8 @@ def _iter_idml_link_uris(idml_path: Path) -> list[tuple[str, str]]:
                 continue
             # Every <Link> with a LinkResourceURI attribute is a candidate.
             for link in root.iter():
+                if not isinstance(link.tag, str):
+                    continue
                 tag = etree.QName(link).localname
                 if tag != "Link":
                     continue
@@ -141,6 +147,8 @@ def _iter_image_offsets_for_link(
                 continue
             # Find every Link element whose URI basename matches.
             for link in root.iter():
+                if not isinstance(link.tag, str):
+                    continue
                 tag = etree.QName(link).localname
                 if tag != "Link":
                     continue
@@ -309,7 +317,7 @@ def audit(
         if is_composite:
             composite_ai_detected.append(
                 {
-                    "path": str(ai_path.relative_to(repo_root)) if _is_under(ai_path, repo_root) else str(ai_path),
+                    "path": str(ai_path.resolve().relative_to(repo_root.resolve())) if _is_under(ai_path, repo_root) else str(ai_path),
                     "page_count": meas.page_count if meas else None,
                     "aspect_ratio": round(meas.aspect_ratio, 2) if meas else None,
                     "distinct_offsets_count": len(offsets),

@@ -24,7 +24,7 @@ build:
 # overrides for `tools/check_ci.py` allowing the document-local non-CI styles and
 # colors that the original Postkarte ships with.
 original_sla: ../../postkarte-vorlage-original.sla
-previews_for_sla: 4ce2239e94ff4d8fdf970f8faa03248ce4a36017dadb21103f1bddf036615edd
+previews_for_sla: 53171599e1cf9ce38aed39a3cd407f6d3e8c8f937be7df447d5ed87bbdf1e14a
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-

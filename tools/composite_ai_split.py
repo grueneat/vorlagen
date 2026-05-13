@@ -25,11 +25,30 @@ import argparse
 import shutil
 import subprocess
 import sys
+import unicodedata
 import zipfile
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import yaml
 from lxml import etree
+
+
+def _basename_from_uri(uri: str) -> str:
+    """URL-decode + NFC-normalise the basename of a ``file:`` URI.
+
+    Mirrors ``tools/idml_to_dsl.py::_basename_from_uri`` — InDesign on macOS
+    emits Link URIs with percent-encoded UTF-8 and NFD Unicode (e.g.
+    ``Gru%CC%88ne%20Logo%20Bund...``), so a literal Path(uri).name never
+    matches the filesystem-NFC basename.
+    """
+    if not uri:
+        return ""
+    parsed = urlparse(uri)
+    if parsed.scheme not in ("file", ""):
+        return ""
+    raw_path = unquote(parsed.path)
+    return unicodedata.normalize("NFC", Path(raw_path).name)
 
 
 def _parse_transform(s: str) -> tuple[float, float, float, float, float, float] | None:
@@ -63,14 +82,20 @@ def _iter_imageframes_for_ai(
             except (etree.XMLSyntaxError, KeyError):
                 continue
             for link in root.iter():
+                if not isinstance(link.tag, str):
+                    continue
                 if etree.QName(link).localname != "Link":
                     continue
                 uri = link.get("LinkResourceURI", "") or ""
-                if Path(uri).name != ai_basename:
+                if _basename_from_uri(uri) != ai_basename:
                     continue
-                # Image element is link's parent in IDML.
+                # Content element is link's parent in IDML; AI placements are
+                # parented by <PDF> (vector), JPEG/PSD/TIFF by <Image>, EPS by
+                # <EPS>. Accept all three so .ai imports actually match.
                 image = link.getparent()
-                if image is None or etree.QName(image).localname != "Image":
+                if image is None or etree.QName(image).localname not in (
+                    "Image", "PDF", "EPS",
+                ):
                     continue
                 image_tf = _parse_transform(image.get("ItemTransform", "")) or (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
                 # Walk up to the frame (Rectangle / Polygon / Oval).

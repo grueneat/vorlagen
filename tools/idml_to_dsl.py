@@ -128,6 +128,26 @@ CI_YAML = ROOT / "shared" / "ci.yml"
 PT_TO_MM = 25.4 / 72.0
 MM_TO_PT = 72.0 / 25.4
 
+# InDesign's LeadingModelAkiBelow inserts ~12% extra "aki" (Japanese-typography
+# space) below each line, so the rendered baseline-to-baseline gap is larger
+# than the nominal Leading attribute. 16.0 / 14.3 ≈ 1.119 — measured against
+# this corpus' Fließtext style; if a future template uses a font/size combo
+# that deviates significantly, derive from OS/2 sTypoAscender/Descender.
+_AKI_BELOW_FACTOR = 16.0 / 14.3
+
+# Safe upper bounds on font metrics as a fraction of fontsize, used to budget
+# the first-baseline offset and last-line descender when widening text frames.
+# Scribus with FLOP=1 ("Font Ascent") places the first baseline at the maximum
+# ascent of any run on that line, and clips a line when its descender extends
+# below the frame bottom. Without these bounds the (n+0.5)*linesp formula
+# under-budgets when the last line uses a font with larger metrics than line 1
+# (e.g. Vollkorn Black Italic 30pt usWinAscent=33.45/usWinDescent=14.67 vs
+# Gotham Narrow Ultra 30pt 28.80/7.20) — empirically verified against this
+# template's u1b0/u1e6/u16c frames.
+_FONT_ASCENT_RATIO = 1.15   # covers Vollkorn Black Italic usWinAscent/em=1.115
+_FONT_DESCENT_RATIO = 0.55  # covers Vollkorn Black Italic usWinDescent/em=0.489
+_FRAME_HEIGHT_SAFETY_PT = 4.0  # absolute cushion for lineGap + Scribus rounding
+
 
 # Exact CMYK match (0..100 ints) -> brand-palette name, per locked decision #1.
 # Source: shared/ci.yml palette cross-referenced against IDML Resources/Graphic.xml.
@@ -417,23 +437,36 @@ def _pt_to_mm(value_pt: float) -> float:
 # 0.40 targets body copy; bolder or wider fonts may have higher ratios but the
 # heuristic is only applied to single-paragraph frames (no explicit breaklines) where
 # the IDML frame is already measured to be shorter than the text's natural height.
-_NARROW_CHAR_RATIO: float = 0.40
+_NARROW_CHAR_RATIO: float = 0.45
 
 
 def _required_text_frame_height_mm(
     point_size_pt: float,
     leading_pt: Optional[float],
+    leading_model: Optional[str] = None,
 ) -> float:
     """Minimum h_mm Scribus needs to render one line without clipping.
 
     Scribus suppresses lines when frame_h_pt < effective_line_height_pt.
     Effective line height is ``leading_pt`` (if explicitly set) else
-    ``point_size_pt * 1.2`` (standard auto-leading multiplier).
+    ``point_size_pt * 1.2`` (standard auto-leading multiplier). When the
+    paragraph style uses ``LeadingModelAkiBelow`` the rendered baseline-
+    to-baseline gap is ~12% larger than the nominal Leading; account for
+    that here so widening doesn't under-budget and clip the last line.
 
-    InDesign tolerates frame_h < line_height by silently overflowing;
-    Scribus does not. The converter compensates by widening h_mm when needed.
+    Also clamps degenerate authored leading (e.g. an IDML Leading of 1.9pt
+    on 11pt body) to at least the font size, mirroring InDesign's fall-back
+    to font-metric leading; Scribus otherwise enforces the literal Leading
+    and chops the line on wrap.
     """
-    line_h_pt = leading_pt if leading_pt is not None else point_size_pt * 1.2
+    if leading_pt is not None:
+        line_h_pt = leading_pt
+        if leading_model == "LeadingModelAkiBelow":
+            line_h_pt *= _AKI_BELOW_FACTOR
+    else:
+        multiplier = 1.45 if leading_model == "LeadingModelAkiBelow" else 1.2
+        line_h_pt = point_size_pt * multiplier
+    line_h_pt = max(line_h_pt, point_size_pt)
     return line_h_pt * PT_TO_MM
 
 
@@ -473,6 +506,9 @@ def _maybe_widen_frame_h(
     total_text_chars: int = 0,
     frame_w_mm: float = 0.0,
     explicit_line_count: int = 0,
+    leading_model: Optional[str] = None,
+    paragraph_char_counts: Optional[list[int]] = None,
+    intrinsic_line_ratio: float = 1.1,
 ) -> tuple[float, Optional[str]]:
     """If the frame's h_mm is too small for the text content, return widened h_mm
     and a comment explaining the adjustment. Otherwise return idml_h_mm unchanged.
@@ -503,29 +539,77 @@ def _maybe_widen_frame_h(
     """
     if max_fontsize_pt is None:
         return idml_h_mm, None
-    line_h_pt = leading_pt if leading_pt is not None else max_fontsize_pt * 1.2
+    if leading_pt is not None:
+        line_h_pt = leading_pt
+        if leading_model == "LeadingModelAkiBelow":
+            line_h_pt *= _AKI_BELOW_FACTOR
+    else:
+        multiplier = 1.45 if leading_model == "LeadingModelAkiBelow" else 1.2
+        line_h_pt = max_fontsize_pt * multiplier
+    # Scribus enforces a font-intrinsic minimum line height; if the authored
+    # Leading falls below it Scribus silently clamps (auto-from-metrics).
+    # The widening budget MUST match what Scribus actually renders, so floor
+    # at fontsize × intrinsic_line_ratio. Caller passes 1.5 for serif fonts
+    # with deep metrics (Vollkorn) and 1.1 for sans-serif (Gotham).
+    line_h_pt = max(line_h_pt, max_fontsize_pt * intrinsic_line_ratio)
     line_h_mm = line_h_pt * PT_TO_MM
     epsilon_mm = 0.05  # avoid flapping on sub-mm rounding
 
-    # Sub-case A: can't show even one line.
-    required_mm_one_line = line_h_mm
-    if idml_h_mm < required_mm_one_line - epsilon_mm:
-        leading_desc = (
-            f"leading={leading_pt:.2f}pt" if leading_pt is not None
-            else f"auto-leading={max_fontsize_pt:.0f}pt×1.2"
+    # Sub-case A's one-line budget. Don't return immediately — compute it
+    # but defer the actual widening decision until after Sub-case B runs,
+    # so frames whose IDML h falls between (one line) and (two soft-wrapped
+    # lines) get the correct larger budget.
+    if explicit_line_count < 2:
+        one_line_pt = (
+            _FONT_ASCENT_RATIO * max_fontsize_pt
+            + _FONT_DESCENT_RATIO * max_fontsize_pt
+            + _FRAME_HEIGHT_SAFETY_PT
         )
-        comment = (
-            f"h_mm widened {idml_h_mm:.4f}mm→{required_mm_one_line:.4f}mm: "
-            f"Scribus clips lines when frame_h < effective line height "
-            f"({leading_desc}; IDML overflows silently)"
+        required_mm_one_line = max(line_h_mm, one_line_pt * PT_TO_MM)
+    else:
+        required_mm_one_line = line_h_mm
+
+    # When paragraph_char_counts are provided, compute visual lines per
+    # paragraph (each paragraph wraps independently). This is more accurate
+    # than treating the whole frame as one continuous text block.
+    # - Headlines: [13, 9] → 1 + 1 = 2 lines (matches baseline)
+    # - Zitat:     [41, 6] → 2 + 1 = 3 lines (matches baseline)
+    # - Kasten:    [31]    → 2 lines       (matches baseline)
+    if paragraph_char_counts and frame_w_mm > 0.0 and max_fontsize_pt > 0:
+        per_para_lines = sum(
+            max(1, _estimate_line_count(c, frame_w_mm, max_fontsize_pt))
+            for c in paragraph_char_counts
         )
-        return required_mm_one_line, comment
+        explicit_line_count = max(explicit_line_count, per_para_lines)
 
     # Sub-case C: explicit line count (from breakline/para separators) — exact.
     # Runs that carry separator=breakline or separator=para each add an explicit
     # newline; explicit_line_count = separator_count + 1 (at minimum 1).
     if explicit_line_count >= 2:
-        required_mm_explicit = explicit_line_count * line_h_mm
+        # Two formulas:
+        # (a) Leading already covers ascent+descent: when ls_pt >= fontsize×0.9,
+        #     the authored Leading is generous; budget = n * ls_pt + safety.
+        #     Avoids over-allocating when the IDML's Leading is already large
+        #     (Headlines case: 27pt Leading on 30pt font, ratio 0.9). The
+        #     previous formula added ascent+descent ON TOP, ballooning the
+        #     frame past the next pageitem and contaminating the audit's
+        #     pdfplumber bbox-based line extraction.
+        # (b) Tight Leading: when ls_pt < fontsize×0.9, Scribus needs extra
+        #     vertical room for ascent of line 1 + descent of line N, so
+        #     budget = ascent + (n-1)*ls + descent + safety.
+        ls_pt = line_h_pt  # already AKI-inflated above when applicable
+        if ls_pt >= max_fontsize_pt * 0.9:
+            required_pt_explicit = (
+                explicit_line_count * ls_pt + _FRAME_HEIGHT_SAFETY_PT
+            )
+        else:
+            required_pt_explicit = (
+                _FONT_ASCENT_RATIO * max_fontsize_pt
+                + (explicit_line_count - 1) * ls_pt
+                + _FONT_DESCENT_RATIO * max_fontsize_pt
+                + _FRAME_HEIGHT_SAFETY_PT
+            )
+        required_mm_explicit = required_pt_explicit * PT_TO_MM
         if idml_h_mm < required_mm_explicit - epsilon_mm:
             leading_desc = (
                 f"leading={leading_pt:.2f}pt" if leading_pt is not None
@@ -538,26 +622,44 @@ def _maybe_widen_frame_h(
             )
             return required_mm_explicit, comment
 
-    # Sub-case B: frame fits ≥1 line but not all lines (InDesign overset on
-    # single-paragraph text). Only run when caller supplied text measurement data.
+    # Sub-case B: single-paragraph soft-wrap. Estimate visual lines from
+    # total char count + frame width; widen when frame_h falls below the
+    # estimated total height. For multi-paragraph frames Sub-case C above
+    # would have returned already.
+    required_mm_all = 0.0
     if total_text_chars > 0 and frame_w_mm > 0.0 and max_fontsize_pt > 0:
         n_lines = _estimate_line_count(total_text_chars, frame_w_mm, max_fontsize_pt)
-        required_mm_all = n_lines * line_h_mm
-        # Widen when frame_h < estimated total height. The conservative char-width
-        # ratio (_NARROW_CHAR_RATIO=0.40) under-estimates chars_per_line, so n_lines
-        # tends to be ≥ actual; widening is only triggered when the deficit is real.
-        if idml_h_mm < required_mm_all - epsilon_mm:
-            leading_desc = (
-                f"leading={leading_pt:.2f}pt" if leading_pt is not None
-                else f"auto-leading={max_fontsize_pt:.0f}pt×1.2"
+        if n_lines >= 2:
+            required_pt_b = (
+                _FONT_ASCENT_RATIO * max_fontsize_pt
+                + (n_lines - 1) * line_h_pt
+                + _FONT_DESCENT_RATIO * max_fontsize_pt
+                + _FRAME_HEIGHT_SAFETY_PT
             )
+            required_mm_all = required_pt_b * PT_TO_MM
+
+    # Choose the largest budget across A and B, widen if frame is below it.
+    target_mm = max(required_mm_one_line, required_mm_all)
+    if idml_h_mm < target_mm - epsilon_mm:
+        leading_desc = (
+            f"leading={leading_pt:.2f}pt" if leading_pt is not None
+            else f"auto-leading={max_fontsize_pt:.0f}pt×1.2"
+        )
+        if required_mm_all > required_mm_one_line:
+            n_lines_est = _estimate_line_count(total_text_chars, frame_w_mm, max_fontsize_pt)
             comment = (
-                f"h_mm widened {idml_h_mm:.4f}mm→{required_mm_all:.4f}mm: "
-                f"IDML overset text ({total_text_chars} chars, ~{n_lines} lines "
+                f"h_mm widened {idml_h_mm:.4f}mm→{target_mm:.4f}mm: "
+                f"IDML overset text ({total_text_chars} chars, ~{n_lines_est} lines "
                 f"estimated at {max_fontsize_pt:.0f}pt {_NARROW_CHAR_RATIO:.2f}× "
                 f"ratio, {leading_desc}; Scribus clips, InDesign overflows silently)"
             )
-            return required_mm_all, comment
+        else:
+            comment = (
+                f"h_mm widened {idml_h_mm:.4f}mm→{target_mm:.4f}mm: "
+                f"Scribus clips lines when frame_h < effective line height "
+                f"({leading_desc}; IDML overflows silently)"
+            )
+        return target_mm, comment
 
     return idml_h_mm, None
 
@@ -688,6 +790,15 @@ class _Ctx:
     printable_layer_ids: set[str] = field(default_factory=set)
     # Filled by Phase F (task 4)
     color_map: dict[str, str] = field(default_factory=dict)
+    # Non-brand swatches the IDML uses (print-mark colors like Endformat /
+    # Druckformat, etc.). Emitted as ``doc.add_color(name, cmyk=...)`` so the
+    # referencing items render in the right colour. Keyed by dsl name.
+    extra_colors: dict[str, tuple[int, int, int, int]] = field(default_factory=dict)
+    # Subset of ``printable_layer_ids`` (visible-layer ids) whose IDML
+    # Printable attribute is also true. Items on a visible-but-non-printable
+    # layer (Info/print-mark layer) get a narrower handler — e.g. GraphicLine
+    # is silently skipped because Falz lines are added manually post-bootstrap.
+    truly_printable_layer_ids: set[str] = field(default_factory=set)
     # Filled by Phase G (task 5)
     paragraph_style_map: dict[str, str] = field(default_factory=dict)
     paragraph_styles: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -878,7 +989,19 @@ def _parse_color_value(s: str) -> tuple[int, int, int, int]:
     return tuple(vals)  # type: ignore[return-value]
 
 
-def _emit_colors_from_xml(graphic_xml: bytes, used_colors: set[str]) -> dict[str, str]:
+def _sanitize_color_name(self_id: str) -> str:
+    """Map ``Color/Endformat`` -> ``Endformat`` for use as a DSL color name."""
+    if "/" in self_id:
+        self_id = self_id.split("/", 1)[1]
+    out = re.sub(r"[^A-Za-z0-9_]+", "_", self_id).strip("_")
+    return out or "ExtraColor"
+
+
+def _emit_colors_from_xml(
+    graphic_xml: bytes,
+    used_colors: set[str],
+    extra_colors: dict[str, tuple[int, int, int, int]] | None = None,
+) -> dict[str, str]:
     """Parse a Resources/Graphic.xml blob and return idml_self → dsl_name map.
 
     Args:
@@ -886,13 +1009,16 @@ def _emit_colors_from_xml(graphic_xml: bytes, used_colors: set[str]) -> dict[str
         used_colors: set of IDML Self IDs that are referenced by a printable
             PageItem or Story. Used to gate the "non-brand printable raises"
             vs "non-brand unused silently dropped" branches.
+        extra_colors: out-dict for non-brand swatches that are referenced by
+            a printable item. The caller emits ``doc.add_color(name, cmyk=...)``
+            for each entry so referencing items render in their authored colour.
 
     Returns:
         Map ``{idml_self_id: brand_or_local_dsl_name}``. Caller stores on ctx.
 
     Raises:
-        UnhandledElement when a referenced color cannot be mapped to a brand
-        name (locked decision #1: snap-to-brand fuzzy matching is OOS for v1).
+        UnhandledElement only when colour space / value is unparseable; non-
+        brand CMYK swatches are auto-registered as document-local colours.
     """
     root = etree.fromstring(graphic_xml, parser=_SECURE_XMLPARSER)
     resolved: dict[str, str] = {}
@@ -937,14 +1063,16 @@ def _emit_colors_from_xml(graphic_xml: bytes, used_colors: set[str]) -> dict[str
         if brand_name is not None:
             resolved[self_id] = brand_name
             continue
-        # Non-brand printable swatch.
+        # Non-brand printable swatch. Register as a document-local colour
+        # (the converter previously raised here; that lost authored print-
+        # mark colours like "Endformat" / "Druckformat" and dropped the
+        # items using them out of the render entirely).
         if self_id in used_colors:
-            raise UnhandledElement(
-                f"Color {self_id!r} CMYK={cmyk} does not match shared/ci.yml "
-                f"brand palette and is used by a printable PageItem. "
-                f"(extend tools/idml_to_dsl.py:_emit_colors_from_xml or add "
-                f"to COLOR_CMYK_TO_BRAND)"
-            )
+            dsl_name = _sanitize_color_name(self_id)
+            resolved[self_id] = dsl_name
+            if extra_colors is not None:
+                extra_colors[dsl_name] = cmyk
+            continue
         # Declared-but-unused non-brand: silently drop.
     return resolved
 
@@ -994,10 +1122,12 @@ def _collect_used_fillcolors(pkg: Any, printable_layer_ids: set[str]) -> set[str
 
 
 def _emit_colors(ctx: _Ctx) -> None:
-    """Phase F driver. Populates ctx.color_map."""
+    """Phase F driver. Populates ctx.color_map and ctx.extra_colors."""
     used = _collect_used_fillcolors(ctx.pkg, ctx.printable_layer_ids)
     graphic_xml = ctx.pkg.open("Resources/Graphic.xml").read()
-    ctx.color_map = _emit_colors_from_xml(graphic_xml, used)
+    ctx.color_map = _emit_colors_from_xml(
+        graphic_xml, used, extra_colors=ctx.extra_colors,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1158,12 +1288,25 @@ def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, An
         fill_color = ps.get("FillColor")
         font_style = ps.get("FontStyle")
         justification = ps.get("Justification")
+        # LeadingModel controls how nominal Leading converts to baseline-to-
+        # baseline gap. "LeadingModelAkiBelow" — InDesign's Japanese-typography
+        # model used by default in this corpus — adds ~12% aki below each
+        # line, so an authored Leading of 14.3pt renders at ~16.0pt actual.
+        # We thread this through to linesp emission and frame-height widening.
+        leading_model = ps.get("LeadingModel")
+        # GridAlignment="AlignBaseline" gates the AkiBelow inflation —
+        # InDesign only snaps to baseline grid (and applies the inflated
+        # gap) when the style aligns. With GridAlignment="None" the raw
+        # Leading is used. (Agent-found root cause for absatzformat-1.)
+        grid_alignment = ps.get("GridAlignment")
         styles[self_id] = {
             "self_id": self_id,
             "name": name,
             "based_on_self": based_on,
             "point_size": float(point_size) if point_size is not None else None,
             "leading": leading,
+            "leading_model": leading_model,
+            "grid_alignment": grid_alignment,
             "fill_color": fill_color,
             "font_style": font_style,
             "justification": justification,
@@ -1186,8 +1329,9 @@ def _resolve_paragraph_style(
     while parent_self and parent_self in all_styles and parent_self not in visited:
         visited.add(parent_self)
         parent = all_styles[parent_self]
-        for k in ("point_size", "leading", "fill_color", "font_style",
-                  "justification", "applied_font", "tab_stops"):
+        for k in ("point_size", "leading", "leading_model", "grid_alignment",
+                  "fill_color", "font_style", "justification", "applied_font",
+                  "tab_stops"):
             if resolved.get(k) is None:
                 resolved[k] = parent.get(k)
         parent_self = parent.get("based_on_self")
@@ -1301,11 +1445,34 @@ def _emit_paragraph_styles_to_function(
             if fc and fc in ctx.color_map:
                 kwargs["fcolor"] = ctx.color_map[fc]
             ld = resolved.get("leading")
+            model = resolved.get("leading_model")
+            grid = resolved.get("grid_alignment")
             if ld and ld != "Auto":
                 try:
-                    kwargs["linesp"] = float(ld)
+                    lp = float(ld)
+                    # AkiBelow inflates Leading by ~12% ONLY when the style
+                    # snaps to the baseline grid (GridAlignment=AlignBaseline).
+                    # Styles with GridAlignment=None use raw Leading. (Agent
+                    # finding for absatzformat-1: same Leading=14.3 inherited
+                    # from fliesstext, but renders literally because Grid=
+                    # None overrides parent's AlignBaseline.)
+                    if (
+                        model == "LeadingModelAkiBelow"
+                        and grid == "AlignBaseline"
+                    ):
+                        lp *= _AKI_BELOW_FACTOR
+                    kwargs["linesp"] = lp
                 except ValueError:
                     pass
+            elif ld == "Auto" or ld is None:
+                # Auto leading: rendered gap depends on LeadingModel. AkiBelow
+                # ≈ pointsize × 1.45 (typography model with descender + aki).
+                # Default ≈ pointsize × 1.2. Without this, Auto-led styles
+                # (e.g. aufzaehlungen) render ~12% tighter than baseline.
+                pt = resolved.get("point_size")
+                if pt is not None:
+                    multiplier = 1.45 if model == "LeadingModelAkiBelow" else 1.2
+                    kwargs["linesp"] = float(pt) * multiplier
             # Tab stops: emit only those defined directly on THIS style (not inherited),
             # so child styles don't redundantly repeat the parent's tab stops.
             own_tabs = st.get("tab_stops")
@@ -1313,6 +1480,20 @@ def _emit_paragraph_styles_to_function(
                 kwargs["tab_stops"] = tuple(
                     (round(pos, 4), typ) for pos, typ in own_tabs
                 )
+                # IDML's bullet-list pattern stores Content as
+                # ``\t•\t<?ACE 7?>`` — the ACE 7 marker is InDesign's
+                # "indent-to-here" character. Bullet styles have TWO tab
+                # stops (one before the bullet, one before the text);
+                # single-tab styles (e.g. Fließtext with one TabList entry
+                # for inline tabbing) are not bullet lists and should NOT
+                # get a hanging indent. Synthesize the hanging indent only
+                # for the bullet pattern: LEFT_INDENT = max tab pos and
+                # FIRST_LINE_INDENT = −max tab pos so wrapped lines align
+                # with the post-bullet text.
+                if len(own_tabs) >= 2:
+                    max_tab_pt = max(pos for pos, _ in own_tabs)
+                    kwargs["left_indent_pt"] = round(max_tab_pt, 4)
+                    kwargs["first_indent_pt"] = round(-max_tab_pt, 4)
             ctx.out.w("doc.add_para_style(ParaStyle(")
             ctx.out.indent += 1
             for k, v in kwargs.items():
@@ -1665,7 +1846,12 @@ def _emit_pageitem(
                 abs_mapped = (
                     mapped_path if mapped_path.is_absolute() else ROOT / mapped_path
                 )
-                # Extract per-PDF placement params from the PDF child's ItemTransform.
+                # Extract per-PDF placement params from the PDF child's
+                # ItemTransform, then COMPOSE with the parent Rectangle's
+                # outer scale. Scribus's LOCALSCX is applied in rendered
+                # (post-Rectangle-transform) coordinates; the PDF child's
+                # ItemTransform is in frame-LOCAL coordinates. Composing
+                # gives the correct rendered-space scale.
                 pdf_transform_str = pdf.get("ItemTransform", "")
                 pdf_local_scale: Optional[tuple[float, float]] = None
                 pdf_local_offset: Optional[tuple[float, float]] = None
@@ -1673,6 +1859,13 @@ def _emit_pageitem(
                     pdf_local_scale, pdf_local_offset = _extract_content_local_params(
                         pdf_transform_str, frame_tl_anchor,
                     )
+                    rect_a, _rb, _rc, rect_d, _, _ = _parse_matrix(item_t)
+                    if pdf_local_scale is not None:
+                        sx, sy = pdf_local_scale
+                        pdf_local_scale = (sx * rect_a, sy * rect_d)
+                    if pdf_local_offset is not None:
+                        ox, oy = pdf_local_offset
+                        pdf_local_offset = (ox * rect_a, oy * rect_d)
                 # Issue #39 Phase A + C: route through the inline-vs-
                 # relative helper. Never emit absolute paths.
                 _emit_image_or_inline(
@@ -1751,14 +1944,17 @@ def _emit_pageitem(
                     except (ValueError, TypeError):
                         pass
         # Fall back to paragraph-style leading if no CSR-level leading found.
-        if _leading_pt is None and _first_psr_style_self:
+        _leading_model: Optional[str] = None
+        if _first_psr_style_self:
             _ps_data = ctx.paragraph_styles.get(_first_psr_style_self, {})
-            _ld_str = _ps_data.get("leading")
-            if _ld_str and _ld_str != "Auto":
-                try:
-                    _leading_pt = float(_ld_str)
-                except (ValueError, TypeError):
-                    pass
+            _leading_model = _ps_data.get("leading_model")
+            if _leading_pt is None:
+                _ld_str = _ps_data.get("leading")
+                if _ld_str and _ld_str != "Auto":
+                    try:
+                        _leading_pt = float(_ld_str)
+                    except (ValueError, TypeError):
+                        pass
 
         # Explicit line count (sub-case C) and total text chars (sub-case B).
         # Sub-case C: frames with breakline/para separators have an exact line count
@@ -1768,25 +1964,44 @@ def _emit_pageitem(
         # explicit newlines are present (heuristic would double-count).
         _total_text_chars: int = 0
         _explicit_line_count: int = 0
+        _paragraph_char_counts: list[int] = []
         if runs:
+            # Split chars into per-paragraph buckets. Each breakline/para
+            # separator opens a new bucket so wrap estimation can be done
+            # per-paragraph (more accurate than treating runs as one block).
+            current_bucket = 0
+            for _r in runs:
+                if _r.separator in ("breakline", "para"):
+                    _paragraph_char_counts.append(current_bucket)
+                    current_bucket = 0
+                elif _r.text:
+                    current_bucket += len(_r.text)
+                    _total_text_chars += len(_r.text)
+            _paragraph_char_counts.append(current_bucket)
             _separator_count = sum(
                 1 for _r in runs if _r.separator in ("breakline", "para")
             )
             if _separator_count > 0:
-                # Sub-case C: exact line count from separators.
                 _explicit_line_count = _separator_count + 1
-            else:
-                # Sub-case B: single-paragraph char-count heuristic.
-                for _r in runs:
-                    if _r.separator is None and _r.text:
-                        _total_text_chars += len(_r.text)
 
         emitted_h_mm = _round_mm(h_mm)
+        # Detect font family for the intrinsic line-height floor. Serif
+        # fonts with deeper metrics (Vollkorn) need ~1.5× fontsize; sans-
+        # serif narrow fonts (Gotham Narrow) only need ~1.1×.
+        _intrinsic = 1.1
+        if runs:
+            for _r in runs:
+                fn = (_r.font or "").lower()
+                if "vollkorn" in fn or "serif" in fn:
+                    _intrinsic = max(_intrinsic, 1.5)
         _widened_h_mm, _widen_comment = _maybe_widen_frame_h(
             emitted_h_mm, _max_fontsize_pt, _leading_pt,
             total_text_chars=_total_text_chars,
             frame_w_mm=_round_mm(w_mm),
             explicit_line_count=_explicit_line_count,
+            leading_model=_leading_model,
+            paragraph_char_counts=_paragraph_char_counts,
+            intrinsic_line_ratio=_intrinsic,
         )
         if _widen_comment:
             ctx.out.w(f"# {_widen_comment}")
@@ -1823,7 +2038,18 @@ def _emit_pageitem(
         # inherit DefaultStyle's non-Left value. Pinning DefaultStyle and
         # also emitting per-paragraph ALIGN on EVERY PSR (below at line
         # ~2283) gives Scribus an unambiguous answer for every paragraph.
-        if _first_psr_style_self and _first_psr_style_self in ctx.paragraph_styles:
+        # Only emit default_style_attrs={"ALIGN": ...} when no named style is
+        # set on the frame; the DSL warns that style= + default_style_attrs=
+        # is ambiguous (default_style_attrs override the parent's attrs on
+        # the same <DefaultStyle/> element). When style= is set, the named
+        # ParaStyle already carries the alignment via its Justification
+        # attribute, and per-paragraph ALIGN is emitted on every PSR below
+        # so Scribus has an unambiguous answer for every paragraph.
+        if (
+            not style_slug
+            and _first_psr_style_self
+            and _first_psr_style_self in ctx.paragraph_styles
+        ):
             _eff_just = ctx.paragraph_styles[_first_psr_style_self].get("justification")
             if _eff_just in JUSTIFICATION_MAP:
                 kwargs["default_style_attrs"] = {
@@ -2019,6 +2245,73 @@ def _extract_content_local_params(
     return ((scx, scy), (offset_x_pt, offset_y_pt))
 
 
+def _read_image_dimensions(
+    *,
+    inline_data: Optional[str] = None,
+    inline_ext: Optional[str] = None,
+    image_path: Optional[str] = None,
+    ctx: Optional[_Ctx] = None,
+) -> tuple[Optional[int], Optional[int], float]:
+    """Return (width_px, height_px, dpi) for an image referenced by an
+    ImageFrame. Handles both inline (qCompress base64) and SLA-relative
+    path images. Falls back to (None, None, 72.0) when the image can't be
+    read — callers degrade gracefully.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        return None, None, 72.0
+    img = None
+    try:
+        if image_path:
+            # SLA-relative path → resolve against ROOT (the converter
+            # always emits paths relative to the SLA's parent which is
+            # templates/<slug>/, so ../../ takes us to ROOT).
+            p = Path(image_path)
+            if p.is_absolute():
+                resolved = p
+            else:
+                resolved = (
+                    ROOT
+                    / "templates"
+                    / (ctx.template_id if ctx is not None else "")
+                    / p
+                ).resolve()
+                if not resolved.exists():
+                    # Try ROOT-anchored interpretation.
+                    resolved = (ROOT / p.name).resolve()
+            if resolved.exists():
+                img = Image.open(str(resolved))
+        elif inline_data:
+            # qCompress format: first 4 bytes are big-endian uncompressed
+            # length; the rest is zlib-compressed. See sla_lib pack_inline_image.
+            import base64
+            import zlib
+            from io import BytesIO
+            raw = base64.b64decode(inline_data)
+            try:
+                payload = zlib.decompress(raw[4:])
+            except zlib.error:
+                payload = raw  # fall back to raw bytes
+            img = Image.open(BytesIO(payload))
+        if img is None:
+            return None, None, 72.0
+        w, h = img.size
+        dpi = 72.0
+        info_dpi = img.info.get("dpi")
+        if info_dpi and isinstance(info_dpi, tuple) and info_dpi[0]:
+            dpi = float(info_dpi[0])
+        return w, h, dpi
+    except Exception:
+        return None, None, 72.0
+    finally:
+        if img is not None:
+            try:
+                img.close()
+            except Exception:
+                pass
+
+
 def _emit_image_frame_call(
     out: PythonRepr,
     x_mm: float,
@@ -2054,28 +2347,124 @@ def _emit_image_frame_call(
     # Emit content placement params when they deviate meaningfully from defaults.
     # Scribus default: local_scale=(1,1), local_offset=(0,0).
     #
-    # Issue #37 P1 task 4: Backport 10 set the dataclass default scale_type=0
-    # (Scribus ScaleAuto = fit-to-frame). SCALETYPE=0 IGNORES LOCALX/LOCALY/
-    # LOCALSCX/LOCALSCY at render time, so any LOCAL* kwargs we emit here are
-    # silently dropped by Scribus unless we ALSO emit scale_type=1
-    # (free scaling). Flag it whenever local_scale or local_offset deviates
-    # from defaults.
-    needs_free_scaling = False
+    # scale_type semantics:
+    #   0 = Scribus ScaleAuto: fit content proportionally to frame; Scribus
+    #       computes LOCALSCX/SCY itself. Right for brand logos and content
+    #       photos that should fill their frame (matches v2 sibling pattern).
+    #   1 = Free scaling: Scribus uses LOCALSCX/SCY + LOCALX/Y verbatim.
+    #       Right for composite-AI icons that need precise sub-rect crops.
+    #
+    # Rule: use scale_type=1 ONLY when a non-zero local_offset is supplied
+    # (i.e. a composite-AI placement that needs both crop and scale honoured
+    # verbatim). For all other cases — including image frames with non-unit
+    # local_scale — emit scale_type=0 so Scribus fits the inline asset to
+    # the frame. SCALETYPE=1 with the converter's literal IDML-derived
+    # local_scale renders the asset at its native pixel size relative to
+    # the frame, which zooms it past the frame edges and shows nothing
+    # (DIE GRÜNEN logo + ziesel photo regression).
+    # IDML's <Image>/<PDF> ItemTransform carries the FILL scale (e.g. 0.43)
+    # but NOT the centering offset — InDesign computes that at render time
+    # for FittingOnEmptyFrame=FillProportionally. Scribus has no equivalent
+    # mode, so we must compute the centering offset ourselves so the image
+    # is centered (and excess cropped equally on both sides) instead of
+    # rendering at the frame's top-left and cropping bottom/right.
+    img_w_px, img_h_px, img_dpi = _read_image_dimensions(
+        inline_data=inline_data, inline_ext=inline_ext, image_path=image_path,
+        ctx=ctx,
+    )
     if local_scale is not None:
         scx, scy = local_scale
-        if abs(scx - 1.0) > 1e-4 or abs(scy - 1.0) > 1e-4:
+        # Composite-AI detection: a tight horizontal/vertical strip whose
+        # source image is much wider than the frame, AND the IDML's
+        # translation picks a sub-region (different per-frame). When this
+        # fires we emit scale_type=1 + the IDML's literal LOCALSCX/Y/X/Y
+        # so Scribus picks the right icon. For regular fill-frame photos
+        # (whose source image is only modestly larger than the frame, and
+        # whose IDML translation is the natural FillProportionally crop),
+        # let Scribus auto-fit via scale_type=0 — that handles tiny
+        # frames where our fill-and-crop math becomes invisible.
+        is_composite_crop = False
+        if local_offset_pt is not None and img_w_px and img_h_px:
+            ox, oy = local_offset_pt
+            img_w_pt = img_w_px * 72.0 / img_dpi
+            img_h_pt = img_h_px * 72.0 / img_dpi
+            frame_w_pt = w_mm / PT_TO_MM if w_mm > 0 else 1.0
+            frame_h_pt = h_mm / PT_TO_MM if h_mm > 0 else 1.0
+            # Source image must be at least 5× the frame in one direction
+            # AND the IDML must store a non-zero translation.
+            wide_strip = (
+                img_w_pt > 5 * frame_w_pt or img_h_pt > 5 * frame_h_pt
+            )
+            has_translation = abs(ox) > 1.0 or abs(oy) > 1.0
+            if wide_strip and has_translation:
+                is_composite_crop = True
+        if is_composite_crop:
             kwargs["local_scale"] = (round(scx, 6), round(scy, 6))
-            needs_free_scaling = True
-    if local_offset_pt is not None:
+            kwargs["scale_type"] = 1
+            if local_offset_pt is not None:
+                ox_mm = local_offset_pt[0] * PT_TO_MM
+                oy_mm = local_offset_pt[1] * PT_TO_MM
+                if abs(ox_mm) > 1e-4 or abs(oy_mm) > 1e-4:
+                    kwargs["local_offset_mm"] = (
+                        round(ox_mm, 4), round(oy_mm, 4),
+                    )
+        elif img_w_px and img_h_px:
+            img_w_pt = img_w_px * 72.0 / img_dpi
+            img_h_pt = img_h_px * 72.0 / img_dpi
+            frame_w_pt = w_mm / PT_TO_MM if w_mm > 0 else 1.0
+            frame_h_pt = h_mm / PT_TO_MM if h_mm > 0 else 1.0
+            sx = frame_w_pt / img_w_pt if img_w_pt else 1.0
+            sy = frame_h_pt / img_h_pt if img_h_pt else 1.0
+            fill = max(sx, sy)
+            # Tiny frames (e.g. the social-media icons at 9.5×9.5pt):
+            # Scribus's free-scaling (SCALETYPE=1) at this size renders
+            # invisibly. Auto-fit (SCALETYPE=0) handles small icons
+            # correctly and the aspect mismatch is negligible for square
+            # icons in square-ish frames.
+            tiny_frame = frame_w_pt < 20 and frame_h_pt < 20
+            if tiny_frame:
+                kwargs["local_scale"] = (round(fill, 6), round(fill, 6))
+                # No scale_type override — defaults to 0 (auto-fit). Tiny
+                # frames intentionally skip the offset emit because the
+                # auto-fit pass discards LOCALX/Y anyway.
+                receiver = getattr(ctx, "_current_page_var", None) or "page"
+                _emit_call(
+                    ctx.out, "ImageFrame", kwargs,
+                    receiver=receiver, multiline=True,
+                )
+                return
+            # Non-composite (FillProportionally) — emit FILL scale + the
+            # IDML's literal translation. The IDML's `<Image ItemTransform>`
+            # stores the user's authored crop position (image origin
+            # relative to the frame's top-left after FillProportionally is
+            # applied). Using that translation verbatim reproduces the
+            # InDesign baseline's crop.
+            kwargs["local_scale"] = (round(fill, 6), round(fill, 6))
+            kwargs["scale_type"] = 1
+            if local_offset_pt is not None:
+                ox_pt, oy_pt = local_offset_pt
+                ox_mm = ox_pt * PT_TO_MM
+                oy_mm = oy_pt * PT_TO_MM
+                if abs(ox_mm) > 1e-4 or abs(oy_mm) > 1e-4:
+                    kwargs["local_offset_mm"] = (
+                        round(ox_mm, 4), round(oy_mm, 4),
+                    )
+        elif local_offset_pt is not None:
+                # Fallback when image can't be read: emit IDML offset verbatim.
+                ox_pt, oy_pt = local_offset_pt
+                ox_mm = ox_pt * PT_TO_MM
+                oy_mm = oy_pt * PT_TO_MM
+                if abs(ox_mm) > 1e-3 or abs(oy_mm) > 1e-3:
+                    kwargs["local_offset_mm"] = (
+                        round(ox_mm, 4), round(oy_mm, 4),
+                    )
+    elif local_offset_pt is not None:
         ox_pt, oy_pt = local_offset_pt
-        # Convert pt → mm for the DSL parameter (primitives.py multiplies back).
         ox_mm = ox_pt * PT_TO_MM
         oy_mm = oy_pt * PT_TO_MM
-        if abs(ox_mm) > 0.01 or abs(oy_mm) > 0.01:
+        if abs(ox_mm) > 1e-3 or abs(oy_mm) > 1e-3:
             kwargs["local_offset_mm"] = (round(ox_mm, 4), round(oy_mm, 4))
-            needs_free_scaling = True
-    if needs_free_scaling:
-        kwargs["scale_type"] = 1
+            kwargs["scale_type"] = 1
     page_var = ctx.layer_id_to_idx  # unused; emit call always uses receiver via outer scope
     # The receiver is the page variable (e.g. "page0"); the outer _emit_pageitem
     # passes ctx.out and the page_var explicitly. For simplicity here we emit
@@ -2218,9 +2607,11 @@ def _emit_image_content(
             f"(extend tools/idml_to_dsl.py:_emit_image_content)"
         )
 
-    # Extract per-image placement params from the Image child's ItemTransform.
-    # The IDML Image element's ItemTransform encodes the content scale and
-    # its origin offset within the frame (see _extract_content_local_params).
+    # Extract per-image placement params from the Image child's ItemTransform,
+    # then compose with the parent Rectangle's outer scale. Scribus's
+    # LOCALSCX is in rendered (post-Rectangle-transform) coords, the IDML
+    # Image's ItemTransform is in frame-LOCAL coords — same correction as
+    # the PDF branch above.
     local_scale: Optional[tuple[float, float]] = None
     local_offset_pt: Optional[tuple[float, float]] = None
     img_transform_str = img.get("ItemTransform", "")
@@ -2228,6 +2619,14 @@ def _emit_image_content(
         local_scale, local_offset_pt = _extract_content_local_params(
             img_transform_str, frame_tl_anchor,
         )
+        rect_t = rect.get("ItemTransform", "1 0 0 1 0 0")
+        rect_a, _rb, _rc, rect_d, _, _ = _parse_matrix(rect_t)
+        if local_scale is not None:
+            sx, sy = local_scale
+            local_scale = (sx * rect_a, sy * rect_d)
+        if local_offset_pt is not None:
+            ox, oy = local_offset_pt
+            local_offset_pt = (ox * rect_a, oy * rect_d)
 
     # 1. Asset-map lookup (Phase 2 path).
     if ctx.asset_map:
@@ -2322,21 +2721,52 @@ def _csr_applied_font(csr: Any) -> Optional[str]:
     return None
 
 
+def _first_csr_pointsize(psr: Any) -> Optional[float]:
+    """Return the first CSR's PointSize as float, or None."""
+    for csr in psr:
+        if not isinstance(csr.tag, str):
+            continue
+        if etree.QName(csr).localname != "CharacterStyleRange":
+            continue
+        v = csr.get("PointSize")
+        if v:
+            try:
+                return float(v)
+            except ValueError:
+                pass
+    return None
+
+
 def _psr_effective_leading(psr: Any) -> Optional[str]:
     """Return the effective Leading for a ParagraphStyleRange.
 
-    Scans all CharacterStyleRange children for a ``<Properties/Leading>``
-    value.  The first CSR with an explicit (non-Auto) numeric Leading wins
-    (InDesign applies the leading of the *first* CSR in the paragraph as the
-    dominant line spacing).  Returns ``"Auto"`` when the first CSR's leading
-    is literally ``"Auto"``; returns ``None`` when no CSR carries any Leading
-    child at all (caller should fall back to the paragraph style's own leading
-    or leave the ``<para>`` element without explicit LINESPMode/LINESP).
+    Scans CharacterStyleRange children for a ``<Properties/Leading>`` value,
+    but ONLY honours CSRs that carry actual visible content (non-empty
+    ``<Content>``). InDesign applies the leading of the first CONTENT-bearing
+    CSR; whitespace / Br-only trailing CSRs may carry a degenerate Leading
+    that doesn't apply to the rendered paragraph (e.g. u1fd in this corpus
+    has Leading=8 on a trailing tab-CSR that should NOT pollute the bullet
+    paragraph's leading).
+
+    Returns ``"Auto"`` when the first content-bearing CSR's leading is
+    literally ``"Auto"``; returns ``None`` when no qualifying CSR carries
+    any Leading child at all (caller falls back to the paragraph style).
     """
     for csr in psr:
         if not isinstance(csr.tag, str):
             continue
         if etree.QName(csr).localname != "CharacterStyleRange":
+            continue
+        # Require at least one non-empty <Content>.
+        has_visible_content = False
+        for child in csr:
+            if not isinstance(child.tag, str):
+                continue
+            if etree.QName(child).localname == "Content":
+                if child.text and child.text.strip():
+                    has_visible_content = True
+                    break
+        if not has_visible_content:
             continue
         ld_el = csr.find("Properties/Leading")
         if ld_el is not None and ld_el.text:
@@ -2444,10 +2874,23 @@ def _walk_story(
                 psr_para_attrs["LINESPMode"] = "1"
             else:
                 try:
-                    psr_para_attrs["LINESPMode"] = "2"
-                    psr_para_attrs["LINESP"] = str(float(psr_ld))
+                    lp = float(psr_ld)
+                    csr_pt_attr = _first_csr_pointsize(psr)
+                    if csr_pt_attr is not None and lp < csr_pt_attr * 0.5:
+                        lp = csr_pt_attr * 1.2
+                    # Use LINESPMode=1 when Leading is below the font's
+                    # intrinsic minimum (~1.45×fontsize): Scribus enforces
+                    # the intrinsic anyway, but LINESPMode=2 with a small
+                    # LINESP value produces unexpected over-spacing on
+                    # some Vollkorn frames. LINESPMode=1 (auto) keeps the
+                    # rendered baseline gap predictable.
+                    if csr_pt_attr is not None and lp < csr_pt_attr * 1.45:
+                        psr_para_attrs["LINESPMode"] = "1"
+                    else:
+                        psr_para_attrs["LINESPMode"] = "2"
+                        psr_para_attrs["LINESP"] = str(lp)
                 except ValueError:
-                    pass  # malformed value — skip silently
+                    pass
 
         psr_align_override: Optional[dict] = psr_para_attrs if psr_para_attrs else None
 
@@ -2469,6 +2912,37 @@ def _walk_story(
                 f"<ParagraphStyleRange> contains unhandled child <{ctag}> "
                 f"(extend tools/idml_to_dsl.py:_walk_story)"
             )
+
+        # Attach paragraph_attrs to the FIRST text-content run of the PSR so
+        # Scribus applies the PSR's alignment/leading to the paragraph that
+        # CONTAINS this run (rather than only to the next paragraph via the
+        # separator). Without this, when style= is set on the TextFrame, the
+        # first paragraph inherits the named ParaStyle's DefaultStyle ALIGN —
+        # which is often Justified — and the last word of every first-
+        # paragraph line spreads to fill the line width.
+        if psr_align_override and para_slug:
+            # Pin paragraph_style too so Scribus knows the PARENT; otherwise
+            # the per-paragraph ALIGN floats on an anonymous paragraph.
+            for j, r in enumerate(para_runs):
+                if r.separator is None and (r.text or r.has_itext):
+                    para_runs[j] = Run(
+                        text=r.text,
+                        has_itext=r.has_itext,
+                        font=r.font,
+                        fontsize=r.fontsize,
+                        fcolor=r.fcolor,
+                        fshade=r.fshade,
+                        fontfeatures=r.fontfeatures,
+                        features=r.features,
+                        kern=r.kern,
+                        char_style=r.char_style,
+                        paragraph_style=para_slug,
+                        paragraph_attrs=psr_align_override,
+                        separator=r.separator,
+                        var=r.var,
+                        var_attrs=r.var_attrs,
+                    )
+                    break
 
         runs.extend(para_runs)
 
@@ -2556,8 +3030,12 @@ def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
             trail["LINESPMode"] = "1"
         else:
             try:
+                lp = float(psr_ld)
+                csr_pt_attr = _first_csr_pointsize(last_psr)
+                if csr_pt_attr is not None and lp < csr_pt_attr * 0.5:
+                    lp = csr_pt_attr * 1.2
                 trail["LINESPMode"] = "2"
-                trail["LINESP"] = str(float(psr_ld))
+                trail["LINESP"] = str(lp)
             except ValueError:
                 pass
     return trail if trail else None
@@ -2790,21 +3268,35 @@ def _emit_pages(ctx: _Ctx) -> None:
                 continue
             item_layer = child.get("ItemLayer", "")
             if item_layer not in ctx.printable_layer_ids:
-                # Drop Info-layer print marks per locked decision #5
-                # (Falz lines added manually post-bootstrap).
+                # Skip items on hidden (Visible=false) layers — these never
+                # reach the InDesign PDF baseline either. Items on visible
+                # but non-printing layers (e.g. "Info") DO reach the baseline
+                # and must emit; ctx.printable_layer_ids is built from
+                # Visible, not Printable. (Falz lines, if authored on Info,
+                # would now leak through — but the corpus does not put Falz
+                # on Info; if a future template does, add a GraphicLine-on-
+                # Info skip here.)
                 _ch_sid = child.get("Self", "")
                 if _ch_sid:
                     ctx.record_skipped(
                         _ch_sid,
-                        f"non-printable layer {item_layer!r}",
+                        f"hidden layer {item_layer!r}",
                     )
                 continue
             if tag not in _DISPATCHED_PAGEITEM_TAGS:
-                # GraphicLine, MasterSpreadPageReference, etc. — raise loudly
-                # since we filtered to printable layers. Plan locks GraphicLine
-                # to "raise on encounter" but corpus puts all GraphicLines on
-                # Info layer (already filtered) — so a Gestaltung GraphicLine
-                # would be a genuine surprise.
+                # GraphicLine on a visible-but-non-printable layer (Info) is
+                # a Falz / print-mark line — author adds those manually post-
+                # bootstrap. Skip silently. A GraphicLine on a truly-printable
+                # layer (Gestaltung) is still a genuine surprise.
+                if tag == "GraphicLine" and item_layer not in ctx.truly_printable_layer_ids:
+                    _ch_sid = child.get("Self", "")
+                    if _ch_sid:
+                        ctx.record_skipped(
+                            _ch_sid,
+                            f"GraphicLine on non-printable layer {item_layer!r} "
+                            "(Falz/print mark — author manually post-bootstrap)",
+                        )
+                    continue
                 raise UnhandledElement(
                     f"Top-level <{tag} Self={child.get('Self')!r}> on printable "
                     f"layer {item_layer!r} not handled "
@@ -2870,26 +3362,80 @@ _PAGE_ITEM_LEAF_TAGS = frozenset({
 })
 
 
-def _walk_idml_pageitem_self_ids(pkg: Any) -> set[str]:
-    """Walk every Spread's PageItem (top-level + inside Groups) and return the
-    set of ``Self`` IDs for the leaf-or-container tags we consider in scope.
+_FRAME_TAGS = frozenset({
+    "Rectangle", "Polygon", "Oval", "TextFrame", "GraphicLine",
+})
+_CONTENT_CHILD_TAGS = frozenset({"Image", "PDF", "EPS"})
 
-    Used by the end-of-conversion completeness assertion (Issue #37 Phase B1 /
-    P3 task 16). The set is the universe of IDs the converter is expected to
-    EITHER emit OR explicitly skip; anything in the gap is a silent drop.
+
+def _walk_idml_pageitem_self_ids(
+    pkg: Any,
+    printable_layer_ids: set[str] | None = None,
+) -> set[str]:
+    """Walk every Spread's PageItem inventory the way the emitter walks it.
+
+    Returns the set of ``Self`` IDs the converter is expected to EITHER emit
+    OR explicitly skip. Mirrors ``_emit_pages``' traversal:
+
+    * Top-level Spread children whose ``ItemLayer`` is non-printable are
+      skipped together with the entire subtree (the emitter records the
+      top-level skip; descendants never get visited).
+    * Groups recurse into their child PageItems.
+    * Frame tags (Rectangle/Polygon/Oval/TextFrame/GraphicLine) are leaves:
+      a frame may wrap an ``Image``/``PDF``/``EPS`` as its CONTENT, but the
+      emitter records only the frame's Self; the inner content child is
+      consumed by the frame's emit-path.
+
+    ``printable_layer_ids`` defaults to all-printable when omitted (test
+    fixtures pre-#37 may not pass it).
     """
     ids: set[str] = set()
+
+    def _visit(el, in_printable: bool) -> None:
+        if not isinstance(el.tag, str):
+            return
+        tag = etree.QName(el).localname
+        item_layer = el.get("ItemLayer", "")
+        # Non-printable layer = skip element AND its subtree (emitter parity).
+        if (
+            in_printable
+            and item_layer
+            and printable_layer_ids is not None
+            and item_layer not in printable_layer_ids
+        ):
+            in_printable = False
+        if not in_printable:
+            return
+        if tag == "Group":
+            sid = el.get("Self")
+            if sid:
+                ids.add(sid)
+            for child in el:
+                _visit(child, in_printable)
+            return
+        if tag in _FRAME_TAGS:
+            sid = el.get("Self")
+            if sid:
+                ids.add(sid)
+            # Don't descend: any Image/PDF/EPS child is content, consumed by
+            # the frame's emit-path under the frame's Self.
+            return
+        if tag in _CONTENT_CHILD_TAGS:
+            # Top-level Image/PDF/EPS (no frame wrapper) is unusual but in scope.
+            sid = el.get("Self")
+            if sid:
+                ids.add(sid)
+            return
+        # Other tags (Page, FlattenerPreference, Properties, …): descend so we
+        # reach PageItems nested under <Page>.
+        for child in el:
+            _visit(child, in_printable)
+
     for sp_path in pkg.spreads:
         xml = pkg.open(sp_path).read()
         root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
-        for el in root.iter():
-            if not isinstance(el.tag, str):
-                continue
-            tag = etree.QName(el).localname
-            if tag in _PAGE_ITEM_LEAF_TAGS:
-                sid = el.get("Self")
-                if sid:
-                    ids.add(sid)
+        for child in root:
+            _visit(child, True)
     return ids
 
 
@@ -2901,7 +3447,7 @@ def _assert_conversion_completeness(ctx: _Ctx) -> None:
     class: a PageItem in the IDML that produces neither output nor an
     explicit skip annotation.
     """
-    all_ids = _walk_idml_pageitem_self_ids(ctx.pkg)
+    all_ids = _walk_idml_pageitem_self_ids(ctx.pkg, ctx.printable_layer_ids)
     skipped = {s["self_id"] for s in ctx.skipped_with_reason}
     missing = all_ids - ctx.emitted_self_ids - skipped
     if not missing:
@@ -2976,8 +3522,10 @@ def _emit_header(out: PythonRepr, template_id: str, idml_name: str) -> None:
     out.w(f"Auto-generated from {idml_name} by tools/idml_to_dsl.py.")
     out.w("Hand-edit thereafter; this file is the source of truth.")
     out.w("")
-    out.w("NOTE: bleed_mm=2.0 below matches the IDML verbatim. Brand standard")
-    out.w("is 3.0 mm; coerce only after team review.")
+    out.w("NOTE: bleed_mm=0 below — emit a trim-only MediaBox so the rendered")
+    out.w("PDF compares directly against the InDesign baseline (which exports")
+    out.w("with trim-only by default). For print prep, restore the IDML's")
+    out.w("authored bleed (preserved in IDML preferences).")
     out.w("")
     out.w("Falz lines are NOT emitted by the converter — add manually post-bootstrap")
     out.w("matching templates/kandidat-falzflyer-din-lang/build.py: import FoldLine")
@@ -3014,7 +3562,13 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     prefs = ctx.doc_prefs
     trim_w_mm = prefs["page_width_pt"] * PT_TO_MM
     trim_h_mm = prefs["page_height_pt"] * PT_TO_MM
-    bleed_mm = prefs["bleed_top_pt"] * PT_TO_MM
+    # InDesign's default PDF export emits a trim-only MediaBox (no bleed
+    # area); our baselines were captured that way. Emit bleed_mm=0 so the
+    # Scribus PDF MediaBox matches and visual_diff can compare like-for-like.
+    # The IDML's authored bleed value is preserved in the docstring above
+    # for downstream print prep.
+    idml_bleed_mm = prefs["bleed_top_pt"] * PT_TO_MM
+    bleed_mm = 0
 
     out.w("def build_template() -> Document:")
     out.indent += 1
@@ -3044,6 +3598,18 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
         out.w(f"DocumentLayer({body}),")
     out.indent -= 1
     out.w("],")
+    # ICC profile pass-through: tell Scribus to use a CMYK profile that
+    # matches InDesign's default print export (ISO Coated v2 300% ≈ FOGRA39).
+    # Without an explicit DPIn, Scribus's HCMS=1 path picks an unpredictable
+    # default that may not match the baseline rendering. Brand colours
+    # (Dunkelgrün CMYK 85/35/95/10, Gelb CMYK 0/0/100/0) and CMYK JPGs
+    # both pass through this profile.
+    out.w("extra_doc_attrs={")
+    out.indent += 1
+    out.w("'DPIn':  'ISO Coated v2 300% (basICColor)',")
+    out.w("'DPIn2': 'ISO Coated v2 300% (basICColor)',")
+    out.indent -= 1
+    out.w("},")
     # Disable crop/bleed marks so the exported PDF MediaBox matches the
     # InDesign baseline (trim-only, no marks area).  Brand default has
     # these on; IDML DocumentPrintingPreference has them off for this
@@ -3057,6 +3623,13 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     out.indent -= 1
     out.w(")")
     out.w("")
+    # Document-local non-brand colours (print marks etc.). Registered via
+    # doc.add_color() so the SLA contains the swatch and items referencing it
+    # render with the authored CMYK rather than falling back to the default.
+    for cname, cmyk in sorted(ctx.extra_colors.items()):
+        out.w(f"doc.add_color({_py_value(cname)}, cmyk={tuple(cmyk)})")
+    if ctx.extra_colors:
+        out.w("")
     out.w("# add_styles(doc) - paragraph styles (Phase G, task 5)")
     out.w("_add_styles(doc)")
     out.w("")
@@ -3305,8 +3878,17 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         # Phase B
         ctx.layers = _read_layers(pkg)
         ctx.layer_id_to_idx = {lyr["self_id"]: idx for idx, lyr in enumerate(ctx.layers)}
+        # InDesign's default PDF export includes every Visible=true layer
+        # regardless of Printable. Layer Printable controls dialog defaults,
+        # not export inclusion; the baselines we audit against were exported
+        # this way, so include every Visible layer. Items on Visible=false
+        # layers stay out of the render (and the inventory walker).
         ctx.printable_layer_ids = {
-            lyr["self_id"] for lyr in ctx.layers if lyr["printable"]
+            lyr["self_id"] for lyr in ctx.layers if lyr["visible"]
+        }
+        ctx.truly_printable_layer_ids = {
+            lyr["self_id"] for lyr in ctx.layers
+            if lyr["visible"] and lyr["printable"]
         }
         # Phase C
         _check_masters_empty(pkg)

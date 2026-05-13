@@ -25,14 +25,18 @@ pytestmark = pytest.mark.integration
 
 
 def _find_v2_idml() -> Path | None:
-    """Locate the v2 falzflyer IDML under originals/."""
+    """Locate the v2 falzflyer IDML under originals/.
+
+    The matcher requires "falzflyer" or "kandidat" in the basename — these
+    are the v2-falzflyer-specific tokens. The previous matcher also accepted
+    "leporello" / "z-falz", but those tokens match unrelated templates
+    (e.g. the 26-03 Leporello family), which made the test pick the wrong
+    IDML and assert the wrong slug's artifacts."""
     if not (ROOT / "originals").exists():
         return None
     for p in sorted((ROOT / "originals").rglob("*.idml")):
-        # Pick any v2 falzflyer-named IDML. The exact basename can drift
-        # across captures; we accept whatever matches the keyword set.
         name_lower = p.name.lower()
-        if "leporello" in name_lower or "z-falz" in name_lower:
+        if "falzflyer" in name_lower or "kandidat" in name_lower:
             return p
     return None
 

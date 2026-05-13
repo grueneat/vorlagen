@@ -31,7 +31,9 @@ def _find_v2_idml() -> Path | None:
         return None
     for p in sorted((ROOT / "originals").rglob("*.idml")):
         name_lower = p.name.lower()
-        if "leporello" in name_lower or "z-falz" in name_lower:
+        # Require v2-falzflyer-specific tokens. "leporello"/"z-falz" alone
+        # match unrelated templates (e.g. the 26-03 Leporello family).
+        if "falzflyer" in name_lower or "kandidat" in name_lower:
             return p
     return None
 

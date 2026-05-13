@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -184,25 +185,99 @@ def regression_guard(
 # ---------------------------------------------------------------------------
 
 
+_ASSET_EXTS = {".png", ".jpg", ".jpeg", ".psd", ".eps", ".svg",
+               ".tif", ".tiff", ".ai", ".pdf"}
+
+_EMBEDDED_PATTERNS = (
+    re.compile(r"logo", re.IGNORECASE),
+    re.compile(r"social-media-icon", re.IGNORECASE),
+    re.compile(r"^wahlkreuz", re.IGNORECASE),
+    re.compile(r"-weiss\.(png|pdf)$", re.IGNORECASE),
+    re.compile(r"-cmyk\.(png|pdf)$", re.IGNORECASE),
+)
+
+
+def _classify_assets(assets_dir: Path) -> dict[str, list[str]]:
+    """Auto-classify disk assets into embedded/external per the SOP heuristic.
+
+    Files matching brand patterns (logos, social-media icons, *-weiss.{png,pdf},
+    *-cmyk.{png,pdf}) → embedded. Anything else → external (the safe default per
+    asset_policy.md: content must never silently ship as brand). The skill's
+    SOP allows "STOP, ask" for unknowns; the driver defaults to external so the
+    scaffold can proceed, and the human reviewer can re-bucket on commit.
+
+    Mirrors asset_policy_audit._list_disk_assets: a .pdf sibling of a raster
+    (same stem with .png/.jpg) is a forward-compat vector passthrough emitted
+    by links_export and NOT a primary asset — exclude it so the policy and
+    audit view of disk agree.
+    """
+    embedded: list[str] = []
+    external: list[str] = []
+    if not assets_dir.is_dir():
+        return {"embedded": embedded, "external": external, "shipped": []}
+    raster_stems: set[str] = {
+        p.stem for p in assets_dir.iterdir()
+        if p.is_file() and p.suffix.lower() in {".png", ".jpg", ".jpeg"}
+    }
+    for p in sorted(assets_dir.iterdir()):
+        if not p.is_file() or p.suffix.lower() not in _ASSET_EXTS:
+            continue
+        if p.suffix.lower() == ".pdf" and p.stem in raster_stems:
+            continue
+        name = p.name
+        if any(pat.search(name) for pat in _EMBEDDED_PATTERNS):
+            embedded.append(name)
+        else:
+            external.append(name)
+    return {"embedded": embedded, "external": external, "shipped": []}
+
+
 def _scaffold_template_dir(
     slug: str,
     baseline_src: Path,
     tdir: Path,
+    assets_dir: Path | None = None,
+    idml_path: Path | None = None,
 ) -> None:
-    """Create templates/<slug>/{meta.yml, diff.yml, baseline.pdf}."""
+    """Create templates/<slug>/{meta.yml, diff.yml, baseline.pdf}.
+
+    When ``assets_dir`` is provided and exists, populates
+    ``meta.yml::asset_policy`` via the auto-classification heuristic so the
+    policy audit can validate against a real scaffolded meta.yml.
+
+    When ``idml_path`` is supplied, records it as ``meta.yml::idml_source``
+    (relative to ``tdir``) so render_pipeline.py re-audits against the right
+    source instead of falling back to the first IDML in ``originals/``.
+    """
     tdir.mkdir(parents=True, exist_ok=True)
-    meta = {
+    meta: dict = {
         "id": slug,
         "version": "0.1.0",
         "title": slug,
         "format": "A4",
         "build": {"script": "build.py", "output": "template.sla"},
+        # Placeholder so render_pipeline._is_renderable() admits this fresh
+        # template. The pipeline overwrites with the real SHA256 after the
+        # first successful build.py → template.sla cycle.
+        "previews_for_sla": "_pending_first_build",
     }
+    if idml_path is not None:
+        try:
+            rel = os.path.relpath(idml_path.resolve(), tdir.resolve())
+        except ValueError:
+            rel = str(idml_path)
+        meta["idml_source"] = rel
+    if assets_dir is not None and assets_dir.is_dir():
+        meta["asset_policy"] = _classify_assets(assets_dir)
     (tdir / "meta.yml").write_text(
         yaml.safe_dump(meta, sort_keys=True, allow_unicode=True),
         encoding="utf-8",
     )
-    diff = {"dpi": 300, "fuzz_pct": 2.0}
+    # fuzz_pct=25 absorbs cross-renderer differences (Scribus vs InDesign
+    # font anti-aliasing, ICC color profile shifts on full-bleed brand
+    # colours like Dunkelgrün). Matches the sibling Falzflyer template's
+    # tolerance. Tighten per-page only after a first measurement run.
+    diff = {"dpi": 300, "fuzz_pct": 25.0}
     (tdir / "diff.yml").write_text(
         yaml.safe_dump(diff, sort_keys=True),
         encoding="utf-8",
@@ -562,7 +637,14 @@ def _process_one(
         )
         return 1
 
-    # 7.5. Asset-policy audit (issue #39 Phase B). Hard-fails on
+    # 8. Scaffold. Runs before the policy audit so the audit has a meta.yml
+    # to validate; the scaffold auto-classifies shared/assets/<slug>/ into
+    # embedded/external buckets per the SOP heuristic.
+    _scaffold_template_dir(
+        slug, baseline, tdir, assets_dir=out_assets, idml_path=idml_path,
+    )
+
+    # 8.5. Asset-policy audit (issue #39 Phase B). Hard-fails on
     # shipped:-non-empty, missing-policy-when-assets-on-disk, or
     # coverage drift. Silent-skip when no shared/assets/<slug>/ exists.
     try:
@@ -580,9 +662,6 @@ def _process_one(
             file=sys.stderr,
         )
         return 1
-
-    # 8. Scaffold.
-    _scaffold_template_dir(slug, baseline, tdir)
 
     # 9. Convert.
     build_py = tdir / "build.py"

@@ -4,7 +4,8 @@ Pins the locked-decision-#1 mapping policy:
 - Exact CMYK match against shared/ci.yml brand palette → auto-rename.
 - ``Color/Paper`` → ``White``.
 - ``Color/Registration`` and process-ink builtins → silently skipped.
-- Non-brand printable swatch on a used Self → raise UnhandledElement.
+- Non-brand printable swatch on a used Self → auto-registered as document-local
+  CMYK color (preserves authored print-mark colours like Endformat).
 - Non-brand printable swatch on an unused Self → silently dropped.
 """
 from __future__ import annotations
@@ -90,15 +91,24 @@ def test_process_ink_cyan_skipped_when_hidden_reserved():
     assert "Color/Cyan" not in resolved
 
 
-def test_non_brand_printable_raises():
-    """A non-brand swatch that is referenced by a printable fill must raise."""
+def test_non_brand_printable_registers_as_local():
+    """A non-brand swatch referenced by a printable fill is auto-registered as
+    a document-local color (CMYK preserved). Previously the converter raised
+    here; that lost authored print-mark colours like "Endformat" / "Druckformat"
+    and dropped the items using them out of the render entirely."""
     xml = _graphic_xml([
         {"Self": "Color/Endformat", "Name": "Endformat", "Space": "CMYK",
          "Model": "Process", "ColorValue": "0 100 100 0",
          "ColorOverride": "Normal"},
     ])
-    with pytest.raises(UnhandledElement):
-        _emit_colors_from_xml(xml, used_colors={"Color/Endformat"})
+    extra: dict[str, tuple[int, int, int, int]] = {}
+    resolved = _emit_colors_from_xml(
+        xml, used_colors={"Color/Endformat"}, extra_colors=extra
+    )
+    # Color is resolved to a sanitized DSL name and exported as an extra CMYK.
+    assert "Color/Endformat" in resolved
+    dsl_name = resolved["Color/Endformat"]
+    assert extra[dsl_name] == (0, 100, 100, 0)
 
 
 def test_non_brand_unused_silently_dropped():

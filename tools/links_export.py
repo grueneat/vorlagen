@@ -303,7 +303,14 @@ def _convert_psd(src: Path, out_path: Path) -> None:
 
 
 def _passthrough_copy(src: Path, out_path: Path) -> None:
-    """Copy a raster source to its slugified output path (no transform)."""
+    """Copy a raster source to its slugified output path (no transform).
+
+    CMYK JPGs are NOT pre-converted to sRGB — Scribus's CMYK render with
+    HCMS=1 + ISO Coated profile produces a closer match to the InDesign
+    baseline than ICC-correct sRGB conversion at export time. (Tested
+    on ziesel.jpg: pre-converted sRGB rendered ~2× darker than raw
+    CMYK through Scribus.)
+    """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, out_path)
 
