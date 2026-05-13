@@ -61,7 +61,18 @@ def _resolve_idml_path(slug: str, templates_dir: Path, originals_dir: Path) -> P
 
     Priority:
     1. ``meta.yml::idml_source`` (relative path from the template dir).
-    2. Glob ``<originals_dir>/*<slug-stem>*/*.idml`` (best-effort).
+    2. Glob ``<originals_dir>/*<slug-stem>*/*.idml`` requiring an exact
+       basename-prefix match against the full slug stem.
+
+    The fallback (#2) is intentionally strict (review fix F11). The previous
+    implementation matched on ``slug.split()[0]`` (i.e. "26" for slug
+    "26-03-leporello-..."), which would happily match a different template
+    "26-04-foo-bar/foo.idml". Worse, when nothing matched it returned
+    ``candidates[0]`` — silently the wrong IDML.
+
+    We now require the IDML's basename (lowercased, hyphen-normalised) to
+    start with the slug's leading numeric prefix AND share at least the
+    first three slug words. If nothing matches, raise FileNotFoundError.
     """
     meta_path = templates_dir / slug / "meta.yml"
     if meta_path.exists():
@@ -75,17 +86,31 @@ def _resolve_idml_path(slug: str, templates_dir: Path, originals_dir: Path) -> P
         except Exception:
             pass
 
-    # Fallback: glob originals/*/*.idml for the slug stem.
+    # Fallback: glob originals/*/*.idml. Require a meaningful overlap
+    # between the slug and the candidate basename — not just the first
+    # space-delimited word.
     candidates = sorted(originals_dir.glob("*/*.idml"))
-    if candidates:
-        slug_stem = slug.lower().replace("-", " ").replace("_", " ")
-        for c in candidates:
-            if slug_stem.split()[0] in c.name.lower():
-                return c
-        return candidates[0]
+    if not candidates:
+        raise FileNotFoundError(
+            f"Could not resolve IDML for slug {slug!r}: "
+            f"meta.yml missing/empty AND no .idml files under {originals_dir}"
+        )
+
+    def _norm(s: str) -> str:
+        return s.lower().replace("-", " ").replace("_", " ")
+
+    slug_words = _norm(slug).split()
+    # Need at least the first 3 tokens to align (e.g. "26 03 leporello").
+    min_prefix = " ".join(slug_words[:3]) if len(slug_words) >= 3 else _norm(slug)
+    for c in candidates:
+        cand_norm = _norm(c.stem)
+        # cand_norm e.g. "26 03 leporello z falz 99x210 6 seitig zweigeteiltes cover"
+        if cand_norm.startswith(min_prefix):
+            return c
     raise FileNotFoundError(
-        f"Could not resolve IDML for slug {slug!r} via "
-        f"{meta_path} or {originals_dir}/*/*.idml"
+        f"Could not resolve IDML for slug {slug!r}: no IDML in "
+        f"{originals_dir} matches slug prefix {min_prefix!r}. "
+        f"Set meta.yml::idml_source or rename the IDML to match the slug."
     )
 
 
@@ -756,8 +781,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--output", type=Path, default=None,
         help=(
-            "Where to write the YAML. '-' or 'stdout' writes to stdout. "
-            "Default: <templates-dir>/<slug>/SCAFFOLD_INVENTORY.yml"
+            "Where to write the YAML. '-' or 'stdout' writes to stdout "
+            "(this is also the default — review fix F10). Pass an explicit "
+            "path to write a file; passing the canonical baseline path "
+            "(<templates-dir>/<slug>/SCAFFOLD_INVENTORY.yml) overwrites the "
+            "committed calibration."
         ),
     )
     args = parser.parse_args(argv)
@@ -774,14 +802,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 2
 
     yaml_text = to_yaml(inv)
-    if args.output is None:
-        templates_dir = args.templates_dir or _default_templates_dir()
-        out_path = templates_dir / args.slug / "SCAFFOLD_INVENTORY.yml"
-    elif str(args.output) in ("-", "stdout"):
+    # Review fix F10: default is now stdout. Previously default wrote to
+    # <templates-dir>/<slug>/SCAFFOLD_INVENTORY.yml — the same path used as
+    # the comparator's --expected baseline. A user running
+    # `python3 tools/inventory_extract.py --slug X` to "check the state"
+    # silently overwrote the calibrated truth, then the subsequent
+    # `inventory_compare --expected ... --actual <fresh>` trivially exited
+    # 0. Callers who want to write a file MUST now pass --output explicitly.
+    if args.output is None or str(args.output) in ("-", "stdout"):
         sys.stdout.write(yaml_text)
         return 0
-    else:
-        out_path = args.output
+    out_path = args.output
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(yaml_text, encoding="utf-8")

@@ -77,10 +77,12 @@ the IDML from InDesign (authoring concern, not converter).
 
 The driver writes this automatically between render-gallery and
 convergence-review (see `tools/idml_import_driver.py:517`+). To
-re-emit by hand:
+re-emit by hand (defaults to stdout — pass `--output` to write a file;
+the canonical baseline path is `templates/<slug>/SCAFFOLD_INVENTORY.yml`):
 
 ```
-python3 tools/inventory_extract.py --slug <slug>
+python3 tools/inventory_extract.py --slug <slug> \
+  --output templates/<slug>/SCAFFOLD_INVENTORY.yml
 ```
 
 This file is **the canonical record of what the template contains**.

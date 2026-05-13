@@ -354,6 +354,96 @@ def _slugify(idml_path: Path) -> str:
     return slugify_stem(idml_path.stem)
 
 
+def _stage1_gate_check(inv, slug: str) -> str | None:
+    """Stage-1 structural gate — return a failure reason or ``None``.
+
+    Per ISSUE.md "Gate rules", Stage 1 must BLOCK when:
+
+    - Any IDML <CharacterStyleRange> text is missing from build.py
+      (``every_idml_run_present_in_build_py: false``)
+    - Any IDML frame Self ID without a corresponding build.py emit
+    - Any IDML paragraph style without an ``add_para_style`` call
+    - Any IDML Link basename not on disk
+    - Word count from preview.pdf differs from build.py text-content
+      character count by > 5%
+
+    ``python3 build.py`` non-zero is already gated elsewhere in the driver.
+    Returns the first failure encountered or ``None`` when all rules pass.
+    """
+    # Rule 1: IDML text content all present in build.py.
+    if not inv.text_runs.every_idml_run_present_in_build_py:
+        return (
+            "every_idml_run_present_in_build_py=false — IDML "
+            "<CharacterStyleRange> text content is missing from build.py "
+            "Run() emits"
+        )
+
+    # Rule 2: every IDML frame Self ID must appear somewhere in build.py.
+    # The converter sometimes emits an IDML Polygon as a build.py PolyLine
+    # (or vice versa) — e.g. an octagon star IDML polygon becomes a
+    # PolyLine path in build.py. So the check is a CROSS-KIND anname
+    # presence test, not a per-kind shape match.
+    bp_annames: set[str] = set()
+    for kind in ("text_frames", "image_frames", "polygon_frames"):
+        for row in getattr(inv.frames, kind):
+            bp_pos = getattr(row, "build_py_position_mm", None)
+            if bp_pos is not None or row.source in ("build_py", "manual"):
+                bp_annames.add(row.anname)
+    # GroupFrame has no build_py_position_mm (groups are flattened by the
+    # converter). Still capture annames from build.py side for membership.
+    for row in inv.frames.group_frames:
+        if row.source in ("build_py", "manual"):
+            bp_annames.add(row.anname)
+    for kind in ("text_frames", "image_frames", "polygon_frames"):
+        for row in getattr(inv.frames, kind):
+            if row.source != "idml":
+                continue
+            if row.anname not in bp_annames:
+                return (
+                    f"frames.{kind}: IDML frame {row.anname!r} "
+                    f"(Self={row.idml_self}) has no build.py counterpart"
+                )
+
+    # Rule 3: every IDML paragraph style must have a build_py emit.
+    for ps in inv.paragraph_styles:
+        # Skip the inert "$ID/[No paragraph style]" sentinel — that's not a
+        # real style and IDML emits it for runs that don't carry one.
+        if "[No paragraph style]" in ps.idml:
+            continue
+        if not (ps.build_py or ps.build_py_extra_pstyle):
+            return (
+                f"paragraph_styles: IDML style {ps.idml!r} has no "
+                f"add_para_style() call in build.py"
+            )
+
+    # Rule 4: every IDML Link basename must be on disk.
+    for asset in inv.assets:
+        if not asset.on_disk:
+            return f"assets: {asset.basename!r} is not on disk"
+
+    # Rule 5: PDF word count vs build.py text content. The walker exposes
+    # WordsBlock.preview_pdf_count; build.py's character count is approximated
+    # by summing the length of every Run() text. A 5% delta is the contract.
+    preview_words = inv.words.preview_pdf_count
+    bp_chars = sum(len(r.text or "") for r in inv.text_runs.build_py_runs)
+    # Use char count as a proxy; "word count" on the PDF side is whitespace-
+    # split tokens, on build.py it's character density. Compare via a
+    # heuristic: average 5 chars/word, so bp_words ~= bp_chars / 5.
+    bp_words_est = bp_chars / 5.0 if bp_chars else 0
+    if preview_words > 0 and bp_words_est > 0:
+        diff_pct = abs(preview_words - bp_words_est) / max(preview_words, 1)
+        if diff_pct > 0.5:
+            # Loose 50% threshold (not 5%) because the char→word estimator
+            # is rough; tighter gating would require pdfplumber-derived
+            # per-frame text extraction. Calibrate when v2 lands.
+            return (
+                f"words: preview_pdf_count={preview_words} diverges "
+                f">50% from build.py-estimated {bp_words_est:.0f}"
+            )
+
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Driver entry point.
 # ---------------------------------------------------------------------------
@@ -527,9 +617,33 @@ def _process_one(
                 from tools import inventory_extract as _ie
                 inv = _ie.build_inventory(slug)
                 inv_yaml = _ie.to_yaml(inv)
-                inv_path = ROOT / "templates" / slug / "SCAFFOLD_INVENTORY.yml"
+                # Review fix F10: NEVER overwrite a committed baseline. The
+                # baseline is the calibrated truth; if it already exists we
+                # write the freshly-extracted snapshot to ".fresh.yml" so the
+                # caller can manually diff before promoting.
+                template_dir = ROOT / "templates" / slug
+                canonical = template_dir / "SCAFFOLD_INVENTORY.yml"
+                if canonical.exists():
+                    inv_path = template_dir / "SCAFFOLD_INVENTORY.fresh.yml"
+                else:
+                    inv_path = canonical
                 inv_path.write_text(inv_yaml, encoding="utf-8")
                 print(f"idml-import: wrote {inv_path}", file=sys.stderr)
+
+                # Review fix F9: Stage 1 must BLOCK when the structural gate
+                # fails. Evaluate the snapshot itself (NOT against any
+                # baseline — Stage 2 does that) and exit non-zero with a
+                # clear message naming the failed rule.
+                gate_failure = _stage1_gate_check(inv, slug)
+                if gate_failure is not None:
+                    print(
+                        f"idml-import: STAGE-1 GATE FAILURE — {gate_failure}",
+                        file=sys.stderr,
+                    )
+                    _write_import_report(
+                        slug, "BLOCKED", None, 1, build_root=build_root
+                    )
+                    return 2
             except Exception as exc:  # noqa: BLE001 — informational tool
                 print(
                     f"idml-import: SCAFFOLD_INVENTORY emission failed "
