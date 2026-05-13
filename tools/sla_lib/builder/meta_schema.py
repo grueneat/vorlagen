@@ -171,6 +171,68 @@ def load_band_spec(slug: str, root: Path | None = None) -> dict | None:
     return spec
 
 
+def load_asset_policy(slug: str, root: Path | None = None) -> dict | None:
+    """Return the parsed ``asset_policy`` block, or ``None`` if absent.
+
+    Reads ``templates/<slug>/meta.yml``. Returns ``None`` when the file is
+    absent OR the ``asset_policy:`` key is missing.
+
+    Validates the block against ``shared/asset-policy.schema.yaml`` (jsonschema
+    Draft 2020-12). The schema enforces:
+
+    - Required keys: ``embedded`` (list[str]), ``shipped`` (list[str]).
+    - Lists are uniqueItems.
+
+    Additional cross-check (NOT in jsonschema): the two lists must be
+    DISJOINT. Same asset can't be both embedded and shipped.
+
+    Coverage cross-check (asset in policy ⇔ asset in
+    ``shared/assets/<slug>/links_export.yml``) lives in
+    ``tools/asset_policy_audit.py`` per issue #39 (not here, to keep this
+    loader pure-Python with no asset-fs dependency).
+
+    Raises ``ValueError`` on YAML parse error, schema violation, or
+    disjoint-violation. See issue #39 + ``.claude/skills/idml-import/
+    asset_policy.md`` for the policy rationale.
+    """
+    p = _meta_path(slug, root)
+    if not p.exists():
+        return None
+    try:
+        data = yaml.safe_load(p.read_text(encoding="utf-8"))
+    except yaml.YAMLError as e:
+        raise ValueError(f"meta.yml at {p} is not valid YAML: {e}") from e
+    if not isinstance(data, dict):
+        return None
+    policy = data.get("asset_policy")
+    if policy is None:
+        return None
+
+    # Lazy-load the schema (avoids a hard import at module top).
+    schema_path = (
+        Path(__file__).resolve().parents[3] / "shared" / "asset-policy.schema.yaml"
+    )
+    schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+    try:
+        jsonschema.validate(instance=policy, schema=schema)
+    except jsonschema.ValidationError as e:
+        raise ValueError(
+            f"meta.yml asset_policy at {p} is malformed: {e.message} "
+            f"(at path {list(e.absolute_path)})"
+        ) from e
+
+    embedded = set(policy.get("embedded", []))
+    shipped = set(policy.get("shipped", []))
+    overlap = embedded & shipped
+    if overlap:
+        raise ValueError(
+            f"meta.yml asset_policy at {p}: assets {sorted(overlap)!r} appear "
+            f"in BOTH `embedded` and `shipped`. Each asset must belong to "
+            f"exactly one bucket. See .claude/skills/idml-import/asset_policy.md."
+        )
+    return policy
+
+
 def load_sla_diff_strict(slug: str, root: Path | None = None) -> bool:
     """Return per-template ``sla_diff_strict`` flag (default True).
 

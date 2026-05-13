@@ -206,6 +206,13 @@ Re-read at every iteration boundary per RESEARCH.md 1.2:
   produces per-icon PDFs; the pattern emits PDF-source ImageFrames.
 - **P10.** Every render cycle is logged. The user can replay the loop
   from `iteration.jsonl` without re-running the renders.
+- **P11.** Templates are self-contained downloads. Brand assets
+  (logos, social icons, decorative backgrounds) are embedded INLINE in
+  the SLA; content assets (portraits, photos, AI-generated images)
+  ship as files in `<slug>.zip::assets/` with the SLA referencing them
+  via REPO-RELATIVE paths. Absolute worktree paths in committed SLAs
+  are a hard error. Every asset must be explicitly classified in
+  `meta.yml::asset_policy`. See `asset_policy.md`.
 
 ## See also
 
@@ -213,6 +220,7 @@ Re-read at every iteration boundary per RESEARCH.md 1.2:
 - `pattern_library.md` — how to add a new pattern to `tools/idml_to_dsl_patterns/`.
 - `tolerance_protocol.md` — the P4 confirmation flow.
 - `inject_protocol.md` — the P5 hand-patch workflow.
+- `asset_policy.md` — the P11 brand-vs-content split + zip packaging.
 - `docs/idml-import-workflow.md` — user-facing CLI walkthrough.
 - `tools/sop_lint.py` — banned-phrase guard.
 - `tools/check_overrides_growth.py` — tolerance-growth gate.

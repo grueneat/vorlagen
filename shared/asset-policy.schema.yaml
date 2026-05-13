@@ -1,0 +1,45 @@
+# JSON-Schema (draft 2020-12) for templates/<slug>/meta.yml::asset_policy.
+#
+# Each template's assets must be classified into one of two buckets:
+#
+#   embedded:  brand-locked assets — embedded INLINE in the SLA via
+#              ImageFrame.inline_image_data. The user cannot replace
+#              them by editing the file or zip contents.
+#
+#   shipped:   content assets — shipped as files in <slug>.zip::assets/.
+#              The SLA references them via REPO-RELATIVE paths
+#              (assets/<name>). The user replaces by overwriting the
+#              file at that path.
+#
+# Invariants:
+#   - Lists are disjoint (no asset appears in both).
+#   - Lists together cover every entry in shared/assets/<slug>/links_export.yml.
+#     (Cross-checked by bin/idml-import; this schema only validates shape.)
+#
+# See: .claude/skills/idml-import/asset_policy.md for the policy rationale.
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://gruene-noe.at/sla-lib/asset-policy.schema.yaml"
+title: "Asset policy (brand-vs-content split)"
+type: object
+additionalProperties: false
+required: [embedded, shipped]
+properties:
+  embedded:
+    type: array
+    description: >-
+      Brand-locked assets embedded inline in the SLA. Each entry is the
+      basename as it appears in shared/assets/<slug>/links_export.yml.
+    items:
+      type: string
+      minLength: 1
+    uniqueItems: true
+  shipped:
+    type: array
+    description: >-
+      User-replaceable content assets. Shipped as files in
+      <slug>.zip::assets/<basename>. The SLA references them via
+      REPO-RELATIVE paths.
+    items:
+      type: string
+      minLength: 1
+    uniqueItems: true
