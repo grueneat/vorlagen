@@ -708,6 +708,15 @@ class _Ctx:
     # filesystem paths are ever emitted; ``_emit_image_or_inline`` raises
     # ``RuntimeError`` if the resolved asset path falls outside ``ROOT``.
     embedded_set: set[str] = field(default_factory=set)
+    # Issue #39 follow-up — basenames listed in
+    # ``meta.yml::asset_policy::external``. These content assets are
+    # referenced via repo-relative paths but NOT bundled with the SLA
+    # download. The render pipeline resolves them from
+    # ``shared/assets/<slug>/`` for preview generation; the downloaded
+    # SLA shows missing-image placeholders that the user replaces.
+    # Brand-team decision (2026-05-13): no AI / supplementary content
+    # ships in the downloadable artifact.
+    external_set: set[str] = field(default_factory=set)
     # Issue #37 Phase B1 (P3 task 16): track every IDML PageItem Self ID
     # that produced output, plus explicit skips with reasons. The
     # end-of-conversion assertion compares against the IDML's PageItem
@@ -2091,18 +2100,33 @@ def _emit_image_or_inline(
     local_scale: Optional[tuple[float, float]] = None,
     local_offset_pt: Optional[tuple[float, float]] = None,
 ) -> None:
-    """Issue #39 Phase A + C: emit an ImageFrame call self-contained.
+    """Issue #39 — emit an ImageFrame call self-contained per asset_policy.
 
-    When ``abs_path.name`` appears in ``ctx.embedded_set`` (the basenames
-    listed in ``meta.yml::asset_policy::embedded``), the bytes at
-    ``abs_path`` are qCompress-encoded via ``pack_inline_image`` and
-    emitted as ``inline_image_data=`` / ``inline_image_ext=``. Otherwise
-    the function emits a repo-relative ``image=`` path string.
+    Two routes, decided by ``abs_path.name`` lookup in the policy:
+
+    1. **embedded** (basename in ``ctx.embedded_set``) — bytes are
+       qCompress-encoded via ``pack_inline_image`` and emitted as
+       ``inline_image_data=`` / ``inline_image_ext=``. The SLA owns the
+       asset; the downloaded file is self-contained.
+    2. **external** (basename in ``ctx.external_set``) — emit a path
+       string RELATIVE TO THE SLA's directory. Scribus chdirs to the
+       SLA's parent on ``openDoc``; the path resolves from there. The
+       render pipeline finds the asset under
+       ``../../shared/assets/<asset-dir>/<basename>``; a user who
+       downloads the SLA standalone sees a missing-image placeholder
+       (brand-team intent — they replace with their own content).
+
+    If a basename appears in neither set, a fallback SLA-relative path
+    is emitted so the converter never silently emits absolute paths;
+    the caller's asset_policy_audit will surface the missing
+    classification at render time.
 
     Never emits absolute filesystem paths. Raises ``RuntimeError`` if
     ``abs_path`` is outside ``ROOT`` (refusing to leak filesystem
     geometry into the SLA — see ``feedback_fix_generator_not_artifact``).
     """
+    import os
+
     from sla_lib.builder.primitives import pack_inline_image
 
     basename = abs_path.name
@@ -2126,21 +2150,20 @@ def _emit_image_or_inline(
             local_offset_pt=local_offset_pt,
         )
         return
-    # Phase A forward-compat: repo-relative path emit. Reachable in this
-    # PR only if asset_policy is absent (audit catches that at build time
-    # for templates with shared/assets/<slug>/); kept here so the
-    # converter never silently emits absolute paths.
+
+    # External (or unclassified — audit surfaces those): SLA-relative path.
     try:
-        rel = abs_path.relative_to(ROOT)
+        abs_path.relative_to(ROOT)
     except ValueError as exc:
         raise RuntimeError(
             f"Asset {abs_path} is outside repo root {ROOT}; refusing to "
             f"emit absolute path (issue #39 Phase A)."
         ) from exc
-    rel_str = str(rel).replace("\\", "/")
+    sla_dir = ROOT / "templates" / ctx.template_id
+    rel_to_sla = os.path.relpath(abs_path, sla_dir).replace("\\", "/")
     _emit_image_frame_call(
         out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
-        image_path=rel_str,
+        image_path=rel_to_sla,
         ctx=ctx,
         local_scale=local_scale,
         local_offset_pt=local_offset_pt,
@@ -3275,6 +3298,7 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             policy = None
         if policy is not None:
             ctx.embedded_set = set(policy.get("embedded", []) or [])
+            ctx.external_set = set(policy.get("external", []) or [])
 
         # Phase A
         ctx.doc_prefs = _read_doc_preferences(pkg)

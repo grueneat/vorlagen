@@ -1,34 +1,58 @@
 # JSON-Schema (draft 2020-12) for templates/<slug>/meta.yml::asset_policy.
 #
-# Each template's assets must be classified into one of two buckets:
+# Each template's assets must be classified into one of three buckets:
 #
 #   embedded:  brand-locked assets — embedded INLINE in the SLA via
 #              ImageFrame.inline_image_data. The user cannot replace
 #              them by editing the file or zip contents.
 #
-#   shipped:   content assets — shipped as files in <slug>.zip::assets/.
-#              The SLA references them via REPO-RELATIVE paths
-#              (assets/<name>). The user replaces by overwriting the
-#              file at that path.
+#   external:  content assets the SLA REFERENCES via repo-relative
+#              paths but does NOT ship. The render pipeline resolves
+#              them from shared/assets/<slug>/ when generating
+#              preview.pdf + page-NN.png. When the user downloads
+#              template.sla, those references show as missing-image
+#              placeholders in Scribus; the user replaces them with
+#              their own content (portraits, photos, etc.).
+#
+#              Brand-team decision (2026-05-13): AI-generated demo
+#              imagery and other supplementary content stay in the
+#              preview templates only — they are NEVER bundled in
+#              the downloadable artifact.
+#
+#   shipped:   reserved for a future ZIP packaging flow (deferred
+#              until brand team revisits). MUST be empty today; the
+#              audit rejects non-empty entries.
 #
 # Invariants:
-#   - Lists are disjoint (no asset appears in both).
-#   - Lists together cover every entry in shared/assets/<slug>/links_export.yml.
-#     (Cross-checked by bin/idml-import; this schema only validates shape.)
+#   - Lists are pairwise disjoint (no asset appears in more than one).
+#   - embedded + external together cover every asset on disk in
+#     shared/assets/<slug>/ that the SLA actually references.
+#     (Cross-checked by tools/asset_policy_audit.py.)
 #
 # See: .claude/skills/idml-import/asset_policy.md for the policy rationale.
 $schema: "https://json-schema.org/draft/2020-12/schema"
 $id: "https://gruene-noe.at/sla-lib/asset-policy.schema.yaml"
-title: "Asset policy (brand-vs-content split)"
+title: "Asset policy (brand-embed, content-external, shipped-deferred)"
 type: object
 additionalProperties: false
-required: [embedded, shipped]
+required: [embedded, external, shipped]
 properties:
   embedded:
     type: array
     description: >-
       Brand-locked assets embedded inline in the SLA. Each entry is the
-      basename as it appears in shared/assets/<slug>/links_export.yml.
+      basename as it appears in shared/assets/<slug>/.
+    items:
+      type: string
+      minLength: 1
+    uniqueItems: true
+  external:
+    type: array
+    description: >-
+      Content assets the SLA references via repo-relative paths but
+      does NOT ship. The render pipeline resolves them from
+      shared/assets/<slug>/ for preview generation; the downloaded
+      SLA shows missing-image placeholders that the user replaces.
     items:
       type: string
       minLength: 1
@@ -36,9 +60,10 @@ properties:
   shipped:
     type: array
     description: >-
-      User-replaceable content assets. Shipped as files in
-      <slug>.zip::assets/<basename>. The SLA references them via
-      REPO-RELATIVE paths.
+      Reserved for a future ZIP packaging flow. MUST be empty today;
+      the audit (not the schema) enforces this. Brand-team decision
+      (2026-05-13) is to NOT ship content via zip; this field stays
+      in the schema for forward compatibility only.
     items:
       type: string
       minLength: 1

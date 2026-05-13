@@ -180,20 +180,20 @@ def load_asset_policy(slug: str, root: Path | None = None) -> dict | None:
     Validates the block against ``shared/asset-policy.schema.yaml`` (jsonschema
     Draft 2020-12). The schema enforces:
 
-    - Required keys: ``embedded`` (list[str]), ``shipped`` (list[str]).
+    - Required keys: ``embedded`` (list[str]), ``external`` (list[str]),
+      ``shipped`` (list[str]).
     - Lists are uniqueItems.
 
-    Additional cross-check (NOT in jsonschema): the two lists must be
-    DISJOINT. Same asset can't be both embedded and shipped.
+    Additional cross-check (NOT in jsonschema): the three lists must be
+    PAIRWISE DISJOINT. Same asset can't appear in more than one bucket.
 
-    Coverage cross-check (asset in policy ⇔ asset in
-    ``shared/assets/<slug>/links_export.yml``) lives in
-    ``tools/asset_policy_audit.py`` per issue #39 (not here, to keep this
-    loader pure-Python with no asset-fs dependency).
+    Coverage cross-check (every referenced asset on disk in
+    ``shared/assets/<slug>/`` appears in ``embedded`` or ``external``)
+    lives in ``tools/asset_policy_audit.py`` per issue #39.
 
     Raises ``ValueError`` on YAML parse error, schema violation, or
-    disjoint-violation. See issue #39 + ``.claude/skills/idml-import/
-    asset_policy.md`` for the policy rationale.
+    pairwise-disjoint violation. See issue #39 + ``.claude/skills/
+    idml-import/asset_policy.md`` for the policy rationale.
     """
     p = _meta_path(slug, root)
     if not p.exists():
@@ -222,14 +222,20 @@ def load_asset_policy(slug: str, root: Path | None = None) -> dict | None:
         ) from e
 
     embedded = set(policy.get("embedded", []))
+    external = set(policy.get("external", []))
     shipped = set(policy.get("shipped", []))
-    overlap = embedded & shipped
-    if overlap:
-        raise ValueError(
-            f"meta.yml asset_policy at {p}: assets {sorted(overlap)!r} appear "
-            f"in BOTH `embedded` and `shipped`. Each asset must belong to "
-            f"exactly one bucket. See .claude/skills/idml-import/asset_policy.md."
-        )
+    for a, b, a_name, b_name in (
+        (embedded, external, "embedded", "external"),
+        (embedded, shipped, "embedded", "shipped"),
+        (external, shipped, "external", "shipped"),
+    ):
+        overlap = a & b
+        if overlap:
+            raise ValueError(
+                f"meta.yml asset_policy at {p}: assets {sorted(overlap)!r} appear "
+                f"in BOTH `{a_name}` and `{b_name}`. Each asset must belong to "
+                f"exactly one bucket. See .claude/skills/idml-import/asset_policy.md."
+            )
     return policy
 
 
