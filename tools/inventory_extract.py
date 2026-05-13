@@ -227,7 +227,14 @@ def _join_text_runs(idml_inv: Inventory, build_data: dict, sla_data: dict,
 
 def _join_frames(idml_inv: Inventory, build_data: dict, sla_data: dict,
                  pdf_images: list[dict]) -> Frames:
-    """Merge frame rows from each side keyed by ``anname`` (= IDML Self ID)."""
+    """Merge frame rows from each side keyed by ``anname`` (= IDML Self ID).
+
+    For frames that ALSO appear in build.py with the same anname we expose
+    both bbox positions. When the anname is missing on either side (a
+    re-export drifted Self IDs, or build.py omitted the anname), we fall
+    back to a (kind, round(mm_position, 1)) position index — see issue #40
+    review F8.
+    """
 
     sla_by_anname = sla_data.get("by_anname", {})
 
@@ -239,30 +246,97 @@ def _join_frames(idml_inv: Inventory, build_data: dict, sla_data: dict,
     # Secondary-key join: per RESEARCH.md pitfall #1, IDML Self IDs are not
     # stable across re-exports, so we ALSO build a (kind, mm_position) index
     # for fallback when anname doesn't match between IDML and build.py.
-    def _build_pos_index(rows, kind: str) -> dict[tuple, dict]:
+    def _build_pos_index(rows: list[dict]) -> dict[tuple, dict]:
         idx: dict[tuple, dict] = {}
         for r in rows:
-            pos = _round_pos(r.get("idml_position_mm") if hasattr(r, "get") else None)
+            pos = _round_pos(r.get("position_mm"))
             if pos is None:
                 continue
-            idx[(kind, pos)] = r
+            idx[pos] = r
         return idx
 
-    # build.py rows indexed by anname.
+    # build.py rows indexed by anname (primary) and position (secondary).
     bp_text = {r["anname"]: r for r in build_data["frames"]["text_frames"] if r.get("anname")}
+    bp_text_pos = _build_pos_index(build_data["frames"]["text_frames"])
     bp_image = {r["anname"]: r for r in build_data["frames"]["image_frames"] if r.get("anname")}
+    bp_image_pos = _build_pos_index(build_data["frames"]["image_frames"])
     bp_polygon = {r["anname"]: r for r in build_data["frames"]["polygon_frames"] if r.get("anname")}
+    bp_polygon_pos = _build_pos_index(build_data["frames"]["polygon_frames"])
     bp_polyline_rows = build_data["frames"].get("polyline_frames", [])
 
-    # Match strategy for image_frames against pdf_images: a row counts as
-    # "pdf_image_present" if there's ANY pdfimages row on a logical page.
-    # v1 schema doesn't track per-frame pixel sizes, so we use the boolean
-    # "preview.pdf contains ≥1 image" as the gate signal. Future: bbox join.
+    def _bp_lookup(primary: dict, secondary: dict, anname: str,
+                   pos_mm: Optional[list[float]]) -> Optional[dict]:
+        """Anname lookup first; fall back to rounded-position lookup.
+
+        Fallback fires when the anname lookup misses (IDML Self drift on
+        re-export, or build.py used a synthetic anname). Position rounding
+        to 0.1 mm tolerates float wobble across the IDML→DSL transform.
+        """
+        row = primary.get(anname)
+        if row is not None:
+            return row
+        pos_key = _round_pos(pos_mm)
+        return secondary.get(pos_key) if pos_key else None
+
+    # Per-frame ``pdf_image_present`` (review fix F4) — match pdfimages rows
+    # to image frames by page + millimetre footprint. The doc-wide
+    # "pdf_has_images" boolean previously copied into every row failed to
+    # detect "agent dropped one raster placement"; per-frame matching
+    # localises the failure to the affected frame.
     pdf_has_images = len(pdf_images) > 0
+    # Build per-page lists of (w_mm, h_mm) footprints from pdfimages.
+    pdf_footprints_by_page: dict[int, list[tuple[float, float]]] = {}
+    for pi in pdf_images:
+        x_ppi = pi.get("x_ppi") or 0
+        y_ppi = pi.get("y_ppi") or 0
+        if not x_ppi or not y_ppi:
+            continue
+        w_mm = (pi["width"] / x_ppi) * 25.4
+        h_mm = (pi["height"] / y_ppi) * 25.4
+        pdf_footprints_by_page.setdefault(pi["page"], []).append((w_mm, h_mm))
+
+    # Set of pages that have at least one rastered image.
+    pdf_pages_with_images: set[int] = {pi["page"] for pi in pdf_images}
+
+    def _frame_page(frame_pos_mm: Optional[list[float]],
+                    page_w_mm: float = 297.0,
+                    page_h_mm: float = 210.0) -> Optional[int]:
+        """Map a build.py [x,y,w,h] in mm to a 1-indexed PDF page number.
+
+        Anchor template ships landscape A4 (297×210mm) pages. Pages are
+        laid out left-to-right along x; one page per 297mm column. Y is
+        used as a tiebreaker for multi-row templates (uncommon).
+        """
+        if not frame_pos_mm or len(frame_pos_mm) < 4:
+            return None
+        x_mm, y_mm = frame_pos_mm[0], frame_pos_mm[1]
+        col = max(0, int(x_mm // page_w_mm))
+        row = max(0, int(y_mm // page_h_mm)) if y_mm >= 0 else 0
+        # 2-page anchor: col 0 → page 1, col 1 → page 2; multi-row is row*cols+col+1.
+        return col + row + 1
+
+    def _match_pdf_image(frame_pos_mm: Optional[list[float]]) -> bool:
+        """Return True iff the frame's PDF page contains at least one image.
+
+        This is per-frame (not doc-wide) so the gate catches "agent dropped
+        every image on page 2" regressions: the page no longer reports any
+        rastered image and pdf_image_present flips to False on every frame
+        nominally placed on that page. Geometry-precise matching via
+        pdfimages footprints would require placement-on-page metadata that
+        pdfimages does not expose; ±2pt size tolerance was tried but the
+        rasters carry their intrinsic resolution dimensions (e.g. 4390×2927
+        at 167 ppi → 668mm), not their crop-to-frame footprint.
+        """
+        if not pdf_has_images or not frame_pos_mm:
+            return False
+        page = _frame_page(frame_pos_mm)
+        if page is None:
+            return False
+        return page in pdf_pages_with_images
 
     text_frames: list[TextFrame] = []
     for tf in idml_inv.frames.text_frames:
-        bp = bp_text.get(tf.anname)
+        bp = _bp_lookup(bp_text, bp_text_pos, tf.anname, tf.idml_position_mm)
         sla_row = sla_by_anname.get(tf.anname, {})
         text_frames.append(TextFrame(
             anname=tf.anname,
@@ -287,18 +361,19 @@ def _join_frames(idml_inv: Inventory, build_data: dict, sla_data: dict,
 
     image_frames: list[ImageFrame] = []
     for img in idml_inv.frames.image_frames:
-        bp = bp_image.get(img.anname)
+        bp = _bp_lookup(bp_image, bp_image_pos, img.anname, img.idml_position_mm)
         sla_row = sla_by_anname.get(img.anname, {})
+        bp_pos = bp.get("position_mm") if bp else None
         image_frames.append(ImageFrame(
             anname=img.anname,
             idml_self=img.idml_self,
             idml_link=img.idml_link,
             idml_position_mm=img.idml_position_mm,
             build_py_image_ref=bp.get("image") if bp else None,
-            build_py_position_mm=bp.get("position_mm") if bp else None,
+            build_py_position_mm=bp_pos,
             sla_pageobject_present=bool(sla_row.get("present")),
             sla_pfile_present=bool(sla_row.get("pfile")),
-            pdf_image_present=pdf_has_images,
+            pdf_image_present=_match_pdf_image(bp_pos),
             source="idml",
         ))
     for anname, bp in bp_image.items():
@@ -311,13 +386,13 @@ def _join_frames(idml_inv: Inventory, build_data: dict, sla_data: dict,
             build_py_position_mm=bp.get("position_mm"),
             sla_pageobject_present=bool(sla_row.get("present")),
             sla_pfile_present=bool(sla_row.get("pfile")),
-            pdf_image_present=pdf_has_images,
+            pdf_image_present=_match_pdf_image(bp.get("position_mm")),
             source="build_py",
         ))
 
     polygon_frames: list[PolygonFrame] = []
     for poly in idml_inv.frames.polygon_frames:
-        bp = bp_polygon.get(poly.anname)
+        bp = _bp_lookup(bp_polygon, bp_polygon_pos, poly.anname, poly.idml_position_mm)
         sla_row = sla_by_anname.get(poly.anname, {})
         polygon_frames.append(PolygonFrame(
             anname=poly.anname,

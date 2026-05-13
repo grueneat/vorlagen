@@ -52,6 +52,9 @@ def _parse_pdfimages_raw(output: str) -> list[dict]:
     Differs from ``tools.baseline_image_audit._parse_pdfimages_list``: that
     helper returns only image-type counts per page. Here we keep smask / mask
     rows too so they can be paired with their parent image during grouping.
+    Also surfaces x-ppi / y-ppi (column positions 12/13 in the standard
+    pdfimages -list output) so the inventory can compute the rendered
+    image's millimetre footprint for per-frame matching.
     """
     rows: list[dict] = []
     for line in output.splitlines():
@@ -69,12 +72,26 @@ def _parse_pdfimages_raw(output: str) -> list[dict]:
             height = int(parts[4])
         except (ValueError, IndexError):
             continue
+        # x-ppi / y-ppi columns vary slightly with pdfimages version; the
+        # canonical poppler layout used in this repo's CI is:
+        #   page num type width height color comp bpc enc interp object ID x-ppi y-ppi size ratio
+        # i.e. indices 12 + 13 after the leading 12 columns. Be tolerant —
+        # fall back to None when missing.
+        x_ppi = None
+        y_ppi = None
+        try:
+            x_ppi = float(parts[12])
+            y_ppi = float(parts[13])
+        except (IndexError, ValueError):
+            pass
         rows.append({
             "page": page,
             "num": num,
             "kind": kind,
             "width": width,
             "height": height,
+            "x_ppi": x_ppi,
+            "y_ppi": y_ppi,
         })
     return rows
 
@@ -111,6 +128,8 @@ def walk_pdf_images(preview_pdf: Path) -> list[dict]:
                 "height": row["height"],
                 "rows_count": 0,
                 "kinds": [],
+                "x_ppi": row.get("x_ppi"),
+                "y_ppi": row.get("y_ppi"),
             }
         grouped[key]["rows_count"] += 1
         grouped[key]["kinds"].append(row["kind"])
