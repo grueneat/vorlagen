@@ -195,6 +195,83 @@ leak.
    PNG-inline-base64 slightly differently — document any drift in
    EXECUTION.md).
 
+### Phase G — AI-image watermarking (`KI-GENERIERT MUSS ERSETZT WERDEN`)
+
+Any AI-generated demo image that ships in `<slug>.zip::assets/` MUST
+carry a strong diagonal **red** watermark with the exact text
+`KI-GENERIERT MUSS ERSETZT WERDEN` running across the picture. Users
+opening the zip immediately see the image is placeholder and replace
+it. Brand-team requirement; no opt-out.
+
+Behavior:
+
+- The watermark is applied to the COPY that lands in the zip.
+- The source file at `shared/assets/<slug>/<basename>` stays clean —
+  rendering pipeline + iteration / convergence loop use the original.
+- The rendered `preview.pdf` (gallery preview that links to the zip)
+  shows the watermarked version, because Scribus references the
+  watermarked file at `assets/<basename>`. This is intentional: the
+  gallery shows exactly what the user gets when they download.
+
+Tagging:
+
+- `meta.yml::asset_policy::shipped` entries become objects, not bare
+  strings, when AI-generated:
+  ```yaml
+  asset_policy:
+    embedded: [gruene-logo-bund-weiss-cmyk.png, ...]
+    shipped:
+      - portrait-1.jpg                 # plain string = ai_generated: false
+      - {name: portrait-2.jpg, ai_generated: true}
+      - {name: photo-bg.jpg, ai_generated: true}
+  ```
+- The schema (`shared/asset-policy.schema.yaml`) accepts BOTH string
+  and object forms (oneOf).
+- `load_asset_policy()` normalises to the object form internally.
+
+Auto-tagging defaults:
+
+- Filenames matching `*ai-*`, `*codex-*`, `*generated-*`, or files
+  produced by `tools/codex_image_gen.py` → presumed AI → require
+  user confirmation before clearing the flag.
+- For v2-falzflyer specifically: the source `plakat-dunkel-fuer-flyer.png`
+  and `green-pine-trees-covered-with-fog.jpg` are NOT AI-generated
+  (stock / brand-supplied), so they ship without watermark.
+
+Watermark style:
+
+- Text: `KI-GENERIERT MUSS ERSETZT WERDEN` verbatim (no translation,
+  no abbreviation, no line break).
+- Color: red (`#D22B2B` or similar, brand-team to confirm exact value).
+  High contrast on any background.
+- Outline: thin black or white stroke around each glyph so the text
+  reads on busy backgrounds too.
+- Rotation: 30° diagonal (running bottom-left to top-right).
+- Sizing: font size scales with image dimensions so the text fills
+  ~70% of the image diagonal. Minimum visibility: readable at
+  thumbnail size in the gallery.
+- Font: Gotham Narrow Black (brand font; available in container
+  per `Dockerfile.claude`).
+- Opacity: ~0.85 (mostly opaque but lets background hint through so
+  users can still tell what the image WOULD show after replacement).
+
+Deliverables:
+
+1. `tools/watermark_ai_image.py` — CLI: `python3 watermark_ai_image.py
+   INPUT --out OUTPUT`. Pure PIL (already pinned at 12.2.0). Pinned
+   fontPath + deterministic output for byte-stable tests.
+2. `tools/build_template_zip.py` (Phase D extension): when packaging
+   a `shipped` asset whose entry has `ai_generated: true`, run it
+   through `watermark_ai_image.py` first, then add the watermarked
+   copy to the zip under `assets/<basename>`.
+3. Schema update: `shared/asset-policy.schema.yaml` accepts the
+   object form (`oneOf: [string, {required: [name, ai_generated]}]`).
+4. `load_asset_policy()` normalisation: both string and object forms
+   return identically shaped dicts to callers.
+5. Test fixture: a tiny known-content image + expected watermarked
+   output bytes (PIL is deterministic given pinned font + version),
+   asserts byte-identical output.
+
 ## Acceptance Criteria
 
 ### Phase A — Path canonicalisation
@@ -232,6 +309,24 @@ leak.
 - [ ] `<slug>.zip` exists and unzips into a working Scribus document
       on a clean checkout.
 - [ ] preview.pdf diff is byte-identical OR documented.
+
+### Phase G — AI-image watermarking
+- [ ] `tools/watermark_ai_image.py` exists; PIL only.
+- [ ] Watermark text is `KI-GENERIERT MUSS ERSETZT WERDEN` exactly
+      (verbatim, no translation, no abbreviation).
+- [ ] Watermark is diagonal (≈30°), red, with stroke outline, ~85%
+      opacity.
+- [ ] Watermark scales with image size (visible at thumbnail size +
+      readable on busy backgrounds).
+- [ ] Schema accepts `shipped` entries as string OR object with
+      `{name, ai_generated}`.
+- [ ] `tools/build_template_zip.py` watermarks `ai_generated: true`
+      assets before bundling.
+- [ ] Source files in `shared/assets/<slug>/` are NEVER mutated.
+- [ ] Determinism test: same input → byte-identical watermarked
+      output (pinned PIL + font).
+- [ ] Auto-tagging heuristic (`*ai-*`, `*codex-*`, etc.) suggests
+      `ai_generated: true` but never writes without user confirmation.
 
 ### Cross-cutting
 - [ ] All 9 existing templates pass the new audit (after a

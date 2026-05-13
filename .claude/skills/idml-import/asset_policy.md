@@ -37,9 +37,32 @@ These are template-specific demo content the user is expected to
 replace:
 
 - Candidate portraits (`portraits/*.jpg`)
-- AI-generated demo illustrations
+- AI-generated demo illustrations (**watermarked** — see below)
 - Photo backgrounds the user would swap for their own
 - QR codes, addresses, captions tied to a specific campaign
+
+**AI-generated subset — strict red watermark required.**
+
+Content assets that are AI-generated MUST carry a diagonal red
+watermark `KI-GENERIERT MUSS ERSETZT WERDEN` running across the
+image when shipped. The source file at
+`shared/assets/<slug>/<basename>` stays clean (the rendering
+pipeline uses it); the watermark is applied at zip-build time by
+`tools/watermark_ai_image.py` (issue #39 Phase G).
+
+The watermark is opt-out-free: every `shipped` asset flagged
+`ai_generated: true` is watermarked. Users see the demo placeholder
+status loudly the moment they open the zip. The brand-team rule
+behind this is: AI imagery must NEVER ship to print without explicit
+human review and replacement.
+
+Schema (Phase G extends `shipped` entries to support both forms):
+
+```yaml
+shipped:
+  - photo.jpg                                # plain string = ai_generated: false
+  - {name: ai-portrait.jpg, ai_generated: true}  # object form = watermarked at zip-build
+```
 
 These ship in a ZIP next to the SLA with a documented folder
 convention. The SLA references them via **relative paths**:
