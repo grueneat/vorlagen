@@ -68,6 +68,7 @@ jobs:
               python3 tools/reconcile_build_py.py "$slug" --check
             fi
           done
+          python3 tools/check_no_absolute_paths_in_sla.py
 
       - name: Run unit tests
         run: |

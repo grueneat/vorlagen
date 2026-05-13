@@ -1,7 +1,7 @@
 ---
 id: '39'
 title: Self-contained template downloads — brand embed + content zip
-status: open
+status: done
 priority: high
 labels:
 - dsl

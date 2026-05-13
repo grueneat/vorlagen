@@ -747,6 +747,37 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Issue #39 Phase B — asset_policy audit (post-extraction, pre-A1).
+    # Hard-fails on missing policy, shipped:-non-empty, or coverage drift.
+    # Silent-skip when shared/assets/<slug>/ doesn't exist (8 of 9 templates today).
+    try:
+        from asset_policy_audit import run_asset_policy_audit
+        policy_report = run_asset_policy_audit(
+            tid, root=ROOT, out_dir=out_dir,
+        )
+        if policy_report.get("ok"):
+            if policy_report.get("skipped"):
+                print(
+                    f"[{tid}] asset_policy_audit: skipped "
+                    f"({policy_report.get('reason', 'no asset dir')})"
+                )
+            else:
+                print(f"[{tid}] asset_policy_audit: OK")
+        else:
+            issue = policy_report.get("issue", "unknown")
+            issue_parts.append(f"asset_policy: {issue}")
+            print(
+                f"[{tid}] asset_policy_audit: FAIL ({issue}): "
+                f"{policy_report.get('message', '')}",
+                file=sys.stderr,
+            )
+    except ValueError as exc:
+        issue_parts.append(f"asset_policy: schema-error")
+        print(
+            f"[{tid}] asset_policy_audit: schema error: {exc}",
+            file=sys.stderr,
+        )
+
     inventory_path = out_dir / "inventory.yml"
     if idml_source is not None and (tdir / "build.py").exists():
         try:

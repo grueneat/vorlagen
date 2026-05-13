@@ -13,13 +13,34 @@ description: >
   (u-prefixed); a human will refactor them to semantic slot names
   post-bootstrap.
 
+# Issue #39 first-PR policy: every asset goes in `embedded:`. The 12
+# disk files in shared/assets/26-03-leporello-z-falz-99x210-6-seitig-
+# gruenes-cover-2/ are inlined into the SLA via
+# ImageFrame.inline_image_data. `shipped:` must remain empty until the
+# brand team decides on the zip flow (Phase D / E / G follow-up).
+asset_policy:
+  embedded:
+    - bluesky-weiss.png
+    - green-pine-trees-covered-with-fog-crop.png
+    - green-pine-trees-covered-with-fog-srgb.png
+    - green-pine-trees-covered-with-fog.jpg
+    - gruene-logo-bund-weiss-cmyk.png
+    - mail-weiss.png
+    - plakat-dunkel-fuer-flyer.png
+    - social-media-icon-facebook.png
+    - social-media-icon-instagram.png
+    - social-media-icon-tiktok.png
+    - social-media-icons-weiss.png
+    - website-weiss.png
+  shipped: []
+
 build:
   script: build.py
   output: template.sla
 
 # Pinned by bin/check-stale-previews; updated by bin/render-gallery on
 # each rebuild. Initial value is the SHA of the converter-emitted SLA.
-previews_for_sla: 01a737f648eba48e347a575ed5a35e05867b7ec26cffab66e42d35a52bc794cb
+previews_for_sla: b9a00e3c2142e21556ad4a20878fe12058ecce5360439af9a471dba2946e6a87
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-

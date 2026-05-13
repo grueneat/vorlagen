@@ -68,3 +68,25 @@ shows the same overlap.
 
 Follow-up: brand-rule lint should grow a per-template exemption
 mechanism for intentional overlay text. Not a converter concern.
+
+## sla-size-bloat — 2026-05-13 — issue #39 brand-embed first PR
+
+Reason: Issue #39 inlines every brand asset into `template.sla` via
+`ImageFrame(inline_image_data=…, inline_image_ext=…)` to make the
+downloaded SLA self-contained (no broken external file references).
+For v2-falzflyer this inlines 9 PFILE-referenced PNG/JPG assets
+(brand logos, social-media icons, photo crop, and the plakat poster).
+
+Pre-emission size:  58_037 bytes (text-only SLA, 9 absolute PFILEs).
+Post-emission size: 17_951_630 bytes (~18 MB, 9 inline images).
+Delta:              +17_893_593 bytes (~309× bloat).
+
+This size is accepted per `.issues/39-…/CONTEXT.md` — the brand-team
+decision on Phase D (zip pipeline) / Phase E (gallery flip) / Phase G
+(AI watermark) is pending. Until that decision, the bare SLA is the
+download artifact; inlining is the only way to keep the file
+self-contained.
+
+Follow-up: when Phase D lands, content assets (the photo + plakat)
+can move to `shipped:` and out of the SLA, shrinking it back to a few
+hundred KB.

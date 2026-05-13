@@ -213,6 +213,10 @@ Re-read at every iteration boundary per RESEARCH.md 1.2:
   via REPO-RELATIVE paths. Absolute worktree paths in committed SLAs
   are a hard error. Every asset must be explicitly classified in
   `meta.yml::asset_policy`. See `asset_policy.md`.
+  **First-PR rule (issue #39):** every asset goes in `embedded:`;
+  `shipped:` MUST be empty. The eventual brand-vs-content split lands
+  in a follow-up PR with Phases D / E / G. See the banner at the top
+  of `asset_policy.md`.
 
 ## See also
 
