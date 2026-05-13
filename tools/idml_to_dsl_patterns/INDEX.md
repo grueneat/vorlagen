@@ -16,6 +16,7 @@ pattern module for the regression test path.
 | `polyline_round_caps_joins` | Map IDML EndCap/EndJoin to Scribus PLINEEND/PLINEJOIN (Backport 8) | PolyLine.EndCap + EndJoin | line_cap + line_join | `tests/unit/test_pattern_polyline_round_caps.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
 | `text_frame_height_widening` | Widen TextFrame h_mm when IDML overflow would clip in Scribus | TextFrame.h_mm + text content metrics | h_mm | `tests/unit/test_pattern_text_frame_height_widening.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
 | `group_transform_cascade` | Compose Group ItemTransform chain to page-local coords | Group.ItemTransform stack | x/y/w/h_pt + rotation | `tests/unit/test_pattern_group_transform_cascade.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
+| `image_frame_pdf_source_for_vectors` | Emit ImageFrame with PDF source for AI assets (vector preservation) | ImageFrame.LinkResourceURI=*.ai | image | `tests/unit/test_pattern_image_frame_pdf_source.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
 
 ## How to add a new pattern
 

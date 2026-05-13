@@ -80,12 +80,16 @@ class AssetEntry:
             ``raster_png``. Surfaced for downstream tooling that may want to
             dispatch on the source kind.
         recipe: Human-readable description of the conversion command.
+        vector_output_rel: Repo-relative POSIX path to the PDF vector copy
+            (only set for ``.ai`` sources; issue #38 Task 14). The PDF lets
+            the converter emit ImageFrame(image=<pdf>) for vector preservation.
     """
 
     original_basename: str
     output_rel: str
     kind: str
     recipe: str
+    vector_output_rel: str | None = None
 
 
 @dataclass(frozen=True)
@@ -199,13 +203,19 @@ def _run(cmd: list[str]) -> None:
         )
 
 
-def _convert_ai(src: Path, out_path: Path) -> None:
-    """``.ai`` → transparent PNG at 600 DPI via pdftocairo.
+def _convert_ai(src: Path, out_path: Path) -> Path | None:
+    """``.ai`` → transparent PNG at 600 DPI via pdftocairo AND a PDF passthrough.
 
     AI files since CS2 are PDF-compatible; pdftocairo reads the bundled PDF
     stream and rasterises it. ``-singlefile`` writes ``<prefix>.png`` instead
     of ``<prefix>-1.png``; we pass the OUTPUT WITHOUT EXTENSION as the prefix
     per pdftocairo's CLI contract.
+
+    Issue #38 Task 14: in addition to the PNG raster, copy the AI verbatim to
+    ``<out_path stem>.pdf``. The PDF copy preserves vector data so the
+    converter can emit ImageFrame(image=<pdf>) when the
+    image_frame_pdf_source_for_vectors pattern applies. Returns the PDF path
+    when written, or None when the source cannot be passed through as PDF.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     prefix = out_path.with_suffix("")  # strip .png — pdftocairo appends it
@@ -218,6 +228,15 @@ def _convert_ai(src: Path, out_path: Path) -> None:
         raise RuntimeError(
             f"pdftocairo did not produce {out_path} from {src}"
         )
+    # PDF passthrough — AI files since CS2 ARE valid PDFs. shutil.copy is
+    # deterministic and cheap; the converter / downstream consumers can
+    # ignore the .pdf if they prefer raster.
+    pdf_out = out_path.with_suffix(".pdf")
+    try:
+        shutil.copy(src, pdf_out)
+        return pdf_out
+    except OSError:
+        return None
 
 
 def _convert_psd(src: Path, out_path: Path) -> None:
@@ -313,11 +332,16 @@ def _emit_manifest(
     # Build the assets block — original basename is the key (NFC-normalised).
     assets_block: dict[str, dict[str, str]] = {}
     for entry in entries:
-        assets_block[entry.original_basename] = {
+        row: dict[str, str] = {
             "output": entry.output_rel,
             "kind": entry.kind,
             "recipe": entry.recipe,
         }
+        # Issue #38 Task 14: vector_output is emitted only for .ai sources
+        # where the PDF passthrough succeeded.
+        if entry.vector_output_rel:
+            row["vector_output"] = entry.vector_output_rel
+        assets_block[entry.original_basename] = row
     skipped_block: dict[str, str] = {bn: reason for bn, reason in skipped}
 
     try:
@@ -390,8 +414,16 @@ def export(
         out_name = f"{out_stem}{recipe.out_ext}"
         out_path = out_dir / out_name
 
+        vector_output_rel: str | None = None
         if ext == ".ai":
-            _convert_ai(src, out_path)
+            pdf_path = _convert_ai(src, out_path)
+            if pdf_path is not None and pdf_path.exists():
+                try:
+                    vector_output_rel = str(
+                        pdf_path.resolve().relative_to(ROOT)
+                    ).replace("\\", "/")
+                except ValueError:
+                    vector_output_rel = str(pdf_path.resolve())
         elif ext == ".psd":
             _convert_psd(src, out_path)
         else:  # passthrough raster (jpg/jpeg/png)
@@ -407,6 +439,7 @@ def export(
             output_rel=output_rel,
             kind=recipe.kind,
             recipe=recipe.description,
+            vector_output_rel=vector_output_rel,
         ))
         if not quiet:
             print(f"OK: {basename_nfc} → {output_rel}", file=sys.stderr)

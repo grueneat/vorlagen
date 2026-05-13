@@ -13,6 +13,7 @@ from typing import List
 from .base import Pattern
 from .default_style_align_inheritance import DefaultStyleAlignInheritance
 from .group_transform_cascade import GroupTransformCascade
+from .image_frame_pdf_source_for_vectors import ImageFramePdfSourceForVectors
 from .justification_to_align import JustificationToAlign
 from .polyline_round_caps_joins import PolylineRoundCapsJoins
 from .scale_type_for_cropped_images import ScaleTypeForCroppedImages
@@ -26,6 +27,7 @@ PATTERNS: List[Pattern] = [
     PolylineRoundCapsJoins(),
     TextFrameHeightWidening(),
     GroupTransformCascade(),
+    ImageFramePdfSourceForVectors(),
 ]
 
 
