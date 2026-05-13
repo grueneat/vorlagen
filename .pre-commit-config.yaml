@@ -1,0 +1,29 @@
+# Pre-commit hooks for issue #38 SOP enforcement.
+#
+# Run on every commit; CI runs the same checks via .github/workflows/.
+# Each hook is system-language and pass_filenames=false so the tool can
+# inspect the whole tree as designed.
+
+repos:
+  - repo: local
+    hooks:
+      - id: sop-lint
+        name: SOP lint — ban the false-plateau phrase family
+        entry: python3 tools/sop_lint.py
+        language: system
+        pass_filenames: false
+      - id: check-overrides-growth
+        name: Check tolerance growth — require TOLERANCE_LOG row or inject entry
+        entry: python3 tools/check_overrides_growth.py --base-ref origin/main
+        language: system
+        pass_filenames: false
+      - id: lint-inject-consistency
+        name: Lint inject.yml <-> build.py P5/inject comment consistency
+        entry: python3 tools/lint_inject_consistency.py
+        language: system
+        pass_filenames: false
+      - id: reconcile-build-py-check
+        name: Reconcile build.py --check on every template with inject.yml
+        entry: bash -c 'set -e; for d in templates/*/; do slug=$(basename "$d"); if [ -f "$d/inject.yml" ] && [ -f "$d/build.py.generated" ]; then python3 tools/reconcile_build_py.py "$slug" --check || exit 1; fi; done'
+        language: system
+        pass_filenames: false

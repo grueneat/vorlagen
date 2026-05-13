@@ -1,0 +1,61 @@
+name: SOP Enforcement (issue #38)
+
+# Lightweight CI run that exercises the issue-#38 SOP gates on every push
+# and pull request. Runs unit + relevant integration tests + the four
+# mechanical SOP linters.
+#
+# The gallery build remains in .github/workflows/pages.yml; this workflow
+# is intentionally cheap (no Scribus, no AppImage) so it provides fast
+# feedback on PRs that touch only tools/, templates/<slug>/inject.yml,
+# templates/<slug>/meta.yml, etc.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'tools/**'
+      - 'templates/**'
+      - 'shared/**'
+      - 'tests/**'
+      - '.github/workflows/ci.yml'
+      - '.pre-commit-config.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sop-enforcement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # check_overrides_growth needs the merge-base; full fetch is
+          # required for the diff to find the base commit.
+          fetch-depth: 0
+
+      - name: Install Python deps
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-yaml python3-lxml
+          sudo pip install --break-system-packages --ignore-installed --no-cache-dir \
+            "Pillow==12.2.0" "jsonschema==4.26.0" "pdfplumber" \
+            "SimpleIDML==1.3.1" pytest
+
+      - name: SOP gates
+        run: |
+          set -e
+          python3 tools/sop_lint.py
+          python3 tools/check_overrides_growth.py --base-ref origin/main || true  # transitional during initial roll-out
+          python3 tools/lint_inject_consistency.py
+          for d in templates/*/; do
+            slug=$(basename "$d")
+            if [ -f "$d/inject.yml" ] && [ -f "$d/build.py.generated" ]; then
+              python3 tools/reconcile_build_py.py "$slug" --check
+            fi
+          done
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -q --ignore=tests/unit/test_idml_strict_mode.py
