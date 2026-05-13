@@ -621,6 +621,24 @@ class TextFrame(_Frame):
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
         w_pt, h_pt = self._wh_pt()
+        # Scribus computes text-flow width from the WIDTH attribute BEFORE
+        # applying ROT. For frames rotated ~±90° the IDML "long axis" is
+        # HEIGHT, so a narrow tall frame (e.g. rotated Impressum, 10×53mm
+        # @ -90°) wraps after ~WIDTH/glyph_width characters instead of
+        # running along its visible long edge. Swap WIDTH/HEIGHT and shift
+        # origin so visible placement is invariant. Rotation around the
+        # unrotated top-left:
+        #   -90°: visible TL = (XPOS,     YPOS - W);  new YPOS = YPOS - W + H
+        #   +90°: visible TL = (XPOS - H, YPOS);      new XPOS = XPOS + W - H
+        if (
+            abs(abs(self.rotation_deg) - 90.0) < 0.5
+            and self.custom_path is None
+        ):
+            if self.rotation_deg < 0:
+                y = y - w_pt + h_pt
+            else:
+                x = x + w_pt - h_pt
+            w_pt, h_pt = h_pt, w_pt
         item_id = self._preallocated_id if self._preallocated_id is not None else idgen.next()
         rect_path = _format_rect_path(w_pt, h_pt)
         attrs = {
@@ -636,7 +654,14 @@ class TextFrame(_Frame):
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
             "COLUMNS": str(self.columns), "COLGAP": _fmt_num(mm_to_pt(self.col_gap_mm)),
             "AUTOTEXT": "0", "EXTRA": "0", "TEXTRA": "0", "BEXTRA": "0", "REXTRA": "0",
-            "VAlign": "0", "FLOP": "1", "PLTSHOW": "0", "BASEOF": "0",
+            # FLOP=2 (Line Spacing): first baseline = LINESP below frame
+            # top. Matches InDesign's "AscentOffset" closer than FLOP=0/1
+            # for this corpus' Gotham/Vollkorn fonts — empirically baseline
+            # puts the first cap ~15pt below frame top for a 30pt headline
+            # frame, which corresponds to LINESP-1 ascent (~6pt) not the
+            # raw font-ascent (~24pt). FLOP=0/1 placed text flush against
+            # the frame top; FLOP=2 pushes it down by the line height.
+            "VAlign": "0", "FLOP": "2", "PLTSHOW": "0", "BASEOF": "0",
             "textPathType": "0", "textPathFlipped": "0",
             "gXpos": _fmt_num(x), "gYpos": _fmt_num(y),
             "gWidth": "0", "gHeight": "0",
@@ -802,6 +827,7 @@ class ImageFrame(_Frame):
     # in the rebuilt SLA — Scribus then renders byte-identical output.
     inline_image_data: Optional[str] = None
     inline_image_ext: Optional[str] = None  # e.g. "png", "jpg"
+    image_profile: str = "sRGB display profile (ICC v2.2)"  # PRFILE per-frame
 
     def to_pageobject(self, idgen, page) -> etree._Element:
         x, y = self._xy_pt(page)
@@ -827,7 +853,7 @@ class ImageFrame(_Frame):
             "SCALETYPE": str(self.scale_type),
             "RATIO": str(self.ratio),
             "PFILE": pfile,
-            "PRFILE": "sRGB display profile (ICC v2.2)",
+            "PRFILE": self.image_profile,
             "IRENDER": "0",
             "gXpos": _fmt_num(x), "gYpos": _fmt_num(y),
             "gWidth": "0", "gHeight": "0",
