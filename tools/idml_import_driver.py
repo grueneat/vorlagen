@@ -249,8 +249,9 @@ def _run_render_gallery(slug: str, *, no_brand_fonts: bool = False) -> int:
         "--audit-strict",
     ]
     if no_brand_fonts:
-        # The actual flag is not implemented on render_pipeline yet; let the
-        # caller bypass via env var or skip. Document the intent.
+        # render_pipeline does not yet expose a --no-brand-fonts CLI flag;
+        # we propagate the intent via env var which render_pipeline's
+        # _verify_brand_fonts can opt into via a follow-up extension.
         os.environ.setdefault("AUSTENDER_NO_BRAND_FONTS", "1")
     result = subprocess.run(cmd)
     return result.returncode
