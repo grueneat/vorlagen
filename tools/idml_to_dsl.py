@@ -700,6 +700,14 @@ class _Ctx:
     # logo_map for both <PDF> (vector) and <Image> (raster) references.
     asset_map: dict[str, str] = field(default_factory=dict)
     unmapped_assets: list[tuple[str, str]] = field(default_factory=list)
+    # Issue #39 Phase A + C — set of basenames listed in
+    # ``meta.yml::asset_policy::embedded``. When a frame's resolved asset
+    # basename appears in this set the converter inlines the bytes into
+    # the ImageFrame call (``inline_image_data=`` + ``inline_image_ext=``).
+    # Otherwise it emits a repo-relative path. Either way, no absolute
+    # filesystem paths are ever emitted; ``_emit_image_or_inline`` raises
+    # ``RuntimeError`` if the resolved asset path falls outside ``ROOT``.
+    embedded_set: set[str] = field(default_factory=set)
     # Issue #37 Phase B1 (P3 task 16): track every IDML PageItem Self ID
     # that produced output, plus explicit skips with reasons. The
     # end-of-conversion assertion compares against the IDML's PageItem
@@ -1640,11 +1648,13 @@ def _emit_pageitem(
             if mapped is None and ctx.logo_map:
                 mapped = ctx.logo_map.get(basename)
             if mapped:
-                # Resolve relative asset_map paths to absolute.
+                # Issue #39 Phase A: resolve relative asset_map paths
+                # against ROOT (NEVER via Path.resolve() — that follows
+                # symlinks through the worktree chain and produces the
+                # absolute-path leak the lint catches).
+                mapped_path = Path(mapped)
                 abs_mapped = (
-                    str(Path(mapped).resolve())
-                    if not Path(mapped).is_absolute()
-                    else mapped
+                    mapped_path if mapped_path.is_absolute() else ROOT / mapped_path
                 )
                 # Extract per-PDF placement params from the PDF child's ItemTransform.
                 pdf_transform_str = pdf.get("ItemTransform", "")
@@ -1654,10 +1664,11 @@ def _emit_pageitem(
                     pdf_local_scale, pdf_local_offset = _extract_content_local_params(
                         pdf_transform_str, frame_tl_anchor,
                     )
-                # Use the mapped PNG for the entire enclosing frame.
-                _emit_image_frame_call(
+                # Issue #39 Phase A + C: route through the inline-vs-
+                # relative helper. Never emit absolute paths.
+                _emit_image_or_inline(
                     out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
-                    image_path=abs_mapped, ctx=ctx,
+                    abs_path=abs_mapped, ctx=ctx,
                     local_scale=pdf_local_scale, local_offset_pt=pdf_local_offset,
                 )
                 return
@@ -2065,6 +2076,77 @@ def _emit_image_frame_call(
     _emit_call(ctx.out, "ImageFrame", kwargs, receiver=receiver, multiline=True)
 
 
+def _emit_image_or_inline(
+    out: PythonRepr,
+    x_mm: float,
+    y_mm: float,
+    w_mm: float,
+    h_mm: float,
+    rot: float,
+    self_id: str,
+    layer_idx: int,
+    *,
+    abs_path: Path,
+    ctx: _Ctx,
+    local_scale: Optional[tuple[float, float]] = None,
+    local_offset_pt: Optional[tuple[float, float]] = None,
+) -> None:
+    """Issue #39 Phase A + C: emit an ImageFrame call self-contained.
+
+    When ``abs_path.name`` appears in ``ctx.embedded_set`` (the basenames
+    listed in ``meta.yml::asset_policy::embedded``), the bytes at
+    ``abs_path`` are qCompress-encoded via ``pack_inline_image`` and
+    emitted as ``inline_image_data=`` / ``inline_image_ext=``. Otherwise
+    the function emits a repo-relative ``image=`` path string.
+
+    Never emits absolute filesystem paths. Raises ``RuntimeError`` if
+    ``abs_path`` is outside ``ROOT`` (refusing to leak filesystem
+    geometry into the SLA — see ``feedback_fix_generator_not_artifact``).
+    """
+    from sla_lib.builder.primitives import pack_inline_image
+
+    basename = abs_path.name
+    if basename in ctx.embedded_set:
+        ext = abs_path.suffix.lstrip(".").lower() or "png"
+        try:
+            blob_b64, ext_norm = pack_inline_image(
+                abs_path.read_bytes(), ext,
+            )
+        except OSError as exc:
+            raise RuntimeError(
+                f"Asset {abs_path} listed in embedded: but is unreadable: {exc}"
+            ) from exc
+        _emit_image_frame_call(
+            out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
+            image_path="",
+            inline_data=blob_b64,
+            inline_ext=ext_norm,
+            ctx=ctx,
+            local_scale=local_scale,
+            local_offset_pt=local_offset_pt,
+        )
+        return
+    # Phase A forward-compat: repo-relative path emit. Reachable in this
+    # PR only if asset_policy is absent (audit catches that at build time
+    # for templates with shared/assets/<slug>/); kept here so the
+    # converter never silently emits absolute paths.
+    try:
+        rel = abs_path.relative_to(ROOT)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"Asset {abs_path} is outside repo root {ROOT}; refusing to "
+            f"emit absolute path (issue #39 Phase A)."
+        ) from exc
+    rel_str = str(rel).replace("\\", "/")
+    _emit_image_frame_call(
+        out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
+        image_path=rel_str,
+        ctx=ctx,
+        local_scale=local_scale,
+        local_offset_pt=local_offset_pt,
+    )
+
+
 _SCRIBUS_FRIENDLY_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
 
 
@@ -2128,12 +2210,17 @@ def _emit_image_content(
     if ctx.asset_map:
         mapped = ctx.asset_map.get(basename)
         if mapped:
-            # Resolve relative asset_map paths to absolute so Scribus finds
-            # the file regardless of the working directory at render time.
-            abs_mapped = str(Path(mapped).resolve()) if not Path(mapped).is_absolute() else mapped
-            _emit_image_frame_call(
+            # Issue #39 Phase A: resolve relative asset_map paths against
+            # ROOT (NEVER via Path.resolve() — that follows symlinks and
+            # leaks absolute worktree paths into the SLA).
+            mapped_path = Path(mapped)
+            abs_mapped = (
+                mapped_path if mapped_path.is_absolute() else ROOT / mapped_path
+            )
+            # Issue #39 Phase A + C: inline-vs-relative routing.
+            _emit_image_or_inline(
                 ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
-                self_id, layer_idx, image_path=abs_mapped, ctx=ctx,
+                self_id, layer_idx, abs_path=abs_mapped, ctx=ctx,
                 local_scale=local_scale, local_offset_pt=local_offset_pt,
             )
             return
@@ -2159,19 +2246,12 @@ def _emit_image_content(
         # Decision #3: defer missing-asset raise to end-of-conversion.
         ctx.missing_assets.append(str(asset_path))
         return
-    # Absolute path so Scribus resolves the file at render time regardless of cwd.
-    emit_path = str(asset_path.resolve())
-    try:
-        # Also try repo-relative for human readability in the emitted source.
-        rel_path = asset_path.resolve().relative_to(ROOT)
-        emit_path = str(rel_path).replace("\\", "/")
-    except ValueError:
-        # Asset is outside the repo root; fall back to absolute path string.
-        emit_path = str(asset_path.resolve())
-
-    _emit_image_frame_call(
+    # Issue #39 Phase A + C: inline-vs-relative routing. _emit_image_or_inline
+    # raises RuntimeError if asset_path is outside ROOT — never silently
+    # emit absolute paths the way the prior fallback did.
+    _emit_image_or_inline(
         ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
-        self_id, layer_idx, image_path=emit_path, ctx=ctx,
+        self_id, layer_idx, abs_path=asset_path, ctx=ctx,
         local_scale=local_scale, local_offset_pt=local_offset_pt,
     )
 
@@ -3177,6 +3257,24 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         ctx = _Ctx(pkg=pkg, template_id=template_id, assets_dir=assets_dir)
         ctx.logo_map = logo_map
         ctx.asset_map = asset_map
+
+        # Issue #39 Phase A + C: load asset_policy and populate
+        # ctx.embedded_set so the 3 emit sites can route via
+        # _emit_image_or_inline. When the policy is absent
+        # (templates without shared/assets/<slug>/) the set stays empty
+        # and every emit takes the repo-relative branch — still no
+        # absolute paths.
+        try:
+            from sla_lib.builder.meta_schema import load_asset_policy as _load_asset_policy
+            policy = _load_asset_policy(template_id, root=ROOT)
+        except ValueError:
+            # Schema or disjoint error — surface upstream via the audits
+            # (tools/asset_policy_audit.py). The converter itself stays
+            # silent here so the build still emits a (relative-path) SLA
+            # for human review.
+            policy = None
+        if policy is not None:
+            ctx.embedded_set = set(policy.get("embedded", []) or [])
 
         # Phase A
         ctx.doc_prefs = _read_doc_preferences(pkg)
