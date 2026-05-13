@@ -1,7 +1,7 @@
 ---
 id: '40'
 title: 'IDML import: two-agent pipeline with script-based inventory gate'
-status: open
+status: done
 priority: high
 labels:
 - architecture
