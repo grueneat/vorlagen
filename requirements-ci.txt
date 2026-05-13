@@ -1,0 +1,10 @@
+# CI dependencies for SOP Enforcement workflow (.github/workflows/ci.yml).
+# Mirrors Dockerfile.claude pins. Updates here must keep step with the
+# dev-container pins.
+Pillow==12.2.0
+PyYAML==6.0.3
+lxml==5.4.0
+jsonschema==4.26.0
+pdfplumber==0.11.9
+SimpleIDML==1.3.1
+pytest
