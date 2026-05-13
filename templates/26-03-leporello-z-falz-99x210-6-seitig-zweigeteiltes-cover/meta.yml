@@ -1,0 +1,32 @@
+asset_policy:
+  embedded:
+  - bluesky-weiss.png
+  - gruene-logo-bund-weiss-cmyk.png
+  - mail-weiss.png
+  - social-media-icon-facebook.png
+  - social-media-icon-instagram.png
+  - social-media-icon-tiktok.png
+  - social-media-icon-x.png
+  - social-media-icons-weiss.png
+  - website-weiss.png
+  external:
+  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
+    weiss--0.pdf
+  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
+    weiss--1.pdf
+  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
+    weiss--2.pdf
+  - green-pine-trees-covered-with-fog.jpg
+  - plakat-dunkel-fuer-flyer.png
+  - ziesel.jpg
+  shipped: []
+build:
+  output: template.sla
+  script: build.py
+format: A4
+id: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
+idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes
+  Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes Cover.idml
+previews_for_sla: _pending_first_build
+title: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
+version: 0.1.0

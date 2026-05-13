@@ -1,0 +1,58 @@
+ai_basename: Social Media Icons weiss.ai
+pages_emitted:
+- frame_transform:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 259.73537278137826
+  - 249.0018360868271
+  idml_anname: u3e7
+  image_transform:
+  - 0.0900000234345859
+  - 0.0
+  - 0.0
+  - 0.0900000234345859
+  - -122.38416929423315
+  - -21.65184264411183
+  index: 0
+  out: /workspace/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
+    Media Icons weiss--0.pdf
+- frame_transform:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 259.73537278137826
+  - 264.9907557693459
+  idml_anname: u3f0
+  image_transform:
+  - 0.0900000234345859
+  - 0.0
+  - 0.0
+  - 0.0900000234345859
+  - -100.93346010656778
+  - -21.65184264411183
+  index: 1
+  out: /workspace/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
+    Media Icons weiss--1.pdf
+- frame_transform:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 259.73537278137826
+  - 281.19299648495166
+  idml_anname: u3f5
+  image_transform:
+  - 0.0900000234345859
+  - 0.0
+  - 0.0
+  - 0.0900000234345859
+  - -111.37251469843008
+  - -21.65184264411183
+  index: 2
+  out: /workspace/shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
+    Media Icons weiss--2.pdf
+source: originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes Cover Ordner/Links/Social
+  Media Icons weiss.ai
