@@ -13,7 +13,7 @@ build:
 
 # Round-trip validation (issue #2)
 original_sla: ../../plakat-a1-hochformat-original.sla
-previews_for_sla: 03c61ef28b10c0830c346abc28ceff94f33224fd2ece9e7abfba01178b6df2eb
+previews_for_sla: dd54c49cacfb57040df2e5f5c91e5b5d5d53c5c478bf03a047949b0102e97053
 brand_overrides:
   - id: brand:line_spacing_0.9
     reason: >-
