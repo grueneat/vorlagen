@@ -479,6 +479,7 @@ def _join_paragraph_styles(idml_inv: Inventory, build_data: dict,
         out.append(ParagraphStyleEntry(
             idml=ps.idml,
             build_py=bp_match,
+            build_py_extra_pstyle=bp_match is not None,
             sla_pstyle_present=sla_present,
         ))
     return out

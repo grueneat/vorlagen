@@ -82,18 +82,58 @@ def _bucket_count_deltas(expected: dict, actual: dict, name: str) -> list[dict]:
     return deltas
 
 
+def _flipped_false(expected_rows: list[dict], actual_rows: list[dict],
+                   key_field: str, flag: str) -> list[str]:
+    """Return keys where ``flag`` was True in expected but False in actual.
+
+    Used to surface "the SLA emit lost its PFILE", "the on_disk file
+    disappeared", "sla_pstyle_present went false" — boolean-valued schema
+    fields that the original set-only comparator silently ignored.
+    """
+    exp_by_key = {
+        r.get(key_field): r for r in (expected_rows or []) if r.get(key_field)
+    }
+    act_by_key = {
+        r.get(key_field): r for r in (actual_rows or []) if r.get(key_field)
+    }
+    flipped: list[str] = []
+    for key, exp_row in exp_by_key.items():
+        if not exp_row.get(flag):
+            continue
+        act_row = act_by_key.get(key)
+        if act_row is None:
+            # Already surfaced as a missing-key under the parent diff.
+            continue
+        if not act_row.get(flag):
+            flipped.append(str(key))
+    return sorted(flipped)
+
+
 def compare(expected: dict, actual: dict) -> dict:
-    """Compute a ``inventory_diff.yml``-shaped dict."""
+    """Compute a ``inventory_diff.yml``-shaped dict.
+
+    The diff covers every value-bearing schema field, not just key presence
+    (review fix F7). For each boolean schema field that "this thing is still
+    here" is a Stage-2 contract on (``sla_pageobject_present``,
+    ``sla_pfile_present``, ``sla_color_present``, ``sla_pstyle_present``,
+    ``on_disk``, ``build_py_extra_color``, ``build_py_extra_pstyle``,
+    ``pdf_image_present``), we report any row that flipped from True →
+    False as ``missing.<section>.<flag>``. That escalates to exit-code 2
+    just like a missing key.
+    """
     missing: dict[str, list[str]] = {}
     extra: dict[str, list[str]] = {}
     count_deltas: list[dict] = []
+
+    exp_frames = (expected.get("frames") or {})
+    act_frames = (actual.get("frames") or {})
 
     # Per-frame-kind set diffs. ``actual.extra`` excludes ``source==manual`` to
     # avoid false-positive PolyLine fold-lines (RESEARCH.md pitfall #3).
     frame_kinds = ("text_frames", "image_frames", "polygon_frames", "group_frames")
     for kind in frame_kinds:
-        exp_rows = (expected.get("frames") or {}).get(kind) or []
-        act_rows = (actual.get("frames") or {}).get(kind) or []
+        exp_rows = exp_frames.get(kind) or []
+        act_rows = act_frames.get(kind) or []
         exp_set = _frame_key_set(exp_rows, include_manual=True)
         act_set = _frame_key_set(act_rows, include_manual=True)
         act_set_no_manual = _frame_key_set(act_rows, include_manual=False)
@@ -104,9 +144,32 @@ def compare(expected: dict, actual: dict) -> dict:
         if ext:
             extra[f"frames.{kind}"] = ext
 
+        # Boolean-field regressions per frame kind (review fix F7).
+        # sla_pageobject_present applies to every frame kind that has a SLA
+        # counterpart; sla_pfile_present is only meaningful on image frames;
+        # pdf_image_present likewise. The exp→act comparison only flags
+        # True → False transitions; False → True is silently allowed (and
+        # would be surfaced through the parent extra diff anyway).
+        flipped = _flipped_false(exp_rows, act_rows, "anname",
+                                 "sla_pageobject_present")
+        if flipped:
+            missing.setdefault(f"frames.{kind}.sla_pageobject", []).extend(flipped)
+        if kind == "image_frames":
+            for flag, label in (
+                ("sla_pfile_present", "sla_pfile"),
+                ("pdf_image_present", "pdf_image"),
+            ):
+                flipped = _flipped_false(exp_rows, act_rows, "anname", flag)
+                if flipped:
+                    missing.setdefault(
+                        f"frames.{kind}.{label}", []
+                    ).extend(flipped)
+
     # paragraph_styles set.
-    exp_ps = _pstyle_set(expected.get("paragraph_styles") or [])
-    act_ps = _pstyle_set(actual.get("paragraph_styles") or [])
+    exp_ps_rows = expected.get("paragraph_styles") or []
+    act_ps_rows = actual.get("paragraph_styles") or []
+    exp_ps = _pstyle_set(exp_ps_rows)
+    act_ps = _pstyle_set(act_ps_rows)
     miss = sorted(exp_ps - act_ps)
     ext = sorted(act_ps - exp_ps)
     if miss:
@@ -114,9 +177,33 @@ def compare(expected: dict, actual: dict) -> dict:
     if ext:
         extra["paragraph_styles"] = ext
 
+    # build.py emit-side: which paragraph styles were emitted via
+    # add_para_style() in expected but missing in actual (review fix F7).
+    # Use ``build_py_extra_pstyle`` (mirror of ``build_py_extra_color``)
+    # as the boolean signal; the ``build_py`` field is the matched name.
+    exp_bp_pstyles = {
+        r.get("idml") for r in exp_ps_rows
+        if r.get("build_py_extra_pstyle") or r.get("build_py")
+    }
+    act_bp_pstyles = {
+        r.get("idml") for r in act_ps_rows
+        if r.get("build_py_extra_pstyle") or r.get("build_py")
+    }
+    bp_pstyle_miss = sorted({k for k in exp_bp_pstyles - act_bp_pstyles if k})
+    if bp_pstyle_miss:
+        missing.setdefault("paragraph_styles.build_py", []).extend(bp_pstyle_miss)
+
+    # SLA-side: which paragraph styles flipped to sla_pstyle_present=False
+    sla_pstyle_flipped = _flipped_false(exp_ps_rows, act_ps_rows, "idml",
+                                        "sla_pstyle_present")
+    if sla_pstyle_flipped:
+        missing.setdefault("paragraph_styles.sla", []).extend(sla_pstyle_flipped)
+
     # colors set.
-    exp_c = _color_set(expected.get("colors") or [])
-    act_c = _color_set(actual.get("colors") or [])
+    exp_c_rows = expected.get("colors") or []
+    act_c_rows = actual.get("colors") or []
+    exp_c = _color_set(exp_c_rows)
+    act_c = _color_set(act_c_rows)
     miss = sorted(exp_c - act_c)
     ext = sorted(act_c - exp_c)
     if miss:
@@ -125,23 +212,34 @@ def compare(expected: dict, actual: dict) -> dict:
         extra["colors"] = ext
     # add_color name deltas (build.py side): missing add_color call is a regression.
     # Compare via the build_py_extra_color flag set per row.
-    exp_bp_colors = {r.get("idml") for r in (expected.get("colors") or [])
-                     if r.get("build_py_extra_color")}
-    act_bp_colors = {r.get("idml") for r in (actual.get("colors") or [])
-                     if r.get("build_py_extra_color")}
+    exp_bp_colors = {r.get("idml") for r in exp_c_rows if r.get("build_py_extra_color")}
+    act_bp_colors = {r.get("idml") for r in act_c_rows if r.get("build_py_extra_color")}
     bp_miss = sorted(exp_bp_colors - act_bp_colors)
     if bp_miss:
         missing.setdefault("colors.build_py", []).extend(bp_miss)
+    # SLA-side: which colors flipped to sla_color_present=False (review fix F7)
+    sla_color_flipped = _flipped_false(exp_c_rows, act_c_rows, "idml",
+                                       "sla_color_present")
+    if sla_color_flipped:
+        missing.setdefault("colors.sla", []).extend(sla_color_flipped)
 
     # assets basenames.
-    exp_a = _asset_set(expected.get("assets") or [])
-    act_a = _asset_set(actual.get("assets") or [])
+    exp_a_rows = expected.get("assets") or []
+    act_a_rows = actual.get("assets") or []
+    exp_a = _asset_set(exp_a_rows)
+    act_a = _asset_set(act_a_rows)
     miss = sorted(exp_a - act_a)
     ext = sorted(act_a - exp_a)
     if miss:
         missing["assets"] = miss
     if ext:
         extra["assets"] = ext
+    # on_disk flipping false (review fix F7): asset present in expected and
+    # actual but the actual side reports the file is no longer on disk.
+    on_disk_flipped = _flipped_false(exp_a_rows, act_a_rows, "basename",
+                                     "on_disk")
+    if on_disk_flipped:
+        missing.setdefault("assets.on_disk", []).extend(on_disk_flipped)
 
     # text_runs: text-set equality per paragraph style is too noisy; instead
     # we surface missing/extra at the WORD level via the words block AND
@@ -166,6 +264,16 @@ def compare(expected: dict, actual: dict) -> dict:
                 "delta": av_i - ev_i,
             })
 
+    # every_idml_run_present_in_build_py flipping to False is a regression.
+    exp_set_eq = bool((expected.get("text_runs") or {}).get(
+        "every_idml_run_present_in_build_py"))
+    act_set_eq = bool((actual.get("text_runs") or {}).get(
+        "every_idml_run_present_in_build_py"))
+    if exp_set_eq and not act_set_eq:
+        missing.setdefault(
+            "text_runs.every_idml_run_present_in_build_py", []
+        ).append("flipped_to_false")
+
     # Words: missing_from_preview / extra_in_preview on the actual side.
     act_missing_words = list(actual.get("words", {}).get("missing_from_preview") or [])
     act_extra_words = list(actual.get("words", {}).get("extra_in_preview") or [])
@@ -181,8 +289,15 @@ def compare(expected: dict, actual: dict) -> dict:
     if word_miss:
         missing.setdefault("text_runs.missing", []).extend(word_miss)
 
+    # Split count deltas by sign (review fix L2): a consumer reading the
+    # summary should be able to distinguish "drift in (additions)" from
+    # "drift out (removals)" without re-walking the entries.
+    neg_count = sum(1 for d in count_deltas if d.get("delta", 0) < 0)
+    pos_count = sum(1 for d in count_deltas if d.get("delta", 0) > 0)
+    zero_count = sum(1 for d in count_deltas if d.get("delta", 0) == 0)
+
     # Negative count delta is a regression (treat as missing).
-    has_negative = any(d.get("delta", 0) < 0 for d in count_deltas)
+    has_negative = neg_count > 0
 
     if missing or has_negative:
         exit_code = 2
@@ -200,6 +315,11 @@ def compare(expected: dict, actual: dict) -> dict:
             "missing_sections": list(missing.keys()),
             "extra_sections": list(extra.keys()),
             "delta_count": len(count_deltas),
+            "delta_summary": {
+                "negative": neg_count,
+                "positive": pos_count,
+                "zero": zero_count,
+            },
         },
     }
 

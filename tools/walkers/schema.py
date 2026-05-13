@@ -118,6 +118,13 @@ class ParagraphStyleEntry:
     idml: str
     build_py: Optional[str] = None
     sla_pstyle_present: bool = False
+    # Mirror of ``ColorEntry.build_py_extra_color`` — True when an
+    # ``add_para_style(...)`` call in build.py matched this IDML style.
+    # The comparator (review fix F7) uses this boolean for the
+    # ``paragraph_styles.build_py`` regression check; the field is also
+    # informationally redundant with ``build_py != None`` but the explicit
+    # boolean is the contract surface tested by the gate.
+    build_py_extra_pstyle: bool = False
 
 
 @dataclass
