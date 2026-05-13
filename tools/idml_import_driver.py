@@ -517,6 +517,25 @@ def _process_one(
     if args.scaffold_only:
         # Run one audit cycle to produce baseline reports, then halt.
         _run_render_gallery(slug, no_brand_fonts=args.no_brand_fonts)
+        # Emit templates/<slug>/SCAFFOLD_INVENTORY.yml between render-gallery
+        # and convergence-review so the inventory captures the just-rendered
+        # SLA + preview.pdf. Failure here is logged but NEVER fails the
+        # scaffold — Stage 2 (idml-tune) is where the inventory becomes a
+        # hard gate.
+        if not args.no_inventory:
+            try:
+                from tools import inventory_extract as _ie
+                inv = _ie.build_inventory(slug)
+                inv_yaml = _ie.to_yaml(inv)
+                inv_path = ROOT / "templates" / slug / "SCAFFOLD_INVENTORY.yml"
+                inv_path.write_text(inv_yaml, encoding="utf-8")
+                print(f"idml-import: wrote {inv_path}", file=sys.stderr)
+            except Exception as exc:  # noqa: BLE001 — informational tool
+                print(
+                    f"idml-import: SCAFFOLD_INVENTORY emission failed "
+                    f"(non-fatal): {exc}",
+                    file=sys.stderr,
+                )
         review = _run_convergence_review(slug)
         iteration += 1
         last_review = review
@@ -701,6 +720,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "--non-interactive",
         action="store_true",
         help="Do not prompt; exit 2 on NEEDS_REVIEW with unaccepted residual.",
+    )
+    parser.add_argument(
+        "--no-inventory",
+        action="store_true",
+        help=(
+            "Skip the SCAFFOLD_INVENTORY.yml emission step in --scaffold-only. "
+            "Use to debug the scaffold path without depending on the inventory "
+            "walkers."
+        ),
     )
     return parser
 
