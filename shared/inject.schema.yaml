@@ -1,0 +1,70 @@
+"$schema": "https://json-schema.org/draft/2020-12/schema"
+"$id": "https://gruene.at/schemas/inject.yaml"
+title: "inject.yml — declarative hand-patches for converter-emitted build.py"
+description: >-
+  Issue #38 P3 schema. Each template MAY ship a templates/<slug>/inject.yml
+  declaring hand_patches that the reconcile_build_py tool applies to the
+  converter-emitted build.py.generated to produce the final build.py.
+type: object
+required: [hand_patches]
+properties:
+  hand_patches:
+    type: array
+    items:
+      $ref: "#/$defs/HandPatch"
+"$defs":
+  HandPatch:
+    type: object
+    required: [target, classification, reason]
+    properties:
+      target:
+        type: object
+        description: >-
+          Structured selector identifying the element to patch. Structural
+          form (element + anname); NOT CSS syntax — RESEARCH.md 4.3 rejects
+          CSS selectors because the converter does not maintain a CSS DOM.
+        required: [element, anname]
+        properties:
+          element:
+            type: string
+            enum: [TextFrame, ImageFrame, PolyLine, Polygon, Group, ParaStyle, DefaultStyle, SLA]
+          anname:
+            type: string
+            description: >-
+              The build.py anname kwarg literal. IDML Self ids (u-prefixed
+              hex) or human slug names both acceptable.
+            pattern: "^[uU][0-9a-fA-F]+$|^[a-zA-Z_][a-zA-Z0-9_]*$"
+      field:
+        type: string
+        description: >-
+          Attribute to mutate. Either a kwarg name (e.g. 'ALIGN',
+          'scale_type', 'y_mm') or a dotted path (e.g.
+          'default_style_attrs.ALIGN').
+      set:
+        description: >-
+          Absolute value to set. Mutually exclusive with delta.
+      delta:
+        description: >-
+          Additive offset (e.g. y_delta_pt: +5.34 or +1.884mm). Mutually
+          exclusive with set. The reconciler parses the field's current
+          numeric value, adds the delta, writes back.
+      reason:
+        type: string
+        minLength: 10
+        description: >-
+          Why this hand-patch is needed. Cites the upstream cause (engine
+          bug id, authoring choice) and the audit signal that surfaces it.
+      classification:
+        type: string
+        enum: [converter-bug, scribus-engine-bug, authoring-bug, human-review]
+      follow_up_issue:
+        oneOf:
+          - type: string
+          - type: "null"
+        description: >-
+          Issue number or URL tracking the converter-fix that would
+          obsolete this entry. May be null when no upstream issue exists
+          yet; reason MUST explain why.
+    oneOf:
+      - required: [set]
+      - required: [delta]
