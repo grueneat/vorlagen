@@ -12,6 +12,7 @@ pattern module for the regression test path.
 |----|-------------|--------|--------|------|------------------------|
 | `justification_to_align` | Map IDML Justification to ALIGN int (Backport 9) | ParaStyle.Justification | PARAGRAPHSTYLE.ALIGN | `tests/unit/test_pattern_justification_to_align.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
 | `default_style_align_inheritance` | Propagate DefaultStyle ALIGN to per-paragraph paragraph_attrs even when ALIGN==0 (Backport 11) | ParagraphStyleRange.Justification + AppliedParagraphStyle | paragraph_attrs.ALIGN | `tests/unit/test_pattern_default_style_align.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
+| `scale_type_for_cropped_images` | Emit scale_type=1 only when local_scale/local_offset deviate from identity (Backport 10) | ImageFrame.local_scale + local_offset_pt | scale_type | `tests/unit/test_pattern_scale_type_cropped.py` | kandidat-falzflyer-din-lang-gruenes-cover-v2 |
 
 ## How to add a new pattern
 

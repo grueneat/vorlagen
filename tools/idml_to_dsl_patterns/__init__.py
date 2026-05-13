@@ -13,11 +13,13 @@ from typing import List
 from .base import Pattern
 from .default_style_align_inheritance import DefaultStyleAlignInheritance
 from .justification_to_align import JustificationToAlign
+from .scale_type_for_cropped_images import ScaleTypeForCroppedImages
 
 
 PATTERNS: List[Pattern] = [
     JustificationToAlign(),
     DefaultStyleAlignInheritance(),
+    ScaleTypeForCroppedImages(),
 ]
 
 
