@@ -525,30 +525,33 @@ def _walk_idml_text_runs(idml_zip: zipfile.ZipFile) -> tuple[int, dict[str, int]
                         fontsize = float(pt)
                     except ValueError:
                         fontsize = 0.0
-                # Concatenate every <Content> child including processing-instruction tails.
-                contents = []
+                # Emit ONE run per <Content> child. Concatenating across
+                # Content boundaries (the old behaviour) folded multi-Run
+                # paragraphs into a single string ("Mehrzeilige Subheadline -
+                # mehr Info zum Thema") that never matches build.py's
+                # per-Run() emit, defeating the set-equality gate.
                 for ch in csr:
                     cht = ch.tag.split("}")[-1] if "}" in (ch.tag or "") else ch.tag
-                    if cht == "Content":
-                        parts = []
-                        if ch.text:
-                            parts.append(ch.text)
-                        for sub in ch:
-                            if sub.tail:
-                                parts.append(sub.tail)
-                        contents.append("".join(parts))
-                text = "".join(contents)
-                if not text.strip():
-                    continue
-                total += 1
-                by_ps[ps_self] = by_ps.get(ps_self, 0) + 1
-                runs.append({
-                    "text": text,
-                    "font": font,
-                    "fontsize": fontsize,
-                    "fcolor": fcolor,
-                    "paragraph_style": ps_self,
-                })
+                    if cht != "Content":
+                        continue
+                    parts = []
+                    if ch.text:
+                        parts.append(ch.text)
+                    for sub in ch:
+                        if sub.tail:
+                            parts.append(sub.tail)
+                    text = "".join(parts)
+                    if not text.strip():
+                        continue
+                    total += 1
+                    by_ps[ps_self] = by_ps.get(ps_self, 0) + 1
+                    runs.append({
+                        "text": text,
+                        "font": font,
+                        "fontsize": fontsize,
+                        "fcolor": fcolor,
+                        "paragraph_style": ps_self,
+                    })
     return total, by_ps, runs
 
 
@@ -765,18 +768,40 @@ def walk_idml(idml_path: Path, slug: str, *, repo_root: Optional[Path] = None):
         printable_layers = _load_printable_layers(z)
         colors_raw = _walk_idml_colors(z)
         ps_names = _walk_idml_paragraph_styles(z)
-        total, by_ps, _runs = _walk_idml_text_runs(z)
+        total, by_ps, runs_raw = _walk_idml_text_runs(z)
         frames = _walk_idml_frames(z, printable_layers)
 
     by_style = [
         TextRunByStyle(style=ps, idml_count=count)
         for ps, count in sorted(by_ps.items())
     ]
+    # Build IDML-side TextRun dataclasses so the orchestrator can run a real
+    # set-equality check against build.py (issue #40 review F3). The walker
+    # already collected the per-CSR detail at ``_walk_idml_text_runs`` —
+    # surface it instead of discarding.
+    from tools.walkers.schema import TextRun as _TextRun  # noqa: WPS433
+    idml_runs = [
+        _TextRun(
+            text=r.get("text", ""),
+            font=r.get("font", "") or "",
+            fontsize=float(r.get("fontsize") or 0),
+            fcolor=r.get("fcolor", "") or "",
+            paragraph_style=r.get("paragraph_style", "") or "",
+            # text_source on the IDML side is intentionally empty — the
+            # build_py/inject_yml tag is only meaningful for the build.py
+            # walker. Leave at default.
+        )
+        for r in runs_raw
+    ]
 
     inv = Inventory(
         schema_version=1,
         template=slug,
-        text_runs=TextRunBucket(total_idml=total, by_paragraph_style=by_style),
+        text_runs=TextRunBucket(
+            total_idml=total,
+            by_paragraph_style=by_style,
+            idml_runs=idml_runs,
+        ),
         frames=Frames(
             text_frames=[
                 TextFrame(anname=r["self"], idml_self=r["self"],

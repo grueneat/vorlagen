@@ -93,13 +93,27 @@ def _join_text_runs(idml_inv: Inventory, build_data: dict, sla_data: dict,
                     pdf_words: WordsBlock) -> TextRunBucket:
     """Populate (idml_count, build_py_count, sla_itext_count, pdf_word_count)
     per paragraph-style bucket and compute set-equality flag.
-    """
-    # IDML-side counts already populated by walk_idml.
-    by_style_map: dict[str, TextRunByStyle] = {
-        b.style: b for b in idml_inv.text_runs.by_paragraph_style
-    }
 
-    # build.py side: count Run entries per paragraph_style and tag text-source.
+    Normalisation contract (review fix F2 + F3):
+    - IDML buckets are keyed on ``ParagraphStyle/<Self>`` names; we slugify
+      via ``_idml_paragraph_style_slug`` so they line up with the
+      ``idml/<slug>`` names build.py and the SLA both use.
+    - build.py and SLA buckets are already keyed on ``idml/<slug>`` so they
+      pass through verbatim.
+    - The bucket emitted to YAML keeps the IDML name as ``style`` (it's the
+      first-class identity per the schema), but the merge happens on the
+      slugified form.
+    """
+    # Normalise every IDML bucket by mapping its IDML name → slug. We keep the
+    # original IDML-side display name as the bucket's ``style`` field because
+    # that's the ground-truth identity for the gate.
+    norm_idml: dict[str, TextRunByStyle] = {}
+    for b in idml_inv.text_runs.by_paragraph_style:
+        slug = _idml_paragraph_style_slug(b.style)
+        norm_idml[slug] = b
+
+    # build.py side: count Run entries per paragraph_style (already slugified)
+    # and remember the per-style text content for set-equality reporting.
     bp_counts: dict[str, int] = {}
     bp_texts: dict[str, set[str]] = {}
     for r in build_data.get("text_runs", []):
@@ -107,34 +121,86 @@ def _join_text_runs(idml_inv: Inventory, build_data: dict, sla_data: dict,
         bp_counts[ps] = bp_counts.get(ps, 0) + 1
         bp_texts.setdefault(ps, set()).add(r.get("text", ""))
 
-    # SLA-side: per-pstyle ITEXT count from walk_sla.
+    # SLA-side: per-pstyle ITEXT count from walk_sla, keyed on ``idml/<slug>``.
     sla_counts = sla_data.get("itext_by_pstyle", {})
 
-    # Merge keys from all sides into the bucket list.
-    all_styles = set(by_style_map) | set(bp_counts) | set(sla_counts)
+    # Merge by slug, but emit the IDML display name as ``style``.
+    all_slugs = set(norm_idml) | set(bp_counts) | set(sla_counts)
     by_style: list[TextRunByStyle] = []
-    for style in sorted(all_styles):
-        entry = by_style_map.get(style, TextRunByStyle(style=style))
-        entry.build_py_count = bp_counts.get(style, 0)
-        entry.sla_itext_count = sla_counts.get(style, 0)
-        # PDF word count is currently not attributable per-paragraph-style
-        # (would require pdfplumber bbox-in-frame join). Leave as 0; the
-        # words block at the inventory root carries the global PDF counts.
+    for slug in sorted(all_slugs):
+        idml_bucket = norm_idml.get(slug)
+        style_label = idml_bucket.style if idml_bucket else slug
+        entry = TextRunByStyle(
+            style=style_label,
+            idml_count=idml_bucket.idml_count if idml_bucket else 0,
+            build_py_count=bp_counts.get(slug, 0),
+            sla_itext_count=sla_counts.get(slug, 0),
+            pdf_word_count=0,  # per-style PDF word join is v2 territory
+        )
         by_style.append(entry)
 
-    # Set-equality flag: is every IDML text run present in build.py?
-    idml_texts: set[str] = set()
-    bp_all_texts: set[str] = set()
-    for ps, texts in bp_texts.items():
-        bp_all_texts.update(texts)
-    # Pull IDML texts (from the IDML walker's internal run list — recomputed
-    # here from the count summary is impossible, but the per-CSR detail isn't
-    # retained on Inventory; flag is conservatively True when overall counts
-    # match. For now, set True iff total_idml >= sum(bp_counts).
-    every_idml_present = (
-        idml_inv.text_runs.total_idml > 0
-        and sum(bp_counts.values()) >= idml_inv.text_runs.total_idml
-    )
+    # Set-equality: per the contract, every IDML-side text-run's text content
+    # must also exist in build.py. The font + fontsize tuple would be ideal,
+    # but the IDML walker reads font family only (e.g. "Gotham Narrow") while
+    # build.py's Run() carries "family + style" (e.g. "Gotham Narrow Ultra"),
+    # so a strict (text, font, fontsize) subset would always fail.
+    # The set-equality check therefore runs on the canonicalised TEXT content
+    # — which is what catches the "agent dropped a word" failure mode. The
+    # full tuples are still exposed via ``idml_runs`` / ``build_py_runs`` so
+    # downstream tools can do tighter checks if/when the font normalisation
+    # converges. See issue #40 review F3.
+    idml_runs_list = list(idml_inv.text_runs.idml_runs) if hasattr(
+        idml_inv.text_runs, "idml_runs"
+    ) else []
+
+    def _normalize_text(s: str) -> str:
+        # Collapse runs of whitespace AND strip the layout glyphs IDML packs
+        # into a single <Content> (tabs around bullets, no-break spaces) so
+        # an IDML "\t•\tLia vellam" doesn't false-mismatch against build.py's
+        # split Run('•') + Run('', sep='tab') + Run('Lia vellam').
+        s = (s or "").replace("\t", " ").replace(" ", " ")
+        return " ".join(s.split())
+
+    def _word_tokens(s: str) -> frozenset:
+        # Last-resort containment: every non-bullet word from the IDML run
+        # must appear somewhere in build.py's concatenated text. Used as a
+        # subset check when whole-string equality fails because IDML packs
+        # tabs/bullets into one Content but build.py splits them across Runs.
+        return frozenset(
+            tok for tok in _normalize_text(s).split()
+            if tok and tok not in {"•", "·", "-", "–", "—"}
+        )
+
+    idml_texts_set = {_normalize_text(r.text if hasattr(r, "text") else r.get("text", ""))
+                      for r in idml_runs_list}
+    idml_texts_set.discard("")
+    bp_texts_set = {_normalize_text(r.get("text", ""))
+                    for r in build_data.get("text_runs", [])}
+    bp_texts_set.discard("")
+    bp_concat_text = " ".join(bp_texts_set)
+    if idml_texts_set:
+        # Primary: strict whole-string subset.
+        if idml_texts_set.issubset(bp_texts_set):
+            every_idml_present = True
+        else:
+            # Fall back to word-level containment for IDML runs that bundle
+            # multiple build.py-side Runs into one Content (tab/bullet/Br
+            # boundaries). Each IDML run is "present" if all of its content
+            # words appear in build.py's concatenated text pool. This still
+            # catches "agent dropped a word" because the word-token set on
+            # the build.py side would no longer cover it.
+            bp_token_pool = _word_tokens(bp_concat_text)
+            every_idml_present = all(
+                _word_tokens(t).issubset(bp_token_pool)
+                for t in idml_texts_set
+            )
+    else:
+        # Fallback when the walker doesn't supply per-run tuples (e.g. legacy
+        # snapshots loaded from disk): preserve the old count heuristic.
+        every_idml_present = (
+            idml_inv.text_runs.total_idml > 0
+            and sum(bp_counts.values()) >= idml_inv.text_runs.total_idml
+        )
 
     # Flattened build_py runs for the comparator's mutation gate.
     from tools.walkers.schema import TextRun as _TextRun
@@ -155,6 +221,7 @@ def _join_text_runs(idml_inv: Inventory, build_data: dict, sla_data: dict,
         by_paragraph_style=by_style,
         every_idml_run_present_in_build_py=every_idml_present,
         build_py_runs=build_py_runs,
+        idml_runs=idml_runs_list,
     )
 
 
@@ -285,25 +352,55 @@ def _join_frames(idml_inv: Inventory, build_data: dict, sla_data: dict,
     )
 
 
+def _idml_paragraph_style_slug(idml_self: str) -> str:
+    """Slugify an IDML ParagraphStyle Self ID to its build.py emit name.
+
+    Mirrors ``tools.idml_to_dsl._idml_style_slug`` exactly so the join lines
+    up with the names build.py uses. We strip the leading ``ParagraphStyle/``
+    container, then defer to the converter so umlauts (ä→ae etc.), the
+    ``$ID/`` InDesign prefix, and the lowercase + alphanum-hyphen rules all
+    match build.py 1:1. Returns e.g. ``idml/aufzaehlungen-auf-gruenem-hintergrund``.
+    """
+    name = idml_self
+    # Strip the IDML container prefix; the converter expects the bare name.
+    if "/" in name:
+        name = name.split("/", 1)[1]
+    # Reuse the canonical slugifier so we are byte-identical with build.py.
+    from tools.idml_to_dsl import _idml_style_slug
+    return _idml_style_slug(name)
+
+
 def _join_paragraph_styles(idml_inv: Inventory, build_data: dict,
                            sla_data: dict) -> list[ParagraphStyleEntry]:
-    """For each IDML ParagraphStyle, report build_py + SLA presence."""
+    """For each IDML ParagraphStyle, report build_py + SLA presence.
+
+    Identity normalisation rules (review fix F2):
+    - IDML side is named ``ParagraphStyle/Aufzählungen auf grünem Hintergrund``
+      or ``ParagraphStyle/$ID/NormalParagraphStyle``.
+    - build.py side emits ``idml/aufzaehlungen-auf-gruenem-hintergrund`` and
+      ``idml/normalparagraphstyle`` via ``tools.idml_to_dsl._idml_style_slug``.
+    - SLA side stores the build.py name verbatim on ``<trail PARENT=...>``
+      elements (e.g. ``idml/aufzaehlungen-auf-gruenem-hintergrund``).
+
+    The old code used ``str.isalnum`` which kept ``ü/ö/ä/ß`` as-is and used
+    substring matching against build.py — so an IDML style "Aufzählungen..."
+    never matched the ASCII-folded build.py emit. Defer to the converter's
+    canonical slugifier for a byte-identical match.
+    """
     bp_set = set(build_data.get("add_para_style_names", []))
     sla_set = sla_data.get("sla_styles", set())
+    # SLA-side: the iter_styles set includes ``<STYLE NAME="idml/...">`` names
+    # AND the PARENT references on ``<trail>`` elements that walk_sla now
+    # surfaces. Either source is sufficient for "present in SLA".
+    sla_pstyle_refs = set(sla_data.get("itext_by_pstyle", {}).keys())
+    sla_combined = {s.lower() for s in sla_set} | {s.lower() for s in sla_pstyle_refs}
     out: list[ParagraphStyleEntry] = []
     for ps in idml_inv.paragraph_styles:
-        # build.py name format: "idml/<slugified-name>". Heuristic match by
-        # case-insensitive substring of the slugified Self ID.
-        slug = ps.idml.split("/", 1)[-1].lower()
-        slug_norm = "".join(
-            c if c.isalnum() else "-" for c in slug
-        ).strip("-")
+        emitted_slug = _idml_paragraph_style_slug(ps.idml)
         bp_match: Optional[str] = None
-        for cand in bp_set:
-            if slug_norm and slug_norm in cand.lower():
-                bp_match = cand
-                break
-        sla_present = any(slug.split()[0] in s.lower() for s in sla_set) if slug else False
+        if emitted_slug in bp_set:
+            bp_match = emitted_slug
+        sla_present = emitted_slug.lower() in sla_combined
         out.append(ParagraphStyleEntry(
             idml=ps.idml,
             build_py=bp_match,

@@ -53,6 +53,12 @@ class TextRunBucket:
     # Flattened list of build.py-side Run() text-rows. Used by inventory_compare
     # to surface "dropped words" between snapshots (mutation tests M1).
     build_py_runs: list[TextRun] = field(default_factory=list)
+    # Flattened list of IDML-side text-runs (every non-empty
+    # ``<CharacterStyleRange>`` content tuple). Drives the real set-equality
+    # check for ``every_idml_run_present_in_build_py`` per the issue contract
+    # "set-equality on (text, font, fontsize)". Without this list the flag
+    # collapsed to a count heuristic; see issue #40 review F3.
+    idml_runs: list[TextRun] = field(default_factory=list)
 
 
 @dataclass
@@ -215,6 +221,7 @@ def _coerce_field(cls: type, name: str, value: Any) -> Any:
     LIST_OF = {
         ("TextRunBucket", "by_paragraph_style"): TextRunByStyle,
         ("TextRunBucket", "build_py_runs"): TextRun,
+        ("TextRunBucket", "idml_runs"): TextRun,
         ("Frames", "text_frames"): TextFrame,
         ("Frames", "image_frames"): ImageFrame,
         ("Frames", "polygon_frames"): PolygonFrame,
