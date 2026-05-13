@@ -1,7 +1,7 @@
 ---
 id: '32'
 title: Fix tent card panel orientation + gallery duplicate pages from hires glob
-status: in_progress
+status: done
 priority: high
 labels:
 - bug
