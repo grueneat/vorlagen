@@ -175,6 +175,26 @@ def _find_asset_dir(template_slug: str, root: Path) -> Path | None:
         template_in_manifest = raw.get("template") or raw.get("template_slug")
         if template_in_manifest == template_slug:
             return child
+    # Try meta.yml::asset_policy::embedded as a cross-check: the directory
+    # whose disk contents match the declared `embedded:` basenames is the
+    # canonical asset dir, regardless of name. This is the most robust
+    # fallback once an `asset_policy` block exists — and it stays robust
+    # even after Phase A removes absolute paths from build.py.
+    if isinstance(meta, dict):
+        policy_block = meta.get("asset_policy")
+        if isinstance(policy_block, dict):
+            embedded_decl = policy_block.get("embedded") or []
+            if embedded_decl:
+                want = set(embedded_decl)
+                for child in sorted(assets_root.iterdir()):
+                    if not child.is_dir():
+                        continue
+                    disk = {
+                        p.name for p in child.iterdir() if p.is_file()
+                    }
+                    if want.issubset(disk):
+                        return child
+
     # Last-resort guess: a single asset dir whose name shares the IDML's stem
     # convention. Look for templates/<slug>/build.py and grep an asset_map
     # reference (links_export.yml lookup happens in idml_to_dsl); but

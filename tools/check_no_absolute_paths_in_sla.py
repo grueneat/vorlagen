@@ -33,11 +33,17 @@ ABSOLUTE_PFILE_RE = re.compile(r"^(?:/|file://|[A-Za-z]:[\\/])")
 def find_absolute_pfiles(root: Path) -> list[tuple[Path, int, str]]:
     """Return (sla_path, sourceline, pfile_value) for every absolute PFILE
     in ``root/templates/*/template.sla``. Empty list when clean.
+
+    Uses ``huge_tree=True`` because Scribus inline-image PAGEOBJECTs carry
+    qCompress-base64 ``ImageData`` attributes that exceed lxml's default
+    10 MB attribute limit (issue #39 v2-falzflyer SLA is ~18 MB after
+    inline-embedding 9 brand assets).
     """
+    parser = etree.XMLParser(huge_tree=True)
     failures: list[tuple[Path, int, str]] = []
     for sla in sorted((root / "templates").glob("*/template.sla")):
         try:
-            tree = etree.parse(str(sla))
+            tree = etree.parse(str(sla), parser)
         except (OSError, etree.XMLSyntaxError) as exc:
             failures.append((sla, 0, f"<parse error: {exc}>"))
             continue
