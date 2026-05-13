@@ -66,16 +66,24 @@ def walk_sla(sla_path: Path) -> dict[str, Any]:
                 "pfile": pfile,
                 "ptype": ptype_name,
             }
-        # PSTYLE attribute on ITEXT/PARA carries the paragraph style name.
-        for it in itexts:
-            pstyle = it.attrib.get("PSTYLE") or ""
-            if not pstyle:
-                # PARA siblings can carry PARENT (style ref) — fall back.
-                parent = it.getparent()
-                if parent is not None:
-                    pstyle = parent.attrib.get("PSTYLE") or ""
-            if pstyle:
-                itext_by_pstyle[pstyle] = itext_by_pstyle.get(pstyle, 0) + 1
+        # Paragraph-style refs live on the trailing ``<trail>`` element (and on
+        # ``<para>`` mid-paragraph elements) via the ``PARENT`` attribute —
+        # NOT ``PSTYLE``. Each "paragraph" is one or more ITEXTs followed by
+        # exactly one ``<trail>``; the trail's PARENT is the style for all
+        # ITEXTs in that buffer. Walk descendants in document order, buffering
+        # ITEXTs until we hit a trail/para, then attribute them.
+        buffer: list[Any] = []
+        for el in obj.iter():
+            tag = el.tag
+            if tag == "ITEXT":
+                buffer.append(el)
+            elif tag in ("trail", "para"):
+                pstyle = el.attrib.get("PARENT") or ""
+                if pstyle:
+                    itext_by_pstyle[pstyle] = (
+                        itext_by_pstyle.get(pstyle, 0) + len(buffer)
+                    )
+                buffer = []
 
     sla_styles = {s.attrib.get("NAME", "") for s in doc.iter_styles() if s.attrib.get("NAME")}
     sla_colors = {c.attrib.get("NAME", "") for c in doc.iter_colors() if c.attrib.get("NAME")}
