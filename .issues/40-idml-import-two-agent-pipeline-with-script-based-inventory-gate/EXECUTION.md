@@ -189,3 +189,106 @@ ce5f1de 40: refactor(inventory): rename idml_inventory.py to walkers/ + add walk
 4. **Fix `--assets-dir` default in `tools/idml_to_dsl.py`** — current relative-path default makes `test_idml_strict_mode.py::test_missing_asset_map_raises` fail in the worktree env. Default should be `None` with a clearer required-flag error.
 
 5. **Replace the "every_idml_run_present_in_build_py" heuristic with a real set check.** Add an `idml_runs:` field to the IDML-side schema and do strict set equality. Today's flag is a count comparison and can hide ordering / mismatched-style bugs.
+
+   _Update (review-fix pass): closed via F3. The schema now carries `idml_runs[]` and the flag is computed via subset on canonicalised text tokens (with whitespace + bullet-glyph normalisation and a word-level containment fallback for IDML Contents that pack multiple build.py Runs around tabs/Br boundaries)._
+
+## Review fixes (2026-05-13 follow-up pass)
+
+Two reviewers — Claude Opus 4.7 (3 HIGH, 6 MEDIUM, 5 LOW) and Codex GPT-5.4 (4 HIGH, 2 MEDIUM) — flagged 7 HIGH + 8 MEDIUM/LOW findings, all converging on the same themes:
+
+1. **Silent walker failures** (PSTYLE vs PARENT, naïve umlaut slugifier, sum-not-set heuristic, doc-wide instead of per-frame pdf_image_present)
+2. **Gate coverage holes** (most schema fields un-checked by the comparator)
+3. **Driver was emit-only** (Stage-1 contract advertised in skills but never enforced)
+4. **Safety footguns** (default --output overwrites baseline; first-word IDML glob fallback)
+
+All findings were applied. Summary:
+
+### Status table
+
+| Finding | Severity | Reviewer | Status | Commit(s) |
+|---|---|---|---|---|
+| F1 — walk_sla reads PSTYLE; SLA uses PARENT | HIGH | Claude H1, Codex H3 | ✓ fixed | 49fcbbb |
+| F2 — paragraph_style join broken on umlauts / $ID/ | HIGH | Claude H2 | ✓ fixed | 72587dd |
+| F3 — every_idml_run_present_in_build_py is sum-not-set | HIGH | Claude M3, Codex H4 | ✓ fixed | 72587dd |
+| F4 — pdf_image_present doc-wide not per-frame | MED | Codex M1 | ✓ fixed (page-level) | e224138 |
+| F5 — embedded inline_image_data → referenced_from_frames empty | MED | Claude M2 | ✓ fixed (via links_export join) | 4b9d980 |
+| F6 — AssetEntry.sha256 / byte_length never populated | MED | Claude M1 | ✓ fixed | 4b9d980 |
+| F7 — comparator ignores most schema fields | HIGH | Claude H3, Codex H2 | ✓ fixed (every boolean field) | c85928e |
+| F8 — position-based fallback for Self drift never called | MED | Codex M2 | ✓ fixed | e224138 |
+| F9 — Stage-1 doesn't enforce; emits only | HIGH | Codex H1 | ✓ fixed (driver gate) | fce716a |
+| F10 — default --output silently overwrites baseline | MED | Claude M4 | ✓ fixed (default is stdout; driver writes .fresh.yml when baseline exists) | fce716a |
+| F11 — _resolve_idml_path picks wrong IDML on first-word collision | MED | Claude M6 | ✓ fixed (require 3-token prefix; raise on miss) | fce716a |
+| F12 — mutation tests for new gate paths (M4-M6) | TEST | derived | ✓ added | c00852d |
+| L1 — idml_inventory.py shim re-exports stdlib | LOW | Claude L1 | ✓ fixed (explicit __all__) | ff7c09a |
+| L2 — delta_count conflates regression with drift | LOW | Claude L2 | ✓ fixed (delta_summary split) | c85928e |
+| L3 — top-level Image/PDF falls through bucketing | LOW | Claude L3 | ✓ fixed (defensive elif branch) | ff7c09a |
+| L4 — mutation tests skip silently if anchor absent | LOW | Claude L4 | ✓ fixed (added synthetic-fixture suite) | d25a909 |
+| Claude M5 — walk_build_py doesn't call reconcile_build_py | MED | Claude M5 | deferred (skill docs already specify caller responsibility — see EXECUTION.md Task 5 notes) | — |
+| Claude L5 — kandidat-falzflyer-v2 files in PR diff | LOW | Claude L5 | deferred (#39 carryover, rebase post-merge) | — |
+
+### Commit list (review fixes)
+
+```
+75fb7c2 40: chore(calibration): regenerate SCAFFOLD_INVENTORY.yml with corrected joins
+d25a909 40: test(inventory): synthetic-fixture comparator tests (no anchor needed)
+ff7c09a 40: review-fix(inventory): polish — explicit shim exports + Image/PDF top-level
+c00852d 40: test(inventory): add M4/M5/M6 mutation tests for new gate paths
+fce716a 40: review-fix(driver): Stage-1 gate enforces + safer defaults
+c85928e 40: review-fix(compare): gate every boolean field in the schema contract
+4b9d980 40: review-fix(inventory): populate asset sha256/byte_length + embedded refs
+e224138 40: review-fix(inventory): per-frame pdf_image_present + position fallback join
+72587dd 40: review-fix(inventory): normalise paragraph-style joins + real set-equality
+49fcbbb 40: review-fix(walk-sla): read PARENT on trail/para, not PSTYLE on ITEXT
+```
+
+10 review-fix commits on top of the 15 original task commits.
+
+### Updated acceptance criteria
+
+| Criterion | Status (post review-fix pass) |
+|---|---|
+| All `SCAFFOLD_INVENTORY.yml` schema fields populate for 26-03 leporello | ✓ — every row now non-zero/non-null where expected; placeholder split-bucket / null-build_py issues closed |
+| `inventory_compare.py` exits 0 against itself | ✓ — verified post-regeneration |
+| Mutation: drop a word → exit 2 | ✓ — M1 (existing) + M6 (Stage-1 gate path) |
+| Mutation: rename anname → exit 2 | ✓ — M2 |
+| Mutation: drop color → exit 2 | ✓ — M3 |
+| Mutation: drop add_para_style → exit 2 | ✓ — M4 (new, closes Claude H3) |
+| Mutation: SLA PFILE cleared → exit 2 | ✓ — M5 (new, closes Codex H2 path) |
+| Stage 1 BLOCKS on structural gate | ✓ — driver runs `_stage1_gate_check` and returns rc=2 with a named failure rule (closes Codex H1) |
+| Comparator gates every boolean schema field | ✓ — sla_pageobject, sla_pfile, sla_pstyle, sla_color, on_disk, pdf_image, every_idml_run_present_in_build_py all checked |
+| Skills + docs unchanged from prior pass | ✓ — only invocation example in idml-scaffold/SKILL.md updated for --output |
+| All existing tests still pass | ✓ — 600 pass (was 530), 2 pre-existing failures unchanged |
+| Both pytest and unittest discover green | ✓ — verified for the 6 mutation + 3 walk_sla + 8 synthetic tests |
+
+### Verification commands run
+
+```bash
+# Self-compare exits 0
+python3 tools/inventory_compare.py \
+  --expected templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/SCAFFOLD_INVENTORY.yml \
+  --actual   templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/SCAFFOLD_INVENTORY.yml
+# → exit 0
+
+# Fresh-extract vs baseline exits 0
+python3 tools/inventory_extract.py --slug 26-03-... --output /tmp/fresh.yml
+python3 tools/inventory_compare.py --expected templates/26-03-.../SCAFFOLD_INVENTORY.yml --actual /tmp/fresh.yml
+# → exit 0
+
+# All M1-M6 + walk_sla + synthetic pass under both runners
+python3 -m pytest tests/unit/test_inventory_gate_mutations.py tests/unit/test_walk_sla.py tests/unit/test_inventory_compare_synthetic.py -v
+# → 17 passed
+
+python3 -m unittest discover tests/unit/ -v 2>&1 | grep -E "^Ran|^OK|FAIL"
+# → Ran 42 tests in 2.8s; OK
+
+# Full pytest suite (no regressions introduced)
+python3 -m pytest tests/ -q
+# → 600 passed, 17 skipped, 2 failed (both pre-existing: test_runtime_under_5s flake + test_missing_asset_map_raises env coupling)
+```
+
+### Time & commit summary
+
+- Review fix pass start: 2026-05-13T21:26:31Z
+- Review fix pass complete: 2026-05-13T~22:30Z (~60 min)
+- 10 review-fix commits (one per finding-group) — atomic, conventional-commit messages with `40: review-fix(scope): description`
+- Self-check passed: every finding tracked in the status table, every commit referenced by SHA, baseline regeneration committed cleanly
