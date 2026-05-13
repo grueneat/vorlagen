@@ -1,7 +1,7 @@
 ---
 id: '38'
 title: IDML import skill — end-to-end converter-driven convergence (no engine floor)
-status: open
+status: done
 priority: high
 labels:
 - dsl
