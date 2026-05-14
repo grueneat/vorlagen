@@ -158,6 +158,20 @@ tolerances:
       baseline. Both rendered outputs are legible; this is best
       classified as an authoring bug in the source IDML, not a
       converter-side issue.
+      F-016 (2026-05-14): re-ran tools/line_spacing_sim.py with
+      candidates `1:,0:1.91,0:2,0:3,0:4,2:1.91`. All candidates
+      returned the SAME preview_median_pt=17.327 — the sim's
+      `_frame_bbox_from_sla` does not handle ROT=-90 (u347 is
+      rotated, so the SLA bbox in render-space is rotated too); the
+      pdfplumber crop is reading from the wrong region, picking up
+      adjacent text gaps. No candidate gave a usable empirical
+      reading; tolerance entry retained. Two ways forward when the
+      sim grows rotation support: (a) re-run, expect LINESPMode=0+
+      LINESP<=3 to land near the InDesign 3.34pt baseline; (b) bump
+      the converter's degenerate-leading clamp from
+      `lp < fontsize × 0.5` to `lp < fontsize × 0.3` so authored
+      1.91pt on 6pt text is honoured verbatim instead of inflated.
+      Both deferred until the sim handles rotation.
     follow_up_issue: "authoring; designer should re-export with sane Leading"
 
   - id: tol:line-spacing-mixed-vollkorn-38pt
