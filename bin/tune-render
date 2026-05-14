@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""bin/tune-render — canonical re-render entry point for /idml-tune.
+
+The Stage-2 tuning workflow re-renders a template many times. Each
+re-render produces MULTIPLE artifacts that MUST stay in sync:
+
+  1. ``templates/<slug>/template.sla``        ← from ``build.py``
+  2. ``templates/<slug>/preview.pdf``         ← from ``template.sla``
+  3. ``templates/<slug>/page-NN.png``         ← rasterised preview, 50 dpi
+  4. ``templates/<slug>/page-NN-hires.png``   ← rasterised preview, 150 dpi
+  5. ``templates/<slug>/meta.yml::previews_for_sla`` ← sha256 of template.sla
+  6. ``build/<slug>/iteration.jsonl``         ← audit chain
+  7. ``build/validation/<slug>/*.yml``        ← per-audit reports
+
+Calling them individually leaves artifacts drifting out of sync — most
+commonly the PNG thumbnails lagging behind preview.pdf because someone
+re-rendered the SLA but forgot to rasterise. This wrapper invokes
+``bin/render-gallery`` which already wires the full chain.
+
+**The /idml-tune skill MUST call this command and only this command.**
+``render_sla_to_pdf`` and ``rasterise`` from ``tools/visual_diff.py``
+must NOT be called directly by the skill. The audit tools downstream
+(E4/E5/E6) gate on freshness so that even if a step is bypassed, the
+audits surface "STALE: …" and refuse to read drifting artifacts.
+
+Usage:
+
+    bin/tune-render <slug>             # render + full audit chain
+    bin/tune-render <slug> --no-audit  # render only (rare; debugging)
+    bin/tune-render <slug> --check     # verify in-sync; exit 1 if stale
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def check_freshness(template_dir: Path) -> list[str]:
+    """Return list of stale-artifact complaints. Empty list = all in sync.
+
+    The bar is "every downstream artifact is at least as new as its
+    upstream input, with a 1-second slack for filesystem mtime
+    granularity". Inputs:
+        build.py → template.sla → preview.pdf → page-*.png
+        template.sla → meta.yml::previews_for_sla (sha equality)
+    """
+    complaints: list[str] = []
+    build_py = template_dir / "build.py"
+    sla = template_dir / "template.sla"
+    preview = template_dir / "preview.pdf"
+    if not build_py.exists():
+        complaints.append(f"missing {build_py}")
+        return complaints
+    bp_mtime = build_py.stat().st_mtime
+
+    def _stale(child: Path, parent_mtime: float, tag: str) -> None:
+        if not child.exists():
+            complaints.append(f"missing {child.relative_to(REPO)} — run `bin/tune-render <slug>`")
+        elif child.stat().st_mtime < parent_mtime - 1.0:
+            complaints.append(
+                f"{tag}: {child.relative_to(REPO)} is older than its source — "
+                "re-render with `bin/tune-render <slug>`"
+            )
+
+    _stale(sla, bp_mtime, "template.sla")
+    if sla.exists():
+        sla_mtime = sla.stat().st_mtime
+        _stale(preview, sla_mtime, "preview.pdf")
+        if preview.exists():
+            preview_mtime = preview.stat().st_mtime
+            for png_name in ("page-01.png", "page-02.png",
+                             "page-01-hires.png", "page-02-hires.png"):
+                _stale(template_dir / png_name, preview_mtime, png_name)
+    # meta.yml hash
+    meta_yml = template_dir / "meta.yml"
+    if meta_yml.exists() and sla.exists():
+        m = re.search(
+            r"^previews_for_sla:\s*(\S+)",
+            meta_yml.read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
+        if m:
+            recorded = m.group(1)
+            actual = _sha256(sla)
+            if recorded != actual and recorded != "_pending_first_build":
+                complaints.append(
+                    f"meta.yml::previews_for_sla hash {recorded[:8]}… ≠ actual {actual[:8]}… "
+                    "— re-render with `bin/tune-render <slug>`"
+                )
+    return complaints
+
+
+def rerender(slug: str, with_audit: bool) -> int:
+    """Invoke render-gallery (the canonical pipeline) for one template.
+
+    render-gallery already does: build.py → template.sla → preview.pdf →
+    rasterise (with zero-padding) → meta.yml hash → sla_diff (if origin
+    SLA present) → optional visual_diff → audit chain.
+    """
+    cmd = [str(REPO / "bin" / "render-gallery"), slug, "--skip-visual-diff"]
+    if with_audit:
+        cmd.append("--audit")
+    print(f"[tune-render] {' '.join(cmd)}", file=sys.stderr)
+    result = subprocess.run(cmd)
+    return result.returncode
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("slug", help="Template slug (directory under templates/)")
+    ap.add_argument("--no-audit", action="store_true",
+                    help="Render-only; skip audit chain (rare; debugging)")
+    ap.add_argument("--check", action="store_true",
+                    help="Verify artifacts are in sync; exit 1 if stale. Does not re-render.")
+    args = ap.parse_args(argv)
+
+    template_dir = REPO / "templates" / args.slug
+    if not template_dir.is_dir():
+        sys.stderr.write(f"Template not found: {template_dir}\n")
+        return 2
+
+    if args.check:
+        complaints = check_freshness(template_dir)
+        if complaints:
+            for c in complaints:
+                sys.stderr.write(f"STALE: {c}\n")
+            return 1
+        print("[tune-render] all artifacts in sync", file=sys.stderr)
+        return 0
+
+    return rerender(args.slug, with_audit=not args.no_audit)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

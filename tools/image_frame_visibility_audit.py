@@ -283,6 +283,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--dpi", type=int, default=_DEFAULT_DPI)
     ap.add_argument("--out-yaml")
     ap.add_argument("--out-md")
+    ap.add_argument(
+        "--skip-freshness", action="store_true",
+        help="Skip artifact freshness check. Set by render-gallery internal "
+             "calls that know they just produced the artifacts. Manual "
+             "callers should NEVER pass this flag.",
+    )
     args = ap.parse_args(argv)
 
     if Image is None:
@@ -296,6 +302,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not (build_py.exists() and preview.exists() and baseline.exists()):
         sys.stderr.write(f"Missing required files in {template_dir}\n")
         return 2
+
+    if not args.skip_freshness:
+        from _freshness_gate import ensure_fresh, StaleArtifactsError
+        try:
+            ensure_fresh(template_dir, audit_name="image_frame_visibility_audit")
+        except StaleArtifactsError as exc:
+            sys.stderr.write(str(exc))
+            return 3
 
     frames = parse_image_frames_from_build_py(build_py)
     if not frames:
