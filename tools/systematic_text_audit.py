@@ -51,10 +51,14 @@ def _frame_actionable(frame: dict) -> tuple[bool, str]:
         return True, f"line count differs (baseline={frame.get('baseline_line_count')} vs preview={frame.get('preview_line_count')})"
     per_line = frame.get("per_line_drift_pt", [])
     if per_line and all(abs(d) >= MAJOR_DRIFT_PT for d in per_line):
-        # Uniform offset: first-line anchor or template-wide spacing
-        return True, f"uniform offset {per_line[0]:+.2f}pt across all lines (first-line-anchor or LINESP)"
+        # Check if signs match (true uniform offset) vs split (some +, some -)
+        signs = {1 if d > 0 else -1 for d in per_line if d != 0}
+        if len(signs) == 1:
+            return True, f"uniform offset {per_line[0]:+.2f}pt across all lines (first-line-anchor or LINESP) — y_mm_shift candidate"
+        else:
+            return True, f"SPLIT offset (signs differ across lines): {per_line} — likely per-paragraph anchor; needs split-frame or per-para LINESP"
     if any(abs(d) >= MAJOR_DRIFT_PT for d in per_line):
-        return True, f"max per-line drift {max_drift:+.2f}pt"
+        return True, f"max per-line drift {max_drift:+.2f}pt — non-uniform pattern, sim-driven fix"
     return False, "no actionable drift"
 
 
