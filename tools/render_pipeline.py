@@ -429,7 +429,15 @@ def _run_sla_diff_strict(tid: str, tdir: Path, meta: dict) -> int:
 
 
 def _run_visual_diff(tid: str, tdir: Path, args) -> int:
-    """Run tools/visual_diff.py against baseline.pdf. Returns exit code (0 = pass or skip)."""
+    """Run tools/visual_diff.py against baseline.pdf. Returns exit code (0 = pass or skip).
+
+    Always emits ``build/validation/<tid>/diff-page-NN.png`` +
+    ``composite-page-NN.png`` so the operator can inspect drift after every
+    render. When ``--visual-diff-warning-only`` is set (the /idml-tune
+    Stage-2 default), a non-zero exit is downgraded to a warning so the
+    audit chain still gets a chance to run — the per-region audits are the
+    authoritative drift gate during tuning iterations.
+    """
     baseline = tdir / "baseline.pdf"
     diff_yml = tdir / "diff.yml"
     if not (baseline.exists() and diff_yml.exists()):
@@ -451,10 +459,13 @@ def _run_visual_diff(tid: str, tdir: Path, args) -> int:
         text=True,
     )
     if r.returncode != 0:
-        print(
-            f"[{tid}] visual_diff FAILED:\n{r.stdout}{r.stderr}",
-            file=sys.stderr,
-        )
+        msg = f"[{tid}] visual_diff DRIFT (diff PNGs in build/validation/{tid}/):\n{r.stdout}{r.stderr}"
+        if getattr(args, "visual_diff_warning_only", False):
+            print(msg, file=sys.stderr)
+            print(f"[{tid}] visual_diff: WARNING (warning-only mode; continuing)",
+                  file=sys.stderr)
+            return 0
+        print(msg, file=sys.stderr)
     else:
         print(f"[{tid}] visual_diff (150dpi): PASS")
 
@@ -1740,6 +1751,16 @@ def main(argv=None) -> int:
         "--skip-visual-diff",
         action="store_true",
         help="Skip the visual_diff step (faster iteration; sla_diff still runs).",
+    )
+    parser.add_argument(
+        "--visual-diff-warning-only",
+        action="store_true",
+        help=(
+            "Run visual_diff (emits diff-page-NN.png/composite-page-NN.png) but "
+            "treat its non-zero exit as a warning so the audit chain still "
+            "runs. Used by `bin/tune-render` during Stage-2 iteration when the "
+            "template is expected to drift while being fixed."
+        ),
     )
     parser.add_argument(
         "--dry-run",

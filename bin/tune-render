@@ -81,6 +81,22 @@ def check_freshness(template_dir: Path) -> list[str]:
             for png_name in ("page-01.png", "page-02.png",
                              "page-01-hires.png", "page-02-hires.png"):
                 _stale(template_dir / png_name, preview_mtime, png_name)
+            # diff-page-NN.png / composite-page-NN.png are emitted by
+            # visual_diff into build/validation/<slug>/ on every render
+            # (Task #50). The freshness gate checks both pages because
+            # the leporello has 2 pages — keep this list in sync with
+            # pages_count when adapting for other templates.
+            validation_dir = (
+                REPO / "build" / "validation" / template_dir.name
+            )
+            if validation_dir.exists():
+                for diff_name in (
+                    "diff-page-01.png",
+                    "diff-page-02.png",
+                    "composite-page-01.png",
+                    "composite-page-02.png",
+                ):
+                    _stale(validation_dir / diff_name, preview_mtime, diff_name)
     # meta.yml hash
     meta_yml = template_dir / "meta.yml"
     if meta_yml.exists() and sla.exists():
@@ -107,7 +123,12 @@ def rerender(slug: str, with_audit: bool) -> int:
     rasterise (with zero-padding) → meta.yml hash → sla_diff (if origin
     SLA present) → optional visual_diff → audit chain.
     """
-    cmd = [str(REPO / "bin" / "render-gallery"), slug, "--skip-visual-diff"]
+    # Stage-2 tuning expects drift while iterating, so visual_diff runs in
+    # warning-only mode: diff-page-NN.png/composite-page-NN.png still land
+    # in build/validation/<slug>/ every render (Task #50), but a non-zero
+    # exit doesn't halt the audit chain — the per-region audits are the
+    # authoritative drift gate during tuning.
+    cmd = [str(REPO / "bin" / "render-gallery"), slug, "--visual-diff-warning-only"]
     if with_audit:
         cmd.append("--audit")
     print(f"[tune-render] {' '.join(cmd)}", file=sys.stderr)

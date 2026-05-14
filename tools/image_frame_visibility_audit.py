@@ -102,10 +102,16 @@ def parse_image_frames_from_build_py(build_py: Path) -> list[ImageFrameInfo]:
         anname = _ast_literal(_ast_kw(node, "anname"))
         if not anname:
             continue
-        x = _ast_literal(_ast_kw(node, "x_mm")) or _ast_literal(_ast_kw(node, "x"))
-        y = _ast_literal(_ast_kw(node, "y_mm")) or _ast_literal(_ast_kw(node, "y"))
-        w = _ast_literal(_ast_kw(node, "w_mm")) or _ast_literal(_ast_kw(node, "w"))
-        h = _ast_literal(_ast_kw(node, "h_mm")) or _ast_literal(_ast_kw(node, "h"))
+        # Coordinates of 0 are valid — `or`-chain would silently drop them.
+        def _coord(primary: str, alt: str):
+            v = _ast_literal(_ast_kw(node, primary))
+            if v is not None:
+                return v
+            return _ast_literal(_ast_kw(node, alt))
+        x = _coord("x_mm", "x")
+        y = _coord("y_mm", "y")
+        w = _coord("w_mm", "w")
+        h = _coord("h_mm", "h")
         if None in (x, y, w, h):
             continue
         scale_type = _ast_literal(_ast_kw(node, "scale_type"))
