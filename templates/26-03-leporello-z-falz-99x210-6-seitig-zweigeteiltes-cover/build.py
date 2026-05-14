@@ -323,6 +323,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         shape='ellipse',
     ))
     # h_mm widened 6.3257mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=9.88pt; IDML overflows silently)
+    # rotation_deg=-18 to match the Störer circle (u185); the converter
+    # had emitted -9 for the text and -18 for the circle so the text
+    # appeared off-axis inside the circle. Both elements form one
+    # design unit and must share rotation.
     page0.add(TextFrame(
         x_mm=259.1,
         y_mm=105.2819,
@@ -330,7 +334,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=8.0081,
         anname='u186',
         layer=0,
-        rotation_deg=-9,
+        rotation_deg=-18,
         style='idml/normalparagraphstyle',
         runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '1'})],
         trail_attrs={'ALIGN': '1', 'LINESPMode': '1'},
@@ -874,14 +878,13 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u3d1',
         layer=0,
     ))
-    # Per-icon PNGs are 548×634px at 72dpi-assumed. With SCALETYPE=0 and
-    # default local_scale=(1,1), Scribus draws the image at native pixel
-    # size (≈193mm wide) and the frame shows only the top-left ~3mm —
-    # mostly transparent corner. SCALETYPE=1 (auto-fit) triggers Scribus
-    # 1.6.x's "RGBA white-on-transparent goes invisible" CMYK bug.
-    # Fix: SCALETYPE=0 with explicit local_scale that fits the icon into
-    # the frame height (preserves aspect; small horizontal padding).
-    # scale = frame_h_pt / source_h_px = (3.299mm × 2.8346 pt/mm) / 634 px ≈ 0.01475
+    # Per-icon PNGs are 548×634px. Scribus reads them at 300dpi (the
+    # ``compute_aspect_fill`` default + production-template convention),
+    # making the asset 46.4×53.7mm native. For the 3.35×3.30mm frame
+    # the aspect-fit scale = min(3.35/46.4, 3.30/53.7) = 0.061458
+    # (height-bound; preserves aspect with ~0.4mm horizontal padding).
+    # The 72dpi assumption used previously produced 0.01475 which made
+    # the icons render at ~50% of the intended size.
     page1.add(ImageFrame(
         x_mm=211.7191,
         y_mm=185.9694,
@@ -891,7 +894,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-facebook.png',
         scale_type=0,
-        local_scale=(0.01475, 0.01475),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
     page1.add(TextFrame(
@@ -913,7 +915,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-instagram.png',
         scale_type=0,
-        local_scale=(0.01475, 0.01475),
     ))
     # h_mm widened 3.2017mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
     page1.add(TextFrame(
@@ -935,7 +936,6 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-tiktok.png',
         scale_type=0,
-        local_scale=(0.01475, 0.01475),
     ))
     # h_mm widened 3.3522mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
     page1.add(TextFrame(
