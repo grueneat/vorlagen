@@ -314,6 +314,96 @@ blocker (the next step's input doesn't exist).
 
 ---
 
+## L-012 — image_frame_visibility_audit only checks presence, not extent
+
+**Symptom:** User flagged the pine-trees banner (u2cd) on the Portrait
+template: in the rendered preview the image renders SHORTER vertically
+than the InDesign baseline.pdf (height drift; width matches). The
+current `image_frame_visibility_audit` (Phase E5) only flags frames
+where preview is mostly background — it has no notion of "ink-bbox in
+preview vs ink-bbox in baseline". So a frame that DOES render content
+but at wrong height/extent passes silently.
+
+**Lesson:** Visibility (binary: visible/invisible) is the wrong
+abstraction. The right signal is **extent** — for each ImageFrame:
+- baseline_inkbbox_mm: tightest pixel-rectangle around inkful pixels
+  in baseline.pdf inside the frame's bbox
+- preview_inkbbox_mm: same in preview.pdf
+- per-side delta_mm
+
+If any side drifts > 1mm, the frame is mis-rendered (clip, wrong
+fit-mode, FrameFittingOption mistranslation).
+
+This catches:
+- IDML FrameFittingOption@Bottom-Crop/Top-Crop/Left-Crop/Right-Crop
+  attributes the converter currently ignores (already documented in
+  zweigeteiltes' tol:u3a0-plakat-dunkel-rightcrop)
+- Scribus SCALETYPE=1 vs IDML's "FillProportionally" effective extent
+- Wrong scale_type value silently truncating images
+
+**Action:**
+1. Design `tools/image_frame_extent_audit.py` (Phase E6/E7).
+2. Wire into preflight as a hard signal — drift > 1mm = preflight fail.
+3. Document the FrameFittingOption-cropping converter gap as the
+   actionable root cause.
+
+**Skill follow-up:** Update `/idml-tune/SKILL.md` Phase descriptions.
+Mark `image_frame_visibility_audit` as INSUFFICIENT — extend or
+replace with extent-based check.
+
+---
+
+## L-014 — image_frame_visibility_audit is broken for inverted imagery
+
+**Symptom:** u141 (white DIE GRÜNEN logo on dark green background)
+classified as `invisible_in_preview` with `preview_ink_density=0.0001`.
+Direct pixel measurement on the rendered preview shows the logo IS
+rendering (43% of pixels in the bbox are bright white — the logo
+glyphs). The audit measures "ink" as DARK pixels and gets ~0%
+correctly, but interprets that as "image not rendering". For white-
+on-dark assets the LIGHT pixels are the ink.
+
+**Lesson:** Audit visibility logic is asymmetric — assumes ink = dark,
+background = light. For brand-style inverted assets (white logos,
+white icons on dark backgrounds) the polarity is inverted and the
+audit produces false positives.
+
+**Action:** Extend `tools/image_frame_visibility_audit.py` with a
+polarity check: compare baseline + preview both ways (dark-ink AND
+light-ink) and use whichever direction matches the baseline. The
+asset is "rendering correctly" if EITHER direction's preview density
+is within tolerance of baseline.
+
+**Skill follow-up:** Update `/idml-tune/SKILL.md` Phase E5 description
+to mention this. Until the audit is fixed, every white-on-dark asset
+will produce a false-positive invisibility flag — note this as a
+known false-positive class so the LLM doesn't chase it.
+
+---
+
+## L-013 — Per-template re-render regressed u141 back to invisible
+
+**Symptom:** After refactoring `build()` to dual-output (template.sla +
+template-preview.sla), the Portrait re-render reported u141 invisible
+again. Earlier this session the fix `image=… + scale_type=0` made u141
+visible. The regression appears tied to which Document the file is
+saved from — possibly `build_template()` is producing a different
+SLA than the previous `build_preview()` path that also worked when
+INJECT_MAP was empty.
+
+**Lesson:** When refactoring the build pipeline, the audit chain
+should be the safety net that catches regressions. The
+`per_region_regression` audit DID flag "1 per-region regression" on
+this run — so the audit caught it. But the LLM (me) needs to act
+on the regression rather than commit through it.
+
+**Action:** Re-investigate u141 with the new build() shape. Likely
+the `image=` reference path differs between `build_template()` and
+`build_preview()` Document emission, or scale_type=0 was lost in the
+template.sla serialization vs the prior all-via-build_preview path.
+
+---
+
 ## L-009 — `font='Times Roman'` is one of several latent ParaStyle defaults the converter blindly carries
 
 **Symptom:** The converter emits ParaStyle definitions verbatim from
