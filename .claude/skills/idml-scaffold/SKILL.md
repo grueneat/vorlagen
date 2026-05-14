@@ -51,6 +51,14 @@ calling the scaffold complete.
   line-spacing audit; runs as Phase E3 in the audit chain. The
   `inconsistent_pattern` count surfaces frames where `<para>` and
   `<trail>` disagree on LINESPMode — a converter bug class.
+- `tools/line_spacing_pixel_audit.py` — **pixel-level per-frame
+  ink-top measurement**; runs as Phase E4. Rasterises preview.pdf
+  and baseline.pdf at 150 dpi and scans each TextFrame bbox for
+  the first non-background row. Reports drift in points. This is
+  the AUTHORITATIVE per-frame line-spacing signal — pdfplumber-based
+  audits (E2/E3) report text-matrix Y which hides per-font-metric
+  differences between InDesign and Scribus rendering of the same
+  font file.
 
 ## Pre-flight checks (machine-checkable)
 
