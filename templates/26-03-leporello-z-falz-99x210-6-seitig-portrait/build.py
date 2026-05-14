@@ -243,9 +243,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         fill='Magenta',
     ))
     # h_mm widened 11.6453mm→16.3815mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=18.96pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 191.6963 → 191.019 (uniform ++1.92pt × sign=-1 → -0.6773mm)
     page0.add(TextFrame(
         x_mm=204.6586,
-        y_mm=191.6963,
+        y_mm=191.019,
         w_mm=86.84,
         h_mm=16.3815,
         anname='u155',
@@ -590,9 +591,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
 def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     """Auto-generated page-items for page 2 (Spread Spreads/Spread_u108.xml)."""
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 17.4 → 18.0773 (uniform +-1.92pt × sign=-1 → +0.6773mm)
     page1.add(TextFrame(
         x_mm=16.8913,
-        y_mm=17.4,
+        y_mm=18.0773,
         w_mm=65.2174,
         h_mm=24.6944,
         anname='u24e',
@@ -612,9 +614,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para')],
         trail_attrs={'ALIGN': '0'},
     ))
+    # P5/playbook y_mm_shift.py: y_mm 47.9915 → 46.5723 (uniform ++4.02pt × sign=-1 → -1.4192mm)
     page1.add(TextFrame(
         x_mm=115.3913,
-        y_mm=47.9915,
+        y_mm=46.5723,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u295',
@@ -696,9 +699,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
     # h_mm widened 7.6199mm→10.8843mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=12.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 151.7968 → 150.9501 (uniform ++2.40pt × sign=-1 → -0.8467mm)
     page1.add(TextFrame(
         x_mm=21.6413,
-        y_mm=151.7968,
+        y_mm=150.9501,
         w_mm=52.6804,
         h_mm=10.8843,
         anname='u376',
@@ -763,9 +767,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '20.48'},
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 123.1736 → 123.6736 (calibration probe (+0.5mm))
+    # P5/playbook y_mm_shift.py: y_mm 123.6736 → 121.3029 (uniform ++6.72pt × sign=-1 → -2.3707mm)
     page1.add(TextFrame(
         x_mm=226.6686,
-        y_mm=123.1736,
+        y_mm=121.3029,
         w_mm=41.6629,
         h_mm=8.0081,
         anname='u3ba',
@@ -798,9 +804,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=186.0667,
+        y_mm=184.204,
         w_mm=26.5209,
         h_mm=8.0081,
         anname='u40c',
@@ -821,9 +828,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.2017mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 191.6586 → 189.7959 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=191.6586,
+        y_mm=189.7959,
         w_mm=29.1209,
         h_mm=8.0081,
         anname='u412',
@@ -844,9 +852,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.3522mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=197.2992,
+        y_mm=195.4365,
         w_mm=36.0209,
         h_mm=8.0081,
         anname='u45b',
@@ -866,9 +875,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=186.0667,
+        y_mm=184.204,
         w_mm=26.4583,
         h_mm=8.0081,
         anname='u47b',
@@ -888,9 +898,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=191.7073,
+        y_mm=189.8446,
         w_mm=27.74,
         h_mm=8.0081,
         anname='u4a6',
@@ -910,9 +921,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 197.4231 → 195.5604 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=197.4231,
+        y_mm=195.5604,
         w_mm=27.74,
         h_mm=8.0081,
         anname='u4df',
