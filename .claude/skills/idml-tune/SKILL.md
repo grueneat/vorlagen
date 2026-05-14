@@ -168,8 +168,57 @@ Only these paths may be edited in Stage 2:
   `meta.yml::non_ci_styles`, `meta.yml::non_ci_colors`,
   `meta.yml::non_ci_layers` — gated by P4 (user confirmation +
   `TOLERANCE_LOG.md` row).
+- `templates/<slug>/meta.yml::frame_library_map` — per-frame mapping
+  from anname → `shared/sample-images/manifest.yml` ID for preview
+  AI substitution (see "Demo image substitution" below).
 - `templates/<slug>/TOLERANCES.yml` — explicit per-element visual
   trade-offs with justifications.
+
+## Demo image substitution — preview render only (active 2026-05-14)
+
+**DO NOT** try to fix demo image crop/scale with empirical
+`local_offset_mm` + `local_scale` guesses. Scribus 1.6.x has no native
+aspect-FILL mode, so any IDML-imported demo photo whose aspect doesn't
+match its frame renders with letterbox/pillarbox or off-frame. The
+crop-tuning loop never converges and produces brittle per-frame magic
+numbers.
+
+**DO** swap demo (`external:`) ImageFrame sources with library AI
+images cropped to the frame's exact W×H at preview-render time. The
+committed `template.sla` keeps its external PFILE reference (user's
+download is unchanged); `template-preview.sla` carries the
+AI-substituted inline image for the gallery render.
+
+Pattern (matches `zeitung`, `postkarte`, `plakat` `build_preview()`):
+
+```python
+from sla_lib.builder.library import load as load_library, inject_into_frame
+
+def build_preview(doc):
+    """Per-template gallery render: substitute external assets with library AI."""
+    # ... build doc as usual, then:
+    for frame in doc.frames_by_anname():  # or similar lookup
+        if frame.anname in meta["frame_library_map"]:
+            img_id = meta["frame_library_map"][frame.anname]
+            img = load_library(img_id)
+            inject_into_frame(
+                frame, img,
+                target_w_mm=frame.w_mm,
+                target_h_mm=frame.h_mm,
+            )
+    return doc
+```
+
+`inject_into_frame` does the right thing in one call: centre-crops the
+library image to the frame's aspect (honouring `crop_focus` saliency
+anchor), packs the JPEG via `pack_inline_image`, sets `scale_type=0`
+(ScaleAuto). The result fills the frame with no gap and no
+`local_offset_mm` guesswork.
+
+If a library entry whose tags fit doesn't exist, see
+`shared/sample-images/manifest.yml` to add one (regenerable via
+`tools/codex_image_gen.py`). Brand `embedded:` assets are NEVER
+substituted — only `external:`.
 
 ## Step 1 — Classify the open issues
 
