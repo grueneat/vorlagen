@@ -149,14 +149,64 @@ u3a0; the other 2 are derived / unused). SLA size: 391 KB
 embed-everything rule). Self-contained for brand; placeholder for
 content.
 
+## Preview render: AI substitution for `external:` assets
+
+**Active rule (locked 2026-05-14):** in the preview pipeline (gallery
+thumbnails + click-through hires), every `external:` ImageFrame gets
+its PFILE substituted with a library AI image cropped to the frame's
+exact dimensions. The committed `template.sla` (what the user
+downloads) still references the original external path — substitution
+only happens in `template-preview.sla` / `build_preview()`.
+
+Why:
+- Scribus 1.6.x has no native aspect-FILL ("cover") mode. Frames
+  whose source asset doesn't match the frame's aspect render either
+  with letterbox/pillarbox (aspect-fit, SCALETYPE=0) or off-frame
+  (SCALETYPE=1 + IDML-derived LOCALSCX). Both look broken in previews.
+- Pre-cropping the library image to the frame's exact W×H via
+  `tools/sla_lib/builder/library.py::inject_into_frame` produces a
+  source image whose aspect matches the frame, so SCALETYPE=0 fills
+  cleanly with no gap and no crop guesswork.
+- The library is already AI-generated, watermarked ("Symbolfoto —
+  KI-generiert"), and indexed by topic/tags — `shared/sample-images/`.
+
+How it's wired:
+- IDML-imported templates that have `external:` content frames emit a
+  `build_preview()` function in `build.py` that walks each external
+  ImageFrame, selects a library image (by tag match — `themen`,
+  `portrait`, `kontext` — or explicit `meta.yml::frame_library_map`
+  override), and calls `inject_into_frame(frame, img, target_w_mm,
+  target_h_mm)`.
+- `_select_render_source` in `tools/render_pipeline.py` prefers
+  `template-preview.sla` over `template.sla` when present, so the
+  gallery render picks up the AI-substituted variant automatically.
+- If a library image at the exact size doesn't exist, the build
+  generates one via `tools/codex_image_gen.py` (cached under
+  `shared/sample-images/<topic>-<W>×<H>.jpg`) — same prompt as the
+  source library entry, regenerable from manifest.
+
+Brand-team safety:
+- Library images are watermarked permanently (R-WATERMARK-CROP) so an
+  accidental "this looks production-ready" gallery shot is impossible.
+- Brand `embedded:` assets are never substituted — only `external:`.
+- The downloaded SLA still has `external:` PFILE pointing at the
+  original asset (or no asset, if `shipped: []` is enforced) — the
+  user still gets a "your content goes here" placeholder.
+
 ## What does NOT happen
 
-- The skill does NOT silently embed AI imagery — that would ship a
-  fake-as-real placeholder into print. Brand team explicitly rejected.
-- The skill does NOT silently ship content (no zip) — brand team
-  decided users get the BRAND template and put their own content in.
+- The skill does NOT silently embed AI imagery into the **committed**
+  `template.sla` — that's still the brand-team-locked surface. AI
+  substitution lives only in the preview variant.
+- The skill does NOT silently ship content (no zip) — users still
+  get the BRAND template and put their own content in.
 - The skill does NOT skip the classification step — every asset must
   land in `embedded:` or `external:`.
+- The skill does NOT crop demo images on-the-fly with empirical
+  `local_offset_mm` guesses. Use `inject_into_frame` so the source
+  matches the frame and Scribus's aspect-fit fills cleanly. The
+  "crop the IDML's literal local_offset" branch is the old approach
+  and is deprecated for `external:` assets.
 
 ## Rationale
 
