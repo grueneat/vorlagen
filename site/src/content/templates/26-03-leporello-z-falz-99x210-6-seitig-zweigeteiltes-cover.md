@@ -53,14 +53,10 @@ _downloads:
   sla: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/template.sla
   pdf: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/preview.pdf
 _previews:
-- label: Innenseite (mit Bildern)
+- label: Innenseite (page 1)
   src: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/page-01.png
-- label: Cover-Außenseite (mit Bildern)
+- label: Cover-Außenseite (page 2)
   src: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/page-02.png
-- label: Innenseite (Layout, ohne Bilder)
-  src: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/page-01-scaffold.png
-- label: Cover-Außenseite (Layout, ohne Bilder)
-  src: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/page-02-scaffold.png
 ---
 
 # 26-03 Leporello z-Falz 99×210 (6-seitig, zweigeteiltes Cover)
