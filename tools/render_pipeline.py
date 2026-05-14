@@ -489,63 +489,6 @@ def _select_render_source(template_dir: Path) -> Path:
     return template_dir / "template.sla"
 
 
-def _emit_scaffold_preview(tid: str, tdir: Path, dpi: int) -> None:
-    """Emit a "demo-images muted" preview alongside the regular one.
-
-    Pipeline:
-      1. ``tools/scaffold_render.py`` reads template.sla and writes
-         template-scaffold.sla with demo ImageFrames muted (PICART=0,
-         PFILE empty, dashed outline).
-      2. Scribus exports template-scaffold.sla → preview-scaffold.pdf.
-      3. pdftoppm rasterises to page-NN-scaffold.png (thumbnail) +
-         page-NN-scaffold-hires.png (150 dpi click-through).
-
-    The output sits next to the regular previews so the Astro template
-    page can list both. Errors here log + return — they don't fail the
-    main render (the with-images preview is the canonical artifact).
-    """
-    template_sla = tdir / "template.sla"
-    scaffold_sla = tdir / "template-scaffold.sla"
-    scaffold_pdf = tdir / "preview-scaffold.pdf"
-    try:
-        scaffold_cmd = [
-            sys.executable, str(ROOT / "tools" / "scaffold_render.py"),
-            str(template_sla), str(scaffold_sla),
-        ]
-        r = subprocess.run(scaffold_cmd, capture_output=True, text=True)
-        if r.returncode != 0:
-            print(f"[{tid}] scaffold_render FAILED: {r.stderr}",
-                  file=sys.stderr)
-            return
-        if r.stdout.strip():
-            print(f"[{tid}] {r.stdout.strip()}")
-        render_sla_to_pdf(scaffold_sla, scaffold_pdf)
-        _scrub_pdf_metadata(scaffold_pdf)
-        # Thumbnail + hires rasterise. Use the same naming convention so
-        # Astro's hires-suffix swap works (page-01-scaffold.png ↔
-        # page-01-scaffold-hires.png).
-        for stale in list(tdir.glob("page-*-scaffold*.png")):
-            stale.unlink()
-        rasterise(scaffold_pdf, tdir / "scaffold", dpi)
-        _zero_pad_pngs(tdir, "scaffold")
-        rasterise(scaffold_pdf, tdir / "scaffold-hires", HIRES_DPI)
-        _zero_pad_pngs(tdir, "scaffold-hires")
-        for src in sorted(tdir.glob("scaffold-*.png")):
-            name = src.name
-            if name.startswith("scaffold-hires-"):
-                idx = name[len("scaffold-hires-"):]
-                target = tdir / f"page-{idx.replace('.png', '-scaffold-hires.png')}"
-            else:
-                idx = name[len("scaffold-"):]
-                if "hires" in idx:
-                    continue
-                target = tdir / f"page-{idx.replace('.png', '-scaffold.png')}"
-            src.rename(target)
-        print(f"[{tid}] scaffold preview: OK")
-    except Exception as exc:
-        print(f"[{tid}] scaffold_render error: {exc}", file=sys.stderr)
-
-
 def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
     """Render a single-SLA template (postkarte, zeitung).
 
@@ -581,12 +524,6 @@ def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
         suffix = src.name[len("hires-"):]   # NN.png
         target = tdir / f"page-{suffix.replace('.png', '-hires.png')}"
         src.rename(target)
-
-    # Scaffold pass (Task #56): a second preview with demo images muted
-    # so the brand team can see the structural layout. Brand-embedded
-    # assets (logos, social icons) stay visible. Output PNGs follow the
-    # same naming convention with a `-scaffold` suffix.
-    _emit_scaffold_preview(tid, tdir, dpi)
 
     rc = _run_sla_diff_strict(tid, tdir, meta)
     if rc != 0:
