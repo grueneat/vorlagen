@@ -34,7 +34,20 @@ from sla_lib.builder import (  # noqa: E402
     pack_inline_image,
 )
 
-INJECT_MAP: dict[str, str] = {}
+INJECT_MAP: dict[str, str] = {
+    # anname → shared/sample-images/manifest.yml library ID.
+    # Used by build_preview() (gallery-only template-preview.sla) so the
+    # with-images preview renders cleanly without empirical local_offset_mm
+    # cropping. The committed template.sla keeps the external IDML asset
+    # reference — the downloaded SLA still shows the user's "your content
+    # here" placeholder. See .claude/skills/idml-tune/SKILL.md
+    # "Demo image substitution".
+    "u514": "themen_klimaschutz_windrad",   # inside top-right photo (101×107mm)
+    "u2cd": "themen_verkehr_radweg",         # cover middle-top wide banner (99×42mm)
+    # u3a0 (full-page green Zitat backdrop) intentionally left unmapped —
+    # the substitute photo would clash with the panel's "Zitat" framing.
+    # The original plakat-dunkel-fuer-flyer.png stays in template-preview.sla.
+}
 
 def _add_styles(doc: Document) -> None:
     """Paragraph styles — populated by tools/idml_to_dsl.py Phase G."""
@@ -1230,13 +1243,27 @@ def build_preview() -> Document:
 build_doc = build_template
 
 
-def build(out_path: str | Path = HERE / "template.sla") -> Path:
-    doc = build_preview()
-    out_path = Path(out_path)
-    doc.save(out_path)
-    return out_path
+def build(out_dir: str | Path = HERE) -> tuple[Path, Path]:
+    """Emit both the brand-clean template.sla and the AI-injected preview.
+
+    - ``template.sla`` carries the original external PFILE references
+      (placeholders that resolve to nothing in the user's download —
+      brand-team policy "no demo content shipped").
+    - ``template-preview.sla`` substitutes external demo frames with
+      library AI images cropped to the frame's exact dimensions
+      (Task #57 / SKILL.md "Demo image substitution"). The render
+      pipeline picks this up via ``_select_render_source`` for the
+      gallery preview.
+    """
+    out_dir = Path(out_dir)
+    template_path = out_dir / "template.sla"
+    preview_path = out_dir / "template-preview.sla"
+    build_template().save(template_path)
+    build_preview().save(preview_path)
+    return template_path, preview_path
 
 
 if __name__ == "__main__":
-    path = build()
-    print(f"OK: saved {path}")
+    tpath, ppath = build()
+    print(f"OK: saved {tpath}")
+    print(f"OK: saved {ppath}")
