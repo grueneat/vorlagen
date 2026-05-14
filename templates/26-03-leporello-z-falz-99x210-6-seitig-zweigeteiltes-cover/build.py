@@ -180,6 +180,16 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         fill='Dunkelgrün',
     ))
+    # u514: Ziesel/squirrel photo on the inside-page top-right panel.
+    # Converter emitted scale_type=1 with the IDML's literal scale, but
+    # Scribus 1.6.x renders SCALETYPE=1 + explicit LOCALSCX/Y at *native*
+    # pixel size (not the scaled size), showing only the top-left native
+    # corner of the source. Switching to scale_type=0 (Free Scaling)
+    # honours both local_scale + local_offset_mm verbatim. Offset values
+    # crop the source so the squirrel appears roughly centred in the
+    # frame: source is 4390×2927 px (≈547×365mm), scaled to ≈236×157mm,
+    # offset centres horizontally + 25mm down so the squirrel's head
+    # falls in the upper half of the frame, matching baseline.pdf.
     page0.add(ImageFrame(
         x_mm=198,
         y_mm=-1.8,
@@ -189,7 +199,8 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/ziesel.jpg',
         local_scale=(0.430959, 0.430959),
-        scale_type=1,
+        scale_type=0,
+        local_offset_mm=(-20.0, -25.0),
     ))
     page0.add(ImageFrame(
         x_mm=273.18,
@@ -668,6 +679,14 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
         trail_attrs={'ALIGN': '0'},
     ))
+    # u2cd: pine-trees backdrop for "Ich bin auch eine Headline" on the
+    # cover middle panel. The converter emitted SCALETYPE=1 + a negative
+    # local_offset; with SCALETYPE=1 (Scale to frame) Scribus uses the
+    # offset to place the *scaled* image, which here pushes it off-frame
+    # and renders invisible. Switching to SCALETYPE=0 (Free Scaling)
+    # interprets local_scale + local_offset as a manual placement that
+    # honours both values — same visible result as InDesign's intended
+    # crop window.
     page1.add(ImageFrame(
         x_mm=99.1764,
         y_mm=0,
@@ -677,7 +696,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/green-pine-trees-covered-with-fog.jpg',
         local_scale=(0.450074, 0.450074),
-        scale_type=1,
+        scale_type=0,
         local_offset_mm=(0, -24.0251),
     ))
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
@@ -848,6 +867,14 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u3d1',
         layer=0,
     ))
+    # Per-icon PNGs are 548×634px at 72dpi-assumed. With SCALETYPE=0 and
+    # default local_scale=(1,1), Scribus draws the image at native pixel
+    # size (≈193mm wide) and the frame shows only the top-left ~3mm —
+    # mostly transparent corner. SCALETYPE=1 (auto-fit) triggers Scribus
+    # 1.6.x's "RGBA white-on-transparent goes invisible" CMYK bug.
+    # Fix: SCALETYPE=0 with explicit local_scale that fits the icon into
+    # the frame height (preserves aspect; small horizontal padding).
+    # scale = frame_h_pt / source_h_px = (3.299mm × 2.8346 pt/mm) / 634 px ≈ 0.01475
     page1.add(ImageFrame(
         x_mm=211.7191,
         y_mm=185.9694,
@@ -857,6 +884,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-facebook.png',
         scale_type=0,
+        local_scale=(0.01475, 0.01475),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
     page1.add(TextFrame(
@@ -878,6 +906,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-instagram.png',
         scale_type=0,
+        local_scale=(0.01475, 0.01475),
     ))
     # h_mm widened 3.2017mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
     page1.add(TextFrame(
@@ -899,6 +928,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-tiktok.png',
         scale_type=0,
+        local_scale=(0.01475, 0.01475),
     ))
     # h_mm widened 3.3522mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
     page1.add(TextFrame(
