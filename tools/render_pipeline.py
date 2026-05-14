@@ -524,8 +524,9 @@ def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
             return rc
 
     if not args.dry_run:
-        h = _sha256_of(template_sla)
-        _update_meta_hash(tdir / "meta.yml", h)
+        # meta.yml::previews_for_sla is already updated in
+        # _orchestrate_template (F-020) right after build.py succeeds.
+        # No need to recompute here.
         _mirror_to_site_public(tdir, public_dir, family=False)
 
     # Count only thumbnails (exclude `*-hires.png` so the page total
@@ -615,7 +616,13 @@ def _orchestrate_template(tdir: Path, args) -> int:
 
     1. Read meta and determine family vs single.
     2. Run build.py to regenerate template.sla.
-    3. Dispatch to _orchestrate_single or _orchestrate_family.
+    3. Auto-update meta.yml::previews_for_sla so the pin always tracks the
+       just-emitted SLA (F-020). Done immediately after build.py succeeds —
+       before any diff/audit phase — so the hash stays in sync even when
+       downstream phases (visual_diff, audits) flag a regression. This
+       removes the manual "compute sha256 + edit meta.yml" step that was
+       easy to forget.
+    4. Dispatch to _orchestrate_single or _orchestrate_family.
     """
     meta = _read_template_meta(tdir)
     tid = meta["id"]
@@ -648,6 +655,24 @@ def _orchestrate_template(tdir: Path, args) -> int:
                 file=sys.stderr,
             )
             return r.returncode
+
+    # F-020: auto-update meta.yml::previews_for_sla immediately after the
+    # SLA is (re)written by build.py. For single templates the pin tracks
+    # template.sla; for family templates each per-size SLA is committed
+    # and unchanged by build.py — those hashes still update inside
+    # _orchestrate_family via the existing per-size loop. We skip family
+    # here because the per-size SLAs may not all exist until that loop.
+    if not getattr(args, "dry_run", False) and not is_family:
+        template_sla = tdir / "template.sla"
+        if template_sla.exists():
+            try:
+                h = _sha256_of(template_sla)
+                _update_meta_hash(tdir / "meta.yml", h)
+            except OSError as exc:
+                print(
+                    f"[{tid}] meta.yml hash auto-update skipped: {exc}",
+                    file=sys.stderr,
+                )
 
     if is_family:
         return _orchestrate_family(tdir, meta, site_public_dir, args)
