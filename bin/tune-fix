@@ -72,9 +72,16 @@ def _read_preflight(slug: str) -> dict:
     return yaml.safe_load(p.read_text(encoding="utf-8")) or {}
 
 
-def _run_tune_render(slug: str) -> int:
+def _run_tune_render(slug: str, transactional: bool = True) -> int:
+    """Re-run tune-render. Inside the iteration loop pass transactional=False
+    so partial progress lands in templates/<slug>/ — otherwise the audit
+    failure rolls back every iteration's edits and the loop diverges. The
+    FINAL render at end of tune-fix runs transactional=True to verify the
+    state ships clean (or rolls back if not)."""
     cmd = [str(REPO / "bin" / "tune-render"), slug]
-    print(f"[tune-fix] re-running: {' '.join(cmd)}", file=sys.stderr)
+    if not transactional:
+        cmd.append("--no-transactional")
+    print(f"[tune-fix] re-running: {' '.join(cmd)}", file=sys.stderr, flush=True)
     return subprocess.run(cmd).returncode
 
 
@@ -123,10 +130,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     for it in range(1, args.max_iter + 1):
-        print(f"\n[tune-fix] iteration {it}/{args.max_iter} on {args.slug}", file=sys.stderr)
+        print(f"\n[tune-fix] iteration {it}/{args.max_iter} on {args.slug}", file=sys.stderr, flush=True)
         n_changed, log = _apply_playbooks(args.slug, args.dry_run)
         for line in log:
-            print(line, file=sys.stderr)
+            print(line, file=sys.stderr, flush=True)
         if n_changed == 0:
             preflight = _read_preflight(args.slug)
             if preflight.get("ok", True):
@@ -154,16 +161,25 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
         if args.dry_run:
-            print(f"[tune-fix] dry-run: {n_changed} change(s) proposed; not writing", file=sys.stderr)
+            print(f"[tune-fix] dry-run: {n_changed} change(s) proposed; not writing", file=sys.stderr, flush=True)
             return 0
-        rc = _run_tune_render(args.slug)
-        if rc == 0:
-            print(f"[tune-fix] preflight green after iteration {it}", file=sys.stderr)
-            return 0
+        # In-loop renders bypass the transactional rollback so partial
+        # progress lands. The FINAL render below runs transactional.
+        rc = _run_tune_render(args.slug, transactional=False)
+        # Re-read preflight to see if we've converged
+        preflight = _read_preflight(args.slug)
+        if preflight.get("ok", True):
+            print(f"[tune-fix] preflight green after iteration {it}", file=sys.stderr, flush=True)
+            # Final transactional render: if anything regressed since this
+            # iteration, the rollback catches it.
+            return _run_tune_render(args.slug, transactional=True)
     print(
         f"[tune-fix] max-iter ({args.max_iter}) reached without convergence",
-        file=sys.stderr,
+        file=sys.stderr, flush=True,
     )
+    # Run a final transactional render to make sure the templates/<slug>/
+    # state is the audited state (or rolled back if STILL bad).
+    _run_tune_render(args.slug, transactional=True)
     return 3
 
 
