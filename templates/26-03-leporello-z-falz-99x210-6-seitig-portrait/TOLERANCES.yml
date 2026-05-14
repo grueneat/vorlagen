@@ -50,7 +50,7 @@ tolerances:
     follow_up_issue: "converter-extension; future Stage-1 work (pattern_library inline-TextPath)"
 
   - id: tol:asset-extraction-composite-ai-social-icons
-    audit: asset_extraction_audit
+    audit: asset_extraction
     classification: human-review
     reason: >-
       1 composite-AI flag fired for "Social Media Icons weiss.ai".
@@ -128,6 +128,21 @@ tolerances:
       layer-1 frames in the converter; here documented as known
       audit artifact for empty info-layer frames.
     follow_up_issue: "converter-extension; tools/idml_to_dsl.py drops empty Info-layer frames"
+
+  - id: tol:text-render-stoerer-rotation-tokenisation
+    audit: text_render_audit
+    classification: scribus-engine-bug
+    reason: >-
+      text_render_audit reports "störer" missing in preview with
+      "stör" + "er" as extras. The Störer text frame (u186) is
+      rotated -18° (matched to its u185 ellipse partner via the
+      stoerer_circle_text_same_rotation constraint). pdftotext
+      extracts the rotated word in two visual chunks because the
+      rotation breaks the linear text-flow heuristic. The word IS
+      rendered correctly visually; the audit is fooled by the
+      extractor's tokenisation. Same gap class as the audit-engine
+      quirks already documented in run_style_audit.
+    follow_up_issue: "engine-bug; pdftotext rotation-aware text extraction"
 
   - id: tol:visual-diff-image-size-mismatch
     audit: visual_diff_regions
