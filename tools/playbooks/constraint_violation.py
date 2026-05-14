@@ -44,8 +44,12 @@ def _set_frame_rotation(build_path: Path, anname: str, new_rot: float) -> bool:
     """Set rotation_deg on a frame; insert if missing."""
     text = build_path.read_text()
     pat = re.compile(
-        r"(^[ \t]*page\d+\.add\(\w+\(\s*\n(?:.|\n)*?anname='" + re.escape(anname) +
-        r"'(?:.|\n)*?\n[ \t]*\)\)\n)", re.MULTILINE,
+        r"(^[ \t]*page\d+\.add\(\w+\("
+        r"(?:(?!\)\)).)*?"
+        r"anname='" + re.escape(anname) + r"'"
+        r"(?:(?!\)\)).)*?"
+        r"\)\)\n)",
+        re.MULTILINE | re.DOTALL,
     )
     m = pat.search(text)
     if not m:

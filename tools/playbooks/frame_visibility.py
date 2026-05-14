@@ -87,8 +87,12 @@ def _swap_to_image_ref(build_path: Path, anname: str, asset_dir_rel: str) -> boo
     """
     text = build_path.read_text()
     pat = re.compile(
-        r"(^[ \t]*page\d+\.add\(ImageFrame\(\s*\n(?:.|\n)*?anname='" + re.escape(anname) +
-        r"'(?:.|\n)*?\n[ \t]*\)\)\n)", re.MULTILINE,
+        r"(^[ \t]*page\d+\.add\(ImageFrame\("
+        r"(?:(?!\)\)).)*?"
+        r"anname='" + re.escape(anname) + r"'"
+        r"(?:(?!\)\)).)*?"
+        r"\)\)\n)",
+        re.MULTILINE | re.DOTALL,
     )
     m = pat.search(text)
     if not m:

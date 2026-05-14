@@ -55,9 +55,14 @@ def _is_uniform_offset(per_line: list) -> bool:
 def _shift_frame_y_mm(build_path: Path, anname: str, dy_mm: float) -> bool:
     """Shift a TextFrame's y_mm by dy_mm. Returns True on write."""
     text = build_path.read_text()
+    # Match a single frame block — must not cross `))` (next frame).
     pat = re.compile(
-        r"(^[ \t]*page\d+\.add\(TextFrame\(\s*\n(?:.|\n)*?anname='" + re.escape(anname) +
-        r"'(?:.|\n)*?\n[ \t]*\)\)\n)", re.MULTILINE,
+        r"(^[ \t]*page\d+\.add\(TextFrame\("
+        r"(?:(?!\)\)).)*?"
+        r"anname='" + re.escape(anname) + r"'"
+        r"(?:(?!\)\)).)*?"
+        r"\)\)\n)",
+        re.MULTILINE | re.DOTALL,
     )
     m = pat.search(text)
     if not m:
@@ -99,8 +104,15 @@ def apply(slug: str, repo: Path, dry_run: bool = False) -> tuple[int, list[str]]
             continue
         nums = [d for d in per_line if isinstance(d, (int, float))]
         avg_pt = mean(nums)
-        # pt > 0 means preview is BELOW baseline → shift frame UP (negative dy)
-        dy_mm = -avg_pt * PT_PER_MM
+        # Empirical sign (issue 2026-05-14): the audit reports
+        # `preview_top_pt - baseline_top_pt`. Positive drift means
+        # preview ink renders LOWER on page (greater Y in image-pixel
+        # coordinates). Shifting frame y_mm DOWN (positive) moved the
+        # preview LOWER too — the opposite of what we want. Flipping
+        # the sign — shift y_mm in the SAME direction as the drift —
+        # produced the empirically-correct +1.92pt → 0pt convergence
+        # on u155 in this template.
+        dy_mm = +avg_pt * PT_PER_MM
         log.append(f"{anname}: uniform offset {avg_pt:+.2f}pt → y_mm shift {dy_mm:+.3f}mm")
         if dry_run:
             continue
