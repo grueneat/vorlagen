@@ -59,6 +59,12 @@ calling the scaffold complete.
   audits (E2/E3) report text-matrix Y which hides per-font-metric
   differences between InDesign and Scribus rendering of the same
   font file.
+- `tools/image_frame_visibility_audit.py` — **per-image-frame
+  visibility check**; runs as Phase E5. Counts ink-pixel density
+  inside each ImageFrame bbox in baseline vs preview, flags frames
+  where preview is mostly background (icon embedded but not
+  rendering — known Scribus 1.6.x bug for SCALETYPE=1 + small
+  frames + RGBA white-on-transparent PNGs).
 
 ## Pre-flight checks (machine-checkable)
 

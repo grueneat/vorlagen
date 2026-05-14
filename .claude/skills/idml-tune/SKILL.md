@@ -55,6 +55,18 @@ here** — see Forbidden paths below.
   renders each via xvfb-run+Scribus, measures the resulting
   baseline-to-baseline gap (pdfplumber-based). For high-fidelity
   empirical search, combine with manual pixel scans.
+- `tools/image_frame_visibility_audit.py` — **the per-image-frame
+  visibility check.** Compares ink-pixel density inside each
+  ImageFrame's bbox between baseline.pdf and preview.pdf. Flags
+  frames where preview is mostly background (icon embedded but
+  not rendering). Catches the known Scribus 1.6.x bug where
+  SCALETYPE=1 + small frame + RGBA white-on-transparent PNG
+  renders fully transparent. Runs as Phase E5 in the audit chain.
+  When a frame is flagged `invisible_in_preview`, switch from
+  `inline_image_data` to a direct `image=` reference and set
+  `scale_type=0` (fit-to-frame). See the 26-03 Leporello u141
+  (DIE GRÜNEN logo) and u3e7/u3f0/u3f5 (left-column social icons)
+  for worked examples.
 - `tools/sop_lint.py` — banned-phrase guard. Still runs on Stage 2 output.
 - `tools/lint_inject_consistency.py` — inject.yml ↔ build.py 1:1 lint.
 

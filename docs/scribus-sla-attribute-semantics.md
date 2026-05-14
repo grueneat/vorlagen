@@ -225,6 +225,50 @@ mm-to-mm ratio before adjusting.
 
 ---
 
+## Image visibility — SCALETYPE=1 + RGBA white-on-transparent
+
+**Where:** ImageFrame `PAGEOBJECT` with `isInlineImage="1"` and
+ImageData carrying a RGBA PNG that's mostly white-on-transparent.
+
+**The bug:** Scribus 1.6.5 silently renders such frames as fully
+transparent when ALL of:
+
+1. `SCALETYPE="1"` (free scaling)
+2. `LOCALSCX`/`LOCALSCY` ≤ ~0.10 (high downscale)
+3. Source PNG is RGBA mostly transparent with white-only pixels (no
+   colour data, only alpha-modulated white).
+
+The Scribus CMYK conversion path mishandles such PNGs at small render
+sizes and outputs zero ink. Documented in
+`tools/sla_lib/builder/primitives.py:807-813`.
+
+**Confirmed cases (26-03 Leporello):**
+
+- `u141` (DIE GRÜNEN logo): 17.8×15.6 mm frame, composite PNG 4384×?
+  RGBA at LOCALSCX=0.447, SCALETYPE=1 → 0% ink in preview, 43% in
+  baseline. Fixed by switching to `image=gruene-logo-bund-weiss-cmyk.png`
+  + `scale_type=0`.
+- `u3e7/u3f0/u3f5` (left-column social media icons): 3.35×3.30 mm
+  frames, composite PNG 4384×1267 RGBA at LOCALSCX=0.09, SCALETYPE=1
+  → 0% ink in preview. Fixed by switching to per-icon PNGs
+  (`social-media-icon-facebook.png`, etc.) + `scale_type=0`.
+
+**Mitigation when a Phase E5 `image_frame_visibility_audit` run
+reports `invisible_in_preview`:**
+
+1. Switch from `inline_image_data` to a direct `image=` path
+   referencing a per-icon asset file.
+2. Set `scale_type=0` (fit-to-frame) so Scribus doesn't take the
+   SCALETYPE=1 code path that triggers the bug.
+3. Drop `local_offset_mm` — the per-icon file doesn't need cropping.
+4. Re-render and re-run the visibility audit to confirm ratio > 0.30.
+
+**Detection:** `tools/image_frame_visibility_audit.py` (Phase E5)
+flags any frame where preview ink density < 30 % of baseline ink
+density. The pre-existing `image_audit` reports COUNT mismatches
+between `pdfimages -list` and build.py `ImageFrame` calls but
+doesn't check per-frame visibility — the new audit closes that gap.
+
 ## EMBEDDED
 
 **Where:** `PAGEOBJECT` child element `<ImageEffect EMBEDDED="..."/>`,

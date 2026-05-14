@@ -1146,6 +1146,61 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E5: image_frame_visibility_audit — catches "embedded but
+    # invisible" image frames. Counts ink pixel density inside each
+    # ImageFrame bbox in baseline vs preview; flags frames where
+    # preview is mostly background. Common cause: Scribus 1.6.x
+    # SCALETYPE=1 + small-frame + RGBA white-on-transparent PNG bug
+    # (see tools/sla_lib/builder/primitives.py:807-813). Pre-existing
+    # image_audit reports count mismatches but doesn't catch this.
+    image_visibility_path = out_dir / "image_frame_visibility_audit.yml"
+    image_visibility_md = out_dir / "image_frame_visibility_audit.md"
+    if preview_pdf.exists() and baseline.exists() and build_py.exists():
+        try:
+            from image_frame_visibility_audit import main as _ifv_main
+            templates_dir = Path("/workspace/templates")
+            _ifv_main([
+                "--slug", tid,
+                "--templates-dir", str(templates_dir),
+                "--dpi", "150",
+                "--out-yaml", str(image_visibility_path),
+                "--out-md", str(image_visibility_md),
+            ])
+            try:
+                ifv_data = yaml.safe_load(image_visibility_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                ifv_data = {}
+            summary = ifv_data.get("summary") or {}
+            invisible = ifv_data.get("invisible_frames") or []
+            n_invisible = summary.get("invisible_in_preview") or 0
+            n_faint = summary.get("faint_in_preview") or 0
+            if n_invisible:
+                issue_parts.append(
+                    f"{n_invisible} image frame(s) invisible in preview: {invisible}"
+                )
+                print(
+                    f"[{tid}] image_frame_visibility_audit: {n_invisible} INVISIBLE "
+                    f"frame(s): {invisible} → REVIEW",
+                    file=sys.stderr,
+                )
+            elif n_faint:
+                print(
+                    f"[{tid}] image_frame_visibility_audit: {n_faint} faint (visibility 0.3-0.7)",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] image_frame_visibility_audit: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit E5 (image_frame_visibility_audit) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit E5 (image_frame_visibility_audit): skipped",
+            file=sys.stderr,
+        )
+
     # Phase E: per-element drift attribution.
     # Aggregates diff_bboxes.json into a per-slot contribution table so the next
     # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
