@@ -3034,8 +3034,22 @@ def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
                 csr_pt_attr = _first_csr_pointsize(last_psr)
                 if csr_pt_attr is not None and lp < csr_pt_attr * 0.5:
                     lp = csr_pt_attr * 1.2
-                trail["LINESPMode"] = "2"
-                trail["LINESP"] = str(lp)
+                # Mirror the <para> separator rule in _walk_story so that
+                # multi-paragraph frames have a CONSISTENT LINESPMode on
+                # every <para>/<trail> element. Direct measurement (issue
+                # #40 follow-up) shows that LINESPMode=2 + sub-metric
+                # LINESP renders WIDER than LINESPMode=1 (font-metric) in
+                # Scribus for every font tested (Gotham Narrow Ultra at
+                # 30pt: LINESP=27→46pt rendered vs auto→38pt; Vollkorn
+                # Black Italic at 23pt: LINESP=20.48→39pt vs auto→26pt).
+                # Stay on LINESPMode=1 (auto) when leading is sub-metric;
+                # template authors handle per-frame residual drift via
+                # inject.yml.
+                if csr_pt_attr is not None and lp < csr_pt_attr * 1.45:
+                    trail["LINESPMode"] = "1"
+                else:
+                    trail["LINESPMode"] = "2"
+                    trail["LINESP"] = str(lp)
             except ValueError:
                 pass
     return trail if trail else None

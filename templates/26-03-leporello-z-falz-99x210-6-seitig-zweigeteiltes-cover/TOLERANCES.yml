@@ -125,6 +125,58 @@ tolerances:
       an audit-engine quirk, not a converter regression.
     follow_up_issue: "engine-bug; no upstream issue yet (audit-engine selection)"
 
+  - id: tol:line-spacing-vollkorn-italic-23pt
+    audit: line_spacing_full_audit
+    classification: scribus-engine-bug
+    reason: >-
+      u3a2 ("Ich bin ein Zitat. Ich bin ein prägnantes / Zitat.") uses
+      Vollkorn Black Italic 23pt with IDML CSR Leading=20.48pt (89% of
+      fontsize). Scribus's font-metric auto-leading for this font/size
+      combination is ~26.25pt (~1.14× of fontsize) — wider than the
+      authored 20.48pt. The converter emits LINESPMode=1 (auto) for
+      this font because LINESPMode=2 with sub-metric LINESP renders
+      EVEN WIDER (~39pt) due to a Scribus quirk in how it interprets
+      LINESPMode=2 + LINESP < font_metric for serif fonts with deep
+      descenders. Empirically (issue #40 follow-up): LINESPMode=1 +
+      Vollkorn = 26.25pt rendered; LINESPMode=2 + LINESP=20.48 +
+      Vollkorn = 39pt rendered; InDesign baseline = 20.48pt. Drift is
+      +5.77pt — the minimum achievable for Vollkorn at this size in
+      Scribus without changing font weight or subset.
+    follow_up_issue: "engine-bug; consider Vollkorn Italic subset or weight swap to tighten the metric"
+
+  - id: tol:line-spacing-impressum-6pt-degenerate-leading
+    audit: line_spacing_full_audit
+    classification: authoring-bug
+    reason: >-
+      u347 ("Impressum: xxxxxx") at 6pt has IDML CSR Leading=1.91pt
+      (32% of fontsize — degenerate authored value, almost certainly
+      a designer mistake). The converter detects this via the
+      lp < fontsize × 0.5 clamp and emits LINESPMode=2 + LINESP=7.20
+      (= fontsize × 1.2 auto-leading). Scribus renders 6.37pt
+      (font-metric ~1.06× fontsize). InDesign honored the authored
+      1.91pt verbatim and rendered 3.34pt. Drift is +3.03pt from
+      baseline. Both rendered outputs are legible; this is best
+      classified as an authoring bug in the source IDML, not a
+      converter-side issue.
+    follow_up_issue: "authoring; designer should re-export with sane Leading"
+
+  - id: tol:line-spacing-mixed-vollkorn-38pt
+    audit: line_spacing_full_audit
+    classification: scribus-engine-bug
+    reason: >-
+      u16c ("Das ist die / dreizeilige / Headline") mixes Gotham Narrow
+      Ultra and Vollkorn Black Italic at 38pt across 3 paragraphs.
+      Because the FIRST CSR is Gotham Narrow Ultra (on the LINESPMode=2
+      allowlist), the converter emits LINESPMode=2 + LINESP=34.13 for
+      the whole frame. Scribus renders the Gotham lines at the
+      authored leading but the Vollkorn line slightly tighter due to
+      its different font-metric — net rendered gap ~30.45pt vs
+      authored 34.13pt and baseline 33.3pt. Drift ~-2.85pt
+      (sub-perceptible). Mixed-font paragraphs are an edge case the
+      single-LINESPMode-per-paragraph SLA schema cannot encode
+      perfectly.
+    follow_up_issue: "engine-bug; sub-3pt drift, well below visual threshold"
+
   - id: tol:visual-diff-regions-20-hot
     audit: visual_diff_regions
     classification: scribus-engine-bug
