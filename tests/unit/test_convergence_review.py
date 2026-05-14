@@ -331,3 +331,156 @@ def test_cli_json_format_end_to_end(tmp_path):
     assert result.returncode == 0
     parsed = json.loads(result.stdout)
     assert parsed["template"] == "slug"
+
+
+# ---------------------------------------------------------------------------
+# Audit-reliability item 4: E4/E5/E6 surface in convergence-review.
+# ---------------------------------------------------------------------------
+
+
+def test_line_spacing_pixel_audit_drifts_surface_as_issues(tmp_path):
+    """E4 (pixel-level) is the canonical line-spacing signal — its
+    rows must appear as issues in the review's hot-issues list."""
+    _write_yml(
+        tmp_path / "preflight.yml",
+        {"template": "slug", "ok": False, "audits": {}, "hot_issues": []},
+    )
+    _write_yml(
+        tmp_path / "line_spacing_pixel_audit.yml",
+        {
+            "rows": [
+                {"anname": "u347", "max_drift_pt": 3.5, "page": 0},
+                {"anname": "u35f", "max_drift_pt": 0.4, "page": 0},  # below threshold
+            ],
+        },
+    )
+    review = cr.build_review("slug", tmp_path, min_drift_pp=0.0)
+    pixel_issues = [
+        i for i in review["issues"]
+        if i["audit"] == "line_spacing_pixel_audit"
+    ]
+    # u347 (3.5pt > 1.0pt) surfaces; u35f (0.4pt) does not.
+    assert len(pixel_issues) == 1
+    assert pixel_issues[0]["slot"] == "u347"
+    assert pixel_issues[0]["classification"] == "converter-bug"
+
+
+def test_image_visibility_invisible_frames_surface_as_issues(tmp_path):
+    """E5 invisible frames must surface as converter-bug issues."""
+    _write_yml(
+        tmp_path / "preflight.yml",
+        {"template": "slug", "ok": False, "audits": {}, "hot_issues": []},
+    )
+    _write_yml(
+        tmp_path / "image_frame_visibility_audit.yml",
+        {
+            "invisible_frames": [
+                {"anname": "u141", "visibility_ratio": 0.05},
+                {"anname": "u3e7", "visibility_ratio": 0.12},
+            ],
+        },
+    )
+    review = cr.build_review("slug", tmp_path, min_drift_pp=0.0)
+    visib_issues = [
+        i for i in review["issues"]
+        if i["audit"] == "image_frame_visibility_audit"
+    ]
+    assert len(visib_issues) == 2
+    assert {i["slot"] for i in visib_issues} == {"u141", "u3e7"}
+    assert all(i["classification"] == "converter-bug" for i in visib_issues)
+
+
+def test_per_region_regression_surfaces_as_issues(tmp_path):
+    """E6 regressions must surface as issues alongside the per-iteration
+    audits."""
+    _write_yml(
+        tmp_path / "preflight.yml",
+        {"template": "slug", "ok": False, "audits": {}, "hot_issues": []},
+    )
+    _write_yml(
+        tmp_path / "per_region_regression.yml",
+        {
+            "seeded": False,
+            "regression_count": 2,
+            "regressions": [
+                {
+                    "anname": "u347",
+                    "kind": "line_spacing_drift_increased",
+                    "prev_max_drift_pt": 1.0,
+                    "curr_max_drift_pt": 2.5,
+                },
+                {
+                    "anname": "u141",
+                    "kind": "image_visibility_dropped",
+                    "prev_visibility_ratio": 0.9,
+                    "curr_visibility_ratio": 0.5,
+                },
+            ],
+        },
+    )
+    review = cr.build_review("slug", tmp_path, min_drift_pp=0.0)
+    reg_issues = [
+        i for i in review["issues"]
+        if i["audit"] == "per_region_regression"
+    ]
+    assert len(reg_issues) == 2
+    assert {i["slot"] for i in reg_issues} == {"u347", "u141"}
+
+
+def test_seeded_per_region_regression_does_not_surface(tmp_path):
+    """A seeded regression file (first run on a slug) has nothing to
+    compare → no issues surfaced from E6."""
+    _write_yml(
+        tmp_path / "preflight.yml",
+        {"template": "slug", "ok": True, "audits": {}, "hot_issues": []},
+    )
+    _write_yml(
+        tmp_path / "per_region_regression.yml",
+        {"seeded": True, "regression_count": 0, "regressions": []},
+    )
+    review = cr.build_review("slug", tmp_path, min_drift_pp=0.0)
+    assert not any(
+        i["audit"] == "per_region_regression" for i in review["issues"]
+    )
+
+
+def test_informational_e2_drifts_no_longer_surface(tmp_path):
+    """F-017: E2's informational_only output must NOT add issues to the
+    review. The pixel audit (E4) is the canonical replacement."""
+    _write_yml(
+        tmp_path / "preflight.yml",
+        {"template": "slug", "ok": False, "audits": {}, "hot_issues": []},
+    )
+    _write_yml(
+        tmp_path / "line_spacing_audit.yml",
+        {
+            "informational_only": True,
+            "ok": False,
+            "drifts": [
+                {"anname": "u1", "delta_pt": 3.0, "page": 0},
+            ],
+        },
+    )
+    review = cr.build_review("slug", tmp_path, min_drift_pp=0.0)
+    assert not any(
+        i["audit"] == "line_spacing_audit" for i in review["issues"]
+    )
+
+
+def test_e4_e5_e6_leverage_exempt(tmp_path):
+    """E4/E5/E6 findings are per-frame measured signals, not page-mismatch
+    derivatives, so they shouldn't be dropped to 'minor' just because the
+    leverage scoring can't tie them to a page region."""
+    _write_yml(
+        tmp_path / "preflight.yml",
+        {"template": "slug", "ok": False, "audits": {}, "hot_issues": []},
+    )
+    _write_yml(
+        tmp_path / "line_spacing_pixel_audit.yml",
+        {"rows": [{"anname": "u1", "max_drift_pt": 2.5, "page": 0}]},
+    )
+    # No per_element_drift.yml → drift_drop=0 → would normally be 'minor'.
+    review = cr.build_review("slug", tmp_path, min_drift_pp=0.5)
+    pix = [i for i in review["issues"] if i["audit"] == "line_spacing_pixel_audit"]
+    assert pix
+    assert pix[0]["classification"] != "minor"

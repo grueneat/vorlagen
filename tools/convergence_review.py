@@ -87,6 +87,16 @@ def _load_all(validation_dir: Path) -> dict[str, Any]:
         "per_element_drift": _load_yml(validation_dir / "per_element_drift.yml"),
         "region_color_audit": _load_yml(validation_dir / "region_color_audit.yml"),
         "line_spacing_audit": _load_yml(validation_dir / "line_spacing_audit.yml"),
+        # Audit-reliability review item 4: surface the newer per-frame
+        # signals (E4/E5/E6) so the convergence review's hot-issue list
+        # includes pixel-level line-spacing drifts, invisible image
+        # frames, and per-region regressions vs the previous run.
+        "line_spacing_pixel_audit": _load_yml(
+            validation_dir / "line_spacing_pixel_audit.yml"),
+        "image_frame_visibility_audit": _load_yml(
+            validation_dir / "image_frame_visibility_audit.yml"),
+        "per_region_regression": _load_yml(
+            validation_dir / "per_region_regression.yml"),
         "visual_diff_regions": _load_yml(validation_dir / "visual_diff_regions.yml"),
         "diff_bboxes": _load_json(validation_dir / "diff_bboxes.json"),
         "visual_diff": _load_json(validation_dir / "visual_diff.json"),
@@ -373,6 +383,12 @@ def _issues_from_run_style(rsa: dict | None, next_id) -> list[dict]:
 def _issues_from_line_spacing(lsa: dict | None, next_id) -> list[dict]:
     if not lsa:
         return []
+    # F-017: E2 (line_spacing_audit) is informational-only. When the YAML
+    # carries informational_only=true we do NOT surface its drifts here —
+    # E4 (line_spacing_pixel_audit) is the canonical signal and gets its
+    # own extractor below.
+    if lsa.get("informational_only"):
+        return []
     out: list[dict] = []
     for drift in (lsa.get("drifts") or lsa.get("line_spacing_drifts") or []):
         drift_pt = drift.get("delta_pt")
@@ -395,6 +411,130 @@ def _issues_from_line_spacing(lsa: dict | None, next_id) -> list[dict]:
                 "regression_test_path": "tests/unit/test_line_spacing_audit.py",
             }
         )
+    return out
+
+
+def _issues_from_line_spacing_pixel(lspa: dict | None, next_id) -> list[dict]:
+    """Audit-reliability review item 4: surface E4 (pixel-level line-
+    spacing) drifts as canonical line-spacing signal.
+
+    Schema: ``rows: [{anname, max_drift_pt, ...}]``. Any frame with
+    ``|max_drift_pt| > 1.0`` is a real per-frame issue; below that
+    threshold is sub-perceptible drift and gets dropped to ``minor`` by
+    the leverage stage."""
+    if not lspa:
+        return []
+    out: list[dict] = []
+    for row in lspa.get("rows") or []:
+        try:
+            d = float(row.get("max_drift_pt") or 0.0)
+        except (TypeError, ValueError):
+            continue
+        if abs(d) <= 1.0:
+            continue
+        out.append({
+            "id": next_id(),
+            "slot": row.get("anname"),
+            "page": row.get("page"),
+            "audit": "line_spacing_pixel_audit",
+            "severity": "drift",
+            "classification": "converter-bug" if abs(d) > 3.0 else "human-review",
+            "converter_path": "templates/<slug>/build.py (per-Run paragraph_attrs)",
+            "suggested_action": (
+                f"Pixel-level drift {d:+.2f}pt — run "
+                "tools/line_spacing_sim.py with the frame's anname to "
+                "find a leading override that lands close to 0pt drift."
+            ),
+            "regression_test_path": (
+                "tests/unit/test_line_spacing_pixel_audit.py"
+            ),
+        })
+    return out
+
+
+def _issues_from_image_visibility(ifv: dict | None, next_id) -> list[dict]:
+    """Audit-reliability review item 4: surface E5 (image-frame
+    visibility) findings — invisible frames are critical."""
+    if not ifv:
+        return []
+    out: list[dict] = []
+    # Invisible frames: visibility_ratio < 0.3 (per audit's schema).
+    for row in ifv.get("invisible_frames") or []:
+        if isinstance(row, str):
+            anname, ratio = row, None
+        else:
+            anname = row.get("anname") if isinstance(row, dict) else None
+            ratio = row.get("visibility_ratio") if isinstance(row, dict) else None
+        if not anname:
+            continue
+        out.append({
+            "id": next_id(),
+            "slot": anname,
+            "page": None,
+            "audit": "image_frame_visibility_audit",
+            "severity": "invisible",
+            "classification": "converter-bug",
+            "converter_path": "tools/sla_lib/builder/primitives.py (ImageFrame emit)",
+            "suggested_action": (
+                f"Frame {anname!r} is mostly background in preview "
+                f"(visibility_ratio={ratio}); switch from inline_image_data "
+                "to direct image= reference with scale_type=0."
+            ),
+            "regression_test_path": (
+                "tests/unit/test_image_frame_visibility_audit.py"
+            ),
+        })
+    return out
+
+
+def _issues_from_per_region_regression(prr: dict | None, next_id) -> list[dict]:
+    """Audit-reliability review item 4: surface E6 (per-region
+    regression vs previous render) findings.
+
+    These are the "did this commit silently regress a frame that was
+    previously fine?" signals — high-leverage to surface in the review.
+    """
+    if not prr:
+        return []
+    # Seeded runs don't have comparison data.
+    if prr.get("seeded"):
+        return []
+    out: list[dict] = []
+    for reg in prr.get("regressions") or []:
+        kind = reg.get("kind", "")
+        anname = reg.get("anname")
+        if not anname:
+            continue
+        # Brief action message per regression kind.
+        if "line_spacing" in kind:
+            prev = reg.get("prev_max_drift_pt")
+            curr = reg.get("curr_max_drift_pt")
+            action = (
+                f"Frame {anname!r} drift regressed from "
+                f"{prev}pt → {curr}pt since the previous render."
+            )
+        elif "visibility" in kind:
+            prev = reg.get("prev_visibility_ratio")
+            curr = reg.get("curr_visibility_ratio")
+            action = (
+                f"Frame {anname!r} visibility dropped from "
+                f"{prev} → {curr} since the previous render."
+            )
+        else:
+            action = f"Frame {anname!r}: {kind}"
+        out.append({
+            "id": next_id(),
+            "slot": anname,
+            "page": None,
+            "audit": "per_region_regression",
+            "severity": kind,
+            "classification": "converter-bug",
+            "converter_path": "",
+            "suggested_action": action,
+            "regression_test_path": (
+                "tests/unit/test_per_region_regression_check.py"
+            ),
+        })
     return out
 
 
@@ -485,17 +625,38 @@ def build_review(
     issues.extend(_issues_from_line_spacing(
         audits["line_spacing_audit"], next_id
     ))
+    # Audit-reliability review item 4: E4/E5/E6 are now first-class issue
+    # sources alongside the legacy audits.
+    issues.extend(_issues_from_line_spacing_pixel(
+        audits["line_spacing_pixel_audit"], next_id
+    ))
+    issues.extend(_issues_from_image_visibility(
+        audits["image_frame_visibility_audit"], next_id
+    ))
+    issues.extend(_issues_from_per_region_regression(
+        audits["per_region_regression"], next_id
+    ))
     issues.extend(_issues_from_asset_audit(audits["asset_audit"], next_id))
 
     # Leverage scoring.
     per_drift = audits["per_element_drift"]
+    # Audit-reliability item 4: E4/E5/E6 findings are per-frame measured
+    # signals, not page-mismatch derivatives. They shouldn't be silenced
+    # by the page-mismatch leverage threshold the way diff_bboxes drifts
+    # can be. Add them to the leverage-exempt set alongside asset_extraction
+    # and font_audit.
+    leverage_exempt = {
+        "asset_extraction",
+        "font_audit",
+        "line_spacing_pixel_audit",
+        "image_frame_visibility_audit",
+        "per_region_regression",
+    }
     for i in issues:
         drop = _est_drift_drop(i, per_drift)
         i["est_drift_drop"] = round(drop, 3)
         if drop < min_drift_pp:
-            # Bias toward 'minor' only when classification is NOT one of the
-            # asset-/font-blocking categories where leverage doesn't apply.
-            if i["audit"] not in ("asset_extraction", "font_audit"):
+            if i["audit"] not in leverage_exempt:
                 i["classification"] = "minor"
 
     # Sort.
