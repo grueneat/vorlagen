@@ -42,17 +42,41 @@ import yaml
 _MM_TO_PT = 72.0 / 25.4
 
 
+def _cluster_threshold_for_fontsize(fontsize_pt: float | None) -> float:
+    """Return the per-line cluster gap threshold (in pt) for a given fontsize.
+
+    F-014: the legacy fixed 1pt cluster threshold mis-merges adjacent lines
+    when the actual line gap is sub-2pt (e.g. 6pt body text with
+    line_h ~3pt — every line gets fused into one cluster, drift reports 0
+    even when the rendered preview clearly drifts).
+
+    We scale the threshold to ``fontsize × 0.4`` clamped to ``[0.6, 2.0]``:
+    - 0.6pt floor: avoid sub-printer-pixel noise at very small fonts.
+    - 2.0pt ceiling: keep the legacy ceiling for headlines so adjacent
+      drift lines don't accidentally cluster.
+
+    When ``fontsize_pt`` is unknown (caller couldn't extract it from the
+    frame's first Run), fall back to the legacy ceiling of 2.0pt — same
+    behaviour as before.
+    """
+    if fontsize_pt is None or fontsize_pt <= 0:
+        return 2.0
+    return max(0.6, min(2.0, fontsize_pt * 0.4))
+
+
 def _extract_line_tops_per_frame(
     pdf: Path,
     frame_bbox_mm: tuple[float, float, float, float],
     page_idx: int,
+    fontsize_pt: float | None = None,
 ) -> list[float]:
     """Return clustered y-coords (PDF pt, top-down) of word lines inside
     the frame bbox on page ``page_idx``.
 
     Uses pdfplumber.extract_words(use_text_flow=False, x_tolerance=2,
-    y_tolerance=2) and clusters word tops within 1pt of each other into
-    a single line.
+    y_tolerance=...). The y_tolerance and cluster gap threshold both
+    scale with ``fontsize_pt`` per F-014 to handle small fonts (6pt body
+    text where the previously-fixed 2pt threshold mis-merged lines).
 
     Returns an empty list when the page doesn't exist or contains no words
     inside the bbox.
@@ -62,6 +86,10 @@ def _extract_line_tops_per_frame(
     y0_pt = y_mm * _MM_TO_PT
     x1_pt = (x_mm + w_mm) * _MM_TO_PT
     y1_pt = (y_mm + h_mm) * _MM_TO_PT
+    threshold = _cluster_threshold_for_fontsize(fontsize_pt)
+    # pdfplumber's y_tolerance must be SMALLER than the inter-line gap or
+    # adjacent lines fuse. Use half the cluster threshold as a safe floor.
+    y_tol = max(0.5, threshold / 2.0)
     with pdfplumber.open(pdf) as plumber:
         if page_idx >= len(plumber.pages):
             return []
@@ -78,15 +106,17 @@ def _extract_line_tops_per_frame(
         words = crop.extract_words(
             use_text_flow=False,
             x_tolerance=2,
-            y_tolerance=2,
+            y_tolerance=y_tol,
         )
     if not words:
         return []
     tops = sorted(round(w["top"], 1) for w in words)
-    # Cluster tops within 1pt of each other into the first one we saw.
+    # Cluster tops within ``threshold`` of each other (legacy behaviour
+    # used a fixed 1pt; F-014 scales by fontsize to avoid mis-merging
+    # small-font lines).
     lines: list[float] = []
     for t in tops:
-        if not lines or t - lines[-1] > 1.0:
+        if not lines or t - lines[-1] > threshold:
             lines.append(t)
     return lines
 
@@ -123,6 +153,29 @@ def _frame_first_para_style(frame: Any) -> str:
 
 def _frame_anname(frame: Any) -> str:
     return getattr(frame, "anname", "") or ""
+
+
+def _frame_fontsize_pt(frame: Any) -> float | None:
+    """Best-effort extraction of the frame's first-Run fontsize in pt.
+
+    F-014: pdfplumber clustering threshold scales with fontsize. We
+    extract the first Run with a numeric `fontsize` attr; runs with no
+    explicit fontsize inherit from the ParaStyle which we don't
+    interrogate here (the audit's cluster threshold has a 0.6/2.0 clamp
+    that absorbs the uncertainty).
+    """
+    runs = getattr(frame, "runs", None) or []
+    for r in runs:
+        fs = getattr(r, "fontsize", None)
+        if fs is None:
+            continue
+        try:
+            value = float(fs)
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            return value
+    return None
 
 
 def run_line_spacing_audit(
@@ -210,11 +263,17 @@ def run_line_spacing_audit(
                 continue
             bbox_for_pdf = (x0_mm, y0_mm, w_mm, h_mm)
 
+            # F-014: pass per-frame fontsize so the clustering threshold
+            # scales (6pt body needs ~2.4pt threshold, 30pt headline needs
+            # ~2pt — the function clamps to [0.6, 2.0]).
+            fontsize_pt = _frame_fontsize_pt(frame)
             base_lines = _extract_line_tops_per_frame(
                 baseline_pdf, bbox_for_pdf, page_idx,
+                fontsize_pt=fontsize_pt,
             )
             prev_lines = _extract_line_tops_per_frame(
                 preview_pdf, bbox_for_pdf, page_idx,
+                fontsize_pt=fontsize_pt,
             )
             if len(base_lines) < 3 or len(prev_lines) < 3:
                 continue  # Single-line headlines, captions — no gap to measure.

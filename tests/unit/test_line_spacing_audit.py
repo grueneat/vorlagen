@@ -15,6 +15,8 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 from line_spacing_audit import (  # noqa: E402
+    _cluster_threshold_for_fontsize,
+    _frame_fontsize_pt,
     _has_text_content,
     _median_baseline_gap,
     _yaml_dump,
@@ -172,6 +174,120 @@ def test_single_line_frame_skipped(tmp_path, monkeypatch):
     )
     assert report["line_spacing_drift_count"] == 0
     assert report["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# F-014: fontsize-scaled clustering threshold
+# ---------------------------------------------------------------------------
+
+
+def test_cluster_threshold_clamps_to_floor_for_small_fonts():
+    """6pt body text → fontsize * 0.4 = 2.4 → clamped to ceiling 2.0pt
+    (used to fall straight on the legacy fixed 2pt — F-014 keeps the
+    ceiling but raises smaller-font behaviour too)."""
+    assert _cluster_threshold_for_fontsize(6.0) == 2.0
+    # 1pt fontsize → 0.4 → clamped to floor 0.6
+    assert _cluster_threshold_for_fontsize(1.0) == 0.6
+
+
+def test_cluster_threshold_scales_with_fontsize():
+    """4pt fontsize → 1.6pt threshold (within [0.6, 2.0] range)."""
+    assert _cluster_threshold_for_fontsize(4.0) == 1.6
+    # 3pt → 1.2pt
+    assert _cluster_threshold_for_fontsize(3.0) == pytest.approx(1.2)
+
+
+def test_cluster_threshold_handles_missing_fontsize():
+    """When the audit can't extract the frame's fontsize, fall back to
+    the legacy 2pt ceiling so behaviour stays the same as pre-F-014
+    for frames without a numeric Run.fontsize."""
+    assert _cluster_threshold_for_fontsize(None) == 2.0
+    assert _cluster_threshold_for_fontsize(0) == 2.0
+    assert _cluster_threshold_for_fontsize(-1) == 2.0
+
+
+def test_cluster_threshold_clamps_to_ceiling_for_huge_fonts():
+    """80pt headline → fontsize * 0.4 = 32 → clamped to ceiling 2.0pt
+    so adjacent drifted lines (e.g. 2.5pt apart) don't accidentally
+    fuse into one cluster."""
+    assert _cluster_threshold_for_fontsize(80.0) == 2.0
+
+
+def test_frame_fontsize_pt_from_first_run():
+    """The first Run with a numeric fontsize wins."""
+    fr = SimpleNamespace(
+        runs=[
+            SimpleNamespace(fontsize=None),
+            SimpleNamespace(fontsize=12.5),
+            SimpleNamespace(fontsize=14.0),
+        ],
+    )
+    assert _frame_fontsize_pt(fr) == 12.5
+
+
+def test_frame_fontsize_pt_returns_none_when_no_runs():
+    fr = SimpleNamespace(runs=None)
+    assert _frame_fontsize_pt(fr) is None
+    fr = SimpleNamespace(runs=[])
+    assert _frame_fontsize_pt(fr) is None
+
+
+def test_frame_fontsize_pt_ignores_non_numeric():
+    fr = SimpleNamespace(
+        runs=[
+            SimpleNamespace(fontsize="not-a-number"),
+            SimpleNamespace(fontsize=8.0),
+        ],
+    )
+    assert _frame_fontsize_pt(fr) == 8.0
+
+
+def test_small_font_threshold_used_in_audit_path(tmp_path, monkeypatch):
+    """End-to-end: 6pt body frame routes fontsize_pt=6.0 into the
+    extractor; we capture the threshold the extractor would have used.
+
+    This is the F-014 regression guard — without per-frame scaling
+    the 6pt Impressum frame would silently report 0 drift.
+    """
+    import line_spacing_audit as lsa
+
+    captured: dict = {}
+
+    def fake_extract(pdf, bbox, page_idx, *, fontsize_pt=None):
+        captured.setdefault("fontsize", fontsize_pt)
+        # Return enough lines so the audit doesn't early-skip
+        return [100.0, 116.0, 132.0]
+
+    monkeypatch.setattr(lsa, "_extract_line_tops_per_frame", fake_extract)
+    # 6pt body run on a real-ish frame (matches _frame() helper shape).
+    frame_6pt = SimpleNamespace(
+        anname="u347",
+        x_mm=10.0, y_mm=20.0, w_mm=80.0, h_mm=60.0,
+        rotation_deg=0.0,
+        anchor=None,
+        text="Impressum",
+        runs=[
+            SimpleNamespace(
+                text="Impressum",
+                paragraph_style="idml/normal",
+                fontsize=6.0,
+            )
+        ],
+    )
+    module = _make_synthetic_module(frames=[frame_6pt])
+    import sla_lib.builder.template_loader as tloader
+    monkeypatch.setattr(tloader, "load_build_module", lambda slug: module)
+
+    build_py = tmp_path / "slug" / "build.py"
+    build_py.parent.mkdir()
+    build_py.write_text("# stub", encoding="utf-8")
+    run_line_spacing_audit(
+        preview_pdf=tmp_path / "preview.pdf",
+        baseline_pdf=tmp_path / "baseline.pdf",
+        build_py=build_py,
+        template="t",
+    )
+    assert captured.get("fontsize") == 6.0
 
 
 def test_yaml_dump_deterministic():
