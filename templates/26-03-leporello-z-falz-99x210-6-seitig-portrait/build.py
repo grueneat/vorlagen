@@ -58,8 +58,14 @@ INJECT_MAP: dict[str, str] = {
     # reference — the downloaded SLA still shows the user's "your content
     # here" placeholder. See .claude/skills/idml-tune/SKILL.md
     # "Demo image substitution".
-    "u139": "portrait_maria",                # tall portrait on cover (101×214mm)
     "u2cd": "themen_verkehr_radweg",          # cover middle-top wide banner (99×42mm)
+    # u139 (Leonore tall portrait) intentionally left unmapped — the AI
+    # portrait substitution turned the upper-right area light, making
+    # the white DIE GRÜNEN logo (u141) on top of the portrait become
+    # invisible. Original Leonore JPG has the dark green silhouette
+    # the white logo reads against. Tracked as L-014/AI-substitution
+    # follow-up: pick a portrait with dark upper-right or composite
+    # the logo on a darker overlay.
     # u3a0 (full-page green Zitat backdrop) intentionally left unmapped —
     # the substitute photo would clash with the panel's "Zitat" framing.
     # u14a (schwarzer-verlauf-radial) is a decorative gradient overlay —
@@ -797,9 +803,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
     ))
     _fb_data, _fb_ext = _inline_brand_icon("social-media-icon-facebook-weiss.png")
+    # P5/playbook y_mm_shift.py: y_mm 185.9694 → 184.1067 (paired with u40c via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=185.9694,
+        y_mm=184.1067,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3e7',
@@ -809,6 +816,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -821,9 +830,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
     _ig_data, _ig_ext = _inline_brand_icon("social-media-icon-instagram-weiss.png")
+    # P5/playbook y_mm_shift.py: y_mm 191.61 → 189.7473 (paired with u412 via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=191.61,
+        y_mm=189.7473,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3f0',
@@ -833,6 +843,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.2017mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 191.6586 → 189.7959 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 191.6586 → 189.7959 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 191.6586 → 189.7959 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -845,9 +857,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
     _tt_data, _tt_ext = _inline_brand_icon("social-media-icon-tiktok-weiss.png")
+    # P5/playbook y_mm_shift.py: y_mm 197.3258 → 195.4631 (paired with u45b via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=197.3258,
+        y_mm=195.4631,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3f5',
@@ -857,6 +870,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.3522mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
@@ -868,9 +883,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='@diegruenenaustria', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
+    # P5/playbook y_mm_shift.py: y_mm 185.9694 → 184.1067 (paired with u47b via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=185.9694,
+        y_mm=184.1067,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u477',
@@ -880,6 +896,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
@@ -891,9 +909,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='@gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
+    # P5/playbook y_mm_shift.py: y_mm 191.61 → 189.7473 (paired with u4a6 via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=191.61,
+        y_mm=189.7473,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u4a2',
@@ -903,6 +922,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
@@ -914,9 +935,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
+    # P5/playbook y_mm_shift.py: y_mm 197.3258 → 195.4631 (paired with u4df via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=197.3258,
+        y_mm=195.4631,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u4da',
@@ -926,6 +948,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 197.4231 → 195.5604 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 197.4231 → 195.5604 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 197.4231 → 195.5604 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
@@ -1181,9 +1205,10 @@ from sla_lib.builder.constraints import (  # noqa: E402
 )
 
 
-# Vertical offset between an icon's top and its sibling text frame's top,
-# measured at the layout the social-icon column converged on in #104.
-_ICON_TEXT_Y_GAP = 1.6
+# Vertical offset between an icon's top and its sibling text frame's top.
+# Portrait icons are 3.30mm tall (smaller than zweigeteiltes' 5mm variant)
+# and sit ~aligned with the @text row top (≈0.1mm offset).
+_ICON_TEXT_Y_GAP = 0.1
 
 
 CONSTRAINTS = [
@@ -1200,9 +1225,11 @@ CONSTRAINTS = [
     same_x("u3e7", "u3f0", "u3f5", name="social_left_column_x_aligned"),
     same_size("u3e7", "u3f0", "u3f5", name="social_left_icons_uniform_size"),
     # equal_gap measures EMPTY space between frames (gap = next.y -
-    # (prev.y + prev.h)), not the row pitch.
-    equal_gap("u3e7", "u3f0", "u3f5", axis="y", gap_mm=0.7,
-              tolerance_mm=0.4, name="social_left_row_pitch"),
+    # (prev.y + prev.h)), not the row pitch. Portrait icons are
+    # 3.30mm tall (the IDML's authored size, not the 5mm zweigeteiltes
+    # variant). Row pitch = 5.64mm − 3.30mm = 2.34mm gap.
+    equal_gap("u3e7", "u3f0", "u3f5", axis="y", gap_mm=2.38,
+              tolerance_mm=0.15, name="social_left_row_pitch"),
     # Each left-col icon sits ~1.6mm below its @text top (icon centre on
     # the @ cap-mid). 0.4mm tolerance absorbs per-row text-frame y jitter.
     distance_y("u3e7", "u40c", equals=_ICON_TEXT_Y_GAP,
@@ -1215,8 +1242,8 @@ CONSTRAINTS = [
     # ── Social-media icon column (right: Bluesky, Website, Email) ───────
     same_x("u477", "u4a2", "u4da", name="social_right_column_x_aligned"),
     same_size("u477", "u4a2", "u4da", name="social_right_icons_uniform_size"),
-    equal_gap("u477", "u4a2", "u4da", axis="y", gap_mm=0.7,
-              tolerance_mm=0.4, name="social_right_row_pitch"),
+    equal_gap("u477", "u4a2", "u4da", axis="y", gap_mm=2.38,
+              tolerance_mm=0.15, name="social_right_row_pitch"),
     distance_y("u477", "u47b", equals=_ICON_TEXT_Y_GAP,
                tolerance_mm=0.4, name="social_right_row1_y_offset"),
     distance_y("u4a2", "u4a6", equals=_ICON_TEXT_Y_GAP,

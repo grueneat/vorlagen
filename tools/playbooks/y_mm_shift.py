@@ -78,11 +78,25 @@ def _is_uniform_offset(per_line: list) -> tuple[bool, str]:
     return False, f"per-line spread {spread:.2f}pt > {UNIFORM_TOL_PT}pt"
 
 
+MAX_SHIFT_MM = 4.0  # refuse shifts > 4mm — likely diagnostic of broken audit
+
+
 def _shift_frame_y_mm(build_path: Path, anname: str, dy_mm: float, reason: str) -> tuple[bool, str]:
-    """Shift a TextFrame's y_mm by dy_mm. Returns (wrote, message)."""
+    """Shift a frame's y_mm by dy_mm. Returns (wrote, message).
+
+    Matches both TextFrame and ImageFrame shapes — paired shifts may
+    target an icon (ImageFrame) when the actionable frame is its
+    @text sibling (TextFrame), or vice versa.
+    """
+    if abs(dy_mm) > MAX_SHIFT_MM:
+        return False, (
+            f"frame {anname}: shift |{dy_mm:.3f}mm| exceeds MAX_SHIFT_MM "
+            f"({MAX_SHIFT_MM}mm) — almost certainly a line-count-mismatch "
+            f"audit artifact, not a real first-line-anchor offset. ESCALATE."
+        )
     text = build_path.read_text()
     pat = re.compile(
-        r"(^[ \t]*page\d+\.add\(TextFrame\("
+        r"(^[ \t]*page\d+\.add\((?:TextFrame|ImageFrame)\("
         r"(?:(?!\)\)).)*?"
         r"anname='" + re.escape(anname) + r"'"
         r"(?:(?!\)\)).)*?"
@@ -100,6 +114,11 @@ def _shift_frame_y_mm(build_path: Path, anname: str, dy_mm: float, reason: str) 
         return False, f"frame {anname} has no y_mm"
     cur_y = float(y_m.group(1))
     new_y = round(cur_y + dy_mm, 4)
+    if new_y < -2.0 or new_y > 215.0:
+        return False, (
+            f"frame {anname}: shift would land y_mm at {new_y} (off-page); "
+            f"refusing. ESCALATE."
+        )
     new_block = block.replace(f"y_mm={y_m.group(1)}", f"y_mm={new_y}", 1)
     if new_block == block:
         return False, f"frame {anname} y_mm already at {new_y}"
@@ -235,7 +254,20 @@ def apply(slug: str, repo: Path, dry_run: bool = False) -> tuple[int, list[str]]
     if not uniform:
         return 0, ["no uniform-offset actionable frames"]
 
-    log.append(f"found {len(uniform)} uniform-offset frame(s)")
+    # Build the distance_y pairing map from build.py CONSTRAINTS. When a
+    # frame is shifted, the playbook ALSO shifts its partner by the same
+    # delta so the relative position (distance_y constraint) is preserved.
+    build_text = build_path.read_text()
+    pairs: dict[str, str] = {}  # anname → partner_anname
+    for m in re.finditer(
+        r"distance_y\(\s*[\"'](\w+)[\"']\s*,\s*[\"'](\w+)[\"']",
+        build_text,
+    ):
+        a, b = m.group(1), m.group(2)
+        pairs[a] = b
+        pairs[b] = a
+    if pairs:
+        log.append(f"distance_y pairs detected: {sorted({(k,v) for k,v in pairs.items() if k<v})}")
 
     # Get or discover sign
     sign = _read_sign(slug, repo)
@@ -285,17 +317,36 @@ def apply(slug: str, repo: Path, dry_run: bool = False) -> tuple[int, list[str]]
         uniform.append({"anname": anname, "avg_pt": avg_pt})
 
     n_changes = 0
+    already_shifted: set[str] = set()
     for u in uniform:
+        anname = u["anname"]
+        if anname in already_shifted:
+            continue
         dy_mm = sign * u["avg_pt"] * PT_PER_MM
         wrote, msg = _shift_frame_y_mm(
-            build_path, u["anname"], dy_mm,
+            build_path, anname, dy_mm,
             f"uniform +{u['avg_pt']:+.2f}pt × sign={sign} → {dy_mm:+.4f}mm",
         )
         if wrote:
             n_changes += 1
             log.append(f"  {msg}")
+            already_shifted.add(anname)
+            # If paired via distance_y, shift the partner by the same delta
+            # so the constraint stays satisfied.
+            partner = pairs.get(anname)
+            if partner and partner not in already_shifted:
+                wrote2, msg2 = _shift_frame_y_mm(
+                    build_path, partner, dy_mm,
+                    f"paired with {anname} via distance_y; same shift {dy_mm:+.4f}mm",
+                )
+                if wrote2:
+                    n_changes += 1
+                    log.append(f"    + {msg2}")
+                    already_shifted.add(partner)
+                else:
+                    log.append(f"    + {partner}: paired-shift skipped — {msg2}")
         else:
-            log.append(f"  {u['anname']}: {msg}")
+            log.append(f"  {anname}: {msg}")
     return n_changes, log
 
 
