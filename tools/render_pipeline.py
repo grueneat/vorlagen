@@ -1332,6 +1332,49 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E5b: systematic_text_audit — for every text frame surveyed by
+    # E4 (line_spacing_pixel_audit), classify whether the drift is
+    # actionable (sim-fixable) vs documented in TOLERANCES.yml. Closes the
+    # L-010/L-011 gap where the LLM rationalises past pixel-audit
+    # warnings without invoking line_spacing_sim. Hard-fail when actionable
+    # frames remain so subsequent audits can't silently complete.
+    systematic_audit_path = out_dir / "systematic_text_audit.yml"
+    systematic_audit_md = out_dir / "systematic_text_audit.md"
+    if line_spacing_pixel_path.exists():
+        try:
+            from systematic_text_audit import main as _sta_main
+            sta_rc = _sta_main([
+                "--slug", tid,
+                "--out-yaml", str(systematic_audit_path),
+                "--out-md", str(systematic_audit_md),
+            ])
+            try:
+                sta_data = yaml.safe_load(systematic_audit_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                sta_data = {}
+            n_actionable = (sta_data.get("summary") or {}).get("actionable") or 0
+            if n_actionable:
+                issue_parts.append(
+                    f"{n_actionable} text frame(s) with un-addressed sim-actionable drift"
+                )
+                print(
+                    f"[{tid}] systematic_text_audit: {n_actionable} actionable "
+                    f"frame(s) — see {systematic_audit_md.name}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] systematic_text_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "systematic_text_audit",
+                "E5b (systematic_text_audit)", exc, tid,
+            )
+    else:
+        print(
+            f"[{tid}] audit E5b (systematic_text_audit): skipped",
+            file=sys.stderr,
+        )
+
     # Phase E6: per_region_regression_check — compares the just-emitted
     # E4 + E5 per-frame measurements against the previous render's
     # measurements (persisted in build/<slug>/per_region_history.jsonl).
@@ -1859,6 +1902,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         visual_diff_regions_path=vd_region_path,
         line_spacing_audit_path=line_spacing_audit_path,
         asset_audit_path=asset_audit_path,
+        systematic_text_audit_path=systematic_audit_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -1902,6 +1946,7 @@ def _build_preflight(
     visual_diff_regions_path: Path | None = None,
     line_spacing_audit_path: Path | None = None,
     asset_audit_path: Path | None = None,
+    systematic_text_audit_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -2055,6 +2100,21 @@ def _build_preflight(
                 True if informational else bool(lsa.get("ok", True)),
                 drift_count,
                 detail,
+            )
+
+    # Phase E5b (LESSONS_LEARNED L-010/L-011): systematic_text_audit
+    # — fail-hard if any text frame has measurable drift > 1pt that
+    # is NOT addressed via TOLERANCES.yml + sim outcome. This is the
+    # tool-level enforcement that the LLM cannot rationalise past.
+    if systematic_text_audit_path is not None:
+        sta = _load_yml(systematic_text_audit_path)
+        if sta is not None:
+            n_actionable = (sta.get("summary") or {}).get("actionable") or 0
+            _record(
+                "systematic_text_audit",
+                bool(sta.get("ok", True)),
+                int(n_actionable),
+                f"{n_actionable} frame(s) with un-addressed sim-actionable drift" if n_actionable else "",
             )
 
     # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the
