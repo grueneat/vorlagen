@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +43,7 @@ import yaml
 
 
 _HISTORY_DEPTH = 20            # cap entries; older entries pruned
+# F-021: regression thresholds — defaults preserved, overridable via CLI.
 _LINE_SPACING_REGRESSION_PT = 0.5
 _IMAGE_VISIBILITY_REGRESSION = 0.10
 
@@ -80,15 +82,25 @@ def detect_regressions(
     curr_line_spacing: dict[str, float],
     prev_visibility: dict[str, float],
     curr_visibility: dict[str, float],
+    *,
+    line_spacing_threshold_pt: float = _LINE_SPACING_REGRESSION_PT,
+    visibility_threshold: float = _IMAGE_VISIBILITY_REGRESSION,
 ) -> list[dict]:
-    """Return list of regression rows."""
+    """Return list of regression rows.
+
+    Thresholds (F-021) are tunable; defaults preserve historical behaviour.
+    A regression fires when:
+
+    - ``abs(curr_drift) - abs(prev_drift) >= line_spacing_threshold_pt``
+    - ``prev_visibility - curr_visibility >= visibility_threshold``
+    """
     regressions: list[dict] = []
     # Line-spacing regressions
     for an, curr_d in sorted(curr_line_spacing.items()):
         prev_d = prev_line_spacing.get(an)
         if prev_d is None:
             continue  # new frame, nothing to compare
-        if abs(curr_d) - abs(prev_d) >= _LINE_SPACING_REGRESSION_PT:
+        if abs(curr_d) - abs(prev_d) >= line_spacing_threshold_pt:
             regressions.append({
                 "anname": an,
                 "kind": "line_spacing_drift_increased",
@@ -109,7 +121,7 @@ def detect_regressions(
         prev_v = prev_visibility.get(an)
         if prev_v is None:
             continue
-        if (prev_v - curr_v) >= _IMAGE_VISIBILITY_REGRESSION:
+        if (prev_v - curr_v) >= visibility_threshold:
             regressions.append({
                 "anname": an,
                 "kind": "image_visibility_dropped",
@@ -168,6 +180,56 @@ def load_previous(history_path: Path) -> Optional[dict]:
     return rows[-1] if rows else None
 
 
+def load_main_branch_entry(
+    slug: str,
+    *,
+    history_dir: Path,
+    repo_root: Optional[Path] = None,
+    main_ref: str = "origin/main",
+) -> Optional[dict]:
+    """Return the LAST history entry on the given main ref (F-022).
+
+    Uses ``git show <ref>:<rel_path>`` to read the file at that revision
+    without needing to check it out. Returns None when:
+
+    - ``git`` is unavailable
+    - the ref doesn't exist (e.g. fresh repo, detached state)
+    - the file doesn't exist on that ref
+    - the file exists but has no parseable rows
+
+    The caller MUST treat a None return as "no prior state on main —
+    seed behaviour, no comparison performed."
+    """
+    if repo_root is None:
+        repo_root = Path.cwd()
+    history_path_abs = (history_dir / slug / "per_region_history.jsonl").resolve()
+    try:
+        rel = history_path_abs.relative_to(repo_root.resolve())
+    except ValueError:
+        # history_dir is outside the repo (test harness, weird layout) —
+        # fall back to using the path as-is. git show will fail cleanly.
+        rel = history_path_abs
+    try:
+        result = subprocess.run(
+            ["git", "show", f"{main_ref}:{rel.as_posix()}"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    rows: list[dict] = []
+    for line in result.stdout.splitlines():
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return rows[-1] if rows else None
+
+
 def write_yaml(
     regressions: list[dict],
     out_path: Path,
@@ -223,6 +285,43 @@ def main(argv: Optional[list[str]] = None) -> int:
              "Defaults to templates/ so history persists with the template "
              "(survives `rm -rf build/`) and is portable across machines.",
     )
+    ap.add_argument(
+        "--line-spacing-threshold",
+        type=float,
+        default=_LINE_SPACING_REGRESSION_PT,
+        help=(
+            "Per-frame abs-drift increase (in pt) that fires a "
+            "line_spacing_drift_increased regression. Default: "
+            f"{_LINE_SPACING_REGRESSION_PT} (F-021)."
+        ),
+    )
+    ap.add_argument(
+        "--visibility-threshold",
+        type=float,
+        default=_IMAGE_VISIBILITY_REGRESSION,
+        help=(
+            "Drop in visibility_ratio (0.0-1.0) that fires an "
+            "image_visibility_dropped regression. Default: "
+            f"{_IMAGE_VISIBILITY_REGRESSION} (F-021)."
+        ),
+    )
+    ap.add_argument(
+        "--compare-main",
+        action="store_true",
+        help=(
+            "Compare current measurements against the LAST history entry "
+            "on the main branch (`git show origin/main:templates/<slug>/"
+            "per_region_history.jsonl`) instead of the immediately-"
+            "preceding local row. Useful for PR workflows: 'did my work "
+            "regress anything vs main?'. Falls back to seeded behaviour "
+            "when origin/main has no entry (F-022)."
+        ),
+    )
+    ap.add_argument(
+        "--main-ref",
+        default="origin/main",
+        help="Git ref used by --compare-main (default: origin/main).",
+    )
     ap.add_argument("--out-yaml")
     ap.add_argument("--out-md")
     args = ap.parse_args(argv)
@@ -241,7 +340,20 @@ def main(argv: Optional[list[str]] = None) -> int:
     curr_vis = _flatten_image_visibility(img_vis)
 
     history_path = Path(args.history_dir) / args.slug / "per_region_history.jsonl"
-    prev = load_previous(history_path)
+    compare_source = "previous run"
+    if args.compare_main:
+        prev = load_main_branch_entry(
+            args.slug,
+            history_dir=Path(args.history_dir),
+            main_ref=args.main_ref,
+        )
+        if prev is not None:
+            compare_source = (
+                f"{args.main_ref} (timestamp {prev.get('timestamp', 'unknown')})"
+            )
+        # If the main ref carries no entry, fall through to seeded behaviour.
+    else:
+        prev = load_previous(history_path)
     seeded = prev is None
     if seeded:
         regressions: list[dict] = []
@@ -251,8 +363,16 @@ def main(argv: Optional[list[str]] = None) -> int:
             curr_line_spacing=curr_ls,
             prev_visibility=prev.get("image_visibility_ratio") or {},
             curr_visibility=curr_vis,
+            line_spacing_threshold_pt=args.line_spacing_threshold,
+            visibility_threshold=args.visibility_threshold,
         )
 
+    # F-022: --compare-main reads main without writing; the local history
+    # file still gets the current run appended so subsequent runs (or a
+    # later non-main comparison) see this iteration. Only skip the append
+    # if --compare-main found nothing (seeded) AND we're explicitly in
+    # main-comparison mode — the seeded path still benefits from a write
+    # so the next local run is informed.
     append_history(history_path, curr_ls, curr_vis)
 
     if args.out_yaml:
@@ -261,19 +381,27 @@ def main(argv: Optional[list[str]] = None) -> int:
         write_md(regressions, Path(args.out_md), seeded)
 
     if seeded:
+        seed_reason = (
+            f"no entry on {args.main_ref}; falling back to seed"
+            if args.compare_main
+            else "no previous local history"
+        )
         print(
             f"per_region_regression: seeded history at {history_path} "
-            f"({len(curr_ls)} line-spacing frames, {len(curr_vis)} image frames)",
+            f"({len(curr_ls)} line-spacing frames, {len(curr_vis)} image frames; "
+            f"{seed_reason})",
             file=sys.stderr,
         )
     elif regressions:
         print(
-            f"per_region_regression: {len(regressions)} regression(s) detected since previous run → REVIEW",
+            f"per_region_regression: comparing against {compare_source}; "
+            f"{len(regressions)} regression(s) detected → REVIEW",
             file=sys.stderr,
         )
     else:
         print(
-            f"per_region_regression: OK ({len(curr_ls)} line-spacing frames, "
+            f"per_region_regression: comparing against {compare_source}; "
+            f"OK ({len(curr_ls)} line-spacing frames, "
             f"{len(curr_vis)} image frames; no regressions)",
             file=sys.stderr,
         )
