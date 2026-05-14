@@ -1038,6 +1038,61 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E3: line_spacing_full_audit — authored-vs-emitted-vs-rendered
+    # per-paragraph table. Catches converter bugs (e.g. <para> emits
+    # LINESPMode=1 while <trail> emits LINESPMode=2 + LINESP=X — issue #40
+    # follow-up) that the rendered-PDF-only E2 audit can miss when both
+    # baseline and preview drift in the same direction.
+    line_spacing_full_path = out_dir / "line_spacing_full_audit.yml"
+    line_spacing_full_md = out_dir / "line_spacing_full_audit.md"
+    if build_py.exists() and (out_dir / "..").resolve().parent.exists():
+        try:
+            from line_spacing_full_audit import main as _lsfa_main
+            slug = tid
+            originals_dir = Path("/workspace/originals")
+            templates_dir = Path("/workspace/templates")
+            _lsfa_main([
+                "--slug", slug,
+                "--templates-dir", str(templates_dir),
+                "--originals-dir", str(originals_dir),
+                "--out-yaml", str(line_spacing_full_path),
+                "--out-md", str(line_spacing_full_md),
+            ])
+            # Surface inconsistent-frame count to the rollup
+            try:
+                lsfa_data = yaml.safe_load(line_spacing_full_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                lsfa_data = {}
+            bad_frames = lsfa_data.get("inconsistent_frames") or []
+            summary = lsfa_data.get("summary") or {}
+            n_major = summary.get("drift_major") or 0
+            if bad_frames:
+                issue_parts.append(
+                    f"{len(bad_frames)} frame(s) with inconsistent <para>/<trail> pattern"
+                )
+                print(
+                    f"[{tid}] line_spacing_full_audit: {len(bad_frames)} inconsistent "
+                    f"frame(s) ({n_major} drift_major) → REVIEW",
+                    file=sys.stderr,
+                )
+            elif n_major:
+                print(
+                    f"[{tid}] line_spacing_full_audit: {n_major} drift_major (no inconsistent frames)",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] line_spacing_full_audit: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit E3 (line_spacing_full_audit) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit E3 (line_spacing_full_audit): skipped (no build.py)",
+            file=sys.stderr,
+        )
+
     # Phase E: per-element drift attribution.
     # Aggregates diff_bboxes.json into a per-slot contribution table so the next
     # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
