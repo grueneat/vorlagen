@@ -92,6 +92,53 @@ accept an 8th Justification value):
 4. Add a row to the pattern's INDEX.md entry noting the widening
    (template that triggered it).
 
+## Converter invariants (issue #40 follow-up)
+
+Two invariants every converter-side leading change must preserve.
+Re-running the line_spacing sim against the 26-03 leporello anchor is
+required before merge.
+
+### Invariant 1 — `<para>` ↔ `<trail>` LINESPMode consistency
+
+Within one PAGEOBJECT, every `<para>` separator AND the closing
+`<trail>` MUST emit the SAME `LINESPMode` (and same `LINESP` if set).
+Asymmetry is silently a converter bug: when `<para>` is mode=1 (auto)
+but `<trail>` is mode=2 with explicit LINESP, Scribus uses the
+`<para>`'s rule for the body of the paragraph and the `<trail>`'s
+LINESP is ineffective.
+
+The check lives in `_psr_trail_attrs_for_story` (mirrors
+`_walk_story`'s 1.45×fontsize downgrade). The audit's
+`inconsistent_pattern` count flags any drift.
+
+### Invariant 2 — never emit `LINESPMode="2"` with sub-metric LINESP
+
+Scribus 1.6.5 renders LINESPMode=2 + LINESP<fontsize×1.45 at
+~font-metric × 1.5, ignoring the LINESP value. Documented in
+`docs/scribus-sla-attribute-semantics.md` §LINESPMode. The converter's
+`_walk_story` rule downgrades to `LINESPMode=1` (auto) in this regime.
+
+When a template needs sub-metric leading (e.g. headline tightening),
+Stage 2 / `/idml-tune` emits `LINESPMode=0 + LINESP=<empirical>` per
+Run via build.py P5/inject overrides. The converter MUST NOT emit
+mode=0 with explicit LINESP universally — Vollkorn and Gotham respond
+differently to mode=0 (Vollkorn renders LINESP literally; Gotham adds
+~7pt offset in mixed-font frames). The right value is
+per-frame-empirical.
+
+### Mixed-font frame auto-split (future converter pattern)
+
+Paragraphs whose adjacent CSRs differ in `AppliedFont` (e.g.
+Gotham→Vollkorn→Gotham 3-line headline) can NOT be reconciled to
+InDesign's uniform baseline-to-baseline gap via any LINESPMode — per-
+line font metrics dominate. The fix in 26-03 leporello was a manual
+frame split (u16c → u16c, u16c_l2, u16c_l3 at calibrated y_mm).
+
+Future converter improvement: detect adjacent CSRs with different
+AppliedFont, emit them as SEPARATE single-line TextFrames at
+calibrated positions. Pattern proposed but not yet implemented; see
+`SKILL_FINDINGS.md` F-015.
+
 ## See also
 
 - `tools/idml_to_dsl_patterns/INDEX.md` — the catalogue.
@@ -100,3 +147,4 @@ accept an 8th Justification value):
   byte-identity contract.
 - `inject_protocol.md` — the P5 fallback when a pattern is not the
   right tool.
+- `docs/scribus-sla-attribute-semantics.md` — Scribus LINESPMode et al.

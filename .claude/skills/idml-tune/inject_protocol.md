@@ -100,6 +100,36 @@ Issue #38 P3 task 17 migrated the existing 14 inline P5 comments in v2
 falzflyer's build.py to inject.yml. Use that migration as a worked
 example.
 
+## Known limitation — reconciler doesn't reach nested dict paths
+
+`tools/reconcile_build_py.py` matches `field=value` at the top level of
+the call (`_apply_set` regex pat). It cannot dive into
+`paragraph_attrs={'LINESPMode': '0', 'LINESP': '21'}` to swap one
+member.
+
+As a result, **per-Run paragraph_attrs overrides for line spacing**
+(the canonical use case from issue #40 follow-up) live INLINE in
+`build.py` with a `# P5/inject` comment. They will be wiped on a
+clean re-import. Track each one in `TOLERANCE_LOG.md` with the
+empirical drift measurement and the sim command used to derive the
+value, so the override can be re-applied.
+
+Worked example: `templates/26-03-leporello-…/build.py` u1b0/u1e6/u24e/
+u2d5/u3a2/u155 carry inline `paragraph_attrs={'LINESPMode': '0',
+'LINESP': '<value>'}` and `trail_attrs={'LINESPMode': '0', 'LINESP':
+'<value>'}`. Each block has a `# P5/inject` comment citing
+`tools/line_spacing_sim.py` and the per-frame drift.
+
+Follow-up: extend the reconciler to support one of:
+
+1. Dotted-path field resolution: `field: paragraph_attrs.LINESPMode`
+2. Per-Run targeting via index: `target.run_index: 0`
+3. Per-Run targeting via text prefix: `target.run_text_startswith:
+   "Ich bin eine"`
+4. A dict-merge section: `runs_paragraph_attrs: { u1b0_run_0: {...} }`
+
+Tracking issue: TBD.
+
 ## See also
 
 - `shared/inject.schema.yaml` — schema definition.
@@ -109,3 +139,7 @@ example.
   structural.
 - `tolerance_protocol.md` — when meta.yml::brand_overrides is the
   right home instead.
+- `SKILL.md` §"Per-frame line-spacing protocol" — the per-frame
+  measurement and tuning loop that produces the values which then
+  feed back into inline build.py overrides or (once the reconciler
+  is extended) inject.yml entries.

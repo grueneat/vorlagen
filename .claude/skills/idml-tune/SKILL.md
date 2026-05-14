@@ -36,6 +36,18 @@ here** — see Forbidden paths below.
 - `tools/reconcile_build_py.py <slug>` — materializes `inject.yml` into
   `build.py`. Run before each iteration's inventory extract so the
   walker sees the canonical reconciled file.
+- `tools/line_spacing_full_audit.py` — cross-source per-paragraph
+  table (IDML CSR `<Properties><Leading>` → build.py `paragraph_attrs`
+  → SLA per-`<para>`/`<trail>` → preview.pdf). Use
+  `--probe <anname>` for direct word-position measurement of one
+  frame — bypass the clustering-based heuristics that mis-merge
+  adjacent-frame text.
+- `tools/line_spacing_sim.py` — **the empirical leading-value
+  discovery tool.** Sweeps `(LINESPMode, LINESP)` candidates,
+  renders each via xvfb-run+Scribus, measures the resulting
+  baseline-to-baseline gap. Required for tuning sub-metric leadings
+  because Scribus rendering is not predictable from authored
+  values (see `docs/scribus-sla-attribute-semantics.md` §LINESPMode).
 - `tools/sop_lint.py` — banned-phrase guard. Still runs on Stage 2 output.
 - `tools/lint_inject_consistency.py` — inject.yml ↔ build.py 1:1 lint.
 
@@ -149,6 +161,80 @@ Tuning is complete when:
 - `--accept-residual` covers every remaining issue AND every accepted
   issue is classified `human-review` or `authoring-bug` (NEVER
   `converter-bug` — those go through `/idml-scaffold`).
+
+## Per-frame line-spacing protocol
+
+When `line_spacing_audit` flags drifts, follow this loop. The clustered
+"line-spacing drift" stat in preflight is a SUMMARY signal; never trust
+it for a specific frame.
+
+### 1. Direct measurement is the only reliable per-frame number
+
+```
+python3 tools/line_spacing_full_audit.py --slug <slug> --probe <anname>
+```
+
+Reports per-line `top` positions, consecutive gaps, baseline vs preview
+medians. Bypasses clustering. If the gap is wrong by ≥0.5pt, proceed.
+
+Also measure CUMULATIVE drift: `(last_line_top - first_line_top)` in
+preview vs baseline. For body text, per-line drift of 0.1pt accumulates
+over 11 lines to 1pt+ — invisible in per-gap stats.
+
+### 2. Empirical (LINESPMode, LINESP) discovery via the simulator
+
+The IDML CSR Leading is the authored value, but Scribus's rendering of
+sub-metric LINESPMode/LINESP is non-monotonic and font-dependent — no
+single rule predicts the output. Use the simulator:
+
+```
+python3 tools/line_spacing_sim.py \
+    --slug <slug> --anname <anname> \
+    --candidates '1:,0:<X>,0:<X-3>,0:<X-6>,2:<X>' \
+    --expected-words "Word1,Word2" --fontsize-pt <pt>
+```
+
+`expected_words` filters lines to those matching the frame's content
+(prevents adjacent-frame contamination). Picks lowest-drift candidate.
+
+### 3. Apply override
+
+Once the (mode, linesp) is known, override per-frame in
+`templates/<slug>/build.py`:
+
+- **`Run().paragraph_attrs`** for intermediate `<para>` separators
+- **`TextFrame.trail_attrs`** for the closing `<trail>`
+
+BOTH must carry the SAME (LINESPMode, LINESP) — otherwise Scribus uses
+the inconsistent `<para>` rule and the trail's LINESP doesn't take
+effect. Add a `# P5/inject` comment citing the sim drift measurement.
+
+The `inject.yml` reconciler currently can't reach nested dict paths
+(`paragraph_attrs.LINESPMode`), so the overrides live inline in
+build.py. They'll be lost on a clean re-import — track that as a
+follow-up; preserve in TOLERANCE_LOG.md.
+
+### 4. Mixed-font frame edge case
+
+When a paragraph contains adjacent CSRs with different fonts (e.g.
+Gotham→Vollkorn→Gotham 3-line headline), Scribus's per-line font-metric
+model dominates — no single (mode, linesp) reconciles the transitions.
+
+The fix is to split the frame into single-line TextFrames at
+calibrated y_mm positions. Get exact positions from baseline.pdf word
+tops, then iterate y_mm by ~+2mm until each line's cap-top matches the
+baseline cap-top (each font has its own ascender offset from frame
+top under FLOP=2). Worked example: `templates/26-03-leporello-…/build.py`
+u16c → u16c, u16c_l2, u16c_l3.
+
+### 5. Banned values
+
+- `LINESPMode=2 + LINESP < fontsize × 1.45` — Scribus renders at
+  ~font-metric × 1.5 regardless of LINESP value. **Never emit this.**
+  Use `LINESPMode=0 + LINESP=<empirical>` or `LINESPMode=1` instead.
+- Template-wide ParaStyle `linesp` overrides for headlines — Scribus's
+  per-line font metric dominates ParaStyle linesp anyway, and the
+  override breaks body text using the same ParaStyle.
 
 ## Banned phrases (advisory)
 
