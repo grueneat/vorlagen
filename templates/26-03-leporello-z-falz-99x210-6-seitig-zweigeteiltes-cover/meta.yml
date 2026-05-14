@@ -3,10 +3,6 @@ asset_policy:
   - bluesky-weiss.png
   - gruene-logo-bund-weiss-cmyk.png
   - mail-weiss.png
-  - social-media-icon-facebook.png
-  - social-media-icon-instagram.png
-  - social-media-icon-tiktok.png
-  - social-media-icon-x.png
   - social-media-icons-weiss.png
   - website-weiss.png
   external:
@@ -27,7 +23,7 @@ format: A4
 id: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes Cover.idml
-previews_for_sla: 474eb0b04e07fa9c5b0ebad2d02de2e6df7bfc85b5c2e8374661bd785775109b
+previews_for_sla: 140f3d506209031ca836ab33ab06607bb35c2c23eab87cbe177faeb81e8c2f65
 title: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 version: 0.1.0
 
