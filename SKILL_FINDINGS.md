@@ -276,6 +276,16 @@ Both existing audits report per-pair gaps but not cumulative drift over a whole 
 
 ### F-019 — Scribus per-font metric calibration data should be cached
 
+**Status (2026-05-14 follow-up batch):** DEFERRED to a separate PR.
+The audit-followups-batch shipped F-020, F-014, F-017, F-021, F-022,
+audit-reliability (preflight.errors + E4/E5/E6 in convergence-review)
+and partial F-016 (sim attempt + tolerance docs). F-019 needs a
+synthetic test-frame harness, a one-shot calibration pass to populate
+the JSON cache, and sim.py changes to query the cache before invoking
+Scribus — too big for this PR. The motivation below stands; the work
+should land as its own focused commit.
+
+
 Each sim run rebuilds the SLA, launches Scribus via xvfb-run, and renders to PDF — about 30-60 seconds per candidate. With 5-6 candidates per frame and 6 frames, that's 30+ minutes total.
 
 **Improvement:** Build `tools/font_metric_cache.json` that records, for each `(font_family, font_weight, fontsize, LINESPMode)`, the per-line baseline-to-baseline gap Scribus produces. Populate via a one-shot calibration pass that renders synthetic test frames. Then `line_spacing_sim.py` queries the cache before invoking Scribus.
