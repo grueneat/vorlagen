@@ -106,11 +106,12 @@ def main(argv=None):
     tolerances_yaml = _load_yaml(template_dir / "TOLERANCES.yml") or {}
     tolerated_annames = set()
     for entry in tolerances_yaml.get("tolerances", []):
-        # Extract annames mentioned in reason field (rough heuristic)
-        reason = entry.get("reason", "")
-        for token in reason.split():
-            if token.startswith("u") and len(token) <= 6 and all(c.isalnum() for c in token):
-                tolerated_annames.add(token.rstrip(".,()"))
+        # Pick up annames in either the id (tol:<anname>-...) OR the reason
+        for src in (entry.get("id", ""), entry.get("reason", "")):
+            for token in src.replace("-", " ").replace(":", " ").split():
+                t = token.rstrip(".,()")
+                if t.startswith("u") and 2 <= len(t) <= 6 and all(c.isalnum() for c in t):
+                    tolerated_annames.add(t)
 
     actionable = []
     summary = {"match": 0, "sub_threshold": 0, "actionable": 0, "tolerated": 0}

@@ -86,6 +86,49 @@ tolerances:
       u16c headline frame.
     follow_up_issue: "engine-bug; sub-3pt drift, well below visual threshold for affected lines"
 
+  - id: tol:u1e6-mixed-font-headline-split-offset
+    audit: systematic_text_audit
+    classification: scribus-engine-bug
+    reason: >-
+      u1e6 is a mixed-font 2-paragraph headline ("Ich bin eine /
+      Headline.") with Gotham Narrow Ultra (¶1) and Vollkorn Black
+      Italic (¶2) at 30pt. The per-line drift pattern is SPLIT —
+      [-1.92, -1.92, +1.92, +1.92] — because each font renders at
+      its own natural leading. The y_mm_shift playbook correctly
+      refused (range > 1.2pt threshold). Sim-fixable only by
+      splitting the frame into per-paragraph TextFrames at
+      calibrated y_mm positions (mirror of SKILL.md u16c worked
+      example) — not yet automated; LLM-judgment escalation.
+    follow_up_issue: "playbook-extension; future tools/playbooks/split_frame.py"
+
+  - id: tol:u1fd-bullet-list-mid-frame-anomaly
+    audit: systematic_text_audit
+    classification: scribus-engine-bug
+    reason: >-
+      u1fd is a 5-bullet aufzaehlungen-auf-gruenem-hintergrund frame
+      (13 lines total). Per-line drift is small (1.92-2.4pt) for
+      lines 1-6, then SPIKES to +17-20pt for lines 7-10, then 0.0
+      for trailing lines. Pattern indicates Scribus and InDesign
+      handle the empty-paragraph between-bullets separators
+      differently. Not a single-LINESPMode-per-frame fix; needs
+      per-bullet structural change (or per-paragraph LINESPMode
+      override on the bullet separators).
+    follow_up_issue: "engine-bug; bullet-list rendering between Scribus and InDesign"
+
+  - id: tol:uf7-empty-info-layer-frame-line-count-mismatch
+    audit: systematic_text_audit
+    classification: authoring-bug
+    reason: >-
+      uf7 is an empty TextFrame on layer=1 (Info — non-printing in
+      the IDML). It covers the whole page (296×209mm). Audit
+      reports "line count differs (baseline=1 vs preview=14)" —
+      because uf7's giant bbox swallows neighboring frames' text
+      when the audit measures lines inside it. y_mm_shift refused
+      (would push frame off-page). Real fix is to drop empty
+      layer-1 frames in the converter; here documented as known
+      audit artifact for empty info-layer frames.
+    follow_up_issue: "converter-extension; tools/idml_to_dsl.py drops empty Info-layer frames"
+
   - id: tol:visual-diff-image-size-mismatch
     audit: visual_diff_regions
     classification: scribus-engine-bug
