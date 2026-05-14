@@ -59,13 +59,21 @@ Do NOT cherry-pick artifacts out of `build/staging/` into
 `bin/tune-render` will re-snapshot and either green or move it back
 to staging — surgical edits to the failed-render output are lost.
 
-### bin/tune-fix playbooks
+### bin/tune-fix playbooks (current registry)
 
 | Audit | Playbook | Action |
 |---|---|---|
-| `systematic_text_audit` | `tools/playbooks/line_spacing.py` | Run `line_spacing_sim` per actionable frame, apply best (LINESPMode, LINESP) candidate |
+| `systematic_text_audit` (uniform per-line offset) | `tools/playbooks/y_mm_shift.py` | Shift the frame's `y_mm` by mean drift × pt-mm. Empirical sign: same-direction. |
+| `systematic_text_audit` (varying per-line drift) | `tools/playbooks/line_spacing.py` | Run `line_spacing_sim` per frame with sweep over authored Leading + fontsize × {0.85, 0.89, 0.9, 0.91, 1.0, 1.1, 1.2, 1.45}. Apply best (LINESPMode, LINESP) when drift ≤ 0.5pt; else escalate. |
 | `structural_check` (rotation) | `tools/playbooks/constraint_violation.py` | Adopt reference rotation onto offenders |
 | `structural_check` (distance/gap/inside) | `tools/playbooks/constraint_violation.py` | ESCALATE — layout intent decision |
+| `image_frame_visibility_audit` (white-on-dark FP) | `tools/playbooks/frame_visibility.py` | Polarity check; mark as known false positive (L-014) without writing |
+| `image_frame_visibility_audit` (true invisibility) | `tools/playbooks/frame_visibility.py` | Swap inline_image_data → image= ref + scale_type=0 when asset path identifiable |
+
+Order matters: y_mm_shift runs BEFORE line_spacing because uniform-
+offset frames are a different fix class (frame anchor) from gap-
+varying frames (LINESP override). The systematic audit doesn't
+distinguish them; the playbook order does.
 
 When `bin/tune-fix` exits 2, the residual is **not addressable by an
 existing playbook**. The right next action is one of:
