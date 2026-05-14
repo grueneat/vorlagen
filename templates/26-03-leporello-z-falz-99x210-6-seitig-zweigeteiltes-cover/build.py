@@ -180,16 +180,13 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         fill='Dunkelgrün',
     ))
-    # u514: Ziesel/squirrel photo on the inside-page top-right panel.
-    # Converter emitted scale_type=1 with the IDML's literal scale, but
-    # Scribus 1.6.x renders SCALETYPE=1 + explicit LOCALSCX/Y at *native*
-    # pixel size (not the scaled size), showing only the top-left native
-    # corner of the source. Switching to scale_type=0 (Free Scaling)
-    # honours both local_scale + local_offset_mm verbatim. Offset values
-    # crop the source so the squirrel appears roughly centred in the
-    # frame: source is 4390×2927 px (≈547×365mm), scaled to ≈236×157mm,
-    # offset centres horizontally + 25mm down so the squirrel's head
-    # falls in the upper half of the frame, matching baseline.pdf.
+    # u514: Ziesel/squirrel demo photo. Scribus 1.6 SCALETYPE quirks
+    # (#issue/55): SCALETYPE=0 = aspect-FIT (contain, leaves gap on
+    # long axis); SCALETYPE=1 with our IDML-derived LOCALSCX renders
+    # at *native* pixel size (1.6 bug). Until inject_into_frame
+    # pre-cropping is wired in for demo assets, accept the aspect-fit
+    # render — demo images will be replaced by users anyway, and the
+    # scaffold preview shows the structural frame size separately.
     page0.add(ImageFrame(
         x_mm=198,
         y_mm=-1.8,
@@ -200,7 +197,6 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/ziesel.jpg',
         local_scale=(0.430959, 0.430959),
         scale_type=0,
-        local_offset_mm=(-20.0, -25.0),
     ))
     page0.add(ImageFrame(
         x_mm=273.18,
@@ -679,14 +675,12 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
         trail_attrs={'ALIGN': '0'},
     ))
-    # u2cd: pine-trees backdrop for "Ich bin auch eine Headline" on the
-    # cover middle panel. The converter emitted SCALETYPE=1 + a negative
-    # local_offset; with SCALETYPE=1 (Scale to frame) Scribus uses the
-    # offset to place the *scaled* image, which here pushes it off-frame
-    # and renders invisible. Switching to SCALETYPE=0 (Free Scaling)
-    # interprets local_scale + local_offset as a manual placement that
-    # honours both values — same visible result as InDesign's intended
-    # crop window.
+    # u2cd: pine-trees backdrop. Same SCALETYPE quirks as u514 (#55).
+    # SCALETYPE=1 with this image renders invisible (negative LOCALY +
+    # 1.6 bug); SCALETYPE=0 (aspect-fit) renders but only fills part of
+    # the frame on the short axis. Until inject_into_frame pre-cropping
+    # is wired in, accept the aspect-fit render — scaffold preview
+    # carries the structural-frame view.
     page1.add(ImageFrame(
         x_mm=99.1764,
         y_mm=0,
