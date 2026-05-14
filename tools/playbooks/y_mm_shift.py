@@ -43,7 +43,7 @@ from statistics import mean
 
 import yaml
 
-UNIFORM_TOL_PT = 0.6
+UNIFORM_TOL_PT = 1.2  # was 0.6; loosened to catch FreeType per-line jitter
 PT_PER_MM = 25.4 / 72.0
 CAL_MM = 0.5  # calibration shift in mm
 
@@ -57,12 +57,19 @@ def _load_pixel_audit(slug: str, repo: Path) -> list[dict]:
 
 
 def _is_uniform_offset(per_line: list) -> tuple[bool, str]:
-    """True if per-line drifts cluster tight enough that mean shift helps."""
+    """True if per-line drifts cluster tight enough that mean shift helps.
+
+    Ignores trailing zero-drift lines (often the last line is a partial /
+    sentinel that the audit measures as 0pt regardless of frame state).
+    """
     if not per_line:
         return False, "no per-line drift data"
     nums = [d for d in per_line if isinstance(d, (int, float))]
     if not nums:
         return False, "no numeric drifts"
+    # Strip trailing zeros — last-line sentinel artifacts
+    while len(nums) > 1 and abs(nums[-1]) < 0.5:
+        nums.pop()
     if len(nums) == 1:
         return True, "single-line frame — high uncertainty"
     spread = max(nums) - min(nums)
@@ -212,6 +219,9 @@ def apply(slug: str, repo: Path, dry_run: bool = False) -> tuple[int, list[str]]
         if (frame.get("max_drift_pt") or 0) < 1.0:
             continue
         nums = [d for d in per_line if isinstance(d, (int, float))]
+        # Mirror _is_uniform_offset's trailing-zero strip
+        while len(nums) > 1 and abs(nums[-1]) < 0.5:
+            nums.pop()
         avg_pt = mean(nums)
         uniform.append({
             "anname": anname,
@@ -268,6 +278,9 @@ def apply(slug: str, repo: Path, dry_run: bool = False) -> tuple[int, list[str]]
         if (frame.get("max_drift_pt") or 0) < 1.0:
             continue
         nums = [d for d in per_line if isinstance(d, (int, float))]
+        # Mirror _is_uniform_offset's trailing-zero strip
+        while len(nums) > 1 and abs(nums[-1]) < 0.5:
+            nums.pop()
         avg_pt = mean(nums)
         uniform.append({"anname": anname, "avg_pt": avg_pt})
 

@@ -244,9 +244,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     # h_mm widened 11.6453mm→16.3815mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=18.96pt; IDML overflows silently)
     # P5/playbook y_mm_shift.py: y_mm 191.6963 → 191.019 (uniform ++1.92pt × sign=-1 → -0.6773mm)
+    # P5/playbook y_mm_shift.py: y_mm 191.019 → 189.6643 (uniform ++3.84pt × sign=-1 → -1.3547mm)
     page0.add(TextFrame(
         x_mm=204.6586,
-        y_mm=191.019,
+        y_mm=189.6643,
         w_mm=86.84,
         h_mm=16.3815,
         anname='u155',
@@ -331,9 +332,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         fill='Dunkelgrün',
     ))
     # h_mm widened 17.9915mm→33.1611mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 17.4 → 18.162 (uniform +-2.16pt × sign=-1 → +0.7620mm)
     page0.add(TextFrame(
         x_mm=16.8913,
-        y_mm=17.4,
+        y_mm=18.162,
         w_mm=65.2174,
         h_mm=33.1611,
         anname='u1b0',
@@ -343,9 +345,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         trail_attrs={'LINESPMode': '1'},
     ))
     # h_mm widened 150.9085mm→153.8111mm: Scribus clips lines when frame_h < 27 explicit lines × line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 41.6915 → 40.9507 (uniform ++2.10pt × sign=-1 → -0.7408mm)
     page0.add(TextFrame(
         x_mm=16.8913,
-        y_mm=41.6915,
+        y_mm=40.9507,
         w_mm=65.2174,
         h_mm=153.8111,
         anname='u1c7',
@@ -603,9 +606,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}, separator='para'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle')],
         trail_attrs={'LINESPMode': '1'},
     ))
+    # P5/playbook y_mm_shift.py: y_mm 41.6915 → 40.9464 (uniform ++2.11pt × sign=-1 → -0.7451mm)
     page1.add(TextFrame(
         x_mm=16.8913,
-        y_mm=41.6915,
+        y_mm=40.9464,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u265',
@@ -688,9 +692,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         trail_attrs={'LINESPMode': '1'},
     ))
     # h_mm widened 23.2833mm→35.2778mm: Scribus clips lines when frame_h < 6 explicit lines × line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 163.0167 → 161.0863 (uniform ++5.47pt × sign=-1 → -1.9304mm)
     page1.add(TextFrame(
         x_mm=21.8196,
-        y_mm=163.0167,
+        y_mm=161.0863,
         w_mm=52.6804,
         h_mm=35.2778,
         anname='u35f',
