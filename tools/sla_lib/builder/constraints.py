@@ -316,6 +316,45 @@ class _SameStyleConstraint(Constraint):
 
 
 @dataclass(frozen=True)
+class _SameRotationConstraint(Constraint):
+    """All targets share an identical ``rotation_deg`` value.
+
+    Use case (#issue/104): a Störer is one design unit composed of a
+    decorative circle/polygon + a text frame placed inside it. The
+    converter can emit the two with different ``rotation_deg`` values
+    (the IDML's group transform is not always propagated to children),
+    making the text appear off-axis inside the circle. Pinning the
+    rotation guards against that regression.
+    """
+
+    tolerance_deg: float = 0.1
+
+    def check(self, primitives_by_anname: dict) -> list:
+        resolved, missing = _resolve(self.targets, primitives_by_anname)
+        if missing:
+            return [_missing_violation(self.id, self.targets, missing)]
+        if len(resolved) < 2:
+            return []
+        ref = float(getattr(resolved[0], "rotation_deg", 0) or 0)
+        bad = []
+        for r in resolved[1:]:
+            v = float(getattr(r, "rotation_deg", 0) or 0)
+            if abs(v - ref) > self.tolerance_deg:
+                bad.append((r.anname, v))
+        if not bad:
+            return []
+        return [Violation(
+            severity="error",
+            message=(
+                f"rotation drift: reference={ref}°, "
+                f"offenders={bad}, tolerance=±{self.tolerance_deg}°"
+            ),
+            rule_id=self.id,
+            targets=self.targets,
+        )]
+
+
+@dataclass(frozen=True)
 class _AlignedBelowConstraint(Constraint):
     """`below` hangs from `above`: same x_mm, below.y_mm == above.y_mm + above.h_mm + gap_mm.
 
@@ -483,6 +522,16 @@ def same_style(*targets, name: str = "") -> Constraint:
     t = _norm(targets)
     return _SameStyleConstraint(
         id=_autoname("same_style", t, name), targets=t, name=name,
+    )
+
+
+def same_rotation(*targets, tolerance_deg: float = 0.1,
+                  name: str = "") -> Constraint:
+    """All targets share the same ``rotation_deg`` (within tolerance)."""
+    t = _norm(targets)
+    return _SameRotationConstraint(
+        id=_autoname("same_rotation", t, name), targets=t, name=name,
+        tolerance_deg=tolerance_deg,
     )
 
 

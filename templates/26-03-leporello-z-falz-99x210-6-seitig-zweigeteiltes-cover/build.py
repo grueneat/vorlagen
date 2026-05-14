@@ -1243,6 +1243,73 @@ def build_preview() -> Document:
 build_doc = build_template
 
 
+# ---------------------------------------------------------------------------
+# CONSTRAINTS — geometric/style invariants checked by structural_check
+# ---------------------------------------------------------------------------
+# These pin the per-frame alignment fixes from PRs #98–#104 so future
+# converter changes or empirical-tune iterations can't silently regress
+# them. Each constraint is a small predicate over annames; structural_check
+# evaluates them and any drift exits non-zero with a clear message.
+from sla_lib.builder.constraints import (  # noqa: E402
+    same_x,
+    same_size,
+    same_rotation,
+    distance_y,
+    equal_gap,
+)
+
+
+# Vertical offset between an icon's top and its sibling text frame's top,
+# measured at the layout the social-icon column converged on in #104
+# (icon h=5mm vs text h=8mm; icon centres on the @ cap-mid).
+_ICON_TEXT_Y_GAP = 1.6
+
+
+CONSTRAINTS = [
+    # ── Störer (page 1 right panel: magenta circle + "Störer" text) ─────
+    # The circle (u185) and text (u186) form one design unit; they MUST
+    # share rotation. The IDML group transform is sometimes dropped on
+    # the text child, producing a circle at -18° with text at -9°
+    # (regression caught in #103).
+    same_rotation("u185", "u186", name="stoerer_circle_text_same_rotation"),
+
+    # ── Social-media icon column (left: Facebook, Instagram, TikTok) ────
+    # All three icons share x_mm (column alignment) and a uniform 5×5mm
+    # size; the row pitch matches the @text row pitch.
+    same_x("u3e7", "u3f0", "u3f5", name="social_left_column_x_aligned"),
+    same_size("u3e7", "u3f0", "u3f5", name="social_left_icons_uniform_size"),
+    # equal_gap measures EMPTY space between frames (gap = next.y -
+    # (prev.y + prev.h)), not the row pitch. With h=5mm and the
+    # row pitch ~5.65mm, the inter-frame gap is ~0.65mm.
+    equal_gap("u3e7", "u3f0", "u3f5", axis="y", gap_mm=0.7,
+              tolerance_mm=0.15, name="social_left_row_pitch"),
+    # Each left-col icon sits ~1.6mm below its @text top (icon centre on
+    # the @ cap-mid). 0.4mm tolerance absorbs per-row text-frame y jitter.
+    distance_y("u3e7", "u40c", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_left_row1_y_offset"),
+    distance_y("u3f0", "u412", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_left_row2_y_offset"),
+    distance_y("u3f5", "u45b", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_left_row3_y_offset"),
+
+    # ── Social-media icon column (right: Bluesky, Website, Email) ───────
+    same_x("u477", "u4a2", "u4da", name="social_right_column_x_aligned"),
+    same_size("u477", "u4a2", "u4da", name="social_right_icons_uniform_size"),
+    equal_gap("u477", "u4a2", "u4da", axis="y", gap_mm=0.7,
+              tolerance_mm=0.15, name="social_right_row_pitch"),
+    distance_y("u477", "u47b", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_right_row1_y_offset"),
+    distance_y("u4a2", "u4a6", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_right_row2_y_offset"),
+    distance_y("u4da", "u4df", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_right_row3_y_offset"),
+
+    # ── All 6 icons share a uniform size (cross-column invariant) ──────
+    same_size("u3e7", "u3f0", "u3f5", "u477", "u4a2", "u4da",
+              name="social_all_icons_uniform_size"),
+]
+
+
 def build(out_dir: str | Path = HERE) -> tuple[Path, Path]:
     """Emit both the brand-clean template.sla and the AI-injected preview.
 

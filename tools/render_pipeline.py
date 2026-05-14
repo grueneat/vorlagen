@@ -259,6 +259,52 @@ def _scrub_xmp_packet(data: bytes) -> bytes:
 # Brand-font check
 # ---------------------------------------------------------------------------
 
+def _run_global_sop_gates() -> None:
+    """Run repo-wide SOP gates that don't take a template id.
+
+    These are CI-only today (.github/workflows/ci.yml::"SOP gates" step).
+    Running them locally before any rendering keeps the pipeline honest:
+    if a developer broke an SOP rule (sop_lint), drifted from inject.yml
+    (lint_inject_consistency across all templates), or grew brand
+    overrides past the merge-base limit (check_overrides_growth), they
+    learn now instead of after pushing.
+
+    Hard fail on sop_lint + check_no_absolute_paths_in_sla (those are
+    invariants the project never wants to ship). Warn for
+    check_overrides_growth (matches CI's transitional ``|| true``).
+    """
+    gates: list[tuple[str, list[str], bool]] = [
+        ("sop_lint", [sys.executable, str(ROOT / "tools" / "sop_lint.py")], True),
+        ("check_no_absolute_paths_in_sla",
+         [sys.executable, str(ROOT / "tools" / "check_no_absolute_paths_in_sla.py")],
+         True),
+        # check_overrides_growth needs a base-ref. Local dev usually
+        # works against origin/main but the fetch may be shallow; mirror
+        # CI's ``|| true`` semantics — informational only.
+        ("check_overrides_growth",
+         [sys.executable, str(ROOT / "tools" / "check_overrides_growth.py"),
+          "--base-ref", "origin/main"],
+         False),
+    ]
+    for name, cmd, hard_fail in gates:
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+        if r.returncode == 0:
+            print(f"[global] {name}: OK")
+        else:
+            tag = "FAIL" if hard_fail else "WARN"
+            sys.stderr.write(
+                f"[global] {name}: {tag} "
+                f"(exit={r.returncode})\n"
+                f"{r.stdout}{r.stderr}\n"
+            )
+            if hard_fail:
+                sys.stderr.write(
+                    f"[global] {name} is a hard SOP gate — "
+                    "fix the violation before re-rendering.\n"
+                )
+                raise SystemExit(2)
+
+
 def _verify_brand_fonts() -> None:
     """Verify brand fonts are registered; exit loudly if not.
 
@@ -1340,6 +1386,348 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # ── Phases E7–E12: thoroughness pack — every audit tool wired up so
+    # bin/tune-render fails locally for the same reasons CI would, with
+    # one-line stderr messages that name the failing check. Each phase
+    # writes its own YML report under build/validation/<slug>/ for
+    # downstream review.
+
+    # Phase E7: structural_check — enforces module-level CONSTRAINTS and
+    # global BRAND_CONSTRAINTS. Previously CI-only (.github/workflows/
+    # pages.yml); 141 declared constraints across 9 templates were not
+    # being checked locally so devs only saw failures after pushing.
+    structural_check_path = out_dir / "structural_check.yml"
+    try:
+        import sys as _sys
+        if str(ROOT / "tools") not in _sys.path:
+            _sys.path.insert(0, str(ROOT / "tools"))
+        from sla_lib.builder.structural_check import check_template as _sc_run
+        sc_rep = _sc_run(tid, root=ROOT)
+        sc_summary = {
+            "slug": tid,
+            "fatal_error": sc_rep.fatal_error,
+            "constraint_errors": [
+                {"rule": i.rule_id, "message": i.message, "location": i.location}
+                for i in sc_rep.constraint_issues if i.severity == "error"
+            ],
+            "constraint_warnings": [
+                {"rule": i.rule_id, "message": i.message, "location": i.location}
+                for i in sc_rep.constraint_issues if i.severity == "warning"
+            ],
+            "brand_errors": [
+                {"rule": i.rule_id, "message": i.message, "location": i.location}
+                for i in sc_rep.brand_issues if i.severity == "error"
+            ],
+            "constraints_passed": sum(
+                1 for i in sc_rep.constraint_issues if i.severity == "pass"
+            ),
+            "brand_passed": sum(
+                1 for i in sc_rep.brand_issues if i.severity == "pass"
+            ),
+            "skipped_brand_rules": [
+                {"rule_id": rid, "reason": reason}
+                for rid, reason in sc_rep.skipped_brand_rules
+            ],
+            "ok": not sc_rep.has_errors,
+        }
+        structural_check_path.write_text(
+            yaml.dump(sc_summary, sort_keys=True, allow_unicode=True,
+                      default_flow_style=False),
+            encoding="utf-8",
+        )
+        if sc_rep.fatal_error:
+            issue_parts.append(f"structural_check fatal: {sc_rep.fatal_error}")
+            print(f"[{tid}] structural_check: FATAL — {sc_rep.fatal_error}",
+                  file=sys.stderr)
+        elif sc_rep.has_errors:
+            n_ce = len(sc_summary["constraint_errors"])
+            n_be = len(sc_summary["brand_errors"])
+            issue_parts.append(
+                f"{n_ce} constraint + {n_be} brand-rule error(s)"
+            )
+            for e in sc_summary["constraint_errors"][:5]:
+                print(f"[{tid}] structural_check FAIL ({e['rule']}): "
+                      f"{e['message']}",
+                      file=sys.stderr)
+            for e in sc_summary["brand_errors"][:5]:
+                print(f"[{tid}] brand_constraint FAIL ({e['rule']}): "
+                      f"{e['message']}",
+                      file=sys.stderr)
+        else:
+            print(
+                f"[{tid}] structural_check: OK "
+                f"({sc_summary['constraints_passed']} CONSTRAINTS, "
+                f"{sc_summary['brand_passed']} brand rules)"
+            )
+    except Exception as exc:
+        _record_phase_error(
+            phase_errors, "structural_check",
+            "E7 (structural_check)", exc, tid,
+        )
+
+    # Phase E8: check_no_absolute_paths_in_sla — guards against
+    # developer-machine paths (``/Users/...``, ``/home/...``) leaking
+    # into the committed SLA bytes. Previously CI-only
+    # (.github/workflows/ci.yml SOP-gates step). Walks SLAs under this
+    # template directory only (faster + scoped to current iteration).
+    path_check_path = out_dir / "path_check.yml"
+    try:
+        from check_no_absolute_paths_in_sla import find_absolute_pfiles
+        # find_absolute_pfiles walks all *.sla under the given root.
+        # Scoping to ``tdir`` keeps the audit per-template.
+        violations = find_absolute_pfiles(tdir)
+        path_summary = {
+            "slug": tid,
+            "violations": [
+                {
+                    "sla": str(p.relative_to(ROOT)),
+                    "lineno": lineno,
+                    "pfile": pfile,
+                }
+                for (p, lineno, pfile) in violations
+            ],
+            "ok": not violations,
+        }
+        path_check_path.write_text(
+            yaml.dump(path_summary, sort_keys=True, allow_unicode=True,
+                      default_flow_style=False),
+            encoding="utf-8",
+        )
+        if violations:
+            issue_parts.append(
+                f"{len(violations)} absolute path(s) in committed SLA"
+            )
+            for (p, lineno, pfile) in violations[:3]:
+                print(
+                    f"[{tid}] check_no_absolute_paths FAIL "
+                    f"({p.name}:{lineno}): {pfile}",
+                    file=sys.stderr,
+                )
+        else:
+            print(f"[{tid}] check_no_absolute_paths_in_sla: OK")
+    except Exception as exc:
+        _record_phase_error(
+            phase_errors, "path_check",
+            "E8 (check_no_absolute_paths_in_sla)", exc, tid,
+        )
+
+    # Phase E9: check_ci — per-SLA brand-identity drift (colour palette,
+    # layers, styles). Critical findings reject the SLA. Previously
+    # CI-only (.github/workflows/pages.yml).
+    check_ci_path = out_dir / "check_ci.yml"
+    try:
+        from check_ci import check_sla as _ci_check, load_ci as _ci_load
+        ci_def = _ci_load(ROOT / "shared" / "ci.yml")
+        report = _ci_check(tdir / "template.sla", ci_def)
+        # CIDriftReport has .issues list with severity ∈ {critical,
+        # warning, info}.
+        critical = [i for i in report.issues if i.severity == "critical"]
+        warning = [i for i in report.issues if i.severity == "warning"]
+        ci_summary = {
+            "slug": tid,
+            "sla": str((tdir / "template.sla").relative_to(ROOT)),
+            "issues": [
+                {
+                    "severity": i.severity,
+                    "code": i.code,
+                    "message": i.message,
+                }
+                for i in report.issues
+            ],
+            "critical_count": len(critical),
+            "warning_count": len(warning),
+            "ok": not critical,
+        }
+        check_ci_path.write_text(
+            yaml.dump(ci_summary, sort_keys=True, allow_unicode=True,
+                      default_flow_style=False),
+            encoding="utf-8",
+        )
+        if critical:
+            issue_parts.append(
+                f"{len(critical)} CI/brand-drift critical"
+            )
+            for d in critical[:3]:
+                print(
+                    f"[{tid}] check_ci FAIL ({d.code}): {d.message}",
+                    file=sys.stderr,
+                )
+        elif warning:
+            print(f"[{tid}] check_ci: {len(warning)} warning(s)")
+        else:
+            print(f"[{tid}] check_ci: OK")
+    except Exception as exc:
+        _record_phase_error(
+            phase_errors, "check_ci",
+            "E9 (check_ci)", exc, tid,
+        )
+
+    # Phase E10: spec_check — Spec-vs-Build drift detector (#issue/12).
+    # Only runs when templates/_specs/<slug>.md exists with a slots
+    # block. Informational unless drift > tolerance, then hard fail.
+    spec_check_path = out_dir / "spec_check.yml"
+    spec_md = ROOT / "templates" / "_specs" / f"{tid}.md"
+    if spec_md.exists():
+        try:
+            from spec_check import check as _spec_run
+            n_drift, messages = _spec_run(tid)
+            spec_summary = {
+                "slug": tid,
+                "drift_count": n_drift,
+                "messages": messages,
+                "ok": n_drift == 0,
+            }
+            spec_check_path.write_text(
+                yaml.dump(spec_summary, sort_keys=True, allow_unicode=True,
+                          default_flow_style=False),
+                encoding="utf-8",
+            )
+            if n_drift:
+                issue_parts.append(f"{n_drift} spec-vs-build drift")
+                for m in messages[:3]:
+                    print(f"[{tid}] spec_check FAIL: {m}", file=sys.stderr)
+            else:
+                print(f"[{tid}] spec_check: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "spec_check",
+                "E10 (spec_check)", exc, tid,
+            )
+    else:
+        print(f"[{tid}] audit E10 (spec_check): skipped (no _specs/{tid}.md)",
+              file=sys.stderr)
+
+    # Phase E11: lint_inject_consistency — inject.yml ↔ build.py #P5
+    # comment correspondence. Only runs when inject.yml exists.
+    inject_yml = tdir / "inject.yml"
+    if inject_yml.exists():
+        lint_inject_path = out_dir / "lint_inject_consistency.yml"
+        try:
+            from lint_inject_consistency import check_template as _lic_run
+            messages = _lic_run(tdir)
+            lic_summary = {
+                "slug": tid,
+                "violations": messages,
+                "ok": not messages,
+            }
+            lint_inject_path.write_text(
+                yaml.dump(lic_summary, sort_keys=True, allow_unicode=True,
+                          default_flow_style=False),
+                encoding="utf-8",
+            )
+            if messages:
+                issue_parts.append("inject.yml ↔ build.py drift")
+                for m in messages[:3]:
+                    print(
+                        f"[{tid}] lint_inject_consistency FAIL: {m}",
+                        file=sys.stderr,
+                    )
+            else:
+                print(f"[{tid}] lint_inject_consistency: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "lint_inject_consistency",
+                "E11 (lint_inject_consistency)", exc, tid,
+            )
+    else:
+        print(
+            f"[{tid}] audit E11 (lint_inject_consistency): skipped "
+            "(no inject.yml)",
+            file=sys.stderr,
+        )
+
+    # Phase E12b: reconcile_build_py --check — only when both
+    # inject.yml and build.py.generated exist. Re-derives build.py from
+    # build.py.generated + inject.yml hand_patches and diffs the result
+    # against the committed build.py. Catches "edited build.py directly
+    # without updating inject.yml" regressions. Previously CI-only
+    # (.github/workflows/ci.yml SOP-gates step).
+    generated_py = tdir / "build.py.generated"
+    if inject_yml.exists() and generated_py.exists():
+        reconcile_path = out_dir / "reconcile_build_py.yml"
+        try:
+            r = subprocess.run(
+                [sys.executable,
+                 str(ROOT / "tools" / "reconcile_build_py.py"),
+                 tid, "--check"],
+                capture_output=True, text=True, cwd=str(ROOT),
+            )
+            reconcile_path.write_text(
+                yaml.dump({
+                    "slug": tid,
+                    "returncode": r.returncode,
+                    "stdout": r.stdout,
+                    "stderr": r.stderr,
+                    "ok": r.returncode == 0,
+                }, sort_keys=True, allow_unicode=True,
+                          default_flow_style=False),
+                encoding="utf-8",
+            )
+            if r.returncode != 0:
+                issue_parts.append(
+                    "reconcile_build_py: build.py drifted from "
+                    "build.py.generated + inject.yml"
+                )
+                print(
+                    f"[{tid}] reconcile_build_py FAIL:\n"
+                    f"{r.stdout}{r.stderr}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] reconcile_build_py: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "reconcile_build_py",
+                "E12b (reconcile_build_py)", exc, tid,
+            )
+    else:
+        # Skip silently — the inject.yml + build.py.generated pair is
+        # only required for the two-stage scaffold flow, not every template.
+        pass
+
+    # Phase E12: audit_alignment — heuristic alignment-pair suggester.
+    # Informational only (matches CI's `|| true` semantics in
+    # pages.yml). Surfaces "you might want a same_x / same_y here"
+    # suggestions; never blocks the pipeline.
+    align_audit_path = out_dir / "audit_alignment.yml"
+    try:
+        from audit_alignment import audit_template as _aa_audit
+        rep = _aa_audit(tid)
+        n_undecl = 0
+        pages_payload = []
+        for p in rep.pages:
+            n_undecl += len(p.suspicious_pairs)
+            pages_payload.append({
+                "page": p.page_idx,
+                "label": p.page_label,
+                "declared_pairs": len(p.declared_pairs),
+                "suspicious_pairs": [
+                    {"kind": pp.kind, "a": pp.a, "b": pp.b,
+                     "delta_mm": pp.delta_mm,
+                     "suggested": pp.suggested}
+                    for pp in p.suspicious_pairs
+                ],
+            })
+        align_audit_path.write_text(
+            yaml.dump({"slug": tid, "pages": pages_payload,
+                       "suspicious_count": n_undecl},
+                      sort_keys=True, allow_unicode=True,
+                      default_flow_style=False),
+            encoding="utf-8",
+        )
+        if n_undecl:
+            print(
+                f"[{tid}] audit_alignment: {n_undecl} undeclared adjacencies "
+                f"(informational)"
+            )
+        else:
+            print(f"[{tid}] audit_alignment: OK")
+    except Exception as exc:
+        _record_phase_error(
+            phase_errors, "audit_alignment",
+            "E12 (audit_alignment)", exc, tid,
+        )
+
     # Phase E: per-element drift attribution.
     # Aggregates diff_bboxes.json into a per-slot contribution table so the next
     # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
@@ -1807,6 +2195,15 @@ def main(argv=None) -> int:
 
     # Preflight: brand fonts.
     _verify_brand_fonts()
+
+    # Global SOP gates (run once per render-gallery invocation). These
+    # were previously CI-only (.github/workflows/ci.yml SOP-gates step).
+    # Wiring them locally so a developer running bin/tune-render fails
+    # for the same reasons CI would, with named errors pointing at the
+    # exact violating tool. Errors here are HARD fail (return non-zero
+    # before any rendering happens) so they catch the issue before
+    # template artifacts are touched.
+    _run_global_sop_gates()
 
     templates_dir = ROOT / "templates"
     if args.template_id is not None:
