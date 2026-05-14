@@ -172,3 +172,136 @@ the only template-specific delta is the count of affected frames
 ## Running notes
 
 (Add new entries as I encounter them)
+
+---
+
+# Reflection — Line-spacing convergence session (2026-05-14)
+
+After completing the line-spacing fix for 26-03 Leporello (drift ~37pt → <0.5pt across 6 multi-line headlines), here's what worked, what didn't, and what should change.
+
+**Status of findings (2026-05-14 reflection):**
+
+| Finding | Status | Landed in |
+|---|---|---|
+| F-010 direct measurement is the only reliable per-frame signal | ✓ landed | `.claude/skills/idml-tune/SKILL.md` §"Per-frame line-spacing protocol" step 1 |
+| F-011 simulator indispensable for empirical leading discovery | ✓ landed | `idml-tune/SKILL.md` Tooling + step 2; `idml-scaffold/SKILL.md` Tooling |
+| F-012 universal converter fix was a regression | ✓ landed | `idml-scaffold/pattern_library.md` §"Converter invariants" |
+| F-013 inject.yml reconciler can't reach nested dict paths | ✓ landed | `idml-tune/inject_protocol.md` §"Known limitation" |
+| F-014 pdfplumber clustering threshold wrong for narrow leading | ⏳ deferred | follow-up |
+| F-015 mixed-font frames need split, not leading override | ✓ landed | `idml-scaffold/pattern_library.md` §"Mixed-font frame auto-split"; `idml-tune/SKILL.md` step 4 |
+| F-016 u347 Impressum still drifts +3pt | ⏳ deferred | TOLERANCES.yml + follow-up |
+| F-017 two audits with different numbers | ⏳ deferred | follow-up |
+| F-018 no cumulative drift measurement | ✓ landed | `idml-tune/SKILL.md` step 1 (advisory note) |
+| F-019 font-metric calibration cache | ⏳ deferred | follow-up |
+| F-020 meta.yml hash auto-update | ⏳ deferred | follow-up |
+| LINESPMode empirical behaviour table | ✓ landed | `docs/scribus-sla-attribute-semantics.md` §LINESPMode |
+
+## Worked well
+
+### F-010 — Direct word-position measurement was the only reliable signal
+
+Both existing `line_spacing_audit.py` (clusters with 2pt threshold) and the new `line_spacing_full_audit.py` (better clustering but still bbox-based) produced misleading numbers when the frame bbox overlapped adjacent text. For u1b0 the clustered median was 25.15pt while the actual gap was 46.23pt — a 21pt error. The mistake led to a converter "fix" that made things worse.
+
+**What worked:** querying pdfplumber for words within a tight (x_min, x_max, y_min, y_max) range manually and computing gaps between consecutive `top` values directly. This is what the `--probe <anname>` mode now does — but it didn't exist when I started.
+
+**Improvement:** Make `--probe` the DEFAULT measurement in the audit chain. The clustered statistic is a summary-level signal at best; never use it as the truth for any specific frame.
+
+### F-011 — Simulator (`line_spacing_sim.py`) was indispensable
+
+Empirically sweeping (LINESPMode, LINESP) candidates revealed Scribus behaviour that no documentation describes:
+- LINESPMode=2 + sub-metric LINESP renders at ~font-metric × 1.5 (ignoring the LINESP value).
+- LINESPMode=0 (strict) is the only mode that respects sub-metric LINESP.
+- For mixed-font lines, Scribus uses per-line font metrics — no LINESPMode value reconciles a Gotham→Vollkorn transition cleanly.
+
+**Improvement:** The sim should ship as a first-class tool referenced from `/idml-tune` skill docs. Add a `--candidates auto` flag that sweeps (1, —), (0, X*0.7), (0, X*0.85), (0, X), (0, X*1.15), (2, X) for a given authored X.
+
+## What broke / didn't work
+
+### F-012 — Universal converter fix was a regression
+
+My first attempt was to make `<para>` and `<trail>` BOTH use LINESPMode=2 + LINESP=X (matching the IDML CSR Leading). This made u1b0 go from +10pt to +18.5pt drift. The user caught it within minutes with "if we made it worse it can't be engine floor".
+
+**What I should have done:** measured each candidate VALUE empirically against baseline.pdf BEFORE shipping the converter change. The sim tool would have surfaced this immediately. Instead I ran the audit (which gave a noisy reading), declared victory, and moved on.
+
+**Improvement:** Any converter-side leading change MUST be paired with a `tests/integration/test_leading_render.py` that re-runs the converter against the 26-03 leporello anchor IDML, renders, and asserts per-frame drift < 1pt. The conversion + render + measure loop has to be a unit-test-style guard.
+
+### F-013 — inject.yml reconciler can't reach `paragraph_attrs.LINESPMode`
+
+The reconciler's `_apply_set` uses a regex matching `^field=value$` at top-level kwargs. It can't dive into `paragraph_attrs={'LINESPMode': '0', ...}` to swap one key. So the per-Run LINESPMode overrides for u1b0/u1e6/u24e/u2d5/u3a2/u155 live INLINE in build.py with `# P5/inject` comments — they'll be lost on a clean re-import.
+
+**Improvement:** Extend the inject.yml schema with one of:
+1. `field: paragraph_attrs.LINESPMode` (dotted path resolution into dict literals)
+2. `target.run_index: 0` (target a specific Run by index in the list)
+3. `target.run_text_startswith: "Ich bin eine"` (target by content prefix)
+4. A new `runs_paragraph_attrs:` section that the reconciler applies as a dict merge
+
+Pick whichever has lowest implementation effort. (3) is probably easiest — match by text prefix is robust to Run ordering changes.
+
+### F-014 — pdfplumber clustering threshold is wrong for narrow leading
+
+`line_spacing_audit.py` clusters word tops with a 2pt gap threshold. For 6pt body text (u347 Impressum, line_h ≈ 3pt), 2pt is bigger than the actual line gap — every line gets merged into one cluster. The audit reports 0 drift for u347, but baseline-vs-preview is +3pt.
+
+**Improvement:** Cluster threshold should be `min(2pt, fontsize × 0.4)` so it scales down for small fonts. Or — better — use pdfplumber's word `top` values directly and rely on adjacency in sort order, not threshold-based grouping.
+
+### F-015 — Mixed-font frames need frame-split, not a leading override
+
+u16c had Gotham→Vollkorn→Gotham 3-line content. No (LINESPMode, LINESP) combination gave uniform 33pt gaps because Scribus's per-line font-metric model dominates. The fix was to split the frame into 3 single-line frames at calibrated y_mm positions — bypasses Scribus's leading model entirely.
+
+**Improvement:** The converter should detect mixed-font paragraphs (where adjacent CSRs have different `AppliedFont`) and emit them as SEPARATE TextFrames automatically. The y_mm offsets can be computed from the CSR's effective Leading × index. Add this to `tools/idml_to_dsl_patterns/` as a new pattern.
+
+## What's still imperfect / needs review
+
+### F-016 — u347 Impressum still drifts +3pt (degenerate IDML authoring)
+
+The IDML CSR Leading=1.91pt for 6pt Gotham text — almost certainly a designer error (33% of fontsize). InDesign honoured it and rendered 3.34pt baseline-to-baseline. Scribus's font-metric floor ~6.37pt overrides.
+
+**Options:**
+1. Override per-Run with LINESPMode=0 + LINESP=3.34 (the simulator hasn't been run for u347 — needs verification that Scribus respects sub-font-metric LINESPMode=0)
+2. Accept as `authoring-bug` tolerance (current TOLERANCES.yml entry)
+3. Bump the converter's degenerate-leading clamp from `lp < fontsize × 0.5 → lp = fontsize × 1.2` to a smaller floor (e.g. fontsize × 0.6) so authored 1.91pt on 6pt text doesn't get inflated to 7.2pt
+
+Recommend running the sim against u347 before accepting the tolerance.
+
+### F-017 — The pre-existing `line_spacing_audit.py` is now misleading
+
+It still reports 4 drifts (u3a2, u1b0, u1e6, u376) using its clustering. The new `line_spacing_full_audit.py` reports differently. We have two audits with different numbers.
+
+**Improvement:** Either (a) deprecate the old one in favour of the new one, or (b) reconcile the clustering algorithms so they agree.
+
+### F-018 — Audit chain doesn't measure cumulative drift
+
+Both existing audits report per-pair gaps but not cumulative drift over a whole frame. For body text with 11 lines, a 0.1pt per-line drift compounds to 1.1pt total — invisible in per-pair stats.
+
+**Improvement:** Add a `cumulative_drift_pt` field to per-frame audit output: `(last_line_top - first_line_top) preview minus baseline`. Threshold: warn if >2pt cumulative for body text.
+
+### F-019 — Scribus per-font metric calibration data should be cached
+
+Each sim run rebuilds the SLA, launches Scribus via xvfb-run, and renders to PDF — about 30-60 seconds per candidate. With 5-6 candidates per frame and 6 frames, that's 30+ minutes total.
+
+**Improvement:** Build `tools/font_metric_cache.json` that records, for each `(font_family, font_weight, fontsize, LINESPMode)`, the per-line baseline-to-baseline gap Scribus produces. Populate via a one-shot calibration pass that renders synthetic test frames. Then `line_spacing_sim.py` queries the cache before invoking Scribus.
+
+### F-020 — `meta.yml::previews_for_sla` hash drift is fragile
+
+Every preview re-render changes the SLA → meta.yml hash needs updating. Easy to forget. Currently a manual step.
+
+**Improvement:** Have `render_pipeline.py` auto-update meta.yml::previews_for_sla on every successful render, OR remove the hash entirely (the SLA's content equality is verified by sla_diff which is the real round-trip guard).
+
+## Things to fix before next iteration
+
+1. **u347 (Impressum)** — sim against it, find a clean value, apply, remove from TOLERANCES.
+2. **Extend inject.yml reconciler** so per-Run overrides survive re-import (F-013).
+3. **Add cumulative-drift measurement** to the audit chain (F-018).
+4. **Deprecate or merge `line_spacing_audit.py`** vs `line_spacing_full_audit.py` (F-017).
+5. **Add a converter pattern for mixed-font auto-split** (F-015) so future templates don't need manual frame splits.
+6. **Skill update: `/idml-tune` doc should reference `line_spacing_sim.py`** as the canonical tool for empirical leading-value discovery.
+
+## Notable Scribus discoveries (preserve in docs/scribus-sla-attribute-semantics.md)
+
+| Mode | Behaviour | When to use |
+|---|---|---|
+| `LINESPMode=0 + LINESP=X` | Strict; respects X. For Gotham in mixed-font frames adds ~7pt offset. For Vollkorn / pure-Gotham frames: renders exactly at X. | Per-frame template overrides where you know the exact target gap. |
+| `LINESPMode=1` (no LINESP) | Auto / font-metric. Per-line metrics dominate. Mixed-font frames get max-of-line-metrics. | Default for converter-emitted text; safe but can over-space large fonts. |
+| `LINESPMode=2 + LINESP=X` | **Broken for sub-metric LINESP.** Renders at ~font-metric × 1.5 — ignores the LINESP value entirely. | Never use with sub-metric LINESP. Possibly fine for `LINESP ≥ font-metric × 1.2`, untested. |
+
+The current `docs/scribus-sla-attribute-semantics.md` has a LINESPMode section but doesn't document the LINESPMode=2-with-sub-metric-LINESP bug. Should add.
+

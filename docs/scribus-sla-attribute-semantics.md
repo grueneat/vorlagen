@@ -69,32 +69,71 @@ is the frame's `YPOS` or the paragraph style's `LINESPMode`, not FLOP.
 ## LINESPMode
 
 **Where:** Paragraph-level attribute on `STYLE`, `DefaultStyle`, and
-`PARA` children of an `ITEXT`.
+`PARA`/`<trail>` children of an `ITEXT`.
 
-**Values observed:**
+**Values observed (Scribus 1.6.5):**
 
-- `LINESPMode="0"` — *auto*. Scribus computes line spacing from font
-  metrics. The default for most paragraph styles.
-- `LINESPMode="1"` — *fixed*. Use the `LINESP` attribute as line
-  spacing in points, ignoring font metrics. The most common explicit
-  override.
-- `LINESPMode="2"` — *baseline-grid*. Snap each line to the document
-  baseline grid. Rarely used.
-- `LINESPMode="3"` — *baseline*. Use the maximum ascender + descender
-  across the line as line spacing. Not used by the converter.
+| Value | Documented as | Empirical behaviour (issue #40-followup measurements) |
+|---:|---|---|
+| `0` | *auto/font-metric* | Font-metric rendering when no LINESP is set; when LINESP is set, the value is honoured but with a font-family-dependent offset (Gotham Narrow Ultra: rendered = LINESP + ~7pt; Vollkorn Black Italic: rendered = LINESP exactly; pure single-font Gotham frames: rendered = LINESP exactly). |
+| `1` | *fixed (LINESP literal)* | When emitted by the converter as default (no LINESP attr), Scribus renders at font-metric. Behaviour with explicit LINESP not separately measured — the converter uses `0` for explicit overrides. |
+| `2` | *baseline-grid* | **Broken with sub-metric LINESP.** Renders at ~font-metric × 1.5 regardless of the LINESP value (LINESP=27 and LINESP=21 both rendered at 46.23pt for 30pt Gotham Narrow Ultra). Possibly snaps to the document baseline grid but ignores per-paragraph LINESP. Never use LINESPMode=2 with sub-metric LINESP. |
+| `3` | *max ascender+descender* | Not used by the converter; not separately measured. |
+
+**Empirical sim data (Gotham Narrow Ultra 30pt, mixed-font 2-line frame, baseline gap = 27.66pt):**
+
+| LINESPMode | LINESP | Rendered |
+|---:|---:|---:|
+| 1 | — | 34.30 |
+| 0 | 27.0 | 34.23 |
+| 0 | 24.0 | 31.23 |
+| 0 | **21.0** | **27.99** ✓ |
+| 0 | 18.0 | 24.99 |
+| 2 | 27.0 | 46.23 |
+| 2 | 21.0 | 46.23 (LINESP ignored) |
+
+For Vollkorn Black Italic 23pt (baseline 20.48): `LINESPMode=0 +
+LINESP=20.48` → renders exactly 20.48pt. For pure single-font Gotham
+frames (no mixed Vollkorn line): `LINESPMode=0 + LINESP=27` → renders
+exactly 27pt.
 
 **Emit site:** `tools/sla_lib/builder/primitives.py:55` — the
 `PARAGRAPH_OVERRIDE_ATTRS` set lists `LINESP` and `LINESPMode`. Run
 emit at `primitives.py:679` for `default_linesp_mode`.
 
-**Anti-example:** Multi-line subheadlines on Leporello page 0 looked
-overspaced. The fix attempted in commit X was to set
-`LINESPMode="1"` with `LINESP="14"` globally — which over-tightened
-quotes elsewhere. The right move was to scope the override to the
-`runs[].paragraph_attrs={"LINESPMode": "2", "LINESP": "18.96..."}`
-trail-attrs on that specific TextFrame (see leporello build.py line
-229). LINESPMode is paragraph-scoped; never apply it template-wide
-without measurement.
+**Converter rule** (`tools/idml_to_dsl.py:2887` / `:3037`): emit
+`LINESPMode=1` when the IDML CSR `<Properties><Leading>` is below
+fontsize × 1.45, otherwise `LINESPMode=2 + LINESP=<authored>`. This
+preserves the existing rendering for the common case where authored
+Leading is generous. Per-Run overrides for sub-metric leadings (where
+LINESPMode=2 is broken) live in `templates/<slug>/build.py` with
+`# P5/inject` comments — see `templates/26-03-leporello-…/build.py`
+for the worked example.
+
+**Inconsistent-pattern check:** `<para>` and `<trail>` inside the same
+PAGEOBJECT MUST agree on (LINESPMode, LINESP). When the trail set
+`LINESPMode=2 + LINESP=X` but intermediate `<para>` separators set
+`LINESPMode=1` (no LINESP), Scribus uses the `<para>`'s rule and the
+trail's LINESP doesn't take effect. `_psr_trail_attrs_for_story` now
+mirrors `_walk_story`'s downgrade rule to keep both consistent.
+`tools/line_spacing_full_audit.py --probe <anname>` surfaces the per-
+frame `<para>`/`<trail>` LINESPMode+LINESP table and flags
+inconsistencies.
+
+**Anti-example:** Multi-line headlines on the 26-03 Leporello cover
+rendered at +18pt drift when the converter emitted `LINESPMode=2 +
+LINESP=27` (sub-metric for Gotham Narrow Ultra 30pt). Reverting to
+`LINESPMode=1` (auto) brought drift back to +10pt; using
+`LINESPMode=0 + LINESP=21` (empirically calibrated) closed it to
++0.5pt. LINESPMode is paragraph-scoped; never apply it template-wide
+without measurement via `tools/line_spacing_sim.py`.
+
+**Mixed-font frames are a special case:** Scribus's per-line font
+metrics dominate, so no single (LINESPMode, LINESP) reconciles
+Gotham→Vollkorn→Gotham transitions. The fix is to split the frame
+into single-line TextFrames at calibrated y_mm positions (see
+`templates/26-03-leporello-…/build.py` u16c → u16c, u16c_l2,
+u16c_l3).
 
 ---
 

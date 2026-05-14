@@ -43,6 +43,14 @@ calling the scaffold complete.
   inventory snapshots. Exit 0 / 2 / 3 (match / regression / drift).
 - `tools/idml_to_dsl.py` — the converter. Editable in Stage 1 ONLY when
   a structural gate fails (e.g. an IDML element kind has no handler).
+- `tools/line_spacing_sim.py` — empirical (LINESPMode, LINESP) sweep
+  via xvfb-run + Scribus. Required reading for any converter change
+  to leading emission (see `docs/scribus-sla-attribute-semantics.md`
+  §LINESPMode for the catalogued behaviour).
+- `tools/line_spacing_full_audit.py` — cross-source per-paragraph
+  line-spacing audit; runs as Phase E3 in the audit chain. The
+  `inconsistent_pattern` count surfaces frames where `<para>` and
+  `<trail>` disagree on LINESPMode — a converter bug class.
 
 ## Pre-flight checks (machine-checkable)
 
