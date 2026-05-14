@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""bin/tune-fix — defined remediation for failed bin/tune-render runs.
+
+When `bin/tune-render` exits with code 2 (preflight red), the failed-
+render artifacts are in `build/staging/<slug>/` and the audit reports
+are in `build/validation/<slug>/`. This tool reads those reports and
+applies the **defined remediation playbooks** for each failing audit:
+
+  systematic_text_audit  → tools/playbooks/line_spacing.py
+                            (run line_spacing_sim per actionable frame,
+                             apply best candidate, write TOLERANCES row)
+  structural_check       → tools/playbooks/constraint_violation.py
+                            (rotation drift → adopt reference rotation;
+                             distance/gap drift → surface for layout fix)
+  image_frame_visibility → tools/playbooks/image_visibility.py
+                            (white-on-dark false positive vs real)
+
+After applying the playbooks, re-invokes `bin/tune-render`. Loops
+until either:
+  - preflight green (exit 0)
+  - no playbook can advance further (exit 2 with "human review needed")
+  - max iterations exhausted (exit 3)
+
+Each playbook is purely deterministic — given the same audit input it
+applies the same fix. No LLM creativity required; the LLM's role is
+to invoke this tool and verify the resulting diff is sane.
+
+Usage:
+    bin/tune-fix <slug>                   # run remediation loop
+    bin/tune-fix <slug> --dry-run         # report what would change
+    bin/tune-fix <slug> --max-iter N      # cap iterations (default 5)
+"""
+from __future__ import annotations
+
+import argparse
+import importlib
+import subprocess
+import sys
+from pathlib import Path
+
+import yaml
+
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "tools"))
+
+
+PLAYBOOKS = [
+    # (audit_name, playbook_module, predicate)
+    ("systematic_text_audit", "playbooks.line_spacing",
+     lambda audit: (audit.get("issues") or 0) > 0),
+    ("structural_check",      "playbooks.constraint_violation",
+     lambda audit: (audit.get("issues") or 0) > 0),
+]
+
+
+def _read_preflight(slug: str) -> dict:
+    p = REPO / "build" / "validation" / slug / "preflight.yml"
+    if not p.exists():
+        return {}
+    return yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+
+
+def _run_tune_render(slug: str) -> int:
+    cmd = [str(REPO / "bin" / "tune-render"), slug]
+    print(f"[tune-fix] re-running: {' '.join(cmd)}", file=sys.stderr)
+    return subprocess.run(cmd).returncode
+
+
+def _apply_playbooks(slug: str, dry_run: bool) -> tuple[int, list[str]]:
+    """Apply each registered playbook for failing audits.
+
+    Returns (frames_changed, log_lines).
+    """
+    preflight = _read_preflight(slug)
+    audits = preflight.get("audits") or {}
+    log: list[str] = []
+    total_changes = 0
+
+    for audit_name, module_name, predicate in PLAYBOOKS:
+        audit = audits.get(audit_name)
+        if not audit or not predicate(audit):
+            continue
+        try:
+            mod = importlib.import_module(module_name)
+        except Exception as exc:
+            log.append(f"  - {audit_name}: playbook {module_name} import failed: {exc}")
+            continue
+        try:
+            n_changed, playbook_log = mod.apply(slug=slug, repo=REPO, dry_run=dry_run)
+        except Exception as exc:
+            log.append(f"  - {audit_name}: playbook {module_name} crashed: {exc}")
+            continue
+        log.append(f"  - {audit_name} → {module_name}: {n_changed} change(s)")
+        log.extend(f"      {ln}" for ln in playbook_log)
+        total_changes += n_changed
+    return total_changes, log
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("slug")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="Report what would change without writing.")
+    ap.add_argument("--max-iter", type=int, default=5,
+                    help="Maximum remediation iterations (default 5).")
+    args = ap.parse_args(argv)
+
+    template_dir = REPO / "templates" / args.slug
+    if not template_dir.is_dir():
+        sys.stderr.write(f"Template not found: {template_dir}\n")
+        return 2
+
+    for it in range(1, args.max_iter + 1):
+        print(f"\n[tune-fix] iteration {it}/{args.max_iter} on {args.slug}", file=sys.stderr)
+        n_changed, log = _apply_playbooks(args.slug, args.dry_run)
+        for line in log:
+            print(line, file=sys.stderr)
+        if n_changed == 0:
+            preflight = _read_preflight(args.slug)
+            if preflight.get("ok", True):
+                print(f"[tune-fix] preflight green for {args.slug}", file=sys.stderr)
+                return 0
+            print(
+                f"\n[tune-fix] no playbook can advance further on {args.slug}.",
+                file=sys.stderr,
+            )
+            print(
+                "[tune-fix] ESCALATE to LLM action — the residual classes below "
+                "either need (a) a new playbook in tools/playbooks/ that handles "
+                "the specific audit signature, or (b) a converter extension when "
+                "the issue is upstream of build.py:",
+                file=sys.stderr,
+            )
+            for name, audit in (preflight.get("audits") or {}).items():
+                if not audit.get("ok", True):
+                    print(f"  - {name}: {audit.get('detail') or audit.get('issues')}",
+                          file=sys.stderr)
+            print(
+                "\n[tune-fix] Action: extend tools/playbooks/* to cover the "
+                "signature, then re-run `bin/tune-fix " + args.slug + "`.",
+                file=sys.stderr,
+            )
+            return 2
+        if args.dry_run:
+            print(f"[tune-fix] dry-run: {n_changed} change(s) proposed; not writing", file=sys.stderr)
+            return 0
+        rc = _run_tune_render(args.slug)
+        if rc == 0:
+            print(f"[tune-fix] preflight green after iteration {it}", file=sys.stderr)
+            return 0
+    print(
+        f"[tune-fix] max-iter ({args.max_iter}) reached without convergence",
+        file=sys.stderr,
+    )
+    return 3
+
+
+if __name__ == "__main__":
+    sys.exit(main())

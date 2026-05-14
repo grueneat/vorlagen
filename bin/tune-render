@@ -34,11 +34,143 @@ from __future__ import annotations
 import argparse
 import hashlib
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
+import yaml
+
 REPO = Path(__file__).resolve().parent.parent
+STAGING_ROOT = REPO / "build" / "staging"
+SNAPSHOT_ROOT = REPO / "build" / "snapshot"
+
+
+# Files in templates/<slug>/ that the render produces. On audit failure
+# these get MOVED to build/staging/<slug>/ and the pre-render snapshot
+# is restored, so a red preflight cannot pollute templates/<slug>/.
+_RENDERED_ARTIFACTS = (
+    "template.sla",
+    "template-preview.sla",
+    "preview.pdf",
+    "page-01.png",
+    "page-02.png",
+    "page-01-hires.png",
+    "page-02-hires.png",
+    "per_region_history.jsonl",
+    "meta.yml",  # previews_for_sla hash gets bumped on render
+)
+
+
+def _snapshot_template_dir(template_dir: Path, slug: str) -> Path:
+    """Snapshot pre-render state to build/snapshot/<slug>-pre/.
+
+    Returns the snapshot path. Idempotent — overwrites prior snapshot.
+    """
+    SNAPSHOT_ROOT.mkdir(parents=True, exist_ok=True)
+    snap = SNAPSHOT_ROOT / f"{slug}-pre"
+    if snap.exists():
+        shutil.rmtree(snap)
+    snap.mkdir(parents=True, exist_ok=True)
+    for name in _RENDERED_ARTIFACTS:
+        src = template_dir / name
+        if src.exists():
+            shutil.copy2(src, snap / name)
+    return snap
+
+
+def _restore_from_snapshot(template_dir: Path, snap: Path) -> None:
+    """Restore the pre-render snapshot back into templates/<slug>/."""
+    for name in _RENDERED_ARTIFACTS:
+        src = snap / name
+        dst = template_dir / name
+        if src.exists():
+            shutil.copy2(src, dst)
+        elif dst.exists():
+            # Pre-render didn't have this file (e.g. template-preview.sla
+            # introduced this run); remove the new file too so the
+            # template state matches pre-render exactly.
+            dst.unlink()
+
+
+def _move_rendered_to_staging(template_dir: Path, slug: str) -> Path:
+    """Move the failed-render artifacts to build/staging/<slug>/.
+
+    Audit reports stay in build/validation/<slug>/ (already there).
+    The staging directory holds the SLA + PDF + PNGs for inspection.
+    """
+    STAGING_ROOT.mkdir(parents=True, exist_ok=True)
+    staging = STAGING_ROOT / slug
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True, exist_ok=True)
+    for name in _RENDERED_ARTIFACTS:
+        src = template_dir / name
+        if src.exists():
+            shutil.copy2(src, staging / name)
+    return staging
+
+
+def _purge_site_mirror(slug: str) -> bool:
+    """Delete the site/public mirror so the failed render can't ship."""
+    mirror = REPO / "site" / "public" / "templates" / slug
+    if mirror.exists():
+        shutil.rmtree(mirror)
+        return True
+    return False
+
+
+def _read_preflight(slug: str) -> tuple[bool, dict]:
+    p = REPO / "build" / "validation" / slug / "preflight.yml"
+    if not p.exists():
+        return True, {}
+    data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    return bool(data.get("ok", True)), data
+
+
+def _format_failure_directive(slug: str, preflight: dict, staging: Path) -> str:
+    """Render the LLM-facing failure message."""
+    failed = []
+    for name, audit in (preflight.get("audits") or {}).items():
+        if not audit.get("ok", True):
+            detail = audit.get("detail") or f"{audit.get('issues','?')} issue(s)"
+            failed.append(f"  - {name}: {detail}")
+    errors = preflight.get("errors") or {}
+    for k, v in errors.items():
+        failed.append(f"  - phase-error/{k}: {str(v)[:200]}")
+    if not failed:
+        failed.append("  - (preflight.yml::ok=false but no per-audit detail)")
+    return "\n".join([
+        "",
+        "=" * 72,
+        f"  RENDER REJECTED — preflight.yml::ok = false for {slug}",
+        "=" * 72,
+        "",
+        "  Failing audits:",
+        *failed,
+        "",
+        "  Failed-render artifacts moved to:  build/staging/{}/".format(slug),
+        "  templates/{}/ restored from pre-render snapshot.".format(slug),
+        "  site/public/{}/ mirror deleted.".format(slug),
+        "",
+        "  No promotable preview was produced. The render cannot ship.",
+        "",
+        "  REQUIRED NEXT ACTION (single command — repeat until exit 0):",
+        "",
+        f"    bin/tune-fix {slug}",
+        "",
+        "  bin/tune-fix dispatches deterministic playbooks for each failing",
+        "  audit (line_spacing_sim per frame, rotation reconciliation, etc.)",
+        "  and re-invokes this command. Loop continues until preflight is",
+        "  green (exit 0) or no playbook can advance further (exit 2).",
+        "",
+        "  When tune-fix exits 2 with 'ESCALATE' rows in its log, the",
+        "  remaining items need a tool extension or new playbook — author",
+        "  one in tools/playbooks/ and re-run, do NOT hand-patch build.py.",
+        "  Hand-patches without an audit signal regress on the next render.",
+        "=" * 72,
+        "",
+    ])
 
 
 def _sha256(path: Path) -> str:
@@ -143,6 +275,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="Render-only; skip audit chain (rare; debugging)")
     ap.add_argument("--check", action="store_true",
                     help="Verify artifacts are in sync; exit 1 if stale. Does not re-render.")
+    ap.add_argument("--no-transactional", action="store_true",
+                    help="Disable snapshot/restore on audit failure. "
+                         "ONLY use when intentionally inspecting failed renders. "
+                         "Audit failures STILL exit non-zero.")
     args = ap.parse_args(argv)
 
     template_dir = REPO / "templates" / args.slug
@@ -159,7 +295,33 @@ def main(argv: list[str] | None = None) -> int:
         print("[tune-render] all artifacts in sync", file=sys.stderr)
         return 0
 
-    return rerender(args.slug, with_audit=not args.no_audit)
+    # Transactional render: snapshot pre-render state. On preflight failure
+    # we restore from this snapshot so a red audit can't pollute templates/.
+    snap = None
+    if not args.no_audit and not args.no_transactional:
+        snap = _snapshot_template_dir(template_dir, args.slug)
+
+    rc = rerender(args.slug, with_audit=not args.no_audit)
+
+    if args.no_audit or args.no_transactional:
+        return rc
+
+    ok, preflight = _read_preflight(args.slug)
+    if ok:
+        # Green render: clean up snapshot.
+        if snap and snap.exists():
+            shutil.rmtree(snap)
+        return 0
+
+    # Red audit: move failed-render artifacts to staging, restore snapshot,
+    # purge site mirror, print directive.
+    staging = _move_rendered_to_staging(template_dir, args.slug)
+    if snap and snap.exists():
+        _restore_from_snapshot(template_dir, snap)
+        shutil.rmtree(snap)
+    _purge_site_mirror(args.slug)
+    sys.stderr.write(_format_failure_directive(args.slug, preflight, staging))
+    return 2
 
 
 if __name__ == "__main__":
