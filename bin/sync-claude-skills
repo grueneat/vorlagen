@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# sync-claude-skills — symlink workspace skills into ~/.claude/skills/
+#
+# Claude Code only auto-discovers skills from ~/.claude/skills/<name>/
+# SKILL.md — it does NOT walk the workspace's .claude/skills/ tree. This
+# script bridges the two: every subdirectory of /workspace/.claude/skills/
+# that contains a SKILL.md becomes a symlink under ~/.claude/skills/.
+#
+# Why symlinks (not copies): editing a skill in the repo immediately
+# flows through to the running Claude session — no container rebuild,
+# no re-sync.
+#
+# Run after adding a new skill to .claude/skills/ in the repo. The
+# Dockerfile.claude already does this at container build time for the
+# four currently-shipped skills (idml-scaffold, idml-tune, idml-import,
+# experiments); this script handles ad-hoc additions during a session.
+#
+# Usage:
+#   bin/sync-claude-skills           # add/update workspace skill symlinks
+#   bin/sync-claude-skills --status  # list which skills are wired
+#
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+WORKSPACE_SKILLS="$REPO_ROOT/.claude/skills"
+USER_SKILLS="$HOME/.claude/skills"
+
+if [ ! -d "$WORKSPACE_SKILLS" ]; then
+    echo "no workspace skills directory: $WORKSPACE_SKILLS" >&2
+    exit 1
+fi
+
+mkdir -p "$USER_SKILLS"
+
+if [ "${1:-}" = "--status" ]; then
+    echo "Workspace skills (will be wired into ~/.claude/skills/):"
+    for d in "$WORKSPACE_SKILLS"/*/; do
+        [ -d "$d" ] || continue
+        name=$(basename "$d")
+        if [ -f "$d/SKILL.md" ]; then
+            target="$USER_SKILLS/$name"
+            if [ -L "$target" ]; then
+                printf "  %-30s symlinked → %s\n" "$name" "$(readlink "$target")"
+            elif [ -e "$target" ]; then
+                printf "  %-30s SHADOWED (real dir at %s)\n" "$name" "$target"
+            else
+                printf "  %-30s not wired (run sync without --status)\n" "$name"
+            fi
+        fi
+    done
+    exit 0
+fi
+
+count=0
+for d in "$WORKSPACE_SKILLS"/*/; do
+    [ -d "$d" ] || continue
+    name=$(basename "$d")
+    [ -f "$d/SKILL.md" ] || continue
+    target="$USER_SKILLS/$name"
+    # If a real directory already exists at the target (e.g. base image's
+    # skill of the same name), skip rather than clobber.
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+        echo "skip: ~/.claude/skills/$name is a real directory — workspace skill will not be wired"
+        continue
+    fi
+    ln -sfn "$d" "$target"
+    printf "wired: %s → %s\n" "$name" "$d"
+    count=$((count + 1))
+done
+
+echo "OK — $count skill(s) wired"
