@@ -285,7 +285,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=8.0081,
         anname='u186',
         layer=0,
-        rotation_deg=-9,
+        # rotation_deg locked to u185's -18° per stoerer_circle_text_same_rotation
+        # constraint (mirrors PR #103 worked example). IDML group transform was
+        # dropped on the text child by the converter; this restores parity.
+        rotation_deg=-18,
         style='idml/normalparagraphstyle',
         runs=[Run(text='Störer', font='Gotham Narrow Ultra', fontsize=11, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '1'})],
         trail_attrs={'ALIGN': '1', 'LINESPMode': '1'},
@@ -1144,6 +1147,80 @@ def build_preview() -> Document:
 
 # Alias for audit_alignment.py / spec_check (they expect build_doc).
 build_doc = build_template
+# ---------------------------------------------------------------------------
+# CONSTRAINTS — geometric/style invariants checked by structural_check
+# ---------------------------------------------------------------------------
+# Mirror of zweigeteiltes-cover's PR #98-#104 corpus + additional invariants
+# designed TDD-style from this session's lessons (LESSONS_LEARNED L-007).
+# Each constraint is a small predicate over annames; structural_check
+# evaluates them and any drift exits non-zero with a clear message.
+from sla_lib.builder.constraints import (  # noqa: E402
+    same_x,
+    same_size,
+    same_rotation,
+    distance_y,
+    equal_gap,
+    inside,
+)
+
+
+# Vertical offset between an icon's top and its sibling text frame's top,
+# measured at the layout the social-icon column converged on in #104.
+_ICON_TEXT_Y_GAP = 1.6
+
+
+CONSTRAINTS = [
+    # ── Störer: rotation invariant ──────────────────────────────────────
+    # The magenta circle (u185) and "Störer" text (u186) form one design
+    # unit; they MUST share rotation. The IDML group transform is sometimes
+    # dropped on the text child, producing a circle at -18° with text at
+    # -9° (regression caught in #103).
+    same_rotation("u185", "u186", name="stoerer_circle_text_same_rotation"),
+
+    # ── Social-media icon column (left: Facebook, Instagram, TikTok) ────
+    # All three icons share x_mm (column alignment) and a uniform 5×5mm
+    # size; the row pitch matches the @text row pitch.
+    same_x("u3e7", "u3f0", "u3f5", name="social_left_column_x_aligned"),
+    same_size("u3e7", "u3f0", "u3f5", name="social_left_icons_uniform_size"),
+    # equal_gap measures EMPTY space between frames (gap = next.y -
+    # (prev.y + prev.h)), not the row pitch.
+    equal_gap("u3e7", "u3f0", "u3f5", axis="y", gap_mm=0.7,
+              tolerance_mm=0.4, name="social_left_row_pitch"),
+    # Each left-col icon sits ~1.6mm below its @text top (icon centre on
+    # the @ cap-mid). 0.4mm tolerance absorbs per-row text-frame y jitter.
+    distance_y("u3e7", "u40c", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_left_row1_y_offset"),
+    distance_y("u3f0", "u412", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_left_row2_y_offset"),
+    distance_y("u3f5", "u45b", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_left_row3_y_offset"),
+
+    # ── Social-media icon column (right: Bluesky, Website, Email) ───────
+    same_x("u477", "u4a2", "u4da", name="social_right_column_x_aligned"),
+    same_size("u477", "u4a2", "u4da", name="social_right_icons_uniform_size"),
+    equal_gap("u477", "u4a2", "u4da", axis="y", gap_mm=0.7,
+              tolerance_mm=0.4, name="social_right_row_pitch"),
+    distance_y("u477", "u47b", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_right_row1_y_offset"),
+    distance_y("u4a2", "u4a6", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_right_row2_y_offset"),
+    distance_y("u4da", "u4df", equals=_ICON_TEXT_Y_GAP,
+               tolerance_mm=0.4, name="social_right_row3_y_offset"),
+
+    # ── All 6 icons share a uniform size (cross-column invariant) ──────
+    same_size("u3e7", "u3f0", "u3f5", "u477", "u4a2", "u4da",
+              name="social_all_icons_uniform_size"),
+
+    # ── New TDD constraints from LESSONS_LEARNED ────────────────────────
+    # The Störer text (u186) MUST sit inside the Störer circle (u185).
+    # Catches the user-reported "Störer floats off-position" class of
+    # bug where rotation IS preserved but offset drifts.
+    inside("u186", "u185", tolerance_mm=2.0,
+           name="stoerer_text_inside_circle"),
+]
+
+
+
 
 
 def build(out_dir: str | Path = HERE) -> tuple[Path, Path]:
