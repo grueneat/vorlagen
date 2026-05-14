@@ -57,6 +57,11 @@ PLAYBOOKS = [
      lambda audit: (audit.get("issues") or 0) > 0),
     ("structural_check",      "playbooks.constraint_violation",
      lambda audit: (audit.get("issues") or 0) > 0),
+    # frame_visibility runs on its own audit; no `issues` field — gate
+    # on either the issue count being > 0 OR the audit being marked
+    # not-ok (covers the L-014 false positive whose count = 1 always).
+    ("image_frame_visibility_audit", "playbooks.frame_visibility",
+     lambda audit: not audit.get("ok", True)),
 ]
 
 

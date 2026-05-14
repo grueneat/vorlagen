@@ -195,9 +195,11 @@ def _apply_to_build_py(build_path: Path, anname: str,
     Returns True if a write occurred.
     """
     text = build_path.read_text()
+    # Match the WHOLE statement starting at the line's leading whitespace
+    # so marker comments insert as full lines, not mid-call.
     pat = re.compile(
-        r"(add\(TextFrame\(\s*\n(?:.|\n)*?anname='" + re.escape(anname) +
-        r"'(?:.|\n)*?\n\s*\)\)\n)", re.MULTILINE,
+        r"(^[ \t]*page\d+\.add\(TextFrame\(\s*\n(?:.|\n)*?anname='" + re.escape(anname) +
+        r"'(?:.|\n)*?\n[ \t]*\)\)\n)", re.MULTILINE,
     )
     m = pat.search(text)
     if not m:

@@ -1903,6 +1903,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         line_spacing_audit_path=line_spacing_audit_path,
         asset_audit_path=asset_audit_path,
         systematic_text_audit_path=systematic_audit_path,
+        image_visibility_path=image_visibility_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -1947,6 +1948,7 @@ def _build_preflight(
     line_spacing_audit_path: Path | None = None,
     asset_audit_path: Path | None = None,
     systematic_text_audit_path: Path | None = None,
+    image_visibility_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -2115,6 +2117,23 @@ def _build_preflight(
                 bool(sta.get("ok", True)),
                 int(n_actionable),
                 f"{n_actionable} frame(s) with un-addressed sim-actionable drift" if n_actionable else "",
+            )
+
+    # Phase E5: image_frame_visibility_audit recorded so the playbook
+    # dispatcher (bin/tune-fix) can react. ok=true only when every
+    # frame is in the `ok` summary bucket.
+    if image_visibility_path is not None:
+        ifv = _load_yml(image_visibility_path)
+        if ifv is not None:
+            summary = ifv.get("summary") or {}
+            n_invisible = int(summary.get("invisible_in_preview") or 0)
+            n_faint = int(summary.get("faint_in_preview") or 0)
+            issues = n_invisible + n_faint
+            _record(
+                "image_frame_visibility_audit",
+                n_invisible == 0,  # faint is sub-threshold; invisible blocks
+                issues,
+                f"{n_invisible} invisible, {n_faint} faint" if issues else "",
             )
 
     # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the

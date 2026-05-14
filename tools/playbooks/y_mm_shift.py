@@ -25,7 +25,7 @@ from statistics import mean
 
 import yaml
 
-UNIFORM_TOL_PT = 0.5
+UNIFORM_TOL_PT = 1.5  # was 0.5; loosened to catch typical FreeType jitter
 PT_PER_MM = 25.4 / 72.0
 
 
@@ -38,12 +38,17 @@ def _load_pixel_audit(slug: str, repo: Path) -> list[dict]:
 
 
 def _is_uniform_offset(per_line: list) -> bool:
-    """Return True when all per-line drifts are within UNIFORM_TOL_PT of each other."""
-    if not per_line or len(per_line) < 2:
+    """True when per-line drifts are uniform enough that mean shift helps.
+
+    Single-line frames count as "uniform" — the one drift IS the shift.
+    """
+    if not per_line:
         return False
     nums = [d for d in per_line if isinstance(d, (int, float))]
-    if len(nums) < 2:
+    if not nums:
         return False
+    if len(nums) == 1:
+        return True
     return (max(nums) - min(nums)) <= UNIFORM_TOL_PT
 
 
@@ -51,8 +56,8 @@ def _shift_frame_y_mm(build_path: Path, anname: str, dy_mm: float) -> bool:
     """Shift a TextFrame's y_mm by dy_mm. Returns True on write."""
     text = build_path.read_text()
     pat = re.compile(
-        r"(add\(TextFrame\(\s*\n(?:.|\n)*?anname='" + re.escape(anname) +
-        r"'(?:.|\n)*?\n\s*\)\)\n)", re.MULTILINE,
+        r"(^[ \t]*page\d+\.add\(TextFrame\(\s*\n(?:.|\n)*?anname='" + re.escape(anname) +
+        r"'(?:.|\n)*?\n[ \t]*\)\)\n)", re.MULTILINE,
     )
     m = pat.search(text)
     if not m:
