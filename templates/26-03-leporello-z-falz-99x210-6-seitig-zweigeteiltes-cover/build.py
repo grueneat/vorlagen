@@ -225,7 +225,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     # h_mm widened 11.6453mm→16.3815mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=18.96pt; IDML overflows silently)
     page0.add(TextFrame(
         x_mm=204.6586,
-        y_mm=151.5858,
+        y_mm=150.07,
         w_mm=86.84,
         h_mm=16.3815,
         anname='u155',
@@ -253,13 +253,17 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     # places cap-top ~3.6pt below frame-top for Gotham 38pt; Vollkorn
     # has slightly different ascender, but the per-frame approach
     # decouples that from line-to-line spacing.
-    # Per-frame y_mm calibrated empirically from baseline.pdf word positions.
-    # Gotham Narrow Ultra and Vollkorn Black Italic have different cap-height
-    # offsets in Scribus, so each frame's y_mm is adjusted to put its cap-top
-    # exactly at baseline.pdf's cap-top for that line.
+    # Per-frame y_mm calibrated from baseline.pdf PIXEL-LEVEL ink-top
+    # positions, NOT pdfplumber's word-top (which reports text-matrix Y
+    # that hides ascent-metric differences between Gotham Ultra and
+    # Vollkorn Italic — Scribus and InDesign use different ascent
+    # values for the same font file). pdfplumber said the lines aligned;
+    # the rasterised PNGs revealed line 1 was 3.84pt LOWER in preview
+    # than baseline and line 2 was 3.84pt HIGHER, visually merging.
+    # Iterate via: render → measure ink-top with PIL row-scan → adjust.
     page0.add(TextFrame(
         x_mm=204.6236,
-        y_mm=113.94,
+        y_mm=112.59,
         w_mm=71.6562,
         h_mm=16.0,
         anname='u16c',
@@ -270,7 +274,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     page0.add(TextFrame(
         x_mm=204.6236,
-        y_mm=123.24,
+        y_mm=124.76,
         w_mm=71.6562,
         h_mm=16.0,
         anname='u16c_l2',
@@ -281,7 +285,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     page0.add(TextFrame(
         x_mm=204.6236,
-        y_mm=138.02,
+        y_mm=138.87,
         w_mm=71.6562,
         h_mm=16.0,
         anname='u16c_l3',
@@ -341,22 +345,34 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         fill='Magenta',
     ))
-    # h_mm widened 17.9915mm→33.1611mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/inject: u1b0 split into 2 single-line frames (Gotham→Vollkorn mixed
+    # font). The original single-frame approach with LINESPMode=0+LINESP=21
+    # gave pdfplumber-correct positions but visually merged the lines because
+    # Scribus's Vollkorn Italic ascent metric differs from Gotham Ultra's,
+    # rendering "Headline." 5.28pt higher than InDesign's baseline. Split
+    # so each line's y_mm is positioned at its baseline ink-top.
+    # Calibrated via pixel scan of baseline.pdf @ 150dpi.
     page0.add(TextFrame(
         x_mm=16.8913,
-        y_mm=17.4,
+        y_mm=18.08,
         w_mm=65.2174,
-        h_mm=33.1611,
+        h_mm=15.0,
         anname='u1b0',
         layer=0,
         style='idml/normalparagraphstyle',
-        # P5/inject: LINESPMode=0 + LINESP=21 measured via tools/line_spacing_sim.py
-        # gives rendered gap 27.99pt vs baseline 27.66pt (drift +0.33). The +7pt
-        # offset of LINESPMode=0 in Scribus accounts for the second line's
-        # Vollkorn Black Italic font-metric extension. LINESPMode=1 (default)
-        # renders 34.54pt (drift +6.88). LINESPMode=2 + any LINESP renders 46pt.
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '21'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '21'}, separator='para'), Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
-        trail_attrs={'LINESPMode': '0', 'LINESP': '21'},
+        runs=[Run(text='Ich bin eine', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
+        trail_attrs={'LINESPMode': '1'},
+    ))
+    page0.add(TextFrame(
+        x_mm=16.8913,
+        y_mm=28.01,
+        w_mm=65.2174,
+        h_mm=15.0,
+        anname='u1b0_l2',
+        layer=0,
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
+        trail_attrs={'LINESPMode': '1'},
     ))
     # h_mm widened 150.9085mm→153.8111mm: Scribus clips lines when frame_h < 27 explicit lines × line height (leading=14.30pt; IDML overflows silently)
     page0.add(TextFrame(
@@ -370,18 +386,28 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
         trail_attrs={'ALIGN': '0'},
     ))
-    # h_mm widened 17.9915mm→33.1611mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/inject: u1e6 mirrors u1b0 — same split into 2 single-line frames.
     page0.add(TextFrame(
         x_mm=115.8913,
-        y_mm=17.4,
+        y_mm=18.08,
         w_mm=65.2174,
-        h_mm=33.1611,
+        h_mm=15.0,
         anname='u1e6',
         layer=0,
         style='idml/normalparagraphstyle',
-        # P5/inject: same as u1b0 — page-0 cover panel with Gotham→Vollkorn mix.
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '21'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '21'}, separator='para'), Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
-        trail_attrs={'LINESPMode': '0', 'LINESP': '21'},
+        runs=[Run(text='Ich bin eine', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
+        trail_attrs={'LINESPMode': '1'},
+    ))
+    page0.add(TextFrame(
+        x_mm=115.8913,
+        y_mm=28.01,
+        w_mm=65.2174,
+        h_mm=15.0,
+        anname='u1e6_l2',
+        layer=0,
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
+        trail_attrs={'LINESPMode': '1'},
     ))
     page0.add(TextFrame(
         x_mm=115.8913,
@@ -720,16 +746,31 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
-    # h_mm widened 7.6199mm→10.8843mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=12.00pt; IDML overflows silently)
+    # P5/inject: u376 "Headline in einem grünen Kasten" wraps into 2 lines
+    # in baseline.pdf with 14.4pt gap. LINESPMode=0+LINESP overrides didn't
+    # reproduce the gap (Scribus inflated it in unexpected ways). Split into
+    # 2 single-line frames at calibrated y_mm positions.
     page1.add(TextFrame(
         x_mm=21.6413,
-        y_mm=151.7968,
+        y_mm=151.01,
         w_mm=52.6804,
-        h_mm=10.8843,
+        h_mm=7.0,
         anname='u376',
         layer=0,
         style='idml/headline-in-gruenem-kasten',
-        runs=[Run(text='Headline in einem grünen Kasten ', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'})],
+        runs=[Run(text='Headline in einem grünen', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'})],
+        trail_attrs={'ALIGN': '1'},
+    ))
+    page1.add(TextFrame(
+        x_mm=21.6413,
+        y_mm=155.44,
+        w_mm=52.6804,
+        h_mm=7.0,
+        anname='u376_l2',
+        layer=0,
+        style='idml/headline-in-gruenem-kasten',
+        runs=[Run(text='Kasten', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'})],
+        trail_attrs={'ALIGN': '1'},
     ))
     page1.add(Polygon(
         x_mm=-15.75,

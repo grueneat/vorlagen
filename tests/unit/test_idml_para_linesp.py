@@ -51,21 +51,21 @@ class IntermediateParaLinespTest(unittest.TestCase):
                 return rows
         return None
 
-    def test_u1b0_para_trail_consistent(self):
-        """u1b0 'Ich bin eine ↵ Headline.' — under build.py P5/inject
-        override, both <para> and <trail> emit LINESPMode=0 + LINESP=21
-        which renders at 27.99pt vs baseline 27.66pt (drift +0.33pt,
-        empirically determined via tools/line_spacing_sim.py). The
-        important invariant is CONSISTENCY between <para> and <trail>
-        — both elements MUST agree on (mode, linesp)."""
-        rows = self._para_trail_for("u1b0")
-        self.assertIsNotNone(rows, "u1b0 frame not in SLA")
-        self.assertGreaterEqual(len(rows), 2)
-        # All rows agree on mode and linesp
-        modes = {r[1] for r in rows}
-        linesps = {r[2] for r in rows}
-        self.assertEqual(len(modes), 1, f"inconsistent modes: {modes}")
-        self.assertEqual(len(linesps), 1, f"inconsistent linesps: {linesps}")
+    def test_u1b0_split_into_two_single_line_frames(self):
+        """u1b0 was a 2-line frame with mixed font (Gotham→Vollkorn);
+        the P5/inject override splits it into u1b0 + u1b0_l2 single-
+        line frames at calibrated y_mm positions because Scribus's
+        per-font ascent metric differs from InDesign's for the same
+        font file, producing visible vertical misalignment under
+        any LINESPMode/LINESP combination. Worked example:
+        templates/26-03-leporello-…/build.py u1b0/u1b0_l2 + the
+        line_spacing_pixel_audit tool."""
+        for anname in ("u1b0", "u1b0_l2"):
+            rows = self._para_trail_for(anname)
+            self.assertIsNotNone(rows, f"{anname} missing in SLA")
+            # Each split frame has 1 line and emits only a <trail>
+            self.assertGreaterEqual(len(rows), 1,
+                f"{anname} missing <trail>; got {rows}")
 
     def test_u2d5_para_trail_consistent(self):
         """u2d5 'Ich bin auch / eine Headline.' — under build.py

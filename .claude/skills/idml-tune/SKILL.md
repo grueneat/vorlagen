@@ -36,18 +36,25 @@ here** — see Forbidden paths below.
 - `tools/reconcile_build_py.py <slug>` — materializes `inject.yml` into
   `build.py`. Run before each iteration's inventory extract so the
   walker sees the canonical reconciled file.
-- `tools/line_spacing_full_audit.py` — cross-source per-paragraph
-  table (IDML CSR `<Properties><Leading>` → build.py `paragraph_attrs`
-  → SLA per-`<para>`/`<trail>` → preview.pdf). Use
-  `--probe <anname>` for direct word-position measurement of one
-  frame — bypass the clustering-based heuristics that mis-merge
-  adjacent-frame text.
+- `tools/line_spacing_pixel_audit.py` — **the authoritative
+  per-frame line-spacing measurement.** Renders preview.pdf and
+  baseline.pdf at 150 dpi, scans each TextFrame's bbox for ink-top
+  pixels, reports per-line drift in points. **Use this before
+  trusting any pdfplumber-based number** — pdfplumber reports the
+  text-matrix Y the renderer was told to write, NOT where the ink
+  actually ends up; the difference is per-font-metric and can be
+  >5pt (Vollkorn 23pt: pdfplumber said 0pt drift, pixel said
+  -5.28pt). `--probe <anname>` for one-frame JSON output.
+- `tools/line_spacing_full_audit.py` — cross-source IDML→build.py→
+  SLA table. Use to identify ROOT CAUSE (which layer carries the
+  wrong value) once pixel audit confirms a drift exists. Its own
+  `--probe <anname>` does word-position via pdfplumber and is
+  useful for the text-matrix Y check (informational only).
 - `tools/line_spacing_sim.py` — **the empirical leading-value
   discovery tool.** Sweeps `(LINESPMode, LINESP)` candidates,
   renders each via xvfb-run+Scribus, measures the resulting
-  baseline-to-baseline gap. Required for tuning sub-metric leadings
-  because Scribus rendering is not predictable from authored
-  values (see `docs/scribus-sla-attribute-semantics.md` §LINESPMode).
+  baseline-to-baseline gap (pdfplumber-based). For high-fidelity
+  empirical search, combine with manual pixel scans.
 - `tools/sop_lint.py` — banned-phrase guard. Still runs on Stage 2 output.
 - `tools/lint_inject_consistency.py` — inject.yml ↔ build.py 1:1 lint.
 
@@ -168,18 +175,36 @@ When `line_spacing_audit` flags drifts, follow this loop. The clustered
 "line-spacing drift" stat in preflight is a SUMMARY signal; never trust
 it for a specific frame.
 
-### 1. Direct measurement is the only reliable per-frame number
+### 1. Direct PIXEL-LEVEL measurement is the only reliable per-frame number
+
+pdfplumber-based measurements (including the audit's clustering AND the
+`--probe` mode in `line_spacing_full_audit.py`) report the text-matrix Y
+the renderer was told to write. The ACTUAL rendered ink position depends
+on per-font ascent metrics — InDesign and Scribus produce different ink
+positions for the SAME text-matrix Y on Vollkorn Italic and other deep-
+metric fonts. Two PDFs can have identical pdfplumber positions and look
+visibly different (issue #40 follow-up: u1b0 pdfplumber 0pt drift but
+pixel scan revealed -5.28pt drift on line 2).
+
+**Always start with the pixel audit:**
 
 ```
-python3 tools/line_spacing_full_audit.py --slug <slug> --probe <anname>
+python3 tools/line_spacing_pixel_audit.py \
+    --slug <slug> \
+    --out-yaml build/validation/<slug>/line_spacing_pixel_audit.yml \
+    --out-md  build/validation/<slug>/line_spacing_pixel_audit.md
+
+# Or for one frame:
+python3 tools/line_spacing_pixel_audit.py --slug <slug> --probe <anname>
 ```
 
-Reports per-line `top` positions, consecutive gaps, baseline vs preview
-medians. Bypasses clustering. If the gap is wrong by ≥0.5pt, proceed.
+Reports per-line ink-top in pt, per-line drift vs baseline, and
+CUMULATIVE drift `(last_top - first_top)` in preview vs baseline. For
+body text with 11 lines, per-line drift of 0.1pt accumulates to 1pt+;
+the pixel audit reports both per-line and cumulative.
 
-Also measure CUMULATIVE drift: `(last_line_top - first_line_top)` in
-preview vs baseline. For body text, per-line drift of 0.1pt accumulates
-over 11 lines to 1pt+ — invisible in per-gap stats.
+If drift is ≥ 1pt on any line, proceed to root-cause analysis with
+`line_spacing_full_audit.py` (which shows IDML, build.py, SLA values).
 
 ### 2. Empirical (LINESPMode, LINESP) discovery via the simulator
 

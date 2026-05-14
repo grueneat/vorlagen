@@ -1093,6 +1093,59 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E4: line_spacing_pixel_audit — pixel-level ink-top measurement.
+    # The authoritative per-frame drift signal. Bypasses pdfplumber's text-
+    # matrix Y (which hides per-font-metric differences between InDesign
+    # and Scribus rendering of the same font file). Issue #40 follow-up:
+    # pdfplumber matches were misleading me into declaring fixes that
+    # rendered visibly wrong; pixel scan caught the actual drift.
+    line_spacing_pixel_path = out_dir / "line_spacing_pixel_audit.yml"
+    line_spacing_pixel_md = out_dir / "line_spacing_pixel_audit.md"
+    if preview_pdf.exists() and baseline.exists() and build_py.exists():
+        try:
+            from line_spacing_pixel_audit import main as _lspa_main
+            templates_dir = Path("/workspace/templates")
+            _lspa_main([
+                "--slug", tid,
+                "--templates-dir", str(templates_dir),
+                "--dpi", "150",
+                "--out-yaml", str(line_spacing_pixel_path),
+                "--out-md", str(line_spacing_pixel_md),
+            ])
+            try:
+                lspa_data = yaml.safe_load(line_spacing_pixel_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                lspa_data = {}
+            summary = lspa_data.get("summary") or {}
+            n_major = summary.get("major") or 0
+            n_minor = summary.get("minor") or 0
+            if n_major:
+                issue_parts.append(
+                    f"{n_major} frame(s) with pixel-level line-spacing major drift (>3pt)"
+                )
+                print(
+                    f"[{tid}] line_spacing_pixel_audit: {n_major} major (>3pt), "
+                    f"{n_minor} minor (1-3pt) → REVIEW",
+                    file=sys.stderr,
+                )
+            elif n_minor:
+                print(
+                    f"[{tid}] line_spacing_pixel_audit: {n_minor} minor drift (1-3pt)",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] line_spacing_pixel_audit: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit E4 (line_spacing_pixel_audit) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit E4 (line_spacing_pixel_audit): skipped",
+            file=sys.stderr,
+        )
+
     # Phase E: per-element drift attribution.
     # Aggregates diff_bboxes.json into a per-slot contribution table so the next
     # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
