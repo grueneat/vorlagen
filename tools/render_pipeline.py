@@ -684,6 +684,25 @@ def _orchestrate_template(tdir: Path, args) -> int:
 # main() — CLI entry point
 # ---------------------------------------------------------------------------
 
+def _record_phase_error(
+    phase_errors: dict[str, str],
+    phase_key: str,
+    label: str,
+    exc: BaseException,
+    tid: str,
+) -> None:
+    """Record an audit-phase exception in BOTH the human log AND the
+    structured `phase_errors` dict that gets surfaced in preflight.yml.
+
+    Without this dict, an exception during e.g. line_spacing_pixel_audit
+    only prints to stderr — the rollup looks 'clean' to anyone reading
+    preflight.yml, masking the failure. Audit-reliability review item 2.
+    """
+    msg = f"{type(exc).__name__}: {exc}"
+    print(f"[{tid}] audit {label} error: {msg}", file=sys.stderr)
+    phase_errors[phase_key] = msg
+
+
 def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     """Run A1 (idml_inventory) + A2 (baseline_text_audit) + A3 (baseline_image_audit).
 
@@ -692,12 +711,18 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
 
     Audit failure does NOT block the render — just surfaces the reports.
     When --audit-strict is set the caller uses the issue count to set exit code.
+
+    Per-phase exceptions are captured into ``phase_errors`` (audit-
+    reliability review item 2) so the final preflight.yml carries an
+    `errors:` section instead of silently dropping the failure on the
+    terminal log.
     """
     tid = meta["id"]
     out_dir = ROOT / "build" / "validation" / tid
     out_dir.mkdir(parents=True, exist_ok=True)
 
     issue_parts: list[str] = []
+    phase_errors: dict[str, str] = {}
 
     # A1: IDML inventory (requires an IDML source)
     idml_source = None
@@ -755,9 +780,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                 else:
                     print(f"[{tid}] asset_extraction_audit: OK")
             except Exception as exc:
-                print(
-                    f"[{tid}] asset_extraction_audit error: {exc}",
-                    file=sys.stderr,
+                _record_phase_error(
+                    phase_errors, "asset_extraction", "asset_extraction_audit",
+                    exc, tid,
                 )
         else:
             print(
@@ -817,7 +842,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             if dropped:
                 issue_parts.append(f"{dropped} dropped element(s)")
         except Exception as exc:
-            print(f"[{tid}] audit A1 (inventory) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "inventory", "A1 (inventory)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit A1 (inventory): skipped (no IDML source found)",
@@ -840,7 +867,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             if unmatched:
                 issue_parts.append(f"{unmatched} unmatched text line(s)")
         except Exception as exc:
-            print(f"[{tid}] audit A2 (text) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "text_audit", "A2 (text)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit A2 (text): skipped (no baseline.pdf or build.py)",
@@ -865,7 +894,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             if strip_count:
                 issue_parts.append(f"{strip_count} composite-strip issue(s)")
         except Exception as exc:
-            print(f"[{tid}] audit A3 (image) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "image_audit", "A3 (image)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit A3 (image): skipped (no baseline.pdf or build.py)",
@@ -892,7 +923,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] font_audit: OK")
         except Exception as exc:
-            print(f"[{tid}] audit D6 (font_audit) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "font_audit", "D6 (font_audit)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit D6 (font_audit): skipped (no preview.pdf or baseline.pdf)",
@@ -920,7 +953,10 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] text_render_audit: OK")
         except Exception as exc:
-            print(f"[{tid}] audit D7 (text_render_audit) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "text_render_audit",
+                "D7 (text_render_audit)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit D7 (text_render_audit): skipped (no preview.pdf or baseline.pdf)",
@@ -949,7 +985,10 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] text_position_audit: OK")
         except Exception as exc:
-            print(f"[{tid}] audit D8 (text_position_audit) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "text_position_audit",
+                "D8 (text_position_audit)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit D8 (text_position_audit): skipped (no preview.pdf or baseline.pdf)",
@@ -1018,7 +1057,10 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                     f"{eed['preview_pdfplumber']} preview words)"
                 )
         except Exception as exc:
-            print(f"[{tid}] audit F (run_style_audit) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "run_style_audit",
+                "F (run_style_audit)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit F (run_style_audit): skipped (no preview.pdf or baseline.pdf)",
@@ -1055,9 +1097,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] line_spacing_audit (E2, informational): OK")
         except Exception as exc:
-            print(
-                f"[{tid}] audit E2 (line_spacing_audit) error: {exc}",
-                file=sys.stderr,
+            _record_phase_error(
+                phase_errors, "line_spacing_audit",
+                "E2 (line_spacing_audit)", exc, tid,
             )
     else:
         print(
@@ -1111,9 +1153,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] line_spacing_full_audit: OK")
         except Exception as exc:
-            print(
-                f"[{tid}] audit E3 (line_spacing_full_audit) error: {exc}",
-                file=sys.stderr,
+            _record_phase_error(
+                phase_errors, "line_spacing_full_audit",
+                "E3 (line_spacing_full_audit)", exc, tid,
             )
     else:
         print(
@@ -1164,9 +1206,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] line_spacing_pixel_audit: OK")
         except Exception as exc:
-            print(
-                f"[{tid}] audit E4 (line_spacing_pixel_audit) error: {exc}",
-                file=sys.stderr,
+            _record_phase_error(
+                phase_errors, "line_spacing_pixel_audit",
+                "E4 (line_spacing_pixel_audit)", exc, tid,
             )
     else:
         print(
@@ -1219,9 +1261,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] image_frame_visibility_audit: OK")
         except Exception as exc:
-            print(
-                f"[{tid}] audit E5 (image_frame_visibility_audit) error: {exc}",
-                file=sys.stderr,
+            _record_phase_error(
+                phase_errors, "image_frame_visibility_audit",
+                "E5 (image_frame_visibility_audit)", exc, tid,
             )
     else:
         print(
@@ -1273,9 +1315,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] per_region_regression: OK")
         except Exception as exc:
-            print(
-                f"[{tid}] audit E6 (per_region_regression) error: {exc}",
-                file=sys.stderr,
+            _record_phase_error(
+                phase_errors, "per_region_regression",
+                "E6 (per_region_regression)", exc, tid,
             )
     else:
         print(
@@ -1310,7 +1352,10 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                         f"({_leader['pct_of_page_total_drift']:.1f}pp of page drift)"
                     )
         except Exception as exc:
-            print(f"[{tid}] audit E (per_element_drift) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "per_element_drift",
+                "E (per_element_drift)", exc, tid,
+            )
 
     # Phase G: region_color_audit — per-region ICC-vs-fill-bug classification.
     # Runs when both preview.pdf and baseline.pdf exist. Diagnostic only (never
@@ -1332,7 +1377,10 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                 f"— pattern: {_rca_result['pattern']}"
             )
         except Exception as exc:
-            print(f"[{tid}] audit G (region_color_audit) error: {exc}", file=sys.stderr)
+            _record_phase_error(
+                phase_errors, "region_color_audit",
+                "G (region_color_audit)", exc, tid,
+            )
     else:
         print(
             f"[{tid}] audit G (region_color_audit): skipped "
@@ -1379,9 +1427,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             else:
                 print(f"[{tid}] visual_diff_regions: OK")
         except Exception as exc:
-            print(
-                f"[{tid}] audit H (visual_diff_regions) error: {exc}",
-                file=sys.stderr,
+            _record_phase_error(
+                phase_errors, "visual_diff_regions",
+                "H (visual_diff_regions)", exc, tid,
             )
     else:
         print(
@@ -1392,6 +1440,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
 
     # Issue #37 P1 task 6: aggregated preflight.yml — one canonical
     # "are all sub-audits ok?" file that bin/render-gallery --audit hard-fails on.
+    # Audit-reliability review item 2: phase_errors flows through so each
+    # exception is captured in preflight.yml::errors instead of vanishing
+    # into stderr only.
     preflight = _build_preflight(
         out_dir, tid,
         inventory_path=inventory_path,
@@ -1405,6 +1456,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         visual_diff_regions_path=vd_region_path,
         line_spacing_audit_path=line_spacing_audit_path,
         asset_audit_path=asset_audit_path,
+        phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
     preflight_path.write_text(
@@ -1419,6 +1471,11 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     if not preflight["ok"]:
         n_failed = sum(1 for a in preflight["audits"].values() if not a["ok"])
         issue_parts.append(f"preflight FAILED ({n_failed} sub-audit(s))")
+    if phase_errors:
+        issue_parts.append(
+            f"{len(phase_errors)} audit phase(s) errored: "
+            f"{', '.join(sorted(phase_errors.keys()))}"
+        )
 
     if issue_parts:
         summary = f"[{tid}] audit: {', '.join(issue_parts)} → REVIEW REQUIRED"
@@ -1442,17 +1499,19 @@ def _build_preflight(
     visual_diff_regions_path: Path | None = None,
     line_spacing_audit_path: Path | None = None,
     asset_audit_path: Path | None = None,
+    phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
 
     Shape::
         {
           template: <slug>,
-          ok: bool (AND of every sub-audit's ok),
+          ok: bool (AND of every sub-audit's ok AND no phase errors),
           audits: {
             <name>: {ok: bool, issues: int, detail: str},
             ...
           },
+          errors: {<phase_key>: <exception_str>, ...},
           hot_issues: [
             {audit: <name>, issues: int, message: str},
             ...  # top 5 by issues count, failing only
@@ -1466,6 +1525,12 @@ def _build_preflight(
     Diagnostic-only audits (``per_element_drift``, ``region_color_audit``)
     are always recorded with ``ok=True``; they surface in ``hot_issues`` only
     if explicitly opted-in by a future schema bump.
+
+    Audit-reliability review item 2: ``phase_errors`` carries per-phase
+    exception strings captured by ``_record_phase_error`` during
+    ``_run_audit``. Non-empty ``phase_errors`` always sets ``ok=False`` and
+    surfaces in the output ``errors`` dict so an exception cannot silently
+    leave preflight green.
     """
     def _load_yml(p: Path) -> dict | None:
         if not p.exists():
@@ -1613,7 +1678,8 @@ def _build_preflight(
                 detail,
             )
 
-    preflight_ok = all(a["ok"] for a in audits_summary.values())
+    errors = dict(phase_errors or {})
+    preflight_ok = all(a["ok"] for a in audits_summary.values()) and not errors
 
     # Hot-issues list: top 5 failing audits by issue count.
     hot = sorted(
@@ -1629,11 +1695,20 @@ def _build_preflight(
         }
         for name, info in hot
     ]
+    # Each errored phase becomes its own top-priority hot issue, so the
+    # rollup surfaces "audit X errored" alongside the audit-issue table.
+    for phase_key, exc_msg in sorted(errors.items()):
+        hot_issues.insert(0, {
+            "audit": phase_key,
+            "issues": 1,
+            "message": f"phase errored: {exc_msg}",
+        })
 
     return {
         "template": tid,
         "ok": preflight_ok,
         "audits": audits_summary,
+        "errors": errors,
         "hot_issues": hot_issues,
     }
 

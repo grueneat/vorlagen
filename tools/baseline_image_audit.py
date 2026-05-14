@@ -366,9 +366,18 @@ def run_image_audit(
             "ok": raster_ok,
         }
         if not raster_ok:
+            # Audit-reliability item 3: this audit only counts raw raster
+            # image references — it cannot tell whether the IMAGE renders
+            # visibly. A "6 raster image(s) extra in build.py" message
+            # gives the misleading impression of a converter bug when in
+            # fact the new image_frame_visibility_audit (E5) is the right
+            # signal for "are the frames visible?". Rephrase to neutral
+            # language pointing readers to E5.
             raster_entry["hint"] = (
-                f"{abs(baseline_raster - build_raster)} raster image(s) "
-                + ("missing from build.py" if baseline_raster > build_raster else "extra in build.py")
+                f"image count differs (baseline={baseline_raster}, "
+                f"build.py={build_raster}); informational only — see "
+                "image_frame_visibility_audit (E5) for per-frame "
+                "visibility, the authoritative signal"
             )
 
         vector_entry: dict = {

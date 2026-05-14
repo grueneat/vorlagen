@@ -220,3 +220,64 @@ def test_non_informational_line_spacing_audit_still_fails_preflight(tmp_path):
     )
     assert result["ok"] is False
     assert result["audits"]["line_spacing_audit"]["ok"] is False
+
+
+# ---------------------------------------------------------------------------
+# Audit-reliability review: phase_errors visibility in preflight
+# ---------------------------------------------------------------------------
+
+
+def test_phase_errors_section_surfaces_in_preflight(tmp_path):
+    """A captured phase error must appear in preflight.yml::errors and
+    force ok=False so a silent exception cannot leave the rollup green."""
+    _all_ok_payloads(tmp_path)
+    result = _build_preflight(
+        tmp_path, "tpl",
+        **_paths(tmp_path),
+        phase_errors={
+            "line_spacing_pixel_audit": "ValueError: bad bbox on u347",
+        },
+    )
+    assert result["ok"] is False
+    assert "errors" in result
+    assert result["errors"] == {
+        "line_spacing_pixel_audit": "ValueError: bad bbox on u347",
+    }
+    # hot_issues includes the errored phase at the top.
+    assert any(
+        h["audit"] == "line_spacing_pixel_audit"
+        and "phase errored" in h["message"]
+        for h in result["hot_issues"]
+    )
+
+
+def test_no_phase_errors_section_when_empty(tmp_path):
+    """When no errors are passed, the errors dict is empty (not absent)
+    so consumers can rely on it always being present."""
+    _all_ok_payloads(tmp_path)
+    result = _build_preflight(tmp_path, "tpl", **_paths(tmp_path))
+    assert result["ok"] is True
+    assert result["errors"] == {}
+
+
+def test_multiple_phase_errors_recorded(tmp_path):
+    """Each errored phase becomes its own hot_issue entry."""
+    _all_ok_payloads(tmp_path)
+    result = _build_preflight(
+        tmp_path, "tpl",
+        **_paths(tmp_path),
+        phase_errors={
+            "line_spacing_pixel_audit": "FileNotFoundError: preview.pdf",
+            "per_region_regression": "TypeError: history corrupt",
+        },
+    )
+    assert result["ok"] is False
+    assert len(result["errors"]) == 2
+    error_audits = {
+        h["audit"] for h in result["hot_issues"]
+        if "phase errored" in h["message"]
+    }
+    assert error_audits == {
+        "line_spacing_pixel_audit",
+        "per_region_regression",
+    }
