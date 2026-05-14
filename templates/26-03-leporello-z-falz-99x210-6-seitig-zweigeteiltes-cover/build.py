@@ -34,6 +34,26 @@ from sla_lib.builder import (  # noqa: E402
     pack_inline_image,
 )
 
+_BRAND_LOGOS = HERE.parents[1] / "shared" / "logos"
+
+
+def _inline_brand_icon(filename: str) -> tuple[str, str]:
+    """Load ``shared/logos/<filename>`` and pack inline for SLA embed.
+
+    Returns ``(inline_image_data, inline_image_ext)``. Use when an
+    ImageFrame's asset is brand-locked and lives in the central
+    ``shared/logos/`` library — the bytes are embedded inline in
+    template.sla so the user's download is self-contained.
+
+    Pairs with ``tools/split_social_media_icons.py`` which produces
+    canonical per-icon PNGs from the brand-source composite.
+    """
+    p = _BRAND_LOGOS / filename
+    if not p.exists():
+        raise FileNotFoundError(f"brand-logo asset missing: {p}")
+    return pack_inline_image(p.read_bytes(), "png")
+
+
 INJECT_MAP: dict[str, str] = {
     # anname → shared/sample-images/manifest.yml library ID.
     # Used by build_preview() (gallery-only template-preview.sla) so the
@@ -878,13 +898,16 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u3d1',
         layer=0,
     ))
-    # Social-media icon column (#issue/103 follow-up). The IDML emitted
-    # 3.35×3.30mm frames, but InDesign's baseline.pdf renders the icon
-    # glyphs at ~5mm — InDesign drew the AI artwork past the rect
-    # bounds. To match the baseline's visual size + vertical alignment
-    # with the @text baseline, the per-icon frames here are 5×5mm and
-    # vertically shifted by +2mm so the icon centre lands on the @
-    # cap-mid rather than ~3mm above it.
+    # Social-media icon column (#issue/103-#106 follow-up). The IDML
+    # emitted 3.35×3.30mm frames, but InDesign's baseline.pdf renders
+    # the icon glyphs at ~5mm — InDesign drew the AI artwork past the
+    # rect bounds. Frames here are 5×5mm and vertically shifted +1.6mm
+    # so the icon centre lands on the @ cap-mid. Each icon is loaded
+    # from the central brand library (``shared/logos/``) — the per-icon
+    # PNGs there are produced by ``tools/split_social_media_icons.py``
+    # from the brand-source composite, so re-splitting auto-flows
+    # through to every template that uses these icons.
+    _fb_data, _fb_ext = _inline_brand_icon("social-media-icon-facebook-weiss.png")
     page1.add(ImageFrame(
         x_mm=210.90,
         y_mm=187.6,
@@ -892,7 +915,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=5.0,
         anname='u3e7',
         layer=0,
-        image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-facebook.png',
+        inline_image_data=_fb_data,
+        inline_image_ext=_fb_ext,
         scale_type=0,
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
@@ -906,6 +930,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
+    _ig_data, _ig_ext = _inline_brand_icon("social-media-icon-instagram-weiss.png")
     page1.add(ImageFrame(
         x_mm=210.90,
         y_mm=193.25,
@@ -913,7 +938,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=5.0,
         anname='u3f0',
         layer=0,
-        image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-instagram.png',
+        inline_image_data=_ig_data,
+        inline_image_ext=_ig_ext,
         scale_type=0,
     ))
     # h_mm widened 3.2017mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
@@ -927,6 +953,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
+    _tt_data, _tt_ext = _inline_brand_icon("social-media-icon-tiktok-weiss.png")
     page1.add(ImageFrame(
         x_mm=210.90,
         y_mm=198.95,
@@ -934,7 +961,8 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         h_mm=5.0,
         anname='u3f5',
         layer=0,
-        image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/social-media-icon-tiktok.png',
+        inline_image_data=_tt_data,
+        inline_image_ext=_tt_ext,
         scale_type=0,
     ))
     # h_mm widened 3.3522mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
