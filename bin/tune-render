@@ -66,6 +66,9 @@ def _snapshot_template_dir(template_dir: Path, slug: str) -> Path:
     """Snapshot pre-render state to build/snapshot/<slug>-pre/.
 
     Returns the snapshot path. Idempotent — overwrites prior snapshot.
+    Snapshots both templates/<slug>/ rendered artifacts AND the
+    site/public/templates/<slug>/ mirror so a failed render can be
+    fully rolled back without losing the previously-committed state.
     """
     SNAPSHOT_ROOT.mkdir(parents=True, exist_ok=True)
     snap = SNAPSHOT_ROOT / f"{slug}-pre"
@@ -76,21 +79,31 @@ def _snapshot_template_dir(template_dir: Path, slug: str) -> Path:
         src = template_dir / name
         if src.exists():
             shutil.copy2(src, snap / name)
+    # Snapshot the public mirror too
+    public_src = REPO / "site" / "public" / "templates" / slug
+    if public_src.exists():
+        shutil.copytree(public_src, snap / "_public_mirror")
     return snap
 
 
-def _restore_from_snapshot(template_dir: Path, snap: Path) -> None:
-    """Restore the pre-render snapshot back into templates/<slug>/."""
+def _restore_from_snapshot(template_dir: Path, snap: Path, slug: str) -> None:
+    """Restore the pre-render snapshot back into templates/<slug>/ + site/public/."""
     for name in _RENDERED_ARTIFACTS:
         src = snap / name
         dst = template_dir / name
         if src.exists():
             shutil.copy2(src, dst)
         elif dst.exists():
-            # Pre-render didn't have this file (e.g. template-preview.sla
-            # introduced this run); remove the new file too so the
-            # template state matches pre-render exactly.
+            # Pre-render didn't have this file; remove the new file
+            # so the template state matches pre-render exactly.
             dst.unlink()
+    # Restore the public mirror to its pre-render state
+    public_dst = REPO / "site" / "public" / "templates" / slug
+    snap_public = snap / "_public_mirror"
+    if public_dst.exists():
+        shutil.rmtree(public_dst)
+    if snap_public.exists():
+        shutil.copytree(snap_public, public_dst)
 
 
 def _move_rendered_to_staging(template_dir: Path, slug: str) -> Path:
@@ -112,11 +125,12 @@ def _move_rendered_to_staging(template_dir: Path, slug: str) -> Path:
 
 
 def _purge_site_mirror(slug: str) -> bool:
-    """Delete the site/public mirror so the failed render can't ship."""
-    mirror = REPO / "site" / "public" / "templates" / slug
-    if mirror.exists():
-        shutil.rmtree(mirror)
-        return True
+    """Deprecated — restore_from_snapshot handles mirror state.
+
+    Kept for backwards-compat in case future tune-render variants
+    call it directly. With snapshot-aware restore, the mirror is
+    rolled back to its pre-render state, not deleted outright.
+    """
     return False
 
 
@@ -151,7 +165,7 @@ def _format_failure_directive(slug: str, preflight: dict, staging: Path) -> str:
         "",
         "  Failed-render artifacts moved to:  build/staging/{}/".format(slug),
         "  templates/{}/ restored from pre-render snapshot.".format(slug),
-        "  site/public/{}/ mirror deleted.".format(slug),
+        "  site/public/templates/{}/ rolled back to pre-render state.".format(slug),
         "",
         "  No promotable preview was produced. The render cannot ship.",
         "",
@@ -313,13 +327,12 @@ def main(argv: list[str] | None = None) -> int:
             shutil.rmtree(snap)
         return 0
 
-    # Red audit: move failed-render artifacts to staging, restore snapshot,
-    # purge site mirror, print directive.
+    # Red audit: move failed-render artifacts to staging, restore snapshot
+    # (which also rolls back the site/public mirror), print directive.
     staging = _move_rendered_to_staging(template_dir, args.slug)
     if snap and snap.exists():
-        _restore_from_snapshot(template_dir, snap)
+        _restore_from_snapshot(template_dir, snap, args.slug)
         shutil.rmtree(snap)
-    _purge_site_mirror(args.slug)
     sys.stderr.write(_format_failure_directive(args.slug, preflight, staging))
     return 2
 

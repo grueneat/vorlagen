@@ -46,6 +46,13 @@ sys.path.insert(0, str(REPO / "tools"))
 
 PLAYBOOKS = [
     # (audit_name, playbook_module, predicate)
+    # NOTE: order matters when multiple playbooks consume the same audit
+    # signal. y_mm_shift runs BEFORE line_spacing because uniform-offset
+    # frames (y-anchor drift) are misclassified as line-spacing drift in
+    # systematic_text_audit and the line_spacing sim returns no measurable
+    # gap on them.
+    ("systematic_text_audit", "playbooks.y_mm_shift",
+     lambda audit: (audit.get("issues") or 0) > 0),
     ("systematic_text_audit", "playbooks.line_spacing",
      lambda audit: (audit.get("issues") or 0) > 0),
     ("structural_check",      "playbooks.constraint_violation",

@@ -139,9 +139,12 @@ def _sim_candidates(authored_lp: float | None, current_mode: str | None,
         for delta in (0, -0.5, -1, -1.5, +0.5, +1, +1.5):
             add(f"0:{round(authored_lp + delta, 2)}")
     if fontsize_pt is not None:
-        for ratio in (0.9, 1.0, 1.1, 1.2, 0.85, 1.45):
+        # 0.89 catches the InDesign "auto" ratio for Vollkorn at 23pt
+        # (20.48pt, within 0.01 of 23×0.89). 0.85 is the Quickguide
+        # "tight" headline ratio. 1.0/1.1/1.2/1.45 cover body-text bands.
+        for ratio in (0.9, 1.0, 1.1, 1.2, 0.85, 1.45, 0.89, 0.91):
             add(f"0:{round(fontsize_pt * ratio, 2)}")
-    return cands[:12]
+    return cands[:14]
 
 
 def _run_sim(slug: str, anname: str, candidates: list[str],
@@ -184,6 +187,11 @@ def _apply_to_build_py(build_path: Path, anname: str,
                        sim_drift: float) -> bool:
     """Inject paragraph_attrs LINESPMode/LINESP into the frame's runs.
 
+    Handles three frame shapes:
+      1. paragraph_attrs already has 'LINESPMode': '<x>' → replace
+      2. paragraph_attrs exists but lacks LINESPMode → insert key
+      3. No paragraph_attrs at all → insert one alongside trail_attrs
+
     Returns True if a write occurred.
     """
     text = build_path.read_text()
@@ -195,17 +203,61 @@ def _apply_to_build_py(build_path: Path, anname: str,
     if not m:
         return False
     block = m.group(1)
-    # Replace 'LINESPMode': '<x>' with new mode
-    new_block = re.sub(r"'LINESPMode':\s*'\d+'", f"'LINESPMode': '{mode}'", block)
+
+    new_attrs = f"'LINESPMode': '{mode}'"
     if linesp:
-        # Insert/replace LINESP near LINESPMode
-        if "'LINESP':" in new_block:
-            new_block = re.sub(r"'LINESP':\s*'[\d.]+'", f"'LINESP': '{linesp}'", new_block)
-        else:
-            new_block = new_block.replace(
-                f"'LINESPMode': '{mode}'",
-                f"'LINESPMode': '{mode}', 'LINESP': '{linesp}'",
+        new_attrs += f", 'LINESP': '{linesp}'"
+
+    new_block = block
+
+    # Case 1: replace existing LINESPMode (and update LINESP if present)
+    if re.search(r"'LINESPMode':\s*'\d+'", new_block):
+        new_block = re.sub(r"'LINESPMode':\s*'\d+'", f"'LINESPMode': '{mode}'", new_block)
+        if linesp:
+            if "'LINESP':" in new_block:
+                new_block = re.sub(r"'LINESP':\s*'[\d.]+'", f"'LINESP': '{linesp}'", new_block)
+            else:
+                new_block = new_block.replace(
+                    f"'LINESPMode': '{mode}'",
+                    f"'LINESPMode': '{mode}', 'LINESP': '{linesp}'",
+                )
+    # Case 2: paragraph_attrs exists somewhere; add LINESPMode alongside
+    # an existing key like 'ALIGN'. Targets ALL occurrences (every Run).
+    elif "paragraph_attrs={" in new_block:
+        new_block = re.sub(
+            r"paragraph_attrs=\{('ALIGN':\s*'\d+')\}",
+            r"paragraph_attrs={\1, " + new_attrs + r"}",
+            new_block,
+        )
+    # Case 3: trail_attrs exists; mirror onto trail_attrs too
+    if "trail_attrs={" in new_block:
+        if re.search(r"trail_attrs=\{[^}]*'LINESPMode'", new_block):
+            new_block = re.sub(
+                r"(trail_attrs=\{[^}]*'LINESPMode':\s*)'\d+'",
+                r"\1'" + mode + "'",
+                new_block,
             )
+            if linesp:
+                if "'LINESP':" in re.search(r"trail_attrs=\{[^}]*\}", new_block).group(0):
+                    new_block = re.sub(
+                        r"(trail_attrs=\{[^}]*'LINESP':\s*)'[\d.]+'",
+                        r"\1'" + linesp + "'",
+                        new_block,
+                    )
+                else:
+                    new_block = re.sub(
+                        r"(trail_attrs=\{[^}]*'LINESPMode':\s*'\d+')",
+                        r"\1, 'LINESP': '" + linesp + "'",
+                        new_block,
+                    )
+        else:
+            # No LINESPMode in trail_attrs yet
+            new_block = re.sub(
+                r"trail_attrs=\{('ALIGN':\s*'\d+')\}",
+                r"trail_attrs={\1, " + new_attrs + r"}",
+                new_block,
+            )
+
     if new_block == block:
         return False
     # Add a marker comment above the frame so the change is traceable

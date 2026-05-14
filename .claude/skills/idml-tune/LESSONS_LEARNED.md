@@ -353,6 +353,85 @@ replace with extent-based check.
 
 ---
 
+## L-015 — The closed loop must be encoded in tooling, not skill prose
+
+**Symptom:** Even after L-010/L-011/L-012 documented the audit-pipeline
+gaps, the LLM continued running audits ad-hoc, applying per-frame
+fixes by hand, and rationalising past warnings. The skill doc had
+the right INTENT ("run the sim before adding a tolerance row") but
+the LLM had no enforcement: bin/tune-render exited non-zero with
+warnings, which the LLM treated as advisory.
+
+**Lesson:** Process documented in prose is process the LLM can
+selectively follow. Process encoded in tooling is process the LLM
+cannot bypass — the next step's input doesn't exist when the prior
+step failed.
+
+**The defined loop (now implemented):**
+
+```
+bin/tune-render <slug>     transactional render + audit
+   ├ on green: artifacts in templates/<slug>/, exit 0
+   └ on red:   artifacts in build/staging/<slug>/, templates/<slug>/
+               restored from snapshot, site/public mirror deleted,
+               exit 2 with directive: `bin/tune-fix <slug>`
+
+bin/tune-fix <slug>        deterministic playbook dispatcher
+   ├ for each failing audit: lookup playbook in registry
+   ├ playbook applies fix OR escalates with concrete signature
+   └ re-invoke bin/tune-render until green or no advance
+```
+
+**Why this works where the prose-only version did not:**
+
+1. **Output withholding:** A red audit moves the rendered preview to
+   `build/staging/`. The promotable artifacts in `templates/<slug>/`
+   are restored to pre-render state. The site/public mirror is
+   deleted. Whatever consumer downstream wants the gallery preview
+   gets nothing — there is no "soft-pass" that looks like success.
+
+2. **Single next action:** The LLM doesn't choose what to do next.
+   The directive says exactly `bin/tune-fix <slug>`. The playbook
+   dispatcher chooses what to fix. The LLM's role is to invoke
+   the loop and verify the resulting diff.
+
+3. **ESCALATE has a specific shape:** When tune-fix exits 2, the
+   log lists exact audit signatures the playbook catalogue doesn't
+   cover. The LLM's action is "extend tools/playbooks/" — write
+   ONE durable fix, not 23 ad-hoc edits. The next falz template
+   that hits the same signature gets fixed for free.
+
+4. **No silent skips:** Each playbook either fixes deterministically
+   (sim, rotation reconciliation) or surfaces a specific need
+   (FrameFittingOption converter extension; layout intent decision).
+   No playbook ever says "good enough, moving on".
+
+**Action items implemented in commit 47b50f2:**
+
+- `bin/tune-render` — transactional snapshot/restore on red
+- `bin/tune-fix` — playbook dispatcher loop
+- `tools/playbooks/line_spacing.py` — sim-driven fix for
+  systematic_text_audit
+- `tools/playbooks/constraint_violation.py` — rotation reconciliation
+  + escalation for layout-intent classes
+- `.claude/skills/idml-tune/SKILL.md` — replaces "canonical re-render"
+  section with the defined loop contract
+
+**Action items deferred (separate playbook authorship):**
+
+- `tools/playbooks/frame_visibility.py` — handle L-014 false-positive
+  detection + scale_type swap
+- `tools/playbooks/composite_ai.py` — auto-swap to brand library when
+  shared/logos/<icon>-weiss.png exists
+- `tools/playbooks/y_mm_shift.py` — for frames whose line-spacing is
+  correct but FIRST-LINE y is shifted (uniform per-line drift). The
+  fix is a y_mm adjustment on the frame, not a LINESP override.
+- `tools/playbooks/text_position.py` — for text_position_audit drifts
+  the playbook can attribute to font-metric width differences vs
+  actual content drift.
+
+---
+
 ## L-014 — image_frame_visibility_audit is broken for inverted imagery
 
 **Symptom:** u141 (white DIE GRÜNEN logo on dark green background)
