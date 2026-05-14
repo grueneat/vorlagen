@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
 """Phase E2 line_spacing_audit: per-TextFrame baseline-to-baseline pt-gap.
 
+.. note::
+    **DEPRECATED as a primary signal — informational only.** The
+    authoritative per-frame line-spacing signal is
+    ``tools/line_spacing_pixel_audit.py`` (Phase E4), which measures
+    pixel-level ink-top positions and does not depend on pdfplumber's
+    text-matrix Y extraction. E3 (``line_spacing_full_audit.py``) is
+    the cross-source diagnostic (IDML CSR → build.py → SLA → preview).
+    E2 is kept running for back-compat and trend-watching but its
+    output YAML now carries ``informational_only: true`` and the
+    render pipeline rollup no longer surfaces its drift count.
+
+    Background: pdfplumber-clustered measurements are misleading
+    whenever the cluster threshold disagrees with the actual inter-
+    line gap. See F-014 (fontsize-scaled threshold) and F-017
+    (deprecation) in SKILL_FINDINGS.md for the empirical history.
+
 Catches the LeadingModel-mismatch class: IDML CSR <Leading>14.3</Leading> but
 rendered baseline.pdf shows 16.0pt baseline-to-baseline (LeadingModelAki,
 TopOfCaps, or 120%-AutoLeading divergence). Without this audit, body-text
@@ -299,6 +315,12 @@ def run_line_spacing_audit(
     drift.sort(key=lambda d: -abs(d["delta_pt"]))
 
     return {
+        # F-017: E2 is deprecated as a primary signal. The flag below tells
+        # render_pipeline and convergence_review to surface the result for
+        # trend-watching but NOT to count it against preflight ok / rollup
+        # issue_parts. E4 (line_spacing_pixel_audit) is the canonical signal.
+        "informational_only": True,
+        "canonical_replacement": "line_spacing_pixel_audit",
         "template": template,
         "threshold_pt": threshold_pt,
         "line_spacing_drift_count": len(drift),

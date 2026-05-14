@@ -1026,8 +1026,10 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         )
 
     # Phase E2: line_spacing_audit — per-TextFrame baseline-to-baseline drift.
-    # Catches the LeadingModel-mismatch class (IDML CSR <Leading>14.3</Leading>
-    # rendered at 16.0pt in baseline.pdf). Issue #37 P3 task 14.
+    # F-017: DEPRECATED as a primary signal. E2 still runs (back-compat,
+    # trend-watching) but its drift count is NO LONGER appended to
+    # issue_parts. Authoritative line-spacing signal is E4
+    # (line_spacing_pixel_audit) which measures pixel-level ink-top.
     line_spacing_audit_path = out_dir / "line_spacing_audit.yml"
     if preview_pdf.exists() and baseline.exists() and build_py.exists():
         try:
@@ -1040,17 +1042,18 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                 _lsa_yaml(lsa_report), encoding="utf-8",
             )
             if not lsa_report["ok"]:
+                # F-017: print informational note only — do NOT append to
+                # issue_parts. The E4 pixel audit is the canonical signal.
                 print(
-                    f"[{tid}] line_spacing_audit: "
+                    f"[{tid}] line_spacing_audit (E2, informational): "
                     f"{lsa_report['line_spacing_drift_count']} frame(s) with "
-                    f"|delta| > {lsa_report['threshold_pt']}pt → REVIEW",
+                    f"|delta| > {lsa_report['threshold_pt']}pt — "
+                    f"see line_spacing_pixel_audit (E4) for the authoritative "
+                    f"per-frame signal",
                     file=sys.stderr,
                 )
-                issue_parts.append(
-                    f"{lsa_report['line_spacing_drift_count']} line-spacing drift(s)"
-                )
             else:
-                print(f"[{tid}] line_spacing_audit: OK")
+                print(f"[{tid}] line_spacing_audit (E2, informational): OK")
         except Exception as exc:
             print(
                 f"[{tid}] audit E2 (line_spacing_audit) error: {exc}",
@@ -1565,14 +1568,25 @@ def _build_preflight(
             )
 
     # Phase E2 (Issue #37 P3 task 14): line_spacing_audit drift count.
+    # F-017: when the YAML carries informational_only=true the audit is
+    # recorded but always marked ok=true so it doesn't fail preflight.
+    # Canonical signal is E4 (line_spacing_pixel_audit).
     if line_spacing_audit_path is not None:
         lsa = _load_yml(line_spacing_audit_path)
         if lsa is not None:
+            informational = bool(lsa.get("informational_only", False))
+            drift_count = int(lsa.get("line_spacing_drift_count", 0) or 0)
+            detail = ""
+            if informational and drift_count:
+                detail = (
+                    f"informational only ({drift_count} drift, see "
+                    f"line_spacing_pixel_audit for canonical signal)"
+                )
             _record(
                 "line_spacing_audit",
-                bool(lsa.get("ok", True)),
-                int(lsa.get("line_spacing_drift_count", 0) or 0),
-                "",
+                True if informational else bool(lsa.get("ok", True)),
+                drift_count,
+                detail,
             )
 
     # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the

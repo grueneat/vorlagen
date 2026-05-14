@@ -194,9 +194,15 @@ Tuning is complete when:
 
 ## Per-frame line-spacing protocol
 
-When `line_spacing_audit` flags drifts, follow this loop. The clustered
-"line-spacing drift" stat in preflight is a SUMMARY signal; never trust
-it for a specific frame.
+When line spacing drifts, follow this loop. **The canonical signal is
+`line_spacing_pixel_audit.yml` (Phase E4).** The legacy
+`line_spacing_audit.yml` (Phase E2) is **deprecated as a primary
+signal** — its pdfplumber clustering is wrong for narrow leadings (the
+threshold mis-merges adjacent small-font lines). E2 still runs and
+writes a YAML, but it carries `informational_only: true`, no longer
+appears in preflight `issue_parts`, and `_build_preflight` records it
+with `ok: true` regardless of its internal `ok` flag. Use it only for
+trend-watching, never as a per-frame decision basis (F-017).
 
 ### 1. Direct PIXEL-LEVEL measurement is the only reliable per-frame number
 

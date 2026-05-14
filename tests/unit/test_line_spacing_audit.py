@@ -290,6 +290,38 @@ def test_small_font_threshold_used_in_audit_path(tmp_path, monkeypatch):
     assert captured.get("fontsize") == 6.0
 
 
+# ---------------------------------------------------------------------------
+# F-017: deprecated E2 — informational_only flag in audit YAML
+# ---------------------------------------------------------------------------
+
+
+def test_audit_yaml_carries_informational_only_flag(tmp_path, monkeypatch):
+    """The audit output marks itself informational_only=true so downstream
+    consumers (preflight, convergence-review) know to treat E2 as
+    diagnostic-only and not surface its drift count as a primary signal."""
+    import line_spacing_audit as lsa
+
+    iters = iter([
+        [100.0, 116.0, 132.0],
+        [100.0, 116.0, 132.0],
+    ])
+    monkeypatch.setattr(lsa, "_extract_line_tops_per_frame",
+                        lambda *a, **k: next(iters))
+    module = _make_synthetic_module(frames=[_frame()])
+    import sla_lib.builder.template_loader as tloader
+    monkeypatch.setattr(tloader, "load_build_module", lambda slug: module)
+    build_py = tmp_path / "slug" / "build.py"
+    build_py.parent.mkdir()
+    build_py.write_text("# stub", encoding="utf-8")
+    report = run_line_spacing_audit(
+        preview_pdf=tmp_path / "preview.pdf",
+        baseline_pdf=tmp_path / "baseline.pdf",
+        build_py=build_py,
+    )
+    assert report["informational_only"] is True
+    assert report["canonical_replacement"] == "line_spacing_pixel_audit"
+
+
 def test_yaml_dump_deterministic():
     payload = {
         "template": "t",
