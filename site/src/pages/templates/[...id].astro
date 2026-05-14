@@ -46,10 +46,10 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
   <!-- Lightbox overlay for hi-res preview (Issue #28). Plain HTML +
        inline JS — keeps the page Astro-static-site without adding
        framework dependencies. -->
-  <div id="preview-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box;">
+  <div id="preview-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box; align-items: center; justify-content: center;">
     <button id="preview-close" type="button" aria-label="Schließen" style="position: absolute; top: 1rem; right: 1rem; background: white; color: black; border: none; border-radius: 4px; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; z-index: 1;">Schließen ✕</button>
     <div id="preview-label" style="position: absolute; top: 1rem; left: 1rem; color: white; font-size: 0.95rem;"></div>
-    <img id="preview-image" src="" alt="" style="max-width: 100%; max-height: 100%; margin: auto; display: block; object-fit: contain;" />
+    <img id="preview-image" src="" alt="" style="max-width: calc(100vw - 4rem); max-height: calc(100vh - 4rem); display: block; object-fit: contain;" />
   </div>
 
   <script is:inline>
@@ -64,7 +64,10 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
         img.src = href;
         img.alt = text || '';
         label.textContent = text || '';
-        overlay.style.display = 'block';
+        // Switch to flex so the image is centred both axes (vs the previous
+        // `display: block` which left-/top-aligned tall hires images and
+        // looked like "preview not visible").
+        overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
       }
       function close() {
@@ -84,7 +87,7 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
       });
       closeBtn.addEventListener('click', close);
       document.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Escape' && overlay.style.display === 'block') close();
+        if (ev.key === 'Escape' && overlay.style.display !== 'none') close();
       });
     })();
   </script>
