@@ -1181,6 +1181,9 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                 "--dpi", "150",
                 "--out-yaml", str(line_spacing_pixel_path),
                 "--out-md", str(line_spacing_pixel_md),
+                # render-gallery has just produced fresh artifacts in
+                # sequence; the freshness gate doesn't apply here.
+                "--skip-freshness",
             ])
             try:
                 lspa_data = yaml.safe_load(line_spacing_pixel_path.read_text(encoding="utf-8")) or {}
@@ -1235,6 +1238,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
                 "--dpi", "150",
                 "--out-yaml", str(image_visibility_path),
                 "--out-md", str(image_visibility_md),
+                "--skip-freshness",
             ])
             try:
                 ifv_data = yaml.safe_load(image_visibility_path.read_text(encoding="utf-8")) or {}

@@ -352,6 +352,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--out-yaml")
     ap.add_argument("--out-md")
     ap.add_argument("--probe", help="Measure a single anname; print JSON to stdout.")
+    ap.add_argument(
+        "--skip-freshness", action="store_true",
+        help="Skip artifact freshness check. Set by render-gallery internal calls "
+             "that know they just produced the artifacts. Manual callers should "
+             "NEVER pass this flag — let the audit refuse stale inputs.",
+    )
     args = ap.parse_args(argv)
 
     template_dir = Path(args.templates_dir) / args.slug
@@ -363,6 +369,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             f"Missing build.py / preview.pdf / baseline.pdf in {template_dir}\n"
         )
         return 2
+
+    if not args.skip_freshness:
+        from _freshness_gate import ensure_fresh, StaleArtifactsError
+        try:
+            ensure_fresh(template_dir, audit_name="line_spacing_pixel_audit")
+        except StaleArtifactsError as exc:
+            sys.stderr.write(str(exc))
+            return 3
 
     frames = parse_textframes_from_build_py(build_py)
     if not frames:

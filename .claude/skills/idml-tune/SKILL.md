@@ -26,6 +26,38 @@ here** — see Forbidden paths below.
 | 1. Scaffold | `/idml-scaffold` | Every IDML element emitted; inventory captured |
 | **2. Tune** | `/idml-tune <slug>` (this) | Per-template visual polish under the inventory gate |
 
+## Canonical re-render command — MANDATORY
+
+```
+bin/tune-render <slug>             # render + full audit chain
+bin/tune-render <slug> --no-audit  # render-only (rare; debugging)
+bin/tune-render <slug> --check     # verify in-sync; exit 1 if stale
+```
+
+This is the **only** way to re-render a template. It runs build.py →
+template.sla → preview.pdf → rasterised PNGs (50 dpi + 150 dpi) →
+meta.yml hash update → audit chain (E2–E6) atomically. Calling them
+piecemeal (e.g. `render_sla_to_pdf` without `rasterise`) leaves
+artifacts out of sync.
+
+**The audit tools (E4 line_spacing_pixel_audit, E5
+image_frame_visibility_audit) ENFORCE this — they exit non-zero
+with "STALE: …" if their inputs are older than build.py.** The LLM
+can't "forget" a re-render step and still see green audit numbers:
+any skipped step makes the next audit fail loudly with
+`Fix: bin/tune-render <slug>` in the error.
+
+NEVER call directly:
+
+- `render_sla_to_pdf()` / `rasterise()` from `tools/visual_diff.py`
+- `python3 templates/<slug>/build.py` (use `bin/tune-render` which
+  also rasterises + updates the hash + runs audits)
+
+If a step in the canonical flow is unsuitable for some reason, the
+skill MUST surface the unmet need to the user and pause — not silently
+skip. (The freshness gate makes "silent skip" impossible by exiting
+non-zero on the next audit.)
+
 ## Tooling
 
 - `tools/inventory_extract.py` — produces a fresh `SCAFFOLD_INVENTORY.yml`
