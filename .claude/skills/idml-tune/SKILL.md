@@ -67,6 +67,17 @@ here** — see Forbidden paths below.
   `scale_type=0` (fit-to-frame). See the 26-03 Leporello u141
   (DIE GRÜNEN logo) and u3e7/u3f0/u3f5 (left-column social icons)
   for worked examples.
+- `tools/per_region_regression_check.py` — **iteration-over-
+  iteration per-frame regression check.** Runs as Phase E6.
+  Maintains `build/<slug>/per_region_history.jsonl` (committed
+  to git) with one entry per audit run carrying every frame's
+  line-spacing drift + image visibility ratio. Compares the
+  current run against the previous entry; flags any frame where
+  `abs(line_spacing_drift)` increased by ≥0.5pt or
+  `image_visibility_ratio` dropped by ≥0.1. **This is the
+  guard against fixing one frame and silently regressing another**
+  — E2-E5 each compare against baseline.pdf within ONE iteration,
+  E6 compares iteration N vs iteration N-1.
 - `tools/sop_lint.py` — banned-phrase guard. Still runs on Stage 2 output.
 - `tools/lint_inject_consistency.py` — inject.yml ↔ build.py 1:1 lint.
 

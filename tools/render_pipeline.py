@@ -1201,6 +1201,60 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E6: per_region_regression_check — compares the just-emitted
+    # E4 + E5 per-frame measurements against the previous render's
+    # measurements (persisted in build/<slug>/per_region_history.jsonl).
+    # Flags frames that regressed on either axis since the prior run.
+    # E2-E5 each compare against baseline.pdf within ONE iteration; E6
+    # ensures iteration-over-iteration we never silently make a frame
+    # worse. Closes the "no history tracking for per-region drift" gap.
+    per_region_regression_path = out_dir / "per_region_regression.yml"
+    per_region_regression_md = out_dir / "per_region_regression.md"
+    if line_spacing_pixel_path.exists() or image_visibility_path.exists():
+        try:
+            from per_region_regression_check import main as _prr_main
+            _prr_main([
+                "--slug", tid,
+                "--validation-dir", str(out_dir.parent),
+                "--history-dir", str(Path(__file__).resolve().parent.parent / "templates"),
+                "--out-yaml", str(per_region_regression_path),
+                "--out-md", str(per_region_regression_md),
+            ])
+            try:
+                prr_data = yaml.safe_load(per_region_regression_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                prr_data = {}
+            n_reg = prr_data.get("regression_count") or 0
+            seeded = prr_data.get("seeded") or False
+            if seeded:
+                print(
+                    f"[{tid}] per_region_regression: seeded history (first run)",
+                    file=sys.stderr,
+                )
+            elif n_reg:
+                regressions = prr_data.get("regressions") or []
+                names = [r.get("anname") for r in regressions]
+                issue_parts.append(
+                    f"{n_reg} per-region regression(s) since previous render"
+                )
+                print(
+                    f"[{tid}] per_region_regression: {n_reg} REGRESSION(s) since previous run: "
+                    f"{names} → REVIEW",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] per_region_regression: OK")
+        except Exception as exc:
+            print(
+                f"[{tid}] audit E6 (per_region_regression) error: {exc}",
+                file=sys.stderr,
+            )
+    else:
+        print(
+            f"[{tid}] audit E6 (per_region_regression): skipped (no E4/E5 input)",
+            file=sys.stderr,
+        )
+
     # Phase E: per-element drift attribution.
     # Aggregates diff_bboxes.json into a per-slot contribution table so the next
     # fix dispatch can prioritise by leverage. Diagnostic only — never blocks audit.
