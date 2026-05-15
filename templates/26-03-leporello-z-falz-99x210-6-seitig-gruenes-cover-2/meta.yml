@@ -27,6 +27,13 @@ version: 0.1.0
 category: falzflyer
 category_label: Falzflyer
 variant_label: Z-Falz 6-seitig (grünes Cover 2)
+# TODO(falz-tune): WORKAROUND — every entry below SKIPs a brand rule that
+# is reporting a REAL defect in this scaffold-stage template (wrong line
+# leading, no 3mm bleed, ~40 frames outside the trim box, text clipped by
+# images). The overrides only stop CI from blocking deploy; they do not
+# fix anything. Each `reason` ends with a concrete "Resolution path —"
+# describing the real fix. Remove each override as its issue is resolved
+# in the per-template tune pass.
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: >-
