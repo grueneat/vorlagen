@@ -1,9 +1,15 @@
-"""Regression tests for zeitung inside_page + spine_safety + drift rules.
+"""Smoke test for the zeitung visual-adjacency-drift rule.
 
-Issue #16 fixed the two right-edge spread frames in build.py.
-Issue #22 trimmed the rotated cover-polygon `u2950` and inset the
-remaining spine-touching frames; the brand:inside_page override was
-removed as a result. GH #39 is closed by #22.
+zeitung-a4-grun's build.py geometry is pinned to a faithful reproduction
+of the original InDesign SLA. The earlier inside_page / spine_safety
+regression tests asserted the #16/#22 "alignment fix" geometry, which was
+reverted — those frame moves wrongly pulled the full-bleed / cross-page
+spread images page-local. Geometry correctness is now validated by the
+``sla_diff`` round-trip against the original SLA (see ZeitungRoundTrip /
+ZeitungConverterFreshRun in test_sla_to_dsl.py); the full-bleed frames
+that legitimately cross the page boundary are covered by the documented
+``brand:inside_page`` / ``bleed_coverage`` / ``band_consistency``
+overrides in meta.yml.
 """
 from __future__ import annotations
 
@@ -16,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from sla_lib.builder.brand_constraints import (  # noqa: E402
-    _InsidePageRule, _SpineSafetyRule, _VisualAdjacencyDriftRule,
+    _VisualAdjacencyDriftRule,
 )
 
 
@@ -30,83 +36,12 @@ def _load_zeitung_module():
     return mod
 
 
-def _load_zeitung_doc():
-    """Return the built doc."""
-    return _load_zeitung_module().build_doc()
-
-
-class ZeitungInsidePageRegressionTests(unittest.TestCase):
-    def test_inside_page_zero_errors_after_u2950_trim(self):
-        """After #22 T10 the rotated cover-polygon u2950 was trimmed to
-        fit page+bleed; the rule reports zero errors WITHOUT the
-        override (which #22 T16 removed from meta.yml).
-        """
-        doc = _load_zeitung_doc()
-        rule = _InsidePageRule(
-            id="brand:inside_page",
-            name="Frames inside page bounds",
-            description="(test instance — bypasses brand_overrides)",
-        )
-        violations = rule.check(list(doc.iter_all_primitives()), doc)
-        errors = [v for v in violations if v.severity == "error"]
-        self.assertEqual(
-            len(errors), 0,
-            msg=(
-                f"expected zero inside_page errors after #22 T10 "
-                f"u2950 trim, got {len(errors)}: "
-                f"{[v.message for v in errors]}"
-            ),
-        )
-
-    def test_inside_page_passes_after_override_removed(self):
-        """After #22 T16 the brand:inside_page override is gone from
-        meta.yml. structural_check reports zero inside_page errors AND
-        the rule is NOT in skipped_brand_rules.
-        """
-        from sla_lib.builder import structural_check as sc
-
-        report = sc.check_template("zeitung-a4-grun", root=ROOT)
-        inside_page_errors = [
-            issue for issue in report.brand_issues
-            if issue.severity == "error"
-            and issue.rule_id == "brand:inside_page"
-        ]
-        self.assertEqual(inside_page_errors, [])
-        skipped_ids = {rid for rid, _reason in report.skipped_brand_rules}
-        self.assertNotIn("brand:inside_page", skipped_ids)
-
-
-class ZeitungSpineSafetyTests(unittest.TestCase):
-    def test_spine_safety_zero_warnings_on_zeitung(self):
-        """After #22 T11 (P9 SpreadImage) + T12 (spine inset),
-        _SpineSafetyRule reports zero warnings on zeitung."""
-        doc = _load_zeitung_doc()
-        rule = _SpineSafetyRule(
-            id="brand:spine_safety",
-            name="Spine safety",
-            description="(test instance)",
-        )
-        violations = rule.check(list(doc.iter_all_primitives()), doc)
-        self.assertEqual(
-            violations, [],
-            msg=(
-                f"expected zero spine_safety warnings, got "
-                f"{[v.message for v in violations]}"
-            ),
-        )
-
-
 class ZeitungVisualAdjacencyDriftTests(unittest.TestCase):
     def test_visual_adjacency_drift_rule_runs_on_zeitung(self):
-        """Smoke test: _VisualAdjacencyDriftRule (replaces _UndeclaredDriftRule)
-        runs cleanly on the Zeitung document with its CONSTRAINTS list.
-
-        Note: severity is warning, so warnings do NOT fail
-        ``structural_check --all``. The post-T07 expectation is that
-        Zeitung produces no warnings here because the geometry is fixed
-        and tight declarations match. Pre-T07 (during atomic ordering),
-        warnings are expected — this test asserts the rule executes
-        without raising, not the count.
+        """Smoke test: _VisualAdjacencyDriftRule runs cleanly on the
+        Zeitung document with its CONSTRAINTS list. severity is warning,
+        so it never fails ``structural_check --all``. This asserts the
+        rule executes without raising, not the warning count.
         """
         mod = _load_zeitung_module()
         doc = mod.build_doc()

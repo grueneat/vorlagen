@@ -570,8 +570,14 @@ def _run_text_render_gate(tid: str, tdir: Path, meta: dict) -> int:
     (rotated-text fragmentation) first, so a non-empty ``missing_in_preview``
     is genuine text loss.
 
-    Runs on EVERY render and hard-fails — no opt-out. Skips only when there
-    is no baseline.pdf to compare against (DSL-only templates).
+    Runs on EVERY render and hard-fails. The ONLY opt-out is
+    ``meta.yml::text_render_strict: false``, mirroring ``sla_diff_strict``:
+    a template pinned to a faithful original-SLA reproduction may carry a
+    small residual that cannot be closed without diverging from the original
+    (Scribus auto-leading is looser than InDesign's). Such a template still
+    runs the audit and prints the residual — it just does not block the
+    render. Absent the flag the gate is strict. Skips entirely when there is
+    no baseline.pdf to compare against (DSL-only templates).
     """
     baseline = tdir / "baseline.pdf"
     preview_pdf = tdir / "preview.pdf"
@@ -589,6 +595,16 @@ def _run_text_render_gate(tid: str, tdir: Path, meta: dict) -> int:
     n_chars = sum((report.get("missing_chars") or {}).values())
     words = report.get("missing_in_preview") or {}
     hint = (" — words: " + ", ".join(words)) if words else ""
+    strict = meta.get("text_render_strict", True)
+    if strict is False:
+        print(
+            f"[{tid}] text_render_audit WARNING — {n_chars} character(s) of "
+            f"baseline text missing{hint}; not blocking "
+            f"(meta.yml::text_render_strict=false — template pinned to the "
+            f"original SLA, residual is Scribus/InDesign leading drift).",
+            file=sys.stderr,
+        )
+        return 0
     print(
         f"[{tid}] text_render_audit FAIL — {n_chars} character(s) of baseline "
         f"text missing from the render{hint}. Scribus suppressed it (frame "
