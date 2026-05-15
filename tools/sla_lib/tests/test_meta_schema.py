@@ -52,13 +52,14 @@ class SlaDiffStrictTests(unittest.TestCase):
                 load_sla_diff_strict("fake-tpl", root=Path(td))
 
     def test_brand_overrides_loader_unchanged(self):
-        # Regression guard: T01's additive change must not perturb the
-        # existing load_brand_overrides() behaviour for zeitung.
-        # #22 T16 removed the brand:inside_page override (u2950 was
-        # trimmed in T10), so only brand:line_spacing_0.9 remains.
+        # Regression guard: load_brand_overrides() must surface every id in
+        # meta.yml::brand_overrides. zeitung's geometry was reset to the
+        # original InDesign SLA, which carries full-bleed / cross-page
+        # spread images — so brand:inside_page is legitimately overridden
+        # again (the rule cannot model an intentional newspaper spread).
         ids = load_brand_overrides("zeitung-a4-grun")
         self.assertIn("brand:line_spacing_0.9", ids)
-        self.assertNotIn("brand:inside_page", ids)
+        self.assertIn("brand:inside_page", ids)
 
 
 if __name__ == "__main__":  # pragma: no cover
