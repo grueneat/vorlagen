@@ -18,9 +18,11 @@ format: A4
 id: 26-03-leporello-z-falz-99x210-6-seitig-portrait
 idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig Portrait Ordner/26-03-Leporello
   z-Falz 99x210 6-seitig Portrait.idml
-previews_for_sla: 447b9933f6626f860223c5037dc93fe6f21a90d495a218b3761c2acf575c756f
+previews_for_sla: fa6ab7df97be13ba25b7192b4b4e4b11076fef66c3a0492982eba8006f0b4446
 title: 26-03 Leporello z-Falz 99×210 6-seitig (Portrait)
 version: 0.1.0
+build_py_sha256: 20bc1828028b982241c9897ff8ab82415342ef43ec9d19ffecad53e9d8a8c7ad
+text_render_strict: true
 category: falzflyer
 category_label: Falzflyer
 variant_label: Z-Falz 6-seitig (Portrait)

@@ -299,3 +299,25 @@ images:
     # Faces around the round table sit roughly mid-frame, slightly below the
     # pendant lamp; cropping slightly low keeps the conversation in frame.
     crop_focus: [0.50, 0.55]
+
+  themen_natur_nebelwald:
+    path: themen/natur-nebelwald.jpg
+    prompt: |
+      Documentary photograph, wide landscape orientation, of a dense
+      Austrian alpine conifer forest — tall spruce and pine trees on a
+      gentle mountain slope — wrapped in soft drifting morning fog.
+      Cool calm atmosphere, muted desaturated greens, layered silhouettes
+      of treetops fading into mist, soft diffuse overcast light, 50mm lens,
+      natural color balance. Quiet, atmospheric, untouched nature.
+      No people. No buildings. No watermark. No text overlays.
+      No logos or trademarks.
+    tags: [themen, topic:natur, subtopic:wald, composition:landscape, austrian, outdoor]
+    synthetic: true
+    license_note: "AI-generated demo image; not a real place. Replace with real photography for production use."
+    size: "1536x1024"
+    watermark: "Symbolfoto — KI-generiert"
+    model: gpt-image-2
+    quality: high
+    # Treeline spans the full width; densest foreground spruces sit lower-centre.
+    # Keep the misty ridge in frame on wide banner crops (u2cd is 99×42 mm).
+    crop_focus: [0.50, 0.55]

@@ -391,6 +391,28 @@ def _update_meta_hash(meta_path: Path, value) -> None:
     meta_path.write_text(text, encoding="utf-8")
 
 
+def _update_meta_build_py_sha(meta_path: Path, sha: str) -> None:
+    """Write (or replace) ``build_py_sha256:`` in meta_path.
+
+    This pin is the staleness gate for the gallery preview chain. The
+    committed ``template.sla`` / ``template-preview.sla`` / page PNGs are
+    only valid for the exact ``build.py`` they were rendered from; recording
+    its SHA here lets ``check_stale_previews`` flag the case where build.py
+    was hand-edited but the previews were never regenerated (the gap that
+    let the gruenes-cover-2 blank banner + missing icons ship). Cheap and
+    deterministic — no rendering needed to verify.
+    """
+    text = meta_path.read_text(encoding="utf-8")
+    block = f"build_py_sha256: {sha}"
+    if re.search(r"^build_py_sha256:", text, re.M):
+        text = re.sub(r"^build_py_sha256:.*$", block, text, count=1, flags=re.M)
+    elif re.search(r"^version:.*$", text, re.M):
+        text = re.sub(r"^(version:.*)$", r"\1\n" + block, text, count=1, flags=re.M)
+    else:
+        text = text.rstrip("\n") + "\n" + block + "\n"
+    meta_path.write_text(text, encoding="utf-8")
+
+
 def _zero_pad_pngs(tdir: Path, prefix: str) -> None:
     """Rename single-digit ``<prefix>-N.png`` → ``<prefix>-0N.png``.
 
@@ -535,6 +557,48 @@ def _select_render_source(template_dir: Path) -> Path:
     return template_dir / "template.sla"
 
 
+def _run_text_render_gate(tid: str, tdir: Path, meta: dict) -> int:
+    """Post-render gate: every word in baseline.pdf must survive into the
+    rendered preview.pdf.
+
+    Catches the class of bug where Scribus silently suppresses text —
+    frame-too-small clipping (the portrait "dreizeilige" → "dreizeili"
+    headline), off-page overflow, colour-on-colour invisibility, z-order
+    occlusion. Runs on every render (not only under ``--audit``) because
+    missing rendered text is never a tolerable cosmetic drift.
+
+    Always prints the result. Hard-fails the render only when the template
+    opts in with ``meta.yml::text_render_strict: true`` — templates not yet
+    tuned to a clean baseline (pdftotext segmentation still diverges on
+    heavy tracking / multi-column flow) stay diagnostic until they are.
+    Skips entirely when there is no baseline.pdf.
+    """
+    baseline = tdir / "baseline.pdf"
+    preview_pdf = tdir / "preview.pdf"
+    if not (baseline.exists() and preview_pdf.exists()):
+        return 0
+    try:
+        from text_render_audit import run_text_render_audit
+        report = run_text_render_audit(preview_pdf, baseline, template=tid)
+    except Exception as exc:
+        print(f"[{tid}] text_render_audit gate skipped: {exc}", file=sys.stderr)
+        return 0
+    missing = report.get("missing_in_preview") or {}
+    if not missing:
+        print(f"[{tid}] text_render_audit: OK (all baseline words rendered)")
+        return 0
+    words = ", ".join(f"{w}×{n}" for w, n in missing.items())
+    strict = bool(meta.get("text_render_strict"))
+    tag = "FAIL" if strict else "WARNING"
+    print(
+        f"[{tid}] text_render_audit {tag} — baseline words missing from the "
+        f"render: {words}. Scribus suppressed them (frame too small / "
+        f"off-page / occluded / colour-on-colour). Fix the frame, re-render.",
+        file=sys.stderr,
+    )
+    return 1 if strict else 0
+
+
 def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
     """Render a single-SLA template (postkarte, zeitung).
 
@@ -579,6 +643,11 @@ def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
         rc = _run_visual_diff(tid, tdir, args)
         if rc != 0:
             return rc
+
+    # Mandatory rendered-text gate — runs on every render, not just --audit.
+    rc = _run_text_render_gate(tid, tdir, meta)
+    if rc != 0:
+        return rc
 
     if not args.dry_run:
         # meta.yml::previews_for_sla is already updated in
@@ -730,6 +799,17 @@ def _orchestrate_template(tdir: Path, args) -> int:
                     f"[{tid}] meta.yml hash auto-update skipped: {exc}",
                     file=sys.stderr,
                 )
+
+    # Record the build.py SHA so check_stale_previews can flag a build.py
+    # that was hand-edited without re-rendering (covers single + family).
+    if not getattr(args, "dry_run", False) and build_py.exists():
+        try:
+            _update_meta_build_py_sha(tdir / "meta.yml", _sha256_of(build_py))
+        except OSError as exc:
+            print(
+                f"[{tid}] meta.yml build_py_sha256 update skipped: {exc}",
+                file=sys.stderr,
+            )
 
     if is_family:
         return _orchestrate_family(tdir, meta, site_public_dir, args)

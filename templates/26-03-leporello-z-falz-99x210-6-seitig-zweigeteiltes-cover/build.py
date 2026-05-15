@@ -63,7 +63,7 @@ INJECT_MAP: dict[str, str] = {
     # here" placeholder. See .claude/skills/idml-tune/SKILL.md
     # "Demo image substitution".
     "u514": "themen_klimaschutz_windrad",   # inside top-right photo (101×107mm)
-    "u2cd": "themen_verkehr_radweg",         # cover middle-top wide banner (99×42mm)
+    "u2cd": "themen_natur_nebelwald",        # cover middle-top wide banner (99×42mm)
     # u3a0 (full-page green Zitat backdrop) intentionally left unmapped —
     # the substitute photo would clash with the panel's "Zitat" framing.
     # The original plakat-dunkel-fuer-flyer.png stays in template-preview.sla.

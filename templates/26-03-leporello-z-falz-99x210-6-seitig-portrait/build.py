@@ -58,7 +58,7 @@ INJECT_MAP: dict[str, str] = {
     # reference — the downloaded SLA still shows the user's "your content
     # here" placeholder. See .claude/skills/idml-tune/SKILL.md
     # "Demo image substitution".
-    "u2cd": "themen_verkehr_radweg",          # cover middle-top wide banner (99×42mm)
+    "u2cd": "themen_natur_nebelwald",         # cover middle-top wide banner (99×42mm)
     # u139 (Leonore tall portrait) intentionally left unmapped — the AI
     # portrait substitution turned the upper-right area light, making
     # the white DIE GRÜNEN logo (u141) on top of the portrait become
@@ -283,11 +283,16 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     # zweigeteiltes-cover (PR #103). Split into 3 single-line
     # TextFrames at calibrated y_mm matching baseline.pdf measured
     # text-tops (151.00 / 157.97 / 169.72 mm).
+    # h_mm 14.0/11.5/11.0 → 16.0: a 38pt headline line needs ~16mm of
+    # frame height (auto leading ≈ 1.2× = 45.6pt). The undersized middle
+    # frame made Scribus truncate u16c_l2 mid-word ("dreizeilige" →
+    # "dreizeili"). Matches the zweigeteiltes-cover split (all 3 at h=16.0,
+    # renders clean). Frames stay top-aligned so the text top is unchanged.
     page0.add(TextFrame(
         x_mm=204.6236,
         y_mm=151.0,
         w_mm=71.6562,
-        h_mm=14.0,
+        h_mm=16.0,
         anname='u16c',
         layer=0,
         style='idml/normalparagraphstyle',
@@ -298,7 +303,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         x_mm=204.6236,
         y_mm=157.97,
         w_mm=71.6562,
-        h_mm=11.5,
+        h_mm=16.0,
         anname='u16c_l2',
         layer=0,
         style='idml/normalparagraphstyle',
@@ -309,7 +314,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         x_mm=204.6236,
         y_mm=169.72,
         w_mm=71.6562,
-        h_mm=11.0,
+        h_mm=16.0,
         anname='u16c_l3',
         layer=0,
         style='idml/normalparagraphstyle',
