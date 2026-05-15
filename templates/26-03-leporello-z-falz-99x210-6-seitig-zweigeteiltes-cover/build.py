@@ -146,7 +146,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
     """Auto-generated paragraph styles from the source IDML."""
     doc.add_para_style(ParaStyle(
         name='idml/no-paragraph-style',
-        font='Times Roman',
         fontsize=12,
         align=0,
         linesp=17.4,
@@ -173,7 +172,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
     doc.add_para_style(ParaStyle(
         name='idml/normalparagraphstyle',
         parent='idml/no-paragraph-style',
-        font='Times Roman',
         fontsize=12,
         align=0,
         linesp=17.4,

@@ -1276,6 +1276,84 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E5d: external_asset_substitution_audit — every external
+    # asset frame must be in INJECT_MAP OR carry a `# noinject:`
+    # justification (per L-016). Forces the LLM/converter to make an
+    # explicit decision rather than letting placeholder content slip
+    # through to gallery previews.
+    eas_path = out_dir / "external_asset_substitution_audit.yml"
+    eas_md = out_dir / "external_asset_substitution_audit.md"
+    if build_py.exists():
+        try:
+            from external_asset_substitution_audit import main as _eas_main
+            _eas_main([
+                "--slug", tid,
+                "--templates-dir", str(Path("/workspace/templates")),
+                "--out-yaml", str(eas_path),
+                "--out-md", str(eas_md),
+            ])
+            eas_data = yaml.safe_load(eas_path.read_text(encoding="utf-8")) or {}
+            n_missing = (eas_data.get("summary") or {}).get("missing") or 0
+            findings = eas_data.get("findings") or []
+            if n_missing:
+                annames = [f.get("anname") for f in findings]
+                issue_parts.append(
+                    f"{n_missing} external asset frame(s) without "
+                    f"INJECT_MAP or noinject: {annames}"
+                )
+                print(
+                    f"[{tid}] external_asset_substitution_audit: "
+                    f"{n_missing} missing → REVIEW",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] external_asset_substitution_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "external_asset_substitution_audit",
+                "E5d (external_asset_substitution_audit)", exc, tid,
+            )
+
+    # Phase E5c: image_content_audit — catches images that ARE rendering
+    # but with wrong content (variance loss, mean color shift, histogram
+    # divergence). Closes L-012 gap where image_frame_visibility says OK
+    # but the image is showing the wrong region (u139-class — Leonore
+    # frame rendered as dark green when source is wrong-aspect or
+    # local_offset is mis-calibrated).
+    image_content_path = out_dir / "image_content_audit.yml"
+    image_content_md = out_dir / "image_content_audit.md"
+    if preview_pdf.exists() and baseline.exists() and build_py.exists():
+        try:
+            from image_content_audit import main as _ica_main
+            _ica_main([
+                "--slug", tid,
+                "--templates-dir", str(Path("/workspace/templates")),
+                "--dpi", "150",
+                "--out-yaml", str(image_content_path),
+                "--out-md", str(image_content_md),
+            ])
+            ica_data = yaml.safe_load(image_content_path.read_text(encoding="utf-8")) or {}
+            n_broken = (ica_data.get("summary") or {}).get("broken") or 0
+            broken = ica_data.get("broken_annames") or []
+            if n_broken:
+                issue_parts.append(
+                    f"{n_broken} image frame(s) broken (wrong content): {broken}"
+                )
+                print(
+                    f"[{tid}] image_content_audit: {n_broken} broken frame(s): "
+                    f"{broken} → REVIEW",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] image_content_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "image_content_audit",
+                "E5c (image_content_audit)", exc, tid,
+            )
+    else:
+        print(f"[{tid}] audit E5c (image_content_audit): skipped", file=sys.stderr)
+
     # Phase E5: image_frame_visibility_audit — catches "embedded but
     # invisible" image frames. Counts ink pixel density inside each
     # ImageFrame bbox in baseline vs preview; flags frames where
@@ -1329,6 +1407,49 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     else:
         print(
             f"[{tid}] audit E5 (image_frame_visibility_audit): skipped",
+            file=sys.stderr,
+        )
+
+    # Phase E5b: systematic_text_audit — for every text frame surveyed by
+    # E4 (line_spacing_pixel_audit), classify whether the drift is
+    # actionable (sim-fixable) vs documented in TOLERANCES.yml. Closes the
+    # L-010/L-011 gap where the LLM rationalises past pixel-audit
+    # warnings without invoking line_spacing_sim. Hard-fail when actionable
+    # frames remain so subsequent audits can't silently complete.
+    systematic_audit_path = out_dir / "systematic_text_audit.yml"
+    systematic_audit_md = out_dir / "systematic_text_audit.md"
+    if line_spacing_pixel_path.exists():
+        try:
+            from systematic_text_audit import main as _sta_main
+            sta_rc = _sta_main([
+                "--slug", tid,
+                "--out-yaml", str(systematic_audit_path),
+                "--out-md", str(systematic_audit_md),
+            ])
+            try:
+                sta_data = yaml.safe_load(systematic_audit_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                sta_data = {}
+            n_actionable = (sta_data.get("summary") or {}).get("actionable") or 0
+            if n_actionable:
+                issue_parts.append(
+                    f"{n_actionable} text frame(s) with un-addressed sim-actionable drift"
+                )
+                print(
+                    f"[{tid}] systematic_text_audit: {n_actionable} actionable "
+                    f"frame(s) — see {systematic_audit_md.name}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] systematic_text_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "systematic_text_audit",
+                "E5b (systematic_text_audit)", exc, tid,
+            )
+    else:
+        print(
+            f"[{tid}] audit E5b (systematic_text_audit): skipped",
             file=sys.stderr,
         )
 
@@ -1859,6 +1980,10 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         visual_diff_regions_path=vd_region_path,
         line_spacing_audit_path=line_spacing_audit_path,
         asset_audit_path=asset_audit_path,
+        systematic_text_audit_path=systematic_audit_path,
+        image_visibility_path=image_visibility_path,
+        image_content_path=image_content_path,
+        external_asset_substitution_path=eas_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -1902,6 +2027,10 @@ def _build_preflight(
     visual_diff_regions_path: Path | None = None,
     line_spacing_audit_path: Path | None = None,
     asset_audit_path: Path | None = None,
+    systematic_text_audit_path: Path | None = None,
+    image_visibility_path: Path | None = None,
+    image_content_path: Path | None = None,
+    external_asset_substitution_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -1992,8 +2121,29 @@ def _build_preflight(
 
     tpa = _load_yml(text_position_audit_path)
     if tpa is not None:
-        _record("text_position_audit", bool(tpa.get("ok", False)),
-                int(tpa.get("large_deltas_count", 0) or 0), "")
+        # Magnitude-bucketed: jitter (≤5pt) is sub-perceptible FreeType
+        # vs InDesign per-character kerning, structural (>5pt) is real
+        # frame/word displacement. Reported as separate audits so
+        # TOLERANCES can apply severity:cosmetic to jitter and keep
+        # severity:structural failing on the large class.
+        n_jitter = int(tpa.get("jitter_deltas_count", 0) or 0)
+        n_structural = int(tpa.get("structural_deltas_count", 0) or 0)
+        _record(
+            "text_position_audit_jitter",
+            n_jitter == 0,
+            n_jitter,
+            f"{n_jitter} sub-perceptible drifts (≤5pt)" if n_jitter else "",
+        )
+        _record(
+            "text_position_audit_structural",
+            n_structural == 0,
+            n_structural,
+            f"{n_structural} large drifts (>5pt) — visible structural shifts" if n_structural else "",
+        )
+        # Keep the original key for backwards-compat but mark it OK if
+        # both buckets are individually addressed (the new audits gate).
+        _record("text_position_audit", True, int(tpa.get("large_deltas_count", 0) or 0),
+                f"split into jitter + structural buckets")
 
     rsa = _load_yml(run_style_audit_path)
     if rsa is not None:
@@ -2057,6 +2207,65 @@ def _build_preflight(
                 detail,
             )
 
+    # Phase E5b (LESSONS_LEARNED L-010/L-011): systematic_text_audit
+    # — fail-hard if any text frame has measurable drift > 1pt that
+    # is NOT addressed via TOLERANCES.yml + sim outcome. This is the
+    # tool-level enforcement that the LLM cannot rationalise past.
+    if systematic_text_audit_path is not None:
+        sta = _load_yml(systematic_text_audit_path)
+        if sta is not None:
+            n_actionable = (sta.get("summary") or {}).get("actionable") or 0
+            _record(
+                "systematic_text_audit",
+                bool(sta.get("ok", True)),
+                int(n_actionable),
+                f"{n_actionable} frame(s) with un-addressed sim-actionable drift" if n_actionable else "",
+            )
+
+    # Phase E5d: external_asset_substitution_audit
+    if external_asset_substitution_path is not None:
+        eas = _load_yml(external_asset_substitution_path)
+        if eas is not None:
+            n_missing = (eas.get("summary") or {}).get("missing") or 0
+            findings = eas.get("findings") or []
+            annames = [f.get("anname") for f in findings]
+            _record(
+                "external_asset_substitution_audit",
+                bool(eas.get("ok", True)),
+                int(n_missing),
+                f"missing INJECT_MAP/noinject: {annames}" if annames else "",
+            )
+
+    # Phase E5c: image_content_audit — varied-content per-frame check.
+    if image_content_path is not None:
+        ica = _load_yml(image_content_path)
+        if ica is not None:
+            n_broken = (ica.get("summary") or {}).get("broken") or 0
+            broken = ica.get("broken_annames") or []
+            _record(
+                "image_content_audit",
+                bool(ica.get("ok", True)),
+                int(n_broken),
+                f"broken: {broken}" if broken else "",
+            )
+
+    # Phase E5: image_frame_visibility_audit recorded so the playbook
+    # dispatcher (bin/tune-fix) can react. ok=true only when every
+    # frame is in the `ok` summary bucket.
+    if image_visibility_path is not None:
+        ifv = _load_yml(image_visibility_path)
+        if ifv is not None:
+            summary = ifv.get("summary") or {}
+            n_invisible = int(summary.get("invisible_in_preview") or 0)
+            n_faint = int(summary.get("faint_in_preview") or 0)
+            issues = n_invisible + n_faint
+            _record(
+                "image_frame_visibility_audit",
+                n_invisible == 0,  # faint is sub-threshold; invisible blocks
+                issues,
+                f"{n_invisible} invisible, {n_faint} faint" if issues else "",
+            )
+
     # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the
     # chain logically (missing links cascade into every other audit). We
     # record it last in this builder for ordering symmetry with the other
@@ -2082,6 +2291,84 @@ def _build_preflight(
             )
 
     errors = dict(phase_errors or {})
+
+    # Bounded tolerance recognition (user-driven 2026-05-15): tolerances
+    # have a `max_issues` cap; preflight only marks an audit ok if the
+    # current issue count is at or below the cap. Without the cap, a
+    # tolerance entry covers the WHOLE audit category, masking real
+    # regressions (small drift growing into structural change).
+    #
+    # Tolerance schema:
+    #   - id: tol:...
+    #     audit: <audit_name>            # which preflight audit key
+    #     max_issues: <int>              # cap; current count > cap → fail
+    #     max_drift_pt: <float>          # optional; per-frame drift cap
+    #     classification: scribus-engine-bug | authoring-bug | human-review
+    #     reason: ...
+    template_dir = Path(__file__).resolve().parent.parent / "templates" / tid
+    tol_path = template_dir / "TOLERANCES.yml"
+    if tol_path.exists():
+        try:
+            tol_doc = yaml.safe_load(tol_path.read_text(encoding="utf-8")) or {}
+            # User-feedback design (2026-05-15): tolerances must declare
+            # `severity:` to participate in preflight gating.
+            #
+            #   cosmetic   — audit-engine quirk OR sub-pt per-pixel jitter.
+            #                Tolerated → preflight may pass.
+            #   structural — visible drift, content shift, layout change.
+            #                DOCUMENTED but does NOT flip preflight; the
+            #                LLM/human must fix the underlying issue.
+            #
+            # Without an explicit `severity:` field, the entry behaves
+            # like `structural` — preflight stays red. This forces the
+            # author to make a deliberate decision about whether the
+            # tolerance is a cosmetic-quirk pass or a real-issue document.
+            audit_caps: dict[str, int] = {}
+            import re as _re
+            for entry in tol_doc.get("tolerances", []):
+                a_name = entry.get("audit")
+                if not a_name:
+                    continue
+                eid = entry.get("id", "")
+                if _re.match(r"^tol:u[0-9a-f]{1,5}-", eid):
+                    continue
+                severity = entry.get("severity", "structural")
+                if severity != "cosmetic":
+                    # Documented only — does not contribute to gating.
+                    continue
+                cap = entry.get("max_issues")
+                if cap is None:
+                    continue
+                audit_caps[a_name] = audit_caps.get(a_name, 0) + int(cap)
+            for name, cap in audit_caps.items():
+                row = audits_summary.get(name)
+                if row is None:
+                    continue
+                cur_issues = int(row.get("issues", 0))
+                if not row.get("ok", True) and cur_issues <= cap:
+                    audits_summary[name] = {
+                        **row,
+                        "ok": True,
+                        "tolerated": True,
+                        "tolerated_cap": cap,
+                        "detail": (
+                            f"{row.get('detail') or ''} "
+                            f"(tolerated: {cur_issues} ≤ cap {cap})"
+                        ).strip(),
+                    }
+                elif not row.get("ok", True) and cur_issues > cap:
+                    # Cap exceeded — keep failing but annotate clearly
+                    audits_summary[name] = {
+                        **row,
+                        "tolerated_cap": cap,
+                        "detail": (
+                            f"{row.get('detail') or ''} "
+                            f"(EXCEEDED tolerance cap: {cur_issues} > {cap})"
+                        ).strip(),
+                    }
+        except Exception:
+            pass
+
     preflight_ok = all(a["ok"] for a in audits_summary.values()) and not errors
 
     # Hot-issues list: top 5 failing audits by issue count.

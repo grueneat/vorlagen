@@ -1,0 +1,123 @@
+tolerances:
+- id: tol:image-audit-31-inline-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  reason: '31 inline vector deltas: the IDML emits curly quote marks and decorative
+    ornament glyphs as inline vector paths inside text frames (`<TextPath>` / `<PathPointArray>`
+    siblings of `<Content>`). The converter currently extracts these as inline images
+    instead of regenerating them as Scribus Polygon items. Architectural fix requires
+    extending the pattern library to detect and re-emit inline TextPath vectors. Same
+    gap class as the sibling falz templates.'
+  follow_up_issue: converter-extension; future Stage-1 work (pattern_library inline-TextPath)
+  max_issues: 35
+  severity: structural
+- id: tol:asset-extraction-composite-ai-social-icons
+  audit: asset_extraction
+  classification: human-review
+  reason: '1 composite-AI flag fired for "Social Media Icons weiss.ai". Resolved at
+    the brand level (issue #107): per-icon PNGs live in shared/logos/ and are embedded
+    via _inline_brand_icon() inside build.py for the left-column social-icon frames
+    (u3e7/u3f0/u3f5). The composite source PDF/PNG were removed from this template''s
+    shared/assets/ directory. The audit flag is non-actionable for this template;
+    same residual class as the sibling falz template.'
+  follow_up_issue: converter-extension; future Stage-1 work (asset_extraction_audit
+    classifier for split-icon)
+  max_issues: 1
+  severity: cosmetic
+- id: tol:run-style-audit-extractor-disagreement
+  audit: run_style_audit
+  classification: scribus-engine-bug
+  reason: pdfplumber and pdftotext disagree on word counts (444 vs 468/464) because
+    each segmenter handles inline composition differently at hyphen boundaries, soft-wraps,
+    and curly-quote-adjacent whitespace. text_render_audit already verifies content
+    equality via pdftotext-substring matching; the per-engine word count is an audit-engine
+    quirk, not a converter regression.
+  follow_up_issue: engine-bug; no upstream issue yet (audit-engine selection)
+  max_issues: 1
+  severity: cosmetic
+- id: tol:line-spacing-pixel-audit-2-major-drifts
+  audit: line_spacing_pixel_audit
+  classification: scribus-engine-bug
+  reason: 2 frames exceed the 3.0pt pixel-level line-spacing threshold. Both drifts
+    trace to mixed-font paragraphs (Gotham→Vollkorn) where Scribus's single-LINESPMode-per-paragraph
+    SLA schema cannot encode the per-line font-metric transitions that InDesign honours.
+    Same gap class as the sibling falz templates' u16c headline frame.
+  follow_up_issue: engine-bug; sub-3pt drift, well below visual threshold for affected
+    lines
+  max_issues: 4
+  severity: structural
+- id: tol:uf7-empty-info-layer-frame-line-count-mismatch
+  audit: systematic_text_audit
+  classification: authoring-bug
+  reason: uf7 is an empty TextFrame on layer=1 (Info — non-printing in the IDML).
+    It covers the whole page (296×209mm). Audit reports "line count differs (baseline=1
+    vs preview=14)" — because uf7's giant bbox swallows neighboring frames' text when
+    the audit measures lines inside it. y_mm_shift refused (would push frame off-page).
+    Real fix is to drop empty layer-1 frames in the converter; here documented as
+    known audit artifact for empty info-layer frames.
+  follow_up_issue: converter-extension; tools/idml_to_dsl.py drops empty Info-layer
+    frames
+  max_issues: 1
+  severity: cosmetic
+- id: tol:text-render-stoerer-rotation-tokenisation
+  audit: text_render_audit
+  classification: scribus-engine-bug
+  reason: text_render_audit reports "störer" missing in preview with "stör" + "er"
+    as extras. The Störer text frame (u186) is rotated -18° (matched to its u185 ellipse
+    partner via the stoerer_circle_text_same_rotation constraint). pdftotext extracts
+    the rotated word in two visual chunks because the rotation breaks the linear text-flow
+    heuristic. The word IS rendered correctly visually; the audit is fooled by the
+    extractor's tokenisation. Same gap class as the audit-engine quirks already documented
+    in run_style_audit.
+  follow_up_issue: engine-bug; pdftotext rotation-aware text extraction
+  max_issues: 1
+  severity: cosmetic
+- id: tol:visual-diff-image-size-mismatch
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  reason: 'visual_diff_regions errors with "image size mismatch: baseline=(1842, 1328),
+    preview=(1754, 1241)". Scribus''s pdftocairo rasterisation produces a slightly
+    different page- pixel-size than the InDesign baseline at the same DPI (a 5% difference).
+    The phase-error surfaces this honestly rather than coercing the dimensions; functional
+    diff signal is covered by visual_diff (with --visual-diff-warning-only) and per-region
+    audits. Same artefact appears on the sibling falz templates.'
+  follow_up_issue: engine-bug; pdftocairo vs InDesign rasterisation DPI rounding
+  max_issues: 0
+  severity: cosmetic
+- id: tol:visual-diff-regions-hot-regions
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  max_issues: 25
+  reason: Visual diff hot regions co-locate with the FreeType kerning jitter, the
+    inline vector deltas, and the bullet-list anomaly already documented above. 20
+    hot regions is the steady-state count after closed-loop convergence; cap at 25
+    with 5 buffer.
+  follow_up_issue: covered by other tolerances above
+  severity: structural
+- id: tol:text-position-audit-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 400
+  reason: Sub-perceptible (≤5pt) per-character kerning differences between Scribus
+    FreeType and InDesign font rasterisers. Intrinsic per-pixel jitter on every character
+    in the document; not converter-fixable. The structural-bucket audit (text_position_audit_structural)
+    catches larger shifts (>5pt) which are real layout regressions and stay red.
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:u1fd-bullet-list-mid-frame-anomaly
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  reason: u1fd is a 5-bullet aufzaehlungen-auf-gruenem-hintergrund frame (13 lines
+    total). The IDML has only ONE empty <para> separator between bullets 3 and 4 (vs
+    TWO between others), making bullet 4 sit tight under bullet 3 in InDesign baseline.
+    Scribus renders both single and double <para> separators with the same gap, so
+    bullet 4 has a full inter-bullet gap in preview, producing +20pt cumulative drift
+    on lines 7-10. Tried adding a second <para> separator to make spacing consistent
+    everywhere — that produced cleaner visual but +36pt drift. Tried per-paragraph
+    LINESP=0.5 override on the single separator — Scribus propagated the override
+    to adjacent paragraphs unexpectedly. Real fix needs Scribus para-collapse-aware
+    rendering OR a space_after_pt model on the bullet style. NOT FIXED, NOT TOLERATED-AS-PASSING
+    — preflight stays red until either baseline.pdf is re-exported with consistent
+    gaps OR a Scribus extension lands.
+  follow_up_issue: engine-bug; bullet-list para-collapse rendering

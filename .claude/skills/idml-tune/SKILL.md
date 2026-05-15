@@ -26,19 +26,89 @@ here** — see Forbidden paths below.
 | 1. Scaffold | `/idml-scaffold` | Every IDML element emitted; inventory captured |
 | **2. Tune** | `/idml-tune <slug>` (this) | Per-template visual polish under the inventory gate |
 
-## Canonical re-render command — MANDATORY
+## Defined render → audit → remediation loop — MANDATORY
+
+The Stage-2 workflow is a **closed loop** between two tools. The LLM's
+role is to point at a template and watch the loop run. There is no
+ad-hoc per-frame iteration; each remediation is encoded in
+`tools/playbooks/*.py`.
 
 ```
-bin/tune-render <slug>             # render + full audit chain
-bin/tune-render <slug> --no-audit  # render-only (rare; debugging)
-bin/tune-render <slug> --check     # verify in-sync; exit 1 if stale
+bin/tune-render <slug>     → render + full audit chain (transactional)
+                              · on green: artifacts promoted to templates/<slug>/
+                              · on red:   artifacts moved to build/staging/<slug>/,
+                                          templates/<slug>/ restored from snapshot,
+                                          site/public mirror deleted, exit 2
+bin/tune-fix    <slug>     → read failed-audit reports, apply playbooks,
+                              re-invoke bin/tune-render in a loop until
+                              preflight is green or no playbook can advance
 ```
 
-This is the **only** way to re-render a template. It runs build.py →
-template.sla → preview.pdf → rasterised PNGs (50 dpi + 150 dpi) →
-meta.yml hash update → audit chain (E2–E6) atomically. Calling them
-piecemeal (e.g. `render_sla_to_pdf` without `rasterise`) leaves
-artifacts out of sync.
+### Failure-driven remediation contract
+
+When `bin/tune-render` exits 2:
+
+1. The render output is **NOT** in `templates/<slug>/`. Looking at
+   `templates/<slug>/preview.pdf` shows the PRE-render state.
+2. The failed render is in `build/staging/<slug>/` (read-only inspect).
+3. The audit reports are in `build/validation/<slug>/`.
+4. The directive is exactly: `bin/tune-fix <slug>`.
+
+Do NOT cherry-pick artifacts out of `build/staging/` into
+`templates/<slug>/`. Do NOT edit `template.sla` directly. The next
+`bin/tune-render` will re-snapshot and either green or move it back
+to staging — surgical edits to the failed-render output are lost.
+
+### bin/tune-fix playbooks (current registry)
+
+| Audit | Playbook | Action |
+|---|---|---|
+| `systematic_text_audit` (uniform per-line offset) | `tools/playbooks/y_mm_shift.py` | Shift the frame's `y_mm` by mean drift × pt-mm. Empirical sign: same-direction. |
+| `systematic_text_audit` (varying per-line drift) | `tools/playbooks/line_spacing.py` | Run `line_spacing_sim` per frame with sweep over authored Leading + fontsize × {0.85, 0.89, 0.9, 0.91, 1.0, 1.1, 1.2, 1.45}. Apply best (LINESPMode, LINESP) when drift ≤ 0.5pt; else escalate. |
+| `structural_check` (rotation) | `tools/playbooks/constraint_violation.py` | Adopt reference rotation onto offenders |
+| `structural_check` (distance/gap/inside) | `tools/playbooks/constraint_violation.py` | ESCALATE — layout intent decision |
+| `image_frame_visibility_audit` (white-on-dark FP) | `tools/playbooks/frame_visibility.py` | Polarity check; mark as known false positive (L-014) without writing |
+| `image_frame_visibility_audit` (true invisibility) | `tools/playbooks/frame_visibility.py` | Swap inline_image_data → image= ref + scale_type=0 when asset path identifiable |
+
+Order matters: y_mm_shift runs BEFORE line_spacing because uniform-
+offset frames are a different fix class (frame anchor) from gap-
+varying frames (LINESP override). The systematic audit doesn't
+distinguish them; the playbook order does.
+
+When `bin/tune-fix` exits 2, the residual is **not addressable by an
+existing playbook**. The right next action is one of:
+
+- Author a new playbook in `tools/playbooks/` covering the audit
+  signature, then re-invoke `bin/tune-fix`. The playbook becomes
+  the durable fix; the next falz template that hits the same class
+  reuses it.
+- Escalate to Stage 1 when the issue is converter-level (e.g.
+  FrameFittingOption translation, ParaStyle font emission).
+
+Hand-patches to `build.py` without an audit signal regress on the
+next render. The defined loop is the safety net; bypassing it
+guarantees regressions.
+
+### When you add a NEW audit
+
+Wire it into `tools/render_pipeline.py` Phase E6+. Have it write
+`build/validation/<slug>/<audit>.yml` with `ok: bool, issues: int,
+detail: str`. Have `_build_preflight` consume it. Then write the
+matching playbook in `tools/playbooks/<audit>.py` exposing
+`apply(slug, repo, dry_run) -> (n_changes, log)`. Register in
+`bin/tune-fix::PLAYBOOKS`. The closed loop now handles your audit
+without any LLM-side recipe — point at a template, the loop drives
+it green or escalates with a specific signature.
+
+### Legacy direct-tool calls (DO NOT USE)
+
+The following must NOT be called by the skill — they bypass the
+transactional gate:
+
+- `render_sla_to_pdf()` / `rasterise()` from `tools/visual_diff.py`
+- `python3 templates/<slug>/build.py` directly
+- `bin/render-gallery <slug>` directly (use `bin/tune-render` instead)
+- Editing `template.sla` directly
 
 **The audit tools (E4 line_spacing_pixel_audit, E5
 image_frame_visibility_audit) ENFORCE this — they exit non-zero
