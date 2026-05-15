@@ -74,16 +74,19 @@ def test_all_audits_ok_yields_preflight_ok(tmp_path):
 
 def test_two_failures_yields_two_hot_issues(tmp_path):
     _all_ok_payloads(tmp_path)
-    # Fail font_audit + text_position_audit
+    # Fail font_audit + text_position_audit. text_position_audit is
+    # magnitude-bucketed: a structural (>5pt) drift surfaces as the
+    # `text_position_audit_structural` sub-audit.
     _write(tmp_path / "font_audit.yml",
            {"ok": False, "missing_in_preview": ["GothamNarrow-Bold", "Vollkorn-Italic"]})
     _write(tmp_path / "text_position_audit.yml",
-           {"ok": False, "large_deltas_count": 7})
+           {"ok": False, "large_deltas_count": 7, "structural_deltas_count": 7,
+            "jitter_deltas_count": 0})
     result = _build_preflight(tmp_path, "tpl", **_paths(tmp_path))
     assert result["ok"] is False
     assert len(result["hot_issues"]) == 2
     failing = {h["audit"] for h in result["hot_issues"]}
-    assert failing == {"font_audit", "text_position_audit"}
+    assert failing == {"font_audit", "text_position_audit_structural"}
 
 
 def test_hot_issues_capped_at_5(tmp_path):
