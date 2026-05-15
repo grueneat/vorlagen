@@ -60,6 +60,13 @@ class PostkarteRoundTrip(unittest.TestCase):
         self.assertTrue(sla.exists())
 
     def test_diff_against_original_clean(self):
+        if not _meta_sla_diff_strict(self.TEMPLATE_DIR / "meta.yml"):
+            self.skipTest(
+                "meta.yml::sla_diff_strict=false — postkarte intentionally "
+                "diverges from upstream: the rotated stamp + petition-URL "
+                "frames are enlarged so Scribus renders all their text "
+                "(the IDML geometry clips them)."
+            )
         sla = _run_build(self.TEMPLATE_DIR / "build.py")
         report = _diff_clean(self.ORIGINAL, sla)
         self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,

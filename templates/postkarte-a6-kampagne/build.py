@@ -173,7 +173,7 @@ def build_template():
         x_mm=74.49013724386381,
         y_mm=34.86545294720161,
         w_mm=19.14330128647709,
-        h_mm=11.538116151545923,
+        h_mm=14.0,  # was 11.54mm — too short for 3 lines of 10/11pt; clipped line 3 ("besteuern")
         layer=0,
         rotation_deg=351,
         line_width_pt=1.00000000000002,
@@ -349,7 +349,7 @@ def build_template():
         x_mm=10.904587155963537,
         y_mm=116.19783784403674,
         w_mm=83.19082568807343,
-        h_mm=4.427522935779805,
+        h_mm=6.0,  # was 4.43mm — below the 13pt fixed leading; clipped the URL line
         layer=0,
         line_width_pt=1,
         trail_style='Fließtext',
