@@ -123,6 +123,13 @@ class PlakatRoundTrip(unittest.TestCase):
     ORIGINAL = ROOT / "plakat-a1-hochformat-original.sla"
 
     def test_diff_against_original_clean(self):
+        if not _meta_sla_diff_strict(self.TEMPLATE_DIR / "meta.yml"):
+            self.skipTest(
+                "meta.yml::sla_diff_strict=false — plakat-a1 intentionally "
+                "diverges from upstream: the two event-info frames are widened "
+                "from the IDML-authored 41.8mm so Scribus renders both text "
+                "lines (41.8mm clips line 2 under Scribus auto-leading)."
+            )
         sla = _run_build(self.TEMPLATE_DIR / "build.py")
         report = _diff_clean(self.ORIGINAL, sla)
         self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,
