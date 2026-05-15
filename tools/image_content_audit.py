@@ -100,14 +100,22 @@ def _crop_at_bbox(img, bbox_mm, dpi):
     return img.crop((px_x, px_y, px_x + px_w, px_y + px_h))
 
 
-def measure_frame_content(info: dict, baseline_pngs, preview_pngs, dpi: int) -> dict:
+def measure_frame_content(info: dict, baseline_pngs, preview_pngs, dpi: int,
+                          baseline_bbox_mm=None) -> dict:
+    """Compare frame content baseline vs preview.
+
+    `baseline_bbox_mm` overrides where the baseline crop is taken when
+    a y_mm_shift moved the frame between the IDML-baseline state and
+    the current build.py state. Without this, the audit reads
+    background where baseline shows the asset → false positive.
+    """
     pg = info.get("page", 0)
     if pg >= len(baseline_pngs) or pg >= len(preview_pngs):
         return {**info, "error": f"page {pg} out of range"}
     bbox_mm = info["bbox_mm"]
     bl = Image.open(baseline_pngs[pg]).convert("RGB")
     pv = Image.open(preview_pngs[pg]).convert("RGB")
-    bl_crop = _crop_at_bbox(bl, bbox_mm, dpi)
+    bl_crop = _crop_at_bbox(bl, baseline_bbox_mm or bbox_mm, dpi)
     pv_crop = _crop_at_bbox(pv, bbox_mm, dpi)
 
     bl_var = _color_variance(bl_crop)
@@ -182,6 +190,28 @@ def main(argv=None):
     sys.path.insert(0, str(ROOT / "tools"))
     from image_frame_visibility_audit import parse_image_frames_from_build_py
     frames = parse_image_frames_from_build_py(template_dir / "build.py")
+
+    # Build a {anname → original_y_mm} map by parsing P5/playbook y_mm_shift.py
+    # markers in build.py. The baseline.pdf renders at the IDML-original
+    # positions; if a frame has been y-shifted via the playbook, its
+    # baseline-side bbox is the FIRST `y_mm X → Y` in the chain (X), not
+    # the current y. Without this the audit compares baseline-at-current-y
+    # (background) vs preview-at-current-y (asset) → false positive.
+    import re
+    original_y_map: dict[str, float] = {}
+    build_text = (template_dir / "build.py").read_text()
+    for fm in re.finditer(
+        r"(?:^[ \t]*# P5/playbook y_mm_shift\.py: y_mm ([\d.-]+) → [\d.-]+[^\n]*\n)+"
+        r"[ \t]*page\d+\.add\((?:TextFrame|ImageFrame)\((?:.|\n)*?anname='(\w+)'",
+        build_text, re.MULTILINE,
+    ):
+        # The earliest-applied (top-most) marker holds the original y
+        anname = fm.group(2)
+        if anname not in original_y_map:
+            try:
+                original_y_map[anname] = float(fm.group(1))
+            except ValueError:
+                pass
     if not frames:
         print("no ImageFrames in build.py", file=sys.stderr)
         return 0
@@ -200,7 +230,17 @@ def main(argv=None):
             "scale_type": f.scale_type,
             "image_path": f.image_path,
         }
-        rows.append(measure_frame_content(info, baseline_pngs, preview_pngs, args.dpi))
+        # If the frame was y_mm-shifted post-IDML, baseline.pdf still
+        # renders at the original y_mm — read baseline crop there.
+        baseline_bbox_mm = None
+        original_y = original_y_map.get(f.anname)
+        if original_y is not None and abs(original_y - f.bbox_mm[1]) > 0.5:
+            x, _, w, h = f.bbox_mm
+            baseline_bbox_mm = (x, original_y, w, h)
+        rows.append(measure_frame_content(
+            info, baseline_pngs, preview_pngs, args.dpi,
+            baseline_bbox_mm=baseline_bbox_mm,
+        ))
 
     summary = {
         "ok": sum(1 for r in rows if r.get("classification") == "ok"),

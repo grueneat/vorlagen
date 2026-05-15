@@ -44,11 +44,21 @@ def _frame_actionable(frame: dict) -> tuple[bool, str]:
     """Return (is_actionable, reason)."""
     if frame.get("classification") == "match":
         return False, "match"
+    # Line-count mismatch is ALWAYS actionable — even when the
+    # measured-line drift is 0pt. The audit only compares lines that
+    # exist in BOTH baseline and preview; if preview wraps to extra
+    # lines, those extra lines drift uncountably (no baseline to
+    # compare). The structural difference is the signal.
+    blc = frame.get("baseline_line_count")
+    plc = frame.get("preview_line_count")
+    if blc is not None and plc is not None and blc != plc:
+        return True, (
+            f"line count differs (baseline={blc} vs preview={plc}) — "
+            f"text wrapped differently; check frame width or font metric"
+        )
     max_drift = frame.get("max_drift_pt") or 0
     if max_drift is None or max_drift < MAJOR_DRIFT_PT:
         return False, f"sub-threshold ({max_drift}pt)"
-    if frame.get("preview_line_count") != frame.get("baseline_line_count"):
-        return True, f"line count differs (baseline={frame.get('baseline_line_count')} vs preview={frame.get('preview_line_count')})"
     per_line = frame.get("per_line_drift_pt", [])
     if per_line and all(abs(d) >= MAJOR_DRIFT_PT for d in per_line):
         # Check if signs match (true uniform offset) vs split (some +, some -)
@@ -106,12 +116,19 @@ def main(argv=None):
     tolerances_yaml = _load_yaml(template_dir / "TOLERANCES.yml") or {}
     tolerated_annames = set()
     for entry in tolerances_yaml.get("tolerances", []):
-        # Pick up annames in either the id (tol:<anname>-...) OR the reason
-        for src in (entry.get("id", ""), entry.get("reason", "")):
-            for token in src.replace("-", " ").replace(":", " ").split():
-                t = token.rstrip(".,()")
-                if t.startswith("u") and 2 <= len(t) <= 6 and all(c.isalnum() for c in t):
-                    tolerated_annames.add(t)
+        # Only pick up annames from the id field (tol:<anname>-...).
+        # Reason-text references to other frames (e.g. "mirror of u16c
+        # worked example") used to be mistakenly treated as tolerances —
+        # which silently masked real regressions. Narrow to id-only.
+        eid = entry.get("id", "")
+        if not eid.startswith("tol:"):
+            continue
+        # Strip "tol:" prefix and split on hyphens. The first token is
+        # typically the anname IF it starts with "u" and is alphanum.
+        body = eid[4:]
+        first = body.split("-", 1)[0]
+        if first.startswith("u") and 2 <= len(first) <= 6 and all(c.isalnum() for c in first):
+            tolerated_annames.add(first)
 
     actionable = []
     summary = {"match": 0, "sub_threshold": 0, "actionable": 0, "tolerated": 0}
