@@ -34,6 +34,9 @@ asset_policy:
 build:
   script: build.py
   output: template.sla
+
+# Pinned by bin/check-stale-previews; updated by bin/render-gallery on
+# each rebuild. Initial value is the SHA of the converter-emitted SLA.
 previews_for_sla: f8198a0f8c15cc992a20b5adaf2d980dce550db09cf96cb4f0b0406930dccbd3
 brand_overrides:
 - id: brand:line_spacing_0.9
