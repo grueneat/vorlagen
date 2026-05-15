@@ -205,6 +205,13 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
 
 def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     """Auto-generated page-items for page 1 (Spread Spreads/Spread_ueb.xml)."""
+    # P5/inject: u139 source (leonore-stehend-lang-retuschiert.jpg) is
+    # 4308×2598 (landscape, aspect 1.658). Frame is 101.18×214mm
+    # (portrait, aspect 0.473). The IDML's scale_type=1 + local_offset_mm
+    # (-166mm) clipped to the wrong region — preview rendered nearly
+    # uniform dark green where baseline showed the portrait. Pre-crop
+    # the source to portrait aspect (1228×2598 via tools/codex_image_gen
+    # or PIL) and use scale_type=0 for proportional fit.
     page0.add(ImageFrame(
         x_mm=197.8236,
         y_mm=-2,
@@ -212,10 +219,8 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=214,
         anname='u139',
         layer=0,
-        image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/leonore-stehend-lang-retuschiert.jpg',
-        local_scale=(0.972886, 0.972886),
-        scale_type=1,
-        local_offset_mm=(-166.3236, 0),
+        image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/leonore-stehend-lang-retuschiert-crop.jpg',
+        scale_type=0,
     ))
     page0.add(ImageFrame(
         x_mm=273.24,

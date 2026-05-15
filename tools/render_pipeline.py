@@ -1276,6 +1276,46 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E5c: image_content_audit — catches images that ARE rendering
+    # but with wrong content (variance loss, mean color shift, histogram
+    # divergence). Closes L-012 gap where image_frame_visibility says OK
+    # but the image is showing the wrong region (u139-class — Leonore
+    # frame rendered as dark green when source is wrong-aspect or
+    # local_offset is mis-calibrated).
+    image_content_path = out_dir / "image_content_audit.yml"
+    image_content_md = out_dir / "image_content_audit.md"
+    if preview_pdf.exists() and baseline.exists() and build_py.exists():
+        try:
+            from image_content_audit import main as _ica_main
+            _ica_main([
+                "--slug", tid,
+                "--templates-dir", str(Path("/workspace/templates")),
+                "--dpi", "150",
+                "--out-yaml", str(image_content_path),
+                "--out-md", str(image_content_md),
+            ])
+            ica_data = yaml.safe_load(image_content_path.read_text(encoding="utf-8")) or {}
+            n_broken = (ica_data.get("summary") or {}).get("broken") or 0
+            broken = ica_data.get("broken_annames") or []
+            if n_broken:
+                issue_parts.append(
+                    f"{n_broken} image frame(s) broken (wrong content): {broken}"
+                )
+                print(
+                    f"[{tid}] image_content_audit: {n_broken} broken frame(s): "
+                    f"{broken} → REVIEW",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] image_content_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "image_content_audit",
+                "E5c (image_content_audit)", exc, tid,
+            )
+    else:
+        print(f"[{tid}] audit E5c (image_content_audit): skipped", file=sys.stderr)
+
     # Phase E5: image_frame_visibility_audit — catches "embedded but
     # invisible" image frames. Counts ink pixel density inside each
     # ImageFrame bbox in baseline vs preview; flags frames where
@@ -1904,6 +1944,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         asset_audit_path=asset_audit_path,
         systematic_text_audit_path=systematic_audit_path,
         image_visibility_path=image_visibility_path,
+        image_content_path=image_content_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -1949,6 +1990,7 @@ def _build_preflight(
     asset_audit_path: Path | None = None,
     systematic_text_audit_path: Path | None = None,
     image_visibility_path: Path | None = None,
+    image_content_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -2117,6 +2159,19 @@ def _build_preflight(
                 bool(sta.get("ok", True)),
                 int(n_actionable),
                 f"{n_actionable} frame(s) with un-addressed sim-actionable drift" if n_actionable else "",
+            )
+
+    # Phase E5c: image_content_audit — varied-content per-frame check.
+    if image_content_path is not None:
+        ica = _load_yml(image_content_path)
+        if ica is not None:
+            n_broken = (ica.get("summary") or {}).get("broken") or 0
+            broken = ica.get("broken_annames") or []
+            _record(
+                "image_content_audit",
+                bool(ica.get("ok", True)),
+                int(n_broken),
+                f"broken: {broken}" if broken else "",
             )
 
     # Phase E5: image_frame_visibility_audit recorded so the playbook
