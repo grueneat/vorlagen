@@ -2289,12 +2289,19 @@ def _build_preflight(
     if tol_path.exists():
         try:
             tol_doc = yaml.safe_load(tol_path.read_text(encoding="utf-8")) or {}
-            # Aggregate tolerances by audit name with summed max_issues.
-            # SKIP per-frame tolerance entries (id starts with `tol:u<anname>-`):
-            # those are handled by per-audit classifiers (e.g.
-            # systematic_text_audit's tolerated_annames lookup) and counting
-            # them again at the preflight gate would double-tolerate
-            # unrelated frames in the same audit category.
+            # User-feedback design (2026-05-15): tolerances must declare
+            # `severity:` to participate in preflight gating.
+            #
+            #   cosmetic   — audit-engine quirk OR sub-pt per-pixel jitter.
+            #                Tolerated → preflight may pass.
+            #   structural — visible drift, content shift, layout change.
+            #                DOCUMENTED but does NOT flip preflight; the
+            #                LLM/human must fix the underlying issue.
+            #
+            # Without an explicit `severity:` field, the entry behaves
+            # like `structural` — preflight stays red. This forces the
+            # author to make a deliberate decision about whether the
+            # tolerance is a cosmetic-quirk pass or a real-issue document.
             audit_caps: dict[str, int] = {}
             import re as _re
             for entry in tol_doc.get("tolerances", []):
@@ -2302,15 +2309,14 @@ def _build_preflight(
                 if not a_name:
                     continue
                 eid = entry.get("id", "")
-                # Per-frame tolerances start with `tol:u<2-5 alphanum>-`
                 if _re.match(r"^tol:u[0-9a-f]{1,5}-", eid):
+                    continue
+                severity = entry.get("severity", "structural")
+                if severity != "cosmetic":
+                    # Documented only — does not contribute to gating.
                     continue
                 cap = entry.get("max_issues")
                 if cap is None:
-                    # Without a cap, a tolerance can mask infinite growth
-                    # — refuse to use it for preflight gating. The
-                    # tolerance still documents the issue but the audit
-                    # stays red until a cap is added.
                     continue
                 audit_caps[a_name] = audit_caps.get(a_name, 0) + int(cap)
             for name, cap in audit_caps.items():

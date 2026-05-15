@@ -8,6 +8,7 @@ tolerances:
     at the converter level. Visual recognisability is preserved.
   follow_up_issue: engine-bug; no upstream issue yet
   max_issues: 50
+  severity: cosmetic
 - id: tol:text-position-audit-395-word-drifts
   audit: text_position_audit
   classification: scribus-engine-bug
@@ -18,6 +19,7 @@ tolerances:
     differences and not converter-fixable.
   follow_up_issue: engine-bug; no upstream issue yet
   max_issues: 400
+  severity: structural
 - id: tol:image-audit-31-inline-vector-path-delta
   audit: image_audit
   classification: scribus-engine-bug
@@ -29,6 +31,7 @@ tolerances:
     gap class as the sibling falz templates.'
   follow_up_issue: converter-extension; future Stage-1 work (pattern_library inline-TextPath)
   max_issues: 35
+  severity: structural
 - id: tol:asset-extraction-composite-ai-social-icons
   audit: asset_extraction
   classification: human-review
@@ -41,6 +44,7 @@ tolerances:
   follow_up_issue: converter-extension; future Stage-1 work (asset_extraction_audit
     classifier for split-icon)
   max_issues: 1
+  severity: cosmetic
 - id: tol:run-style-audit-extractor-disagreement
   audit: run_style_audit
   classification: scribus-engine-bug
@@ -51,6 +55,7 @@ tolerances:
     quirk, not a converter regression.
   follow_up_issue: engine-bug; no upstream issue yet (audit-engine selection)
   max_issues: 1
+  severity: cosmetic
 - id: tol:line-spacing-pixel-audit-2-major-drifts
   audit: line_spacing_pixel_audit
   classification: scribus-engine-bug
@@ -61,6 +66,7 @@ tolerances:
   follow_up_issue: engine-bug; sub-3pt drift, well below visual threshold for affected
     lines
   max_issues: 4
+  severity: structural
 - id: tol:u1e6-mixed-font-headline-split-offset
   audit: systematic_text_audit
   classification: scribus-engine-bug
@@ -73,6 +79,7 @@ tolerances:
     automated; LLM-judgment escalation.
   follow_up_issue: playbook-extension; future tools/playbooks/split_frame.py
   max_issues: 1
+  severity: structural
 - id: tol:u1fd-bullet-list-mid-frame-anomaly
   audit: systematic_text_audit
   classification: scribus-engine-bug
@@ -84,6 +91,7 @@ tolerances:
     on the bullet separators).
   follow_up_issue: engine-bug; bullet-list rendering between Scribus and InDesign
   max_issues: 1
+  severity: structural
 - id: tol:uf7-empty-info-layer-frame-line-count-mismatch
   audit: systematic_text_audit
   classification: authoring-bug
@@ -96,6 +104,7 @@ tolerances:
   follow_up_issue: converter-extension; tools/idml_to_dsl.py drops empty Info-layer
     frames
   max_issues: 1
+  severity: cosmetic
 - id: tol:text-render-stoerer-rotation-tokenisation
   audit: text_render_audit
   classification: scribus-engine-bug
@@ -108,23 +117,7 @@ tolerances:
     in run_style_audit.
   follow_up_issue: engine-bug; pdftotext rotation-aware text extraction
   max_issues: 1
-- id: tol:u16c-mixed-font-headline-line-wrap
-  audit: systematic_text_audit
-  classification: scribus-engine-bug
-  max_issues: 1
-  reason: >-
-    u16c is a 3-paragraph mixed-font headline ("Das ist die /
-    dreizeilige / Headline.") with Gotham Narrow Ultra → Vollkorn
-    Black Italic → Gotham Narrow Ultra at 38pt. Scribus renders
-    Vollkorn Black Italic 1 character wider per line than InDesign,
-    causing different line wraps. Audit reports baseline=1 line vs
-    preview=2 lines for the third paragraph. Visually the text is
-    fully readable; the inter-paragraph gap is also slightly wider
-    in preview which pushes the subheadline (u155) down. Same gap
-    class as the sibling falz templates' u16c worked example.
-    Future fix: split into per-paragraph TextFrames at calibrated
-    y_mm (mirror of zweigeteiltes-cover u16c approach).
-  follow_up_issue: engine-bug; mixed-font-headline split-frame fix tracked
+  severity: cosmetic
 - id: tol:visual-diff-image-size-mismatch
   audit: visual_diff_regions
   classification: scribus-engine-bug
@@ -136,6 +129,7 @@ tolerances:
     audits. Same artefact appears on the sibling falz templates.'
   follow_up_issue: engine-bug; pdftocairo vs InDesign rasterisation DPI rounding
   max_issues: 0
+  severity: cosmetic
 - id: tol:visual-diff-regions-hot-regions
   audit: visual_diff_regions
   classification: scribus-engine-bug
@@ -145,3 +139,4 @@ tolerances:
     hot regions is the steady-state count after closed-loop convergence; cap at 25
     with 5 buffer.
   follow_up_issue: covered by other tolerances above
+  severity: structural
