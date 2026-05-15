@@ -274,16 +274,46 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         runs=[Run(text='Mehrzeilige Subheadline –', font='Gotham Narrow Book', fontsize=18, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}, separator='para'), Run(text='mehr Info zum Thema', font='Gotham Narrow Book', fontsize=18, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
         trail_attrs={'LINESPMode': '1'},
     ))
-    # h_mm widened 34.7873mm→81.8444mm: Scribus clips lines when frame_h < 4 explicit lines × line height (leading=34.13pt; IDML overflows silently)
+    # P5/inject: u16c was a single 3-paragraph mixed-font headline
+    # (Gotham Narrow Ultra "Das ist die" → Vollkorn Black Italic
+    # "dreizeilige" → Gotham Narrow Ultra "Headline"). Scribus's
+    # inter-paragraph gap on empty <para> separators differs from
+    # InDesign, pushing "Headline" + the subheadline u155 below it
+    # downward. Mirrors the u16c worked example from
+    # zweigeteiltes-cover (PR #103). Split into 3 single-line
+    # TextFrames at calibrated y_mm matching baseline.pdf measured
+    # text-tops (151.00 / 157.97 / 169.72 mm).
     page0.add(TextFrame(
         x_mm=204.6236,
-        y_mm=151.759,
+        y_mm=151.0,
         w_mm=71.6562,
-        h_mm=81.8444,
+        h_mm=14.0,
         anname='u16c',
         layer=0,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Das ist die ', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}, separator='para'), Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb'), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}, separator='para'), Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+        runs=[Run(text='Das ist die', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
+        trail_attrs={'LINESPMode': '1'},
+    ))
+    page0.add(TextFrame(
+        x_mm=204.6236,
+        y_mm=157.97,
+        w_mm=71.6562,
+        h_mm=11.5,
+        anname='u16c_l2',
+        layer=0,
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=38, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
+        trail_attrs={'LINESPMode': '1'},
+    ))
+    page0.add(TextFrame(
+        x_mm=204.6236,
+        y_mm=169.72,
+        w_mm=71.6562,
+        h_mm=11.0,
+        anname='u16c_l3',
+        layer=0,
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Headline', font='Gotham Narrow Ultra', fontsize=38, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
         trail_attrs={'LINESPMode': '1'},
     ))
     page0.add(Polygon(
