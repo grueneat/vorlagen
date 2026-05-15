@@ -391,6 +391,28 @@ def _update_meta_hash(meta_path: Path, value) -> None:
     meta_path.write_text(text, encoding="utf-8")
 
 
+def _update_meta_build_py_sha(meta_path: Path, sha: str) -> None:
+    """Write (or replace) ``build_py_sha256:`` in meta_path.
+
+    This pin is the staleness gate for the gallery preview chain. The
+    committed ``template.sla`` / ``template-preview.sla`` / page PNGs are
+    only valid for the exact ``build.py`` they were rendered from; recording
+    its SHA here lets ``check_stale_previews`` flag the case where build.py
+    was hand-edited but the previews were never regenerated (the gap that
+    let the gruenes-cover-2 blank banner + missing icons ship). Cheap and
+    deterministic — no rendering needed to verify.
+    """
+    text = meta_path.read_text(encoding="utf-8")
+    block = f"build_py_sha256: {sha}"
+    if re.search(r"^build_py_sha256:", text, re.M):
+        text = re.sub(r"^build_py_sha256:.*$", block, text, count=1, flags=re.M)
+    elif re.search(r"^version:.*$", text, re.M):
+        text = re.sub(r"^(version:.*)$", r"\1\n" + block, text, count=1, flags=re.M)
+    else:
+        text = text.rstrip("\n") + "\n" + block + "\n"
+    meta_path.write_text(text, encoding="utf-8")
+
+
 def _zero_pad_pngs(tdir: Path, prefix: str) -> None:
     """Rename single-digit ``<prefix>-N.png`` → ``<prefix>-0N.png``.
 
@@ -730,6 +752,17 @@ def _orchestrate_template(tdir: Path, args) -> int:
                     f"[{tid}] meta.yml hash auto-update skipped: {exc}",
                     file=sys.stderr,
                 )
+
+    # Record the build.py SHA so check_stale_previews can flag a build.py
+    # that was hand-edited without re-rendering (covers single + family).
+    if not getattr(args, "dry_run", False) and build_py.exists():
+        try:
+            _update_meta_build_py_sha(tdir / "meta.yml", _sha256_of(build_py))
+        except OSError as exc:
+            print(
+                f"[{tid}] meta.yml build_py_sha256 update skipped: {exc}",
+                file=sys.stderr,
+            )
 
     if is_family:
         return _orchestrate_family(tdir, meta, site_public_dir, args)

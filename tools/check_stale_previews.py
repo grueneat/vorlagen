@@ -81,6 +81,25 @@ def _check_template(tdir: Path) -> list[str]:
 
     errors: list[str] = []
 
+    # build.py staleness gate: the committed template.sla /
+    # template-preview.sla / page PNGs are only valid for the exact build.py
+    # they were rendered from. render-gallery records sha256(build.py) in
+    # meta.yml::build_py_sha256; a mismatch means build.py was edited but the
+    # previews were never regenerated — the gap that let gruenes-cover-2 ship
+    # a blank banner + missing left icons. Transitional: templates without
+    # the pin yet are not failed; they acquire it on their next render.
+    recorded_build_sha = meta.get("build_py_sha256")
+    build_py = tdir / "build.py"
+    if recorded_build_sha and build_py.exists():
+        actual_build_sha = _sha256_of(build_py)
+        if actual_build_sha != recorded_build_sha:
+            errors.append(
+                f"stale: {tid}; build.py changed since last render "
+                f"(recorded={recorded_build_sha[:16]}... "
+                f"actual={actual_build_sha[:16]}...) — "
+                "run bin/render-gallery and commit the result."
+            )
+
     if is_family:
         # Family: recorded must be a dict mapping size code → hash.
         if not isinstance(recorded, dict):
