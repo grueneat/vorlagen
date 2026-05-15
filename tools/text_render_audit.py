@@ -94,6 +94,26 @@ def extract_pdf_words(pdf_path: Path) -> Counter:
     return Counter(words)
 
 
+def extract_pdf_chars(pdf_path: Path) -> Counter:
+    """Return a Counter of normalised word-characters from all pages.
+
+    Every whitespace and punctuation character is dropped — only ``\\w``
+    glyphs are counted. This is the authoritative "is exactly the same text
+    present" signal: it is invariant to pdftotext word-segmentation, which
+    diverges between the InDesign baseline and the Scribus render on rotated
+    badges and heavily-tracked text (the same word tokenises into different
+    fragments). A genuine clip still shows as missing characters.
+    """
+    result = subprocess.run(
+        ["pdftotext", "-layout", str(pdf_path), "-"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    text = _normalize_text(result.stdout)
+    return Counter(re.findall(r"\w", text))
+
+
 def _reconcile_fragmented(
     missing: dict[str, int], extra: dict[str, int]
 ) -> tuple[dict[str, int], dict[str, int]]:
@@ -141,37 +161,44 @@ def run_text_render_audit(
     baseline_pdf: Path,
     template: str = "",
 ) -> dict[str, Any]:
-    """Diff word-level presence between preview_pdf and baseline_pdf.
+    """Diff text presence between preview_pdf and baseline_pdf.
 
     Returns a report dict with keys:
         template, baseline_pdf, preview_pdf,
         baseline_word_count, preview_word_count,
+        baseline_char_count, preview_char_count, missing_chars,
         missing_in_preview, extra_in_preview, ok.
 
-    ``ok`` is True only when missing_in_preview is empty (every baseline word
-    appears at least as many times in preview as in baseline). Word-boundary
-    fragmentation artifacts (rotated text split by pdftotext) are reconciled
-    away first so ``ok`` reflects genuine render-side text loss.
+    ``ok`` is the **character-multiset** verdict: True only when every
+    word-character in the baseline appears at least as often in the preview.
+    Character-level is authoritative because pdftotext word-segmentation
+    diverges between InDesign and Scribus output on rotated / heavily-tracked
+    text — the same word fragments differently — which makes a word-level
+    verdict unreliable. A genuine clip (a too-short frame rendering
+    "dreizeilige" as "dreizeili") still drops characters and is caught.
+
+    ``missing_in_preview`` is the word-level breakdown, kept for the
+    human-readable "which words" hint. When the character multiset matches
+    exactly it is emptied — any residual word diff is pure tokenisation noise.
     """
     base = extract_pdf_words(baseline_pdf)
     prev = extract_pdf_words(preview_pdf)
+    base_c = extract_pdf_chars(baseline_pdf)
+    prev_c = extract_pdf_chars(preview_pdf)
 
-    # Words present MORE OFTEN in baseline → suppressed in preview.
-    missing = {
-        w: base[w] - prev[w]
-        for w in base
-        if base[w] > prev[w]
-    }
-    # Words present MORE OFTEN in preview → extra content (informational).
-    extra = {
-        w: prev[w] - base[w]
-        for w in prev
-        if prev[w] > base[w]
-    }
+    # Authoritative verdict: character multiset.
+    char_missing = base_c - prev_c
+    ok = not char_missing
 
-    # Drop rotated-text tokenisation artifacts (e.g. "störer" → "stör"+"er")
-    # so a genuine clip is not buried under permanent false positives.
+    # Word-level breakdown (diagnostic). Reconcile rotated-text fragmentation
+    # so the "which words" hint is as clean as possible.
+    missing = {w: base[w] - prev[w] for w in base if base[w] > prev[w]}
+    extra = {w: prev[w] - base[w] for w in prev if prev[w] > base[w]}
     missing, extra = _reconcile_fragmented(missing, extra)
+    if ok:
+        # Every character is present — any leftover word diff is tokenisation
+        # noise (rotation / tracking), not text loss.
+        missing = {}
 
     return {
         "template": template,
@@ -179,13 +206,16 @@ def run_text_render_audit(
         "preview_pdf": str(preview_pdf),
         "baseline_word_count": sum(base.values()),
         "preview_word_count": sum(prev.values()),
+        "baseline_char_count": sum(base_c.values()),
+        "preview_char_count": sum(prev_c.values()),
+        "missing_chars": dict(sorted(char_missing.items())),
         "missing_in_preview": dict(
             sorted(missing.items(), key=lambda kv: (-kv[1], kv[0]))
         ),
         "extra_in_preview": dict(
             sorted(extra.items(), key=lambda kv: (-kv[1], kv[0]))
         ),
-        "ok": not missing,
+        "ok": ok,
     }
 
 
@@ -241,19 +271,19 @@ def main(argv: list[str] | None = None) -> int:
 
     print(yaml_text, end="")
 
-    missing = report["missing_in_preview"]
-    if missing:
-        n_missing = sum(missing.values())
-        n_unique = len(missing)
+    label = args.template or args.preview.name
+    if not report["ok"]:
+        n_chars = sum(report["missing_chars"].values())
+        words = report["missing_in_preview"]
+        hint = (f" — words: {', '.join(words)}" if words else "")
         print(
-            f"[{args.template or args.preview.name}] text_render_audit: "
-            f"{n_unique} unique words missing ({n_missing} occurrences) "
-            f"— silent suppression → FAIL",
+            f"[{label}] text_render_audit: {n_chars} character(s) missing "
+            f"from the render — silent suppression → FAIL{hint}",
             file=sys.stderr,
         )
         return 1
 
-    print(f"[{args.template or args.preview.name}] text_render_audit: OK")
+    print(f"[{label}] text_render_audit: OK")
     return 0
 
 

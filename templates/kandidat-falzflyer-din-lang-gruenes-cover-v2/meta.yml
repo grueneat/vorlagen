@@ -1,5 +1,6 @@
 id: kandidat-falzflyer-din-lang-gruenes-cover-v2
 version: 0.1.0
+build_py_sha256: 5d70677c2d394b681adcb198d305b8c8dd84fb17fb7251b945819634e2b6a002
 title: Kandidat-Falzflyer DIN-lang (Grünes Cover v2)
 format: A4
 orientation: landscape
@@ -37,7 +38,7 @@ build:
 
 # Pinned by bin/check-stale-previews; updated by bin/render-gallery on
 # each rebuild. Initial value is the SHA of the converter-emitted SLA.
-previews_for_sla: f8198a0f8c15cc992a20b5adaf2d980dce550db09cf96cb4f0b0406930dccbd3
+previews_for_sla: 7258fe979f28d6c577572216cf14c5f18f5fd19638983418bbd73c58cc93e19e
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: IDML-imported template. The original InDesign ParagraphStyles (Headline

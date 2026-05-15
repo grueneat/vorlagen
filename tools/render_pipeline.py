@@ -583,15 +583,16 @@ def _run_text_render_gate(tid: str, tdir: Path, meta: dict) -> int:
     except Exception as exc:
         print(f"[{tid}] text_render_audit gate skipped: {exc}", file=sys.stderr)
         return 0
-    missing = report.get("missing_in_preview") or {}
-    if not missing:
-        print(f"[{tid}] text_render_audit: OK (all baseline words rendered)")
+    if report.get("ok"):
+        print(f"[{tid}] text_render_audit: OK (all baseline text rendered)")
         return 0
-    words = ", ".join(f"{w}×{n}" for w, n in missing.items())
+    n_chars = sum((report.get("missing_chars") or {}).values())
+    words = report.get("missing_in_preview") or {}
+    hint = (" — words: " + ", ".join(words)) if words else ""
     print(
-        f"[{tid}] text_render_audit FAIL — baseline words missing from the "
-        f"render: {words}. Scribus suppressed them (frame too small / "
-        f"off-page / occluded / colour-on-colour). Fix the frame, re-render.",
+        f"[{tid}] text_render_audit FAIL — {n_chars} character(s) of baseline "
+        f"text missing from the render{hint}. Scribus suppressed it (frame "
+        f"too small / off-page / occluded / colour-on-colour). Fix, re-render.",
         file=sys.stderr,
     )
     return 1

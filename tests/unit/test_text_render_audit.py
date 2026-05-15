@@ -164,20 +164,23 @@ def test_nfc_normalisation(tmp_path):
     # so we test the normalisation logic directly via extract_pdf_words monkeypatch.
     import text_render_audit as tra_module
 
-    # Simulate extract_pdf_words returning NFD text for baseline, NFC for preview.
+    # Simulate extract_pdf_{words,chars} returning NFD text for baseline,
+    # NFC for preview — run_text_render_audit calls both.
     original_extract = tra_module.extract_pdf_words
+    original_chars = tra_module.extract_pdf_chars
+
+    def _text_for(pdf_path):
+        word = nfd_word if "baseline" in str(pdf_path) else nfc_word
+        return unicodedata.normalize("NFC", word.lower())
 
     def fake_extract(pdf_path):
-        if "baseline" in str(pdf_path):
-            text = unicodedata.normalize("NFC", nfd_word.lower())
-            words = __import__("re").findall(r"[\w@.\-]+", text)
-            return Counter(words)
-        else:
-            text = unicodedata.normalize("NFC", nfc_word.lower())
-            words = __import__("re").findall(r"[\w@.\-]+", text)
-            return Counter(words)
+        return Counter(__import__("re").findall(r"[\w@.\-]+", _text_for(pdf_path)))
+
+    def fake_chars(pdf_path):
+        return Counter(__import__("re").findall(r"\w", _text_for(pdf_path)))
 
     tra_module.extract_pdf_words = fake_extract
+    tra_module.extract_pdf_chars = fake_chars
     try:
         baseline_pdf = tmp_path / "baseline.pdf"
         preview_pdf = tmp_path / "preview.pdf"
@@ -188,6 +191,7 @@ def test_nfc_normalisation(tmp_path):
         assert report["ok"] is True, f"NFC mismatch: {report['missing_in_preview']}"
     finally:
         tra_module.extract_pdf_words = original_extract
+        tra_module.extract_pdf_chars = original_chars
 
 
 # ---------------------------------------------------------------------------
@@ -248,19 +252,21 @@ def test_ligature_ffi_normalized():
     import text_render_audit as tra_module
 
     original_extract = tra_module.extract_pdf_words
+    original_chars = tra_module.extract_pdf_chars
+
+    def _text_for(pdf_path):
+        return _normalize_text("ofﬃcia" if "baseline" in str(pdf_path) else "officia")
 
     def fake_extract(pdf_path: Path) -> Counter:
         import re as _re
-        if "baseline" in str(pdf_path):
-            # ﬃ ligature form
-            text = _normalize_text("ofﬃcia")
-            return Counter(_re.findall(r"[\w@.\-]+", text))
-        else:
-            # decomposed form
-            text = _normalize_text("officia")
-            return Counter(_re.findall(r"[\w@.\-]+", text))
+        return Counter(_re.findall(r"[\w@.\-]+", _text_for(pdf_path)))
+
+    def fake_chars(pdf_path: Path) -> Counter:
+        import re as _re
+        return Counter(_re.findall(r"\w", _text_for(pdf_path)))
 
     tra_module.extract_pdf_words = fake_extract
+    tra_module.extract_pdf_chars = fake_chars
     try:
         baseline_pdf = Path("/dev/null")
         preview_pdf = Path("/dev/null")
@@ -270,6 +276,7 @@ def test_ligature_ffi_normalized():
         )
     finally:
         tra_module.extract_pdf_words = original_extract
+        tra_module.extract_pdf_chars = original_chars
 
 
 # ---------------------------------------------------------------------------
@@ -283,17 +290,21 @@ def test_ligature_fi_normalized():
     import text_render_audit as tra_module
 
     original_extract = tra_module.extract_pdf_words
+    original_chars = tra_module.extract_pdf_chars
+
+    def _text_for(pdf_path):
+        return _normalize_text("oﬁce" if "baseline" in str(pdf_path) else "ofice")
 
     def fake_extract(pdf_path: Path) -> Counter:
         import re as _re
-        if "baseline" in str(pdf_path):
-            text = _normalize_text("oﬁce")
-            return Counter(_re.findall(r"[\w@.\-]+", text))
-        else:
-            text = _normalize_text("ofice")
-            return Counter(_re.findall(r"[\w@.\-]+", text))
+        return Counter(_re.findall(r"[\w@.\-]+", _text_for(pdf_path)))
+
+    def fake_chars(pdf_path: Path) -> Counter:
+        import re as _re
+        return Counter(_re.findall(r"\w", _text_for(pdf_path)))
 
     tra_module.extract_pdf_words = fake_extract
+    tra_module.extract_pdf_chars = fake_chars
     try:
         baseline_pdf = Path("/dev/null")
         preview_pdf = Path("/dev/null")
@@ -303,6 +314,7 @@ def test_ligature_fi_normalized():
         )
     finally:
         tra_module.extract_pdf_words = original_extract
+        tra_module.extract_pdf_chars = original_chars
 
 
 # ---------------------------------------------------------------------------
