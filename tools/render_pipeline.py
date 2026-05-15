@@ -2217,32 +2217,72 @@ def _build_preflight(
 
     errors = dict(phase_errors or {})
 
-    # Tolerance recognition: read templates/<slug>/TOLERANCES.yml and mark
-    # audits with documented tolerance entries as ok=true (passing). The
-    # tolerance YAML's `audit:` field names the audit; if the issue count
-    # has not grown beyond the documented level, the audit passes.
-    # Without this gate, preflight stays red on documented residual
-    # classes (e.g. composite-AI brand-library swap, FreeType jitter)
-    # forever, regardless of how many tolerance entries exist.
+    # Bounded tolerance recognition (user-driven 2026-05-15): tolerances
+    # have a `max_issues` cap; preflight only marks an audit ok if the
+    # current issue count is at or below the cap. Without the cap, a
+    # tolerance entry covers the WHOLE audit category, masking real
+    # regressions (small drift growing into structural change).
+    #
+    # Tolerance schema:
+    #   - id: tol:...
+    #     audit: <audit_name>            # which preflight audit key
+    #     max_issues: <int>              # cap; current count > cap → fail
+    #     max_drift_pt: <float>          # optional; per-frame drift cap
+    #     classification: scribus-engine-bug | authoring-bug | human-review
+    #     reason: ...
     template_dir = Path(__file__).resolve().parent.parent / "templates" / tid
     tol_path = template_dir / "TOLERANCES.yml"
     if tol_path.exists():
         try:
             tol_doc = yaml.safe_load(tol_path.read_text(encoding="utf-8")) or {}
-            tolerated_audits = set()
+            # Aggregate tolerances by audit name with summed max_issues.
+            # SKIP per-frame tolerance entries (id starts with `tol:u<anname>-`):
+            # those are handled by per-audit classifiers (e.g.
+            # systematic_text_audit's tolerated_annames lookup) and counting
+            # them again at the preflight gate would double-tolerate
+            # unrelated frames in the same audit category.
+            audit_caps: dict[str, int] = {}
+            import re as _re
             for entry in tol_doc.get("tolerances", []):
                 a_name = entry.get("audit")
-                if a_name:
-                    tolerated_audits.add(a_name)
-            for name in tolerated_audits:
-                if name in audits_summary and not audits_summary[name].get("ok", True):
+                if not a_name:
+                    continue
+                eid = entry.get("id", "")
+                # Per-frame tolerances start with `tol:u<2-5 alphanum>-`
+                if _re.match(r"^tol:u[0-9a-f]{1,5}-", eid):
+                    continue
+                cap = entry.get("max_issues")
+                if cap is None:
+                    # Without a cap, a tolerance can mask infinite growth
+                    # — refuse to use it for preflight gating. The
+                    # tolerance still documents the issue but the audit
+                    # stays red until a cap is added.
+                    continue
+                audit_caps[a_name] = audit_caps.get(a_name, 0) + int(cap)
+            for name, cap in audit_caps.items():
+                row = audits_summary.get(name)
+                if row is None:
+                    continue
+                cur_issues = int(row.get("issues", 0))
+                if not row.get("ok", True) and cur_issues <= cap:
                     audits_summary[name] = {
-                        **audits_summary[name],
+                        **row,
                         "ok": True,
                         "tolerated": True,
+                        "tolerated_cap": cap,
                         "detail": (
-                            (audits_summary[name].get("detail") or "")
-                            + " (tolerated via TOLERANCES.yml)"
+                            f"{row.get('detail') or ''} "
+                            f"(tolerated: {cur_issues} ≤ cap {cap})"
+                        ).strip(),
+                    }
+                elif not row.get("ok", True) and cur_issues > cap:
+                    # Cap exceeded — keep failing but annotate clearly
+                    audits_summary[name] = {
+                        **row,
+                        "tolerated_cap": cap,
+                        "detail": (
+                            f"{row.get('detail') or ''} "
+                            f"(EXCEEDED tolerance cap: {cur_issues} > {cap})"
                         ).strip(),
                     }
         except Exception:
