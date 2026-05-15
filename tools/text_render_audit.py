@@ -94,6 +94,48 @@ def extract_pdf_words(pdf_path: Path) -> Counter:
     return Counter(words)
 
 
+def _reconcile_fragmented(
+    missing: dict[str, int], extra: dict[str, int]
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Cancel missing↔extra pairs that are pdftotext word-fragmentation noise.
+
+    Scribus emits rotated text (e.g. the −18° "Störer" badge) so that
+    ``pdftotext`` segments one word into adjacent fragments — "störer"
+    surfaces as "stör" + "er". The glyphs ARE on the page; that is a
+    tokeniser artifact, not a real text loss, and it must not mask a
+    genuine miss. For each missing word, greedily spell it by consuming
+    ``extra`` fragments as a prefix chain. If it spells completely from
+    ≥2 fragments, drop it from both sides. A genuinely clipped word
+    (a too-short frame renders "dreizeilige" as "dreizeili") leaves an
+    unspellable remainder and stays in ``missing`` — the real signal.
+    """
+    missing = dict(missing)
+    pool = Counter(extra)
+    for w in list(missing):
+        while missing[w] > 0:
+            remaining, consumed = w, []
+            while remaining:
+                cand = next(
+                    (f for f in sorted(pool, key=len, reverse=True)
+                     if pool[f] > 0 and f != w and remaining.startswith(f)),
+                    None,
+                )
+                if cand is None:
+                    break
+                remaining = remaining[len(cand):]
+                pool[cand] -= 1
+                consumed.append(cand)
+            if not remaining and len(consumed) >= 2:
+                missing[w] -= 1  # spelled from fragments → artifact
+            else:
+                for f in consumed:
+                    pool[f] += 1  # roll back; not reconcilable
+                break
+        if missing[w] == 0:
+            del missing[w]
+    return missing, {k: v for k, v in pool.items() if v > 0}
+
+
 def run_text_render_audit(
     preview_pdf: Path,
     baseline_pdf: Path,
@@ -107,7 +149,9 @@ def run_text_render_audit(
         missing_in_preview, extra_in_preview, ok.
 
     ``ok`` is True only when missing_in_preview is empty (every baseline word
-    appears at least as many times in preview as in baseline).
+    appears at least as many times in preview as in baseline). Word-boundary
+    fragmentation artifacts (rotated text split by pdftotext) are reconciled
+    away first so ``ok`` reflects genuine render-side text loss.
     """
     base = extract_pdf_words(baseline_pdf)
     prev = extract_pdf_words(preview_pdf)
@@ -124,6 +168,10 @@ def run_text_render_audit(
         for w in prev
         if prev[w] > base[w]
     }
+
+    # Drop rotated-text tokenisation artifacts (e.g. "störer" → "stör"+"er")
+    # so a genuine clip is not buried under permanent false positives.
+    missing, extra = _reconcile_fragmented(missing, extra)
 
     return {
         "template": template,
