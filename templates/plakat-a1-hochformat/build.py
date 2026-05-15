@@ -133,7 +133,7 @@ def build_template():
         x_mm=32.62062385321089,
         y_mm=700.3917431192663,
         w_mm=233.02752293578,
-        h_mm=41.79755751783901,
+        h_mm=52.0,  # was 41.8mm — too short for 2 lines of 50pt Fließtext (auto leading ~60pt); clipped line 2
         layer=0,
         line_width_pt=1,
         trail_style='Fließtext',
@@ -148,7 +148,7 @@ def build_template():
         x_mm=277.6620101936798,
         y_mm=700.3917431192663,
         w_mm=235.9403669724773,
-        h_mm=41.79755751783866,
+        h_mm=52.0,  # was 41.8mm — too short for 2 lines of 50pt Fließtext (auto leading ~60pt); clipped line 2
         layer=0,
         line_width_pt=1,
         trail_style='Fließtext',

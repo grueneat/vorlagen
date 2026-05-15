@@ -559,19 +559,19 @@ def _select_render_source(template_dir: Path) -> Path:
 
 def _run_text_render_gate(tid: str, tdir: Path, meta: dict) -> int:
     """Post-render gate: every word in baseline.pdf must survive into the
-    rendered preview.pdf.
+    rendered preview.pdf — exactly.
 
-    Catches the class of bug where Scribus silently suppresses text —
+    This is a basic correctness gate: the text content the InDesign baseline
+    shows and the text content our Scribus render shows must be identical.
+    It catches the class of bug where Scribus silently suppresses text —
     frame-too-small clipping (the portrait "dreizeilige" → "dreizeili"
     headline), off-page overflow, colour-on-colour invisibility, z-order
-    occlusion. Runs on every render (not only under ``--audit``) because
-    missing rendered text is never a tolerable cosmetic drift.
+    occlusion. ``text_render_audit`` reconciles pure tokenisation artifacts
+    (rotated-text fragmentation) first, so a non-empty ``missing_in_preview``
+    is genuine text loss.
 
-    Always prints the result. Hard-fails the render only when the template
-    opts in with ``meta.yml::text_render_strict: true`` — templates not yet
-    tuned to a clean baseline (pdftotext segmentation still diverges on
-    heavy tracking / multi-column flow) stay diagnostic until they are.
-    Skips entirely when there is no baseline.pdf.
+    Runs on EVERY render and hard-fails — no opt-out. Skips only when there
+    is no baseline.pdf to compare against (DSL-only templates).
     """
     baseline = tdir / "baseline.pdf"
     preview_pdf = tdir / "preview.pdf"
@@ -588,15 +588,13 @@ def _run_text_render_gate(tid: str, tdir: Path, meta: dict) -> int:
         print(f"[{tid}] text_render_audit: OK (all baseline words rendered)")
         return 0
     words = ", ".join(f"{w}×{n}" for w, n in missing.items())
-    strict = bool(meta.get("text_render_strict"))
-    tag = "FAIL" if strict else "WARNING"
     print(
-        f"[{tid}] text_render_audit {tag} — baseline words missing from the "
+        f"[{tid}] text_render_audit FAIL — baseline words missing from the "
         f"render: {words}. Scribus suppressed them (frame too small / "
         f"off-page / occluded / colour-on-colour). Fix the frame, re-render.",
         file=sys.stderr,
     )
-    return 1 if strict else 0
+    return 1
 
 
 def _orchestrate_single(tdir: Path, meta: dict, public_dir: Path, args) -> int:
