@@ -405,16 +405,36 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Recum doluptae dolupissit porumquis dolut quamet faccae di aut fuga. Bit, unt quatem harum, offic te officit, que praturio eliquo maionsecto velis volut vollitatem ipitae comnim imodignatis estem quat.', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
         trail_attrs={'ALIGN': '0'},
     ))
-    # h_mm widened 17.9915mm→33.1611mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/inject: u1e6 was a single 2-paragraph mixed-font headline
+    # (Gotham Narrow Ultra "Ich bin eine" → Vollkorn Black Italic
+    # "Headline."). Scribus's inter-paragraph gap on the empty
+    # <para> separator is wider than InDesign's collapse behaviour,
+    # pushing "Headline." down 8mm vs baseline. Same fix as u16c.
+    # Calibrated y_mm from baseline.pdf measured text-tops.
+    # P5/playbook y_mm_shift.py: y_mm 17.4 → 18.0773 (uniform +-1.92pt × sign=-1 → +0.6773mm)
     page0.add(TextFrame(
         x_mm=115.8913,
-        y_mm=17.4,
+        y_mm=18.0773,
         w_mm=65.2174,
-        h_mm=33.1611,
+        h_mm=10.0,
         anname='u1e6',
         layer=0,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}, separator='para'), Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
+        runs=[Run(text='Ich bin eine', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
+        trail_attrs={'LINESPMode': '1'},
+    ))
+    # Calibrated y_mm 27.2 — measured baseline ink range for "Headline."
+    # is 27.94..35.39mm; frame top y_mm + cap-height-offset ≈ ink top.
+    # P5/playbook y_mm_shift.py: y_mm 27.2 → 27.708 (uniform +-1.44pt × sign=-1 → +0.5080mm)
+    page0.add(TextFrame(
+        x_mm=115.8913,
+        y_mm=27.708,
+        w_mm=65.2174,
+        h_mm=10.0,
+        anname='u1e6_p2',
+        layer=0,
+        style='idml/normalparagraphstyle',
+        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'})],
         trail_attrs={'LINESPMode': '1'},
     ))
     page0.add(TextFrame(
