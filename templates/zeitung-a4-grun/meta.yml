@@ -4,108 +4,122 @@ title: Grüne Zeitung A4
 format: A4
 orientation: portrait
 pages: 9
-audience: [bezirksgruppe, landesgruppe]
-description: >
-  Mehrseitige A4-Zeitungsvorlage mit Master-Pages und Beispielseiten.
-  Eine Datei mit allen typischen Layout-Optionen — Bezirks- und
-  Landesgruppen duplizieren die gewünschten Beispielseiten, passen
-  Inhalte an und löschen ungenutzte Beispiele.
+audience:
+- bezirksgruppe
+- landesgruppe
+description: 'Mehrseitige A4-Zeitungsvorlage mit Master-Pages und Beispielseiten.
+  Eine Datei mit allen typischen Layout-Optionen — Bezirks- und Landesgruppen duplizieren
+  die gewünschten Beispielseiten, passen Inhalte an und löschen ungenutzte Beispiele.
+
+  '
 build:
   script: build.py
   output: template.sla
-
-# Round-trip validation (issue #2)
 original_sla: ../../gruene-zeitung-vorlage-original.sla
 previews_for_sla: b008d0d0bd6eb51d513f59496311c17068c9a1490cd69188d3f947a5d8f57096
 sla_diff_strict: false
-
-# Issue #12 — brand_overrides (see shared/brand/SPEC-WRITING-GUIDE.md).
 brand_overrides:
-  - id: brand:line_spacing_0.9
-    reason: >-
-      Production template auto-generated from gruene-zeitung-vorlage-original
-      .sla; multiple per-template para-styles drift from Quickguide 0.9 factor
-      (e.g. Titelseite Header 46/55=0.84, Bildunterschrift weiß 12/10=1.2x).
-      The Zeitung uses journalism conventions (tighter headline leading, looser
-      caption leading) that differ from the unified-Quickguide rule. Round-
-      trip diff is the byte-stable contract.
-  - id: brand:image_text_overlap
-    reason: >-
-      Caption-on-photo intentional design pattern: several text frames
-      (page-1 cover headline u2989 over u2950 band, page-3/page-7 caption
-      text inside u6ad/Kopie-von-u6ad polygons, page-14 captions on
-      P13 Hero) extend slightly beyond their containing colored polygons.
-      The page-10 Polygon `Kopie von u1529` overlap with text columns
-      `Kopie von u2d5c (13)`/`(16)` was the documented bug — FIXED in
-      Issue #23 T07 by shrinking the columns' h_mm to end above the
-      green card. Remaining 9 cases are caption-on-photo design intent;
-      tightening text frames to match polygon edges exactly would change
-      the visual layout. Out of scope for #23; revisit per follow-up
-      audit.
-
-# Issue #25 — body_block_margins: pins the OUTER STRUCTURE (header band
-# y=20-49, free zone y=49-283, footer band y=283-297, L/R margins 20mm)
-# of every body-pool page. The free zone is intentionally flexible
-# (3-col grid / image-top / image-bottom / photo grid all OK) — only
-# the bands and margins are rigid, guaranteeing combinability when
-# Bezirksgruppen shuffle pages freely. Intentional full-bleed feature
-# frames (cover hero, P1 Hero, P9 Spread halves, back-cover photo) opt
-# out per-frame via ``is_full_bleed=True`` on the frame primitive — the
-# rule still tests every page; only individual feature frames skip.
+- id: brand:line_spacing_0.9
+  reason: Production template auto-generated from gruene-zeitung-vorlage-original
+    .sla; multiple per-template para-styles drift from Quickguide 0.9 factor (e.g.
+    Titelseite Header 46/55=0.84, Bildunterschrift weiß 12/10=1.2x). The Zeitung uses
+    journalism conventions (tighter headline leading, looser caption leading) that
+    differ from the unified-Quickguide rule. Round- trip diff is the byte-stable contract.
+- id: brand:image_text_overlap
+  reason: 'Caption-on-photo intentional design pattern: several text frames (page-1
+    cover headline u2989 over u2950 band, page-3/page-7 caption text inside u6ad/Kopie-von-u6ad
+    polygons, page-14 captions on P13 Hero) extend slightly beyond their containing
+    colored polygons. The page-10 Polygon `Kopie von u1529` overlap with text columns
+    `Kopie von u2d5c (13)`/`(16)` was the documented bug — FIXED in Issue #23 T07
+    by shrinking the columns'' h_mm to end above the green card. Remaining 9 cases
+    are caption-on-photo design intent; tightening text frames to match polygon edges
+    exactly would change the visual layout. Out of scope for #23; revisit per follow-up
+    audit.'
 body_block_margins:
   bands:
-    header: {y_top_mm: 20.0, y_bottom_mm: 49.0}
-    footer: {y_top_mm: 283.0, y_bottom_mm: 297.0}
+    header:
+      y_top_mm: 20.0
+      y_bottom_mm: 49.0
+    footer:
+      y_top_mm: 283.0
+      y_bottom_mm: 297.0
   margins:
-    left:  {outer_mm: 20.0, inner_mm: 20.0}
-    right: {outer_mm: 20.0, inner_mm: 20.0}
+    left:
+      outer_mm: 20.0
+      inner_mm: 20.0
+    right:
+      outer_mm: 20.0
+      inner_mm: 20.0
   background_decoration:
-    fills: [Dunkelgrün, Hellgrün, Magenta, Gelb, White]
+    fills:
+    - Dunkelgrün
+    - Hellgrün
+    - Magenta
+    - Gelb
+    - White
 ci_overrides:
   non_ci_styles:
-    - "Default Paragraph Style"
-    - "[No paragraph style]"
-    - "Titelseite Header"
-    - "Monat/Ausgabe"
-    - "Zustellerhinweis (Post)"
-    - "Impressum"
-    - "Copyright"
-    - "Seitenzahl"
-    - "Fließtext"
-    - "Schrift Störer"
-    - "Inhaltsheadline Titelseite"
-    - "Überschrift weiß"
-    - "Überschrift Dunkelgrün"
-    - "Bildunterschrift weiß"
-    - "Fließtext weiß"
-    - "Fließtext in grünem Kasten"
-    - "Headline in grünem Kasten"
-    - "Zwischenüberschrift"
-    - "Einleitungstext"
-    - "Zwischenüberschrift weiß"
-    - "Zitat weißer Text"
-    - "Zitat grüner Text"
-    - "NormalParagraphStyle"
+  - Default Paragraph Style
+  - '[No paragraph style]'
+  - Titelseite Header
+  - Monat/Ausgabe
+  - Zustellerhinweis (Post)
+  - Impressum
+  - Copyright
+  - Seitenzahl
+  - Fließtext
+  - Schrift Störer
+  - Inhaltsheadline Titelseite
+  - Überschrift weiß
+  - Überschrift Dunkelgrün
+  - Bildunterschrift weiß
+  - Fließtext weiß
+  - Fließtext in grünem Kasten
+  - Headline in grünem Kasten
+  - Zwischenüberschrift
+  - Einleitungstext
+  - Zwischenüberschrift weiß
+  - Zitat weißer Text
+  - Zitat grüner Text
+  - NormalParagraphStyle
   non_ci_colors:
-    - "Green"
+  - Green
 masters:
-  - { name: Normal,            description: implicit baseline }
-  - { name: rechts-3col,       description: rechte Innenseite mit 3-Spalten-Raster und Footer-Akzent }
-  - { name: links-3col,        description: linke Innenseite mit 3-Spalten-Raster und Footer-Akzent }
-  - { name: titelseite,        description: Cover-Layout mit Hero-Bereich }
-  - { name: foto-spread,       description: Vollbild-Fotoseite }
-  - { name: impressum-master,  description: Rückseite mit Impressum-Block }
+- name: Normal
+  description: implicit baseline
+- name: rechts-3col
+  description: rechte Innenseite mit 3-Spalten-Raster und Footer-Akzent
+- name: links-3col
+  description: linke Innenseite mit 3-Spalten-Raster und Footer-Akzent
+- name: titelseite
+  description: Cover-Layout mit Hero-Bereich
+- name: foto-spread
+  description: Vollbild-Fotoseite
+- name: impressum-master
+  description: Rückseite mit Impressum-Block
 example_pages:
-  - { num: 1, label: Titelseite (Cover) }
-  - { num: 2, label: "Beispiel: Hauptartikel 3-spaltig" }
-  - { num: 3, label: "Beispiel: Drei Artikel nebeneinander" }
-  - { num: 4, label: "Beispiel: Foto-Doppelseite (links)" }
-  - { num: 5, label: "Beispiel: Foto-Doppelseite (rechts)" }
-  - { num: 6, label: "Beispiel: Veranstaltungskalender" }
-  - { num: 7, label: "Beispiel: Interview-Layout" }
-  - { num: 8, label: "Beispiel: Kommentar mit Pull-Quote" }
-  - { num: 9, label: Impressum + Postvermerk }
+- num: 1
+  label: Titelseite (Cover)
+- num: 2
+  label: 'Beispiel: Hauptartikel 3-spaltig'
+- num: 3
+  label: 'Beispiel: Drei Artikel nebeneinander'
+- num: 4
+  label: 'Beispiel: Foto-Doppelseite (links)'
+- num: 5
+  label: 'Beispiel: Foto-Doppelseite (rechts)'
+- num: 6
+  label: 'Beispiel: Veranstaltungskalender'
+- num: 7
+  label: 'Beispiel: Interview-Layout'
+- num: 8
+  label: 'Beispiel: Kommentar mit Pull-Quote'
+- num: 9
+  label: Impressum + Postvermerk
 preflight:
   bleed_mm: 3
   cmyk_only: true
   min_image_dpi: 300
+category: zeitung
+category_label: Zeitung
+variant_label: A4 grün

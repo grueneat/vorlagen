@@ -16,7 +16,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../plakat-a1-hochformat-original.sla
-previews_for_sla: b3024d3249bcdcaac923ed4c77c9446f6905c5f87ef93c2ac068743de2889b76
+previews_for_sla: dd54c49cacfb57040df2e5f5c91e5b5d5d53c5c478bf03a047949b0102e97053
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from plakat-a1-hochformat-original.sla;
@@ -79,6 +79,9 @@ slots:
 preflight:
   bleed_mm: 3
   cmyk_only: true
+category: plakat
+category_label: Plakat
+variant_label: Event A1 hoch
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/plakat-a1-hochformat/template.sla

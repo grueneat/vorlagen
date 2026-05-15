@@ -276,6 +276,9 @@ preflight:
   - 198
   cmyk_only: true
   min_image_dpi: 300
+category: falzflyer
+category_label: Falzflyer
+variant_label: Kandidat DIN-lang
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/kandidat-falzflyer-din-lang/template.sla

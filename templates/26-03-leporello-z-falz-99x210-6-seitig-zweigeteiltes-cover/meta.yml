@@ -23,9 +23,13 @@ format: A4
 id: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes Cover.idml
-previews_for_sla: e7dbeb9101f801f24f203c0540eb493519694c837806a4d3d419ab257da59cc2
+previews_for_sla: bcba4899b1c9dcb5bf5cdfcaa44076ff2214ab68a0831b269f0ecce258a181fc
 title: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 version: 0.1.0
+
+category: falzflyer
+category_label: Falzflyer
+variant_label: Z-Falz 6-seitig (zweigeteiltes Cover)
 
 # brand_overrides — IDML-import gap parity with sibling v2 falzflyer
 # (kandidat-falzflyer-din-lang-gruenes-cover-v2). Every entry below

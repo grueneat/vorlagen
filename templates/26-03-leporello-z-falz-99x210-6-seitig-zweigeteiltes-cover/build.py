@@ -673,9 +673,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
 def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     """Auto-generated page-items for page 2 (Spread Spreads/Spread_u108.xml)."""
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 17.4 → 16.2993 (uniform ++3.12pt × sign=-1 → -1.1007mm)
     page1.add(TextFrame(
         x_mm=16.8913,
-        y_mm=17.4,
+        y_mm=16.2993,
         w_mm=65.2174,
         h_mm=24.6944,
         anname='u24e',
@@ -688,9 +689,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Ich bin eine ', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27'}, separator='para'), Run(text='Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle')],
         trail_attrs={'LINESPMode': '0', 'LINESP': '27'},
     ))
+    # P5/playbook y_mm_shift.py: y_mm 41.6915 → 40.9464 (uniform ++2.11pt × sign=-1 → -0.7451mm)
     page1.add(TextFrame(
         x_mm=16.8913,
-        y_mm=41.6915,
+        y_mm=40.9464,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u265',
@@ -699,9 +701,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', fcolor='Dunkelgrün', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Gotham Narrow Book', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para')],
         trail_attrs={'ALIGN': '0'},
     ))
+    # P5/playbook y_mm_shift.py: y_mm 47.9915 → 46.5562 (uniform ++4.07pt × sign=-1 → -1.4353mm)
     page1.add(TextFrame(
         x_mm=115.3913,
-        y_mm=47.9915,
+        y_mm=46.5562,
         w_mm=65.2174,
         h_mm=150.9085,
         anname='u295',
@@ -781,9 +784,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         trail_attrs={'LINESPMode': '1'},
     ))
     # h_mm widened 23.2833mm→35.2778mm: Scribus clips lines when frame_h < 6 explicit lines × line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 163.0167 → 161.0863 (uniform ++5.47pt × sign=-1 → -1.9304mm)
     page1.add(TextFrame(
         x_mm=21.8196,
-        y_mm=163.0167,
+        y_mm=161.0863,
         w_mm=52.6804,
         h_mm=35.2778,
         anname='u35f',
@@ -806,9 +810,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='Headline in einem grünen', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'})],
         trail_attrs={'ALIGN': '1'},
     ))
+    # P5/playbook y_mm_shift.py: y_mm 155.44 → 154.0853 (uniform ++3.84pt × sign=-1 → -1.3547mm)
     page1.add(TextFrame(
         x_mm=21.6413,
-        y_mm=155.44,
+        y_mm=154.0853,
         w_mm=52.6804,
         h_mm=7.0,
         anname='u376_l2',
@@ -844,6 +849,12 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         fill='Gelb',
     ))
+    # noinject: u3a0 is the full-page Zitat backdrop (99×210mm). AI
+    # substitution overwhelmed the quote text (people-photo aspect
+    # didn't constrain to the narrow portrait panel). Original
+    # plakat-dunkel-fuer-flyer.png renders as a tinted green panel
+    # that the white quote text reads against. Same noinject decision
+    # as the sibling Portrait template.
     page1.add(ImageFrame(
         x_mm=198,
         y_mm=-0.1874,
@@ -874,9 +885,11 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '20.48'},
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 123.1736 → 123.6736 (calibration probe (+0.5mm))
+    # P5/playbook y_mm_shift.py: y_mm 123.6736 → 121.3029 (uniform ++6.72pt × sign=-1 → -2.3707mm)
     page1.add(TextFrame(
         x_mm=226.6686,
-        y_mm=123.1736,
+        y_mm=121.3029,
         w_mm=41.6629,
         h_mm=8.0081,
         anname='u3ba',

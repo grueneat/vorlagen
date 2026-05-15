@@ -1,118 +1,92 @@
 ---
-id: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
-version: 0.1.0
-title: 26-03 Leporello z-Falz 99×210 6-seitig (zweigeteiltes Cover)
-format: A4
-orientation: landscape
-pages: 2
-preview_dpi: 50
-audience:
-- bezirksgruppe
-- ortsgruppe
-description: >-
-  3-fach gefalzter A4-quer-Leporello (Zickzackfalz, 6 Panele à 99×210 mm) mit
-  zweigeteiltem Cover. Cover-Außenseite: zwei Headline-Panele + Zitat-Panel mit
-  DIE GRÜNEN Logo und Social-Media-Links. Innenseite: Fließtext + Subheadline-
-  Cluster + 3-zeilige Mixed-Font-Headline + Bullet-Liste + Kasten-Headline.
+asset_policy:
+  embedded:
+  - bluesky-weiss.png
+  - gruene-logo-bund-weiss-cmyk.png
+  - mail-weiss.png
+  - social-media-icons-weiss.png
+  - website-weiss.png
+  external:
+  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
+    weiss--0.pdf
+  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
+    weiss--1.pdf
+  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
+    weiss--2.pdf
+  - green-pine-trees-covered-with-fog.jpg
+  - plakat-dunkel-fuer-flyer.png
+  - ziesel.jpg
+  shipped: []
 build:
-  script: build.py
   output: template.sla
-previews_for_sla: d28ddbf8e83a6061659a283e5f19602d6697c32b3909e696a36a3702314d785e
+  script: build.py
+format: A4
+id: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
+idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes
+  Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes Cover.idml
+previews_for_sla: e7dbeb9101f801f24f203c0540eb493519694c837806a4d3d419ab257da59cc2
+title: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
+version: 0.1.0
 brand_overrides:
 - id: brand:line_spacing_0.9
-  reason: >-
-    IDML-imported template. The original InDesign ParagraphStyles drift from
-    the Quickguide 0.9 line-spacing factor (e.g. fließtext-auf-gruenem-
-    hintergrund 16/11=1.45×, normalparagraphstyle 17.4/12=1.45×). Verbatim
-    converter emission keeps build.py round-trip-stable; brand-team review
-    pending.
+  reason: IDML-imported template. The original InDesign ParagraphStyles (idml/headline-in-gruenem-kasten,
+    idml/absatzformat-1, idml/fliesstext-auf-gruenem-hintergrund, idml/aufzaehlungen-auf-gruenem-hintergrund,
+    idml/normalparagraphstyle, idml/no-paragraph-style, plus the ci/* family) carry
+    leading values that do NOT follow the Quickguide 0.9-factor convention (e.g. headline-in-gruenem-kasten
+    linesp=12 fontsize=12 = 1.0x; fliesstext-auf-gruenem-hintergrund linesp=16 fontsize=11
+    = 1.45x; absatzformat-1 linesp=14.3 fontsize=11 = 1.3x). The converter emits these
+    verbatim from the IDML Resources/Styles.xml; changing them would diverge from
+    the InDesign-authored baseline.pdf which is the convergence target (issue 35 P1).
+    Same gap class as the sibling v2 falzflyer.
 - id: brand:font_family
-  reason: >-
-    IDML-imported template. Some text frames inherit Times Roman via
-    idml/no-paragraph-style fallback; converter preserves verbatim font
-    inheritance per issue #35 P1.
+  reason: 'IDML-imported template. 11 text frames inherit FONT="Times Roman" via the
+    idml/no-paragraph-style and idml/normalparagraphstyle defaults that the IDML preserves
+    untouched (the InDesign source never overrides them for these minor labels). The
+    converter cannot remap these to brand fonts without changing the baseline.pdf
+    convergence target. Resolution path: extend tools/idml_to_dsl.py font resolution;
+    tracked alongside issue 37 as a converter completeness gap. Same gap class as
+    the sibling v2 falzflyer.'
 - id: brand:bleed_3mm
-  reason: >-
-    IDML source authored bleed=0; baseline.pdf matches. Quickguide 3mm bleed
-    is brand-team's spec but the existing IDML predates that requirement.
+  reason: IDML-imported template. The IDML's InDesign document was authored with bleed=0;
+    converter respects the source page geometry. The baseline.pdf (convergence target)
+    also has bleed=0. Adjusting bleed would force a deviation from the InDesign-authored
+    output. Brand-team review pending — the canonical Quickguide requires 3mm but
+    the existing IDML asset predates that requirement. Same gap class as the sibling
+    v2 falzflyer.
 - id: brand:inside_page
-  reason: >-
-    Some decorative frames extend slightly beyond the trim box (intentional
-    InDesign bleed marks). Converter preserves verbatim per issue #35 P1.
+  reason: IDML-imported template. Multiple frames in the original IDML extend slightly
+    outside the trim box (u1ae background polygon with 1.82mm overshoot; u514, u3a2,
+    and several decorative shapes with similar overshoot). These were intentional
+    InDesign- side bleed/extension marks in the source asset. The converter preserves
+    the source geometry verbatim per issue 35 P1 (baseline.pdf is the convergence
+    target). Same gap class as the sibling v2 falzflyer.
 - id: brand:image_text_overlap
-  reason: >-
-    Cover-Zitat panel intentionally places white-on-green text on the green
-    polygon backdrop. The rule cannot distinguish "text on a colored polygon"
-    (intentional) from "text on a raster image" (overlap concern).
-preflight:
-  bleed_mm: 0
-  cmyk_only: true
-  min_image_dpi: 150
+  reason: IDML-imported template. The IDML places impressum text and other white-on-green
+    text overlapping the green page-background polygon by design — the visual result
+    is white-text-on-green, visually correct against baseline.pdf. The brand:image_text_overlap
+    rule cannot distinguish "text on a colored polygon backdrop" (intentional) from
+    "text on a raster image" (overlap concern). Same gap class as the sibling v2 falzflyer.
+ci_overrides:
+  non_ci_styles:
+  - idml/absatzformat-1
+  - idml/aufzaehlungen-auf-gruenem-hintergrund
+  - idml/fliesstext-auf-gruenem-hintergrund
+  - idml/headline-in-gruenem-kasten
+  - idml/no-paragraph-style
+  - idml/normalparagraphstyle
+  non_ci_colors: []
+  non_ci_layers: []
+category: falzflyer
+category_label: Falzflyer
+variant_label: Z-Falz 6-seitig (zweigeteiltes Cover)
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/template.sla
   pdf: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/preview.pdf
 _previews:
-- label: Innenseite (page 1)
+- label: Seite 1
   src: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/page-01.png
-- label: Cover-Außenseite (page 2)
+- label: Seite 2
   src: /templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/page-02.png
 ---
 
-# 26-03 Leporello z-Falz 99×210 (6-seitig, zweigeteiltes Cover)
-
-A4 quer (297×210 mm), 3-fach Zickzackfalz, 6 Panele à 99×210 mm. Cover-Außenseite zweigeteilt mit Zitat-Panel, Innenseite mit Mixed-Font-Headline-Cluster und Fließtext-Cluster.
-
-## Layout
-
-**Cover-Außenseite (Page 2):**
-
-- Linkes Panel: 2-zeilige Cover-Headline "Ich bin eine / Headline." (Gotham Narrow Ultra → Vollkorn Black Italic, 30pt). DIE GRÜNEN Logo unten rechts.
-- Mittleres Panel: 2-zeilige Cover-Headline "Ich bin auch / eine Headline." (Gotham Narrow Ultra, 30pt) auf hellem Background.
-- Rechtes Cover-Panel ("Zitat"): 3-zeiliges Zitat in Vollkorn Black Italic 23pt, gelbes "Leonore Gewessler", Social-Media-Handles mit 6 Icons (Facebook · Instagram · TikTok | X · Email · Website).
-
-**Innenseite (Page 1):**
-
-- Linkes Panel: 1-zeilige Headline "Ich bin eine Headline." (Gotham Ultra → Vollkorn Italic, 30pt) + Fließtext-Cluster (Gotham Narrow Book 11pt).
-- Mittleres Panel: 1-zeilige Headline "Ich bin eine Headline." (pure Gotham Ultra) + Bullet-Liste (Aufzählungen, mit "Headline in einem grünen Kasten"-Label im Footer).
-- Rechtes Panel: 3-zeilige Mixed-Font-Headline "Das ist die / dreizeilige / Headline" (Gotham Ultra → Vollkorn Black Italic → Gotham Ultra, 38pt). Wind-Turbine-Vektorgrafik. "Mehrzeilige Subheadline – mehr Info zum Thema" am Cluster-Fuß.
-
-## Per-Frame Line-Spacing Calibration
-
-Sub-metric Leading (e.g. Gotham Narrow Ultra 30pt mit LINESP=27, 90%) hat in Scribus 1.6.x ein
-nicht-monotones Verhalten — `LINESPMode=2` rendert dann breiter als
-`LINESPMode=1`, was wir per `tools/line_spacing_pixel_audit.py`
-empirisch festgestellt haben (Issue #40 follow-up). Drei mixed-font
-Frames (u1b0, u1e6, u16c) wurden in einzelne Single-Line Frames
-aufgesplittet damit jede Linie ihre Position über `y_mm` (statt
-Scribus's Per-Line-Font-Metrics) steuert.
-
-Audit-Status (Pixel-Level):
-- Headlines u1b0/u1e6/u24e/u2d5/u16c/u155: ≤ 0.5pt Drift ✓
-- u3a2 Zitat (Vollkorn Italic 23pt): -0.96pt Sub-Pt Drift (akzeptiert)
-- u376 Kasten: 0.0pt Drift ✓
-- Body-Text Fließtext u1c7/u35f/u265/u295: kumulativ ≤ 0.1pt über 9–11 Zeilen
-
-## Inverse Visibility Bug (Scribus 1.6.x)
-
-Linkes-Spalten Social-Media-Icons + DIE GRÜNEN Logo waren ursprünglich
-als `inline_image_data` mit `scale_type=1` emittiert. Scribus rendert
-in dieser Konfiguration weiße-auf-transparenter RGBA PNGs unsichtbar
-(CMYK conversion bug, dokumentiert in `tools/sla_lib/builder/
-primitives.py:807-813`). Behoben durch Umstellung auf `image=` mit
-Per-Icon-PDFs/PNGs und `scale_type=0`. Catch-mechanism:
-`tools/image_frame_visibility_audit.py` (Phase E5).
-
-## Re-Render
-
-```
-bin/tune-render 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
-```
-
-Erzeugt template.sla + preview.pdf + page-NN.png (50 dpi Gallery-
-Thumbnails) + page-NN-hires.png (150 dpi Click-Through) + update der
-`meta.yml::previews_for_sla` Hash atomisch. Audit-Chain (E2–E6) läuft
-nach Render-Schritt. Die Pixel-Level-Audits (E4 line_spacing_pixel,
-E5 image_frame_visibility) refuse to run wenn Artefakte nicht in sync
-sind — verhindert dass eine PNG-Thumbnail Lag den Audit-Output
-verfälscht.

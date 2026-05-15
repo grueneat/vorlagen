@@ -1,0 +1,66 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const all = await getCollection('templates');
+  // Group by category id
+  const cats = new Map<string, { label: string; items: typeof all }>();
+  for (const t of all) {
+    const id = t.data.category ?? 'other';
+    const label = t.data.category_label ?? 'Sonstige';
+    if (!cats.has(id)) cats.set(id, { label, items: [] });
+    cats.get(id)!.items.push(t);
+  }
+  return [...cats.entries()].map(([id, g]) => ({
+    params: { category: id },
+    props: { categoryId: id, categoryLabel: g.label, items: g.items },
+  }));
+}
+
+const { categoryId, categoryLabel, items } = Astro.props;
+const BASE = import.meta.env.BASE_URL;
+const url = (p: string) => BASE + p.replace(/^\//, '');
+
+items.sort((a: any, b: any) =>
+  (a.data.variant_label ?? a.data.title).localeCompare(b.data.variant_label ?? b.data.title)
+);
+---
+<Base title={`${categoryLabel} — Vorlagen-Galerie`}>
+  <p><a href={url('/')}>← Zurück zur Galerie</a></p>
+  <h1>{categoryLabel}</h1>
+  <p style="color: #666;">{items.length} {items.length === 1 ? 'Variante' : 'Varianten'}</p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+    {items.map((t: any) => {
+      const preview = t.data._previews?.[0]?.src;
+      const label = t.data.variant_label ?? t.data.title;
+      return (
+        <a
+          href={url(`templates/${t.id}/`)}
+          style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;"
+        >
+          {preview && (
+            <div style="aspect-ratio: 3 / 4; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <img src={url(preview)} alt={label} loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            </div>
+          )}
+          <div style="padding: 1rem;">
+            <h3 style="margin: 0 0 0.5rem 0;">{label}</h3>
+            {t.data.format && (
+              <span style="color: #666; font-size: 0.85em;">
+                {t.data.format}{t.data.pages ? ` · ${t.data.pages} Seiten` : ''}
+              </span>
+            )}
+            {t.data.type === 'family' && (
+              <span style="color: #666; font-size: 0.85em;">Familie · {t.data.sizes?.length} Größen</span>
+            )}
+            {t.data.description && (
+              <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.9em;">{t.data.description}</p>
+            )}
+          </div>
+        </a>
+      );
+    })}
+  </div>
+</Base>

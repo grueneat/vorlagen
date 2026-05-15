@@ -5,290 +5,276 @@ format: A4
 orientation: landscape
 pages: 2
 preview_dpi: 100
-audience: [kandidat, bezirksgruppe, ortsgruppe]
-description: >
-  3-fach gefalzter A4-quer-Kandidaten-Flyer (Zickzackfalz, 6 Panele à 99×210 mm).
-  Cover (Portrait + Name + Slogan) → Teaser → Closer (Wahlkreuz auf Dunkelgrün).
+audience:
+- kandidat
+- bezirksgruppe
+- ortsgruppe
+description: '3-fach gefalzter A4-quer-Kandidaten-Flyer (Zickzackfalz, 6 Panele à
+  99×210 mm). Cover (Portrait + Name + Slogan) → Teaser → Closer (Wahlkreuz auf Dunkelgrün).
   Rückseite: 4 Themen-Module + Kontakt + Impressum.
 
+  '
 build:
   script: build.py
   output: template.sla
-
 previews_for_sla: af443213101618b58a2fbeb3054b9931db918e8a4a69e412aabde13da49ab30e
 brand_overrides:
-  - id: brand:line_spacing_0.9
-    reason: >-
-      Shared with all templates: CI palette ratios drift; per-template panel
-      styles use slightly looser line-heights (e.g. teaser-body 14/11=1.27x)
-      to keep narrow 99mm panels readable. Brand-team review pending.
-  - id: brand:image_text_overlap
-    reason: >-
-      P6 vollflächig Dunkelgrün design intentionally places Impressum (h=8)
-      directly below the P6 Logo at the panel footer; rule reports a 38×2mm
-      partial overlap (Impressum top edge crosses Logo bottom edge) which is
-      intentional band-edge bleed for tight footer composition. Cannot be
-      fixed by frame separation without breaking the V1 footer rhythm.
-  - id: brand:band_consistency
-    reason: >-
-      V1 still has minor ParaStyle band drift on the eyebrow Caps; needs
-      per-template body_block_margins spec authoring. Deferred to
-      follow-up issue per RESEARCH.
+- id: brand:line_spacing_0.9
+  reason: 'Shared with all templates: CI palette ratios drift; per-template panel
+    styles use slightly looser line-heights (e.g. teaser-body 14/11=1.27x) to keep
+    narrow 99mm panels readable. Brand-team review pending.'
+- id: brand:image_text_overlap
+  reason: P6 vollflächig Dunkelgrün design intentionally places Impressum (h=8) directly
+    below the P6 Logo at the panel footer; rule reports a 38×2mm partial overlap (Impressum
+    top edge crosses Logo bottom edge) which is intentional band-edge bleed for tight
+    footer composition. Cannot be fixed by frame separation without breaking the V1
+    footer rhythm.
+- id: brand:band_consistency
+  reason: V1 still has minor ParaStyle band drift on the eyebrow Caps; needs per-template
+    body_block_margins spec authoring. Deferred to follow-up issue per RESEARCH.
 ci_overrides:
   non_ci_styles:
-    - "falzflyer/cand-name"
-    - "falzflyer/slogan"
-    - "falzflyer/slogan-on-green"
-    - "falzflyer/teaser-headline"
-    - "falzflyer/teaser-body"
-    - "falzflyer/thema-headline"
-    - "falzflyer/thema-body"
-    - "falzflyer/themen-eyebrow"
-    - "falzflyer/top-title"
-    - "falzflyer/quote-on-green"
-    - "falzflyer/closer-headline"
-    - "falzflyer/closer-datum"
-    - "falzflyer/closer-url"
-    - "falzflyer/contact-headline"
-    - "falzflyer/contact-body"
-    - "falzflyer/impressum"
+  - falzflyer/cand-name
+  - falzflyer/slogan
+  - falzflyer/slogan-on-green
+  - falzflyer/teaser-headline
+  - falzflyer/teaser-body
+  - falzflyer/thema-headline
+  - falzflyer/thema-body
+  - falzflyer/themen-eyebrow
+  - falzflyer/top-title
+  - falzflyer/quote-on-green
+  - falzflyer/closer-headline
+  - falzflyer/closer-datum
+  - falzflyer/closer-url
+  - falzflyer/contact-headline
+  - falzflyer/contact-body
+  - falzflyer/impressum
   non_ci_colors:
-    - "Falz"
+  - Falz
   non_ci_layers:
-    - "Falz"
-
+  - Falz
 slots:
-  # ── P1 (Cover, front) — V1 Top-Band + Name-Card ─────────────────────────
   p1_top_band:
     type: shape
     description: Universal Top-Band Dunkelgrün (105×31, +3mm bleed)
-    anname: "P1 Top-Band"
+    anname: P1 Top-Band
   p1_logo:
     type: image
     description: Grüne wordmark white (3M = 38mm Trim-konform)
     source: shared/logos/gruene-weiss.png
-    anname: "P1 Logo Grüne (weiss)"
+    anname: P1 Logo Grüne (weiss)
   p1_kandidat_portrait:
     type: image
     description: Kandidat-Portrait (87×100, INJECT_MAP -> portrait_maria)
     optional: true
-    anname: "P1 Kandidat-Portrait"
+    anname: P1 Kandidat-Portrait
   p1_name_card:
     type: shape
     description: Name-Card vollbleed bottom Dunkelgrün polygon
-    anname: "P1 Name-Card"
+    anname: P1 Name-Card
   p1_kandidat_name:
     type: text
     description: Kandidat-Name (24pt Vollkorn Italic White on Name-Card)
-    anname: "P1 Kandidat-Name"
+    anname: P1 Kandidat-Name
   p1_slogan:
     type: text
     description: Slogan (14pt Gotham Bold Gelb on Dunkelgrün)
-    anname: "P1 Slogan"
-
-  # ── P2 (Mein Plan, front) — V1 Top-Band + Body-Backing ──────────────────
+    anname: P1 Slogan
   p2_top_band:
     type: shape
     description: Top-Band Dunkelgrün (99×31 inner)
-    anname: "P2 Top-Band"
+    anname: P2 Top-Band
   p2_top_title:
     type: text
     description: Top-Title "Mein Plan" (Caps Bold White 11pt)
-    anname: "P2 Top-Title"
+    anname: P2 Top-Title
   p2_teaser_headline:
     type: text
-    anname: "P2 Teaser-Headline"
+    anname: P2 Teaser-Headline
   p2_body_backing:
     type: shape
     description: Hellgrün card backing for teaser body
-    anname: "P2 Body-Backing"
+    anname: P2 Body-Backing
   p2_teaser_body:
     type: text
-    anname: "P2 Teaser-Body"
-
-  # ── P3 (Wahltag, front) — vollflächig Dunkelgrün ────────────────────────
+    anname: P2 Teaser-Body
   p3_hintergrund:
     type: shape
     description: Dunkelgrün vollflächig polygon (P3 grüne-Klammer pair)
-    anname: "P3 Hintergrund"
+    anname: P3 Hintergrund
   p3_top_title:
     type: text
     description: Top-Title "Wahltag" (Caps Bold Gelb 11pt — fcolor override)
-    anname: "P3 Top-Title"
+    anname: P3 Top-Title
   p3_wahlkreuz:
     type: image
     description: Wahlkreuz Hero auf Dunkelgrün
     source: shared/assets/wahlkreuz.png
-    anname: "P3 Wahlkreuz"
+    anname: P3 Wahlkreuz
   p3_closer_headline:
     type: text
     description: Wahlaufruf-Headline (22pt Gotham Bold White)
-    anname: "P3 Closer-Headline"
+    anname: P3 Closer-Headline
   p3_datum_akzent:
     type: text
     description: Datum als Vollkorn-Italic-Gelb-Akzent
-    anname: "P3 Datum-Akzent"
+    anname: P3 Datum-Akzent
   p3_url:
     type: text
     description: Kandidaten-URL
-    anname: "P3 URL"
-
-  # ── Falz lines (Front) ──
+    anname: P3 URL
   falz_x99_front:
     type: shape
-    anname: "Falz x=99 (Front)"
+    anname: Falz x=99 (Front)
   falz_x198_front:
     type: shape
-    anname: "Falz x=198 (Front)"
-
-  # ── P4 (Themen 1+2, back) — V1 Top-Band + 2x photo cards ────────────────
+    anname: Falz x=198 (Front)
   p4_top_band:
     type: shape
     description: Top-Band Dunkelgrün (105×31 outer)
-    anname: "P4 Top-Band"
+    anname: P4 Top-Band
   p4_top_title:
     type: text
     description: Top-Title "Themen 1·2"
-    anname: "P4 Top-Title"
+    anname: P4 Top-Title
   p4_thema1_eyebrow:
     type: text
-    anname: "P4 Thema 1 — Eyebrow"
+    anname: P4 Thema 1 — Eyebrow
   p4_thema1_headline:
     type: text
-    anname: "P4 Thema 1 — Headline"
+    anname: P4 Thema 1 — Headline
   p4_thema1_photo:
     type: image
     description: Thema 1 photo (87×44, INJECT_MAP -> themen_klimaschutz_solar)
     optional: true
-    anname: "P4 Thema 1 — Photo"
+    anname: P4 Thema 1 — Photo
   p4_thema_trenner:
     type: shape
     description: 3mm Hellgrün strip dividing Thema 1 / 2
-    anname: "P4 Thema 1·2 Trenner"
+    anname: P4 Thema 1·2 Trenner
   p4_thema1_body:
     type: text
-    anname: "P4 Thema 1 — Body"
+    anname: P4 Thema 1 — Body
   p4_thema2_eyebrow:
     type: text
-    anname: "P4 Thema 2 — Eyebrow"
+    anname: P4 Thema 2 — Eyebrow
   p4_thema2_headline:
     type: text
-    anname: "P4 Thema 2 — Headline"
+    anname: P4 Thema 2 — Headline
   p4_thema2_photo:
     type: image
     description: Thema 2 photo (87×44, INJECT_MAP -> themen_soziales_kaffeehaus)
     optional: true
-    anname: "P4 Thema 2 — Photo"
-
-  # ── P5 (Themen 3+4, back) — mirror of P4 ────────────────────────────────
+    anname: P4 Thema 2 — Photo
   p5_top_band:
     type: shape
     description: Top-Band Dunkelgrün (99×31 inner)
-    anname: "P5 Top-Band"
+    anname: P5 Top-Band
   p5_top_title:
     type: text
     description: Top-Title "Themen 3·4"
-    anname: "P5 Top-Title"
+    anname: P5 Top-Title
   p5_thema3_eyebrow:
     type: text
-    anname: "P5 Thema 3 — Eyebrow"
+    anname: P5 Thema 3 — Eyebrow
   p5_thema3_headline:
     type: text
-    anname: "P5 Thema 3 — Headline"
+    anname: P5 Thema 3 — Headline
   p5_thema3_photo:
     type: image
     optional: true
-    anname: "P5 Thema 3 — Photo"
+    anname: P5 Thema 3 — Photo
   p5_thema_trenner:
     type: shape
     description: 3mm Hellgrün strip dividing Thema 3 / 4
-    anname: "P5 Thema 3·4 Trenner"
+    anname: P5 Thema 3·4 Trenner
   p5_thema3_body:
     type: text
-    anname: "P5 Thema 3 — Body"
+    anname: P5 Thema 3 — Body
   p5_thema4_eyebrow:
     type: text
-    anname: "P5 Thema 4 — Eyebrow"
+    anname: P5 Thema 4 — Eyebrow
   p5_thema4_headline:
     type: text
-    anname: "P5 Thema 4 — Headline"
+    anname: P5 Thema 4 — Headline
   p5_thema4_photo:
     type: image
     description: Thema 4 photo NEW V1 (87×44, INJECT_MAP -> themen_wirtschaft_handwerk)
     optional: true
-    anname: "P5 Thema 4 — Photo"
-
-  # ── P6 (Kontakt, back) — vollflächig Dunkelgrün + 2-Spalten + 2 QRs ─────
+    anname: P5 Thema 4 — Photo
   p6_hintergrund:
     type: shape
     description: Dunkelgrün vollflächig polygon (P6 grüne-Klammer pair)
-    anname: "P6 Hintergrund"
+    anname: P6 Hintergrund
   p6_top_title:
     type: text
     description: Top-Title "Kontakt"
-    anname: "P6 Top-Title"
+    anname: P6 Top-Title
   p6_kontakt_headline:
     type: text
-    anname: "P6 Kontakt-Headline"
+    anname: P6 Kontakt-Headline
   p6_adresse:
     type: text
     description: 2-col cell row 1 left (mirrored around 247.5)
-    anname: "P6 Adresse"
+    anname: P6 Adresse
   p6_telefon:
     type: text
     description: 2-col cell row 1 right
-    anname: "P6 Telefon"
+    anname: P6 Telefon
   p6_email:
     type: text
     description: 2-col cell row 2 left
-    anname: "P6 Email"
+    anname: P6 Email
   p6_sprechtag:
     type: text
     description: 2-col cell row 2 right
-    anname: "P6 Sprechtag"
+    anname: P6 Sprechtag
   p6_qr_mitmachen:
     type: image
     description: QR-Code mitmachen (24×24 mirror axis 247.5)
     optional: true
-    anname: "P6 QR-Code (mitmachen)"
+    anname: P6 QR-Code (mitmachen)
   p6_qr_caption_mitmachen:
     type: text
     description: QR-Caption "MITMACHEN" (themen-eyebrow fcolor=White)
-    anname: "P6 QR-Caption (mitmachen)"
+    anname: P6 QR-Caption (mitmachen)
   p6_qr_termine:
     type: image
     optional: true
-    anname: "P6 QR-Code (termine)"
+    anname: P6 QR-Code (termine)
   p6_qr_caption_termine:
     type: text
-    anname: "P6 QR-Caption (termine)"
+    anname: P6 QR-Caption (termine)
   p6_logo:
     type: image
     description: Grüne wordmark white footer (38×34 = 3M Trim-konform)
     source: shared/logos/gruene-weiss.png
-    anname: "P6 Logo Grüne (weiss)"
+    anname: P6 Logo Grüne (weiss)
   p6_impressum:
     type: text
-    anname: "P6 Impressum"
-
-  # ── Falz lines (Back) ──
+    anname: P6 Impressum
   falz_x99_back:
     type: shape
-    anname: "Falz x=99 (Back)"
+    anname: Falz x=99 (Back)
   falz_x198_back:
     type: shape
-    anname: "Falz x=198 (Back)"
-
+    anname: Falz x=198 (Back)
 example_pages:
-  - { num: 1, label: "Front: Cover (P1) — Teaser (P2) — Closer (P3)" }
-  - { num: 2, label: "Back: Themen 1+2 (P4) — 3+4 (P5) — Kontakt (P6)" }
-
+- num: 1
+  label: 'Front: Cover (P1) — Teaser (P2) — Closer (P3)'
+- num: 2
+  label: 'Back: Themen 1+2 (P4) — 3+4 (P5) — Kontakt (P6)'
 samples:
-  - id: kandidat-portrait
-    description: "Kandidat-Portrait fürs Cover (Codex DALL-E generated, 768x1024)"
-
+- id: kandidat-portrait
+  description: Kandidat-Portrait fürs Cover (Codex DALL-E generated, 768x1024)
 preflight:
   bleed_mm: 3
-  fold_mm: [99, 198]
+  fold_mm:
+  - 99
+  - 198
   cmyk_only: true
   min_image_dpi: 300
+category: falzflyer
+category_label: Falzflyer
+variant_label: Kandidat DIN-lang

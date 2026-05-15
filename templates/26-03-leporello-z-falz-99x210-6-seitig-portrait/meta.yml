@@ -19,8 +19,11 @@ id: 26-03-leporello-z-falz-99x210-6-seitig-portrait
 idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig Portrait Ordner/26-03-Leporello
   z-Falz 99x210 6-seitig Portrait.idml
 previews_for_sla: 447b9933f6626f860223c5037dc93fe6f21a90d495a218b3761c2acf575c756f
-title: 26-03-leporello-z-falz-99x210-6-seitig-portrait
+title: 26-03 Leporello z-Falz 99×210 6-seitig (Portrait)
 version: 0.1.0
+category: falzflyer
+category_label: Falzflyer
+variant_label: Z-Falz 6-seitig (Portrait)
 
 # brand_overrides — IDML-import gap parity with sibling falz templates
 # (zweigeteiltes-cover, kandidat-falzflyer-din-lang-gruenes-cover-v2).

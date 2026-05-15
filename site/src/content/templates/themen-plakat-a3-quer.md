@@ -100,6 +100,9 @@ preflight:
   bleed_mm: 3
   cmyk_only: true
   min_image_dpi: 300
+category: plakat
+category_label: Plakat
+variant_label: Themen A3 quer
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/themen-plakat-a3-quer/template.sla

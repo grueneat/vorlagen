@@ -9,8 +9,14 @@ const templates = defineCollection({
     title: z.string(),
     description: z.string().optional(),
     type: z.string().optional(),
+    category: z.string().optional(),         // 'falzflyer' | 'plakat' | etc
+    category_label: z.string().optional(),   // display: 'Falzflyer'
+    variant_label: z.string().optional(),    // 'Z-Falz 6-seitig (Portrait)'
     format: z.string().optional(),
+    orientation: z.string().optional(),
     pages: z.number().optional(),
+    preview_dpi: z.number().optional(),
+    previews_for_sla: z.string().optional(),
     audience: z.array(z.string()).optional(),
     sizes: z.array(z.any()).optional(),
     masters: z.array(z.any()).optional(),
@@ -18,6 +24,10 @@ const templates = defineCollection({
     slots: z.record(z.any()).optional(),
     preflight: z.record(z.any()).optional(),
     build: z.record(z.any()).optional(),
+    asset_policy: z.record(z.any()).optional(),
+    brand_overrides: z.array(z.any()).optional(),
+    ci_overrides: z.record(z.any()).optional(),
+    idml_source: z.string().optional(),
     _downloads: z.array(z.any()).optional(),
     _previews: z.array(z.any()).optional(),
   }),
