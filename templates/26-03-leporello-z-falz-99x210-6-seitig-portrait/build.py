@@ -58,7 +58,14 @@ INJECT_MAP: dict[str, str] = {
     # reference — the downloaded SLA still shows the user's "your content
     # here" placeholder. See .claude/skills/idml-tune/SKILL.md
     # "Demo image substitution".
+    #
+    # Per L-016: every external-asset frame must EITHER be in this map
+    # OR carry a `# noinject: <reason>` comment immediately above its
+    # `pageN.add(ImageFrame(...))`. The
+    # external_asset_substitution_audit fails preflight when neither
+    # is present.
     "u2cd": "themen_verkehr_radweg",          # cover middle-top wide banner (99×42mm)
+    "u3a0": "kontext_buergerversammlung",     # full-page Zitat backdrop (99×210mm)
     # u139 (Leonore tall portrait) intentionally left unmapped — the AI
     # portrait substitution turned the upper-right area light, making
     # the white DIE GRÜNEN logo (u141) on top of the portrait become
@@ -212,6 +219,12 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     # uniform dark green where baseline showed the portrait. Pre-crop
     # the source to portrait aspect (1228×2598 via tools/codex_image_gen
     # or PIL) and use scale_type=0 for proportional fit.
+    # noinject: AI portrait substitution turned the upper-right area
+    # light, making the white DIE GRÜNEN logo (u141) on top become
+    # invisible. Original Leonore JPG has a dark green silhouette in
+    # the upper-right that the white logo reads against. Future fix:
+    # pick a portrait whose upper-right is also dark, OR composite
+    # the logo on a darker overlay band.
     page0.add(ImageFrame(
         x_mm=197.8236,
         y_mm=-2,
@@ -232,6 +245,10 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         image='../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/gruene-logo-bund-weiss-cmyk.png',
         scale_type=0,
     ))
+    # noinject: schwarzer-verlauf-radial.png is a decorative black
+    # vignette overlay (regenerated programmatically as quadratic
+    # alpha falloff), not content. AI substitution would replace a
+    # design element with a photo. Brand-effect, leave alone.
     page0.add(ImageFrame(
         x_mm=188.6107,
         y_mm=101.25,
@@ -766,9 +783,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_offset_mm=(0, 0.1874),
     ))
     # h_mm widened 22.0927mm→37.9236mm: Scribus clips lines when frame_h < 3 explicit lines × line height (leading=20.48pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 97.4809 → 99.5129 (uniform +-5.76pt × sign=-1 → +2.0320mm)
     page1.add(TextFrame(
         x_mm=203.88,
-        y_mm=97.4809,
+        y_mm=99.5129,
         w_mm=87.24,
         h_mm=37.9236,
         anname='u3a2',
@@ -785,9 +803,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
     # P5/playbook y_mm_shift.py: y_mm 123.1736 → 123.6736 (calibration probe (+0.5mm))
     # P5/playbook y_mm_shift.py: y_mm 123.6736 → 121.3029 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 121.3029 → 123.5042 (uniform +-6.24pt × sign=-1 → +2.2013mm)
     page1.add(TextFrame(
         x_mm=226.6686,
-        y_mm=121.3029,
+        y_mm=123.5042,
         w_mm=41.6629,
         h_mm=8.0081,
         anname='u3ba',
@@ -809,9 +828,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     _fb_data, _fb_ext = _inline_brand_icon("social-media-icon-facebook-weiss.png")
     # P5/playbook y_mm_shift.py: y_mm 185.9694 → 184.1067 (paired with u40c via distance_y; same shift -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 184.1067 → 186.4774 (paired with u40c via distance_y; same shift +2.3707mm)
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=184.1067,
+        y_mm=186.4774,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3e7',
@@ -824,9 +844,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 184.204 → 186.5747 (uniform +-6.72pt × sign=-1 → +2.3707mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=184.204,
+        y_mm=186.5747,
         w_mm=26.5209,
         h_mm=8.0081,
         anname='u40c',
@@ -836,9 +857,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     _ig_data, _ig_ext = _inline_brand_icon("social-media-icon-instagram-weiss.png")
     # P5/playbook y_mm_shift.py: y_mm 191.61 → 189.7473 (paired with u412 via distance_y; same shift -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 189.7473 → 192.118 (paired with u412 via distance_y; same shift +2.3707mm)
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=189.7473,
+        y_mm=192.118,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3f0',
@@ -851,9 +873,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # P5/playbook y_mm_shift.py: y_mm 191.6586 → 189.7959 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 191.6586 → 189.7959 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 191.6586 → 189.7959 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 189.7959 → 192.1666 (uniform +-6.72pt × sign=-1 → +2.3707mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=189.7959,
+        y_mm=192.1666,
         w_mm=29.1209,
         h_mm=8.0081,
         anname='u412',
@@ -863,9 +886,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     _tt_data, _tt_ext = _inline_brand_icon("social-media-icon-tiktok-weiss.png")
     # P5/playbook y_mm_shift.py: y_mm 197.3258 → 195.4631 (paired with u45b via distance_y; same shift -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 195.4631 → 197.6644 (paired with u45b via distance_y; same shift +2.2013mm)
     page1.add(ImageFrame(
         x_mm=211.7191,
-        y_mm=195.4631,
+        y_mm=197.6644,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u3f5',
@@ -878,9 +902,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 195.4365 → 197.6378 (uniform +-6.24pt × sign=-1 → +2.2013mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=195.4365,
+        y_mm=197.6378,
         w_mm=36.0209,
         h_mm=8.0081,
         anname='u45b',
@@ -889,9 +914,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='@diegruenenaustria', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
     # P5/playbook y_mm_shift.py: y_mm 185.9694 → 184.1067 (paired with u47b via distance_y; same shift -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 184.1067 → 184.784 (paired with u47b via distance_y; same shift +0.6773mm)
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=184.1067,
+        y_mm=184.784,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u477',
@@ -904,9 +930,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 184.204 → 184.8813 (uniform +-1.92pt × sign=-1 → +0.6773mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=184.204,
+        y_mm=184.8813,
         w_mm=26.4583,
         h_mm=8.0081,
         anname='u47b',
@@ -915,9 +942,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='@gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
     # P5/playbook y_mm_shift.py: y_mm 191.61 → 189.7473 (paired with u4a6 via distance_y; same shift -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 189.7473 → 192.626 (paired with u4a6 via distance_y; same shift +2.8787mm)
     page1.add(ImageFrame(
         x_mm=257.1,
-        y_mm=189.7473,
+        y_mm=192.626,
         w_mm=3.3526,
         h_mm=3.299,
         anname='u4a2',
@@ -930,9 +958,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 189.8446 → 192.7233 (uniform +-8.16pt × sign=-1 → +2.8787mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=189.8446,
+        y_mm=192.7233,
         w_mm=27.74,
         h_mm=8.0081,
         anname='u4a6',

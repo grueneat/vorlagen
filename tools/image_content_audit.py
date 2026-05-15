@@ -221,6 +221,29 @@ def main(argv=None):
     preview_pngs = render_pdf_pages(preview, args.dpi, tmpdir / "preview")
     baseline_pngs = render_pdf_pages(baseline, args.dpi, tmpdir / "baseline")
 
+    # Frames that get AI substitution in template-preview.sla legitimately
+    # differ from baseline.pdf — skip image_content comparison for them.
+    inject_map_annames: set[str] = set()
+    inject_match = re.search(r"INJECT_MAP\s*:\s*dict\[[^\]]*\]\s*=\s*\{([^}]*)\}",
+                             build_text, re.DOTALL)
+    if inject_match:
+        for m in re.finditer(r'"(\w+)"\s*:\s*"', inject_match.group(1)):
+            inject_map_annames.add(m.group(1))
+
+    # Brand-embedded assets (per meta.yml::asset_policy::embedded)
+    # are part of the brand identity. Their rendering differences
+    # between Scribus and InDesign are intentional (e.g. brand icons
+    # split into per-icon PNGs vs IDML composite). Only AUDIT for
+    # external (placeholder content) assets.
+    embedded_basenames: set[str] = set()
+    meta_yml = template_dir / "meta.yml"
+    if meta_yml.exists():
+        try:
+            meta = yaml.safe_load(meta_yml.read_text()) or {}
+            embedded_basenames = set(meta.get("asset_policy", {}).get("embedded", []))
+        except Exception:
+            pass
+
     rows = []
     for f in frames:
         info = {
@@ -230,6 +253,52 @@ def main(argv=None):
             "scale_type": f.scale_type,
             "image_path": f.image_path,
         }
+        # If frame is in INJECT_MAP, AI substitution intentionally
+        # changes the image content — emit an OK row rather than running
+        # the comparison (which would always fail).
+        if f.anname in inject_map_annames:
+            rows.append({
+                "anname": f.anname,
+                "page": f.page,
+                "bbox_mm": list(f.bbox_mm),
+                "scale_type": f.scale_type,
+                "image_path": f.image_path,
+                "classification": "ok",
+                "flags": [],
+                "skipped_reason": "in INJECT_MAP — AI substitution expected",
+            })
+            continue
+        # Brand-embedded assets render differently between Scribus and
+        # InDesign by intentional design (per-icon PNGs vs composite,
+        # subtle color profile differences). Skip content comparison;
+        # image_frame_visibility audit catches outright invisibility.
+        from pathlib import Path as _P
+        if not f.image_path:
+            # Frames using inline_image_data only (no external file
+            # ref) are brand-embedded by convention (`_inline_brand_icon`
+            # helper). Skip content comparison.
+            rows.append({
+                "anname": f.anname,
+                "page": f.page,
+                "bbox_mm": list(f.bbox_mm),
+                "classification": "ok",
+                "flags": [],
+                "skipped_reason": "inline-only — brand-embedded by convention",
+            })
+            continue
+        basename = _P(f.image_path).name
+        if basename in embedded_basenames:
+            rows.append({
+                "anname": f.anname,
+                "page": f.page,
+                "bbox_mm": list(f.bbox_mm),
+                "scale_type": f.scale_type,
+                "image_path": f.image_path,
+                "classification": "ok",
+                "flags": [],
+                "skipped_reason": f"embedded brand asset ({basename})",
+            })
+            continue
         # If the frame was y_mm-shifted post-IDML, baseline.pdf still
         # renders at the original y_mm — read baseline crop there.
         baseline_bbox_mm = None

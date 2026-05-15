@@ -1276,6 +1276,44 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E5d: external_asset_substitution_audit — every external
+    # asset frame must be in INJECT_MAP OR carry a `# noinject:`
+    # justification (per L-016). Forces the LLM/converter to make an
+    # explicit decision rather than letting placeholder content slip
+    # through to gallery previews.
+    eas_path = out_dir / "external_asset_substitution_audit.yml"
+    eas_md = out_dir / "external_asset_substitution_audit.md"
+    if build_py.exists():
+        try:
+            from external_asset_substitution_audit import main as _eas_main
+            _eas_main([
+                "--slug", tid,
+                "--templates-dir", str(Path("/workspace/templates")),
+                "--out-yaml", str(eas_path),
+                "--out-md", str(eas_md),
+            ])
+            eas_data = yaml.safe_load(eas_path.read_text(encoding="utf-8")) or {}
+            n_missing = (eas_data.get("summary") or {}).get("missing") or 0
+            findings = eas_data.get("findings") or []
+            if n_missing:
+                annames = [f.get("anname") for f in findings]
+                issue_parts.append(
+                    f"{n_missing} external asset frame(s) without "
+                    f"INJECT_MAP or noinject: {annames}"
+                )
+                print(
+                    f"[{tid}] external_asset_substitution_audit: "
+                    f"{n_missing} missing → REVIEW",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] external_asset_substitution_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "external_asset_substitution_audit",
+                "E5d (external_asset_substitution_audit)", exc, tid,
+            )
+
     # Phase E5c: image_content_audit — catches images that ARE rendering
     # but with wrong content (variance loss, mean color shift, histogram
     # divergence). Closes L-012 gap where image_frame_visibility says OK
@@ -1945,6 +1983,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         systematic_text_audit_path=systematic_audit_path,
         image_visibility_path=image_visibility_path,
         image_content_path=image_content_path,
+        external_asset_substitution_path=eas_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -1991,6 +2030,7 @@ def _build_preflight(
     systematic_text_audit_path: Path | None = None,
     image_visibility_path: Path | None = None,
     image_content_path: Path | None = None,
+    external_asset_substitution_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -2159,6 +2199,20 @@ def _build_preflight(
                 bool(sta.get("ok", True)),
                 int(n_actionable),
                 f"{n_actionable} frame(s) with un-addressed sim-actionable drift" if n_actionable else "",
+            )
+
+    # Phase E5d: external_asset_substitution_audit
+    if external_asset_substitution_path is not None:
+        eas = _load_yml(external_asset_substitution_path)
+        if eas is not None:
+            n_missing = (eas.get("summary") or {}).get("missing") or 0
+            findings = eas.get("findings") or []
+            annames = [f.get("anname") for f in findings]
+            _record(
+                "external_asset_substitution_audit",
+                bool(eas.get("ok", True)),
+                int(n_missing),
+                f"missing INJECT_MAP/noinject: {annames}" if annames else "",
             )
 
     # Phase E5c: image_content_audit — varied-content per-frame check.

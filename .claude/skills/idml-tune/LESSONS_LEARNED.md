@@ -432,6 +432,55 @@ bin/tune-fix <slug>        deterministic playbook dispatcher
 
 ---
 
+## L-016 — INJECT_MAP is opt-in but should be opt-out for external assets
+
+**Symptom:** u3a0 (plakat-dunkel-fuer-flyer.png — full-page green Zitat
+backdrop on Portrait page 2) renders the original placeholder image in
+the gallery preview because it's NOT in INJECT_MAP. The build.py
+comment says "intentionally left unmapped — the substitute photo would
+clash with the panel's 'Zitat' framing." But the asset IS classified
+as `external:` in meta.yml::asset_policy — it's PLACEHOLDER CONTENT,
+not brand. The current opt-in INJECT_MAP design lets non-branded
+content slip through to gallery previews unnoticed.
+
+**Lesson:** The model should be:
+- Brand-locked assets (`embedded:`) — never substituted
+- Placeholder content (`external:`) — ALWAYS substituted in gallery
+  preview UNLESS there's an explicit `# noinject:` justification
+
+The opt-in INJECT_MAP requires the human/LLM to manually pair every
+external frame with a library ID. When new external frames are added
+(by converter, by user), they default to "show original placeholder"
+which can lead to user-visible old content in preview.
+
+**Action:**
+
+1. Add a new audit `tools/external_asset_substitution_audit.py` that
+   checks every frame whose `image=` path resolves to an asset in
+   `meta.yml::asset_policy::external`. The frame MUST be in
+   INJECT_MAP OR have a `# noinject: <reason>` comment in build.py
+   above its `add(ImageFrame(...))`. Otherwise the audit FAILS.
+
+2. Convert the current opt-in INJECT_MAP comments ("intentionally left
+   unmapped") into structured `# noinject:` markers so the audit can
+   recognise the explicit decision and tolerate it. Without the marker,
+   the audit forces the LLM to either map the frame OR justify the
+   exclusion.
+
+3. Add a playbook `tools/playbooks/inject_map_default.py` that
+   auto-suggests a library ID for unmapped external frames based on
+   frame dimensions (portrait → portrait_*, wide banner → themen_*,
+   square → themen_*) and emits the recommendation as LLM-actionable
+   output for review.
+
+**Why u3a0 specifically wasn't caught:** No audit existed to detect
+"external asset frame without INJECT_MAP entry". The decision-to-
+exclude lived only in a free-form Python comment that no tool reads.
+A structured `# noinject:` marker + an audit makes the decision
+auditable and defaults to "must justify exclusion".
+
+---
+
 ## L-014 — image_frame_visibility_audit is broken for inverted imagery
 
 **Symptom:** u141 (white DIE GRÜNEN logo on dark green background)
