@@ -180,7 +180,6 @@
         <ITEXT CH="Uaerum ium " FONT="Gotham Narrow Black"/>
         <ITEXT CH="verior alicide liquuntio. " FONT="Gotham Narrow Book"/>
         <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" ALIGN="0"/>
-        <para PARENT="idml/aufzaehlungen-auf-gruenem-hintergrund" ALIGN="0"/>
         <ITEXT CH="" FONT="Gotham Narrow Book"/>
         <tab FEATURES="inherit"/>
         <ITEXT CH="•" FONT="Gotham Narrow Book"/>

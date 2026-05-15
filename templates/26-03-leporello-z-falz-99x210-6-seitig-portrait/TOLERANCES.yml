@@ -104,3 +104,20 @@ tolerances:
     in the document; not converter-fixable. The structural-bucket audit (text_position_audit_structural)
     catches larger shifts (>5pt) which are real layout regressions and stay red.
   follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:u1fd-bullet-list-mid-frame-anomaly
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  reason: u1fd is a 5-bullet aufzaehlungen-auf-gruenem-hintergrund frame (13 lines
+    total). The IDML has only ONE empty <para> separator between bullets 3 and 4 (vs
+    TWO between others), making bullet 4 sit tight under bullet 3 in InDesign baseline.
+    Scribus renders both single and double <para> separators with the same gap, so
+    bullet 4 has a full inter-bullet gap in preview, producing +20pt cumulative drift
+    on lines 7-10. Tried adding a second <para> separator to make spacing consistent
+    everywhere — that produced cleaner visual but +36pt drift. Tried per-paragraph
+    LINESP=0.5 override on the single separator — Scribus propagated the override
+    to adjacent paragraphs unexpectedly. Real fix needs Scribus para-collapse-aware
+    rendering OR a space_after_pt model on the bullet style. NOT FIXED, NOT TOLERATED-AS-PASSING
+    — preflight stays red until either baseline.pdf is re-exported with consistent
+    gaps OR a Scribus extension lands.
+  follow_up_issue: engine-bug; bullet-list para-collapse rendering
