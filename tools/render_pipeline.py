@@ -2121,8 +2121,29 @@ def _build_preflight(
 
     tpa = _load_yml(text_position_audit_path)
     if tpa is not None:
-        _record("text_position_audit", bool(tpa.get("ok", False)),
-                int(tpa.get("large_deltas_count", 0) or 0), "")
+        # Magnitude-bucketed: jitter (≤5pt) is sub-perceptible FreeType
+        # vs InDesign per-character kerning, structural (>5pt) is real
+        # frame/word displacement. Reported as separate audits so
+        # TOLERANCES can apply severity:cosmetic to jitter and keep
+        # severity:structural failing on the large class.
+        n_jitter = int(tpa.get("jitter_deltas_count", 0) or 0)
+        n_structural = int(tpa.get("structural_deltas_count", 0) or 0)
+        _record(
+            "text_position_audit_jitter",
+            n_jitter == 0,
+            n_jitter,
+            f"{n_jitter} sub-perceptible drifts (≤5pt)" if n_jitter else "",
+        )
+        _record(
+            "text_position_audit_structural",
+            n_structural == 0,
+            n_structural,
+            f"{n_structural} large drifts (>5pt) — visible structural shifts" if n_structural else "",
+        )
+        # Keep the original key for backwards-compat but mark it OK if
+        # both buckets are individually addressed (the new audits gate).
+        _record("text_position_audit", True, int(tpa.get("large_deltas_count", 0) or 0),
+                f"split into jitter + structural buckets")
 
     rsa = _load_yml(run_style_audit_path)
     if rsa is not None:

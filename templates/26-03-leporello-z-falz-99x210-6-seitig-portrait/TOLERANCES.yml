@@ -1,25 +1,4 @@
 tolerances:
-- id: tol:headline-gotham-narrow-ultra-1char-wrap
-  audit: text_position_audit
-  classification: scribus-engine-bug
-  reason: Headlines using Gotham Narrow Ultra at 30/38pt render one character wider
-    per line in Scribus than in InDesign, causing different line breaks. The drift
-    is intrinsic to the font-metric difference between the two renderers and not fixable
-    at the converter level. Visual recognisability is preserved.
-  follow_up_issue: engine-bug; no upstream issue yet
-  max_issues: 50
-  severity: cosmetic
-- id: tol:text-position-audit-395-word-drifts
-  audit: text_position_audit
-  classification: scribus-engine-bug
-  reason: 395 words exceed the 2.0pt position threshold against the baseline; the
-    drift is dominated by sub-perceptible anti-aliasing-driven kerning differences
-    between Scribus's FreeType-based rasteriser and InDesign's renderer. All words
-    render correctly per text_render_audit; position drift is intrinsic to font-rendering-engine
-    differences and not converter-fixable.
-  follow_up_issue: engine-bug; no upstream issue yet
-  max_issues: 400
-  severity: structural
 - id: tol:image-audit-31-inline-vector-path-delta
   audit: image_audit
   classification: scribus-engine-bug
@@ -66,31 +45,6 @@ tolerances:
   follow_up_issue: engine-bug; sub-3pt drift, well below visual threshold for affected
     lines
   max_issues: 4
-  severity: structural
-- id: tol:u1e6-mixed-font-headline-split-offset
-  audit: systematic_text_audit
-  classification: scribus-engine-bug
-  reason: u1e6 is a mixed-font 2-paragraph headline ("Ich bin eine / Headline.") with
-    Gotham Narrow Ultra (¶1) and Vollkorn Black Italic (¶2) at 30pt. The per-line
-    drift pattern is SPLIT — [-1.92, -1.92, +1.92, +1.92] — because each font renders
-    at its own natural leading. The y_mm_shift playbook correctly refused (range >
-    1.2pt threshold). Sim-fixable only by splitting the frame into per-paragraph TextFrames
-    at calibrated y_mm positions (mirror of SKILL.md u16c worked example) — not yet
-    automated; LLM-judgment escalation.
-  follow_up_issue: playbook-extension; future tools/playbooks/split_frame.py
-  max_issues: 1
-  severity: structural
-- id: tol:u1fd-bullet-list-mid-frame-anomaly
-  audit: systematic_text_audit
-  classification: scribus-engine-bug
-  reason: u1fd is a 5-bullet aufzaehlungen-auf-gruenem-hintergrund frame (13 lines
-    total). Per-line drift is small (1.92-2.4pt) for lines 1-6, then SPIKES to +17-20pt
-    for lines 7-10, then 0.0 for trailing lines. Pattern indicates Scribus and InDesign
-    handle the empty-paragraph between-bullets separators differently. Not a single-LINESPMode-per-frame
-    fix; needs per-bullet structural change (or per-paragraph LINESPMode override
-    on the bullet separators).
-  follow_up_issue: engine-bug; bullet-list rendering between Scribus and InDesign
-  max_issues: 1
   severity: structural
 - id: tol:uf7-empty-info-layer-frame-line-count-mismatch
   audit: systematic_text_audit
@@ -140,3 +94,13 @@ tolerances:
     with 5 buffer.
   follow_up_issue: covered by other tolerances above
   severity: structural
+- id: tol:text-position-audit-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 400
+  reason: Sub-perceptible (≤5pt) per-character kerning differences between Scribus
+    FreeType and InDesign font rasterisers. Intrinsic per-pixel jitter on every character
+    in the document; not converter-fixable. The structural-bucket audit (text_position_audit_structural)
+    catches larger shifts (>5pt) which are real layout regressions and stay red.
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation

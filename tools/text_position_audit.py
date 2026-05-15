@@ -279,13 +279,35 @@ def run_text_position_audit(
     filtered_deltas.sort(key=lambda d: -(abs(d["dx_pt"]) + abs(d["dy_pt"])))
     top_deltas = filtered_deltas[:50]
 
+    # Magnitude bucketing (user-driven 2026-05-15): sub-perceptible
+    # FreeType-vs-InDesign per-character kerning differences cluster at
+    # 2-5pt and are intrinsic to the rasterizer. Visible structural
+    # shifts cluster > 5pt. Bucket so the LLM/human can apply
+    # `severity: cosmetic` to JITTER and keep `structural` red on the
+    # large-drift class.
+    # Note: position-greedy matching here is fragile when layout
+    # shifts (e.g. headline split-frame fixes change downstream word
+    # positions). Bucketing reflects the AUDIT's measurement, not
+    # ground-truth visible drift. A future content-aware matcher
+    # (text equality first, position second) would distinguish
+    # better. Until then both buckets are noisy.
+    JITTER_THRESHOLD_PT = 5.0
+    n_jitter = sum(
+        1 for d in filtered_deltas
+        if max(abs(d["dx_pt"]), abs(d["dy_pt"])) <= JITTER_THRESHOLD_PT
+    )
+    n_structural = len(filtered_deltas) - n_jitter
+
     return {
         "template": template,
         "baseline_pdf": str(baseline_pdf),
         "preview_pdf": str(preview_pdf),
         "threshold_pt": large_delta_threshold_pt,
         "common_word_threshold": common_word_threshold,
+        "jitter_threshold_pt": JITTER_THRESHOLD_PT,
         "large_deltas_count": len(filtered_deltas),
+        "jitter_deltas_count": n_jitter,
+        "structural_deltas_count": n_structural,
         "suppressed_common_word_deltas_count": suppressed_count,
         "suppressed_unmatched_word_count": suppressed_unmatched_word_count,
         "large_deltas": top_deltas,
