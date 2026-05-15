@@ -919,10 +919,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # from the brand-source composite, so re-splitting auto-flows
     # through to every template that uses these icons.
     _fb_data, _fb_ext = _inline_brand_icon("social-media-icon-facebook-weiss.png")
-    # P5/playbook y_mm_shift.py: y_mm 187.6 → 185.7373 (paired with u40c via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=210.90,
-        y_mm=185.7373,
+        y_mm=187.6,
         w_mm=5.0,
         h_mm=5.0,
         anname='u3e7',
@@ -932,10 +931,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
-    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=184.204,
+        y_mm=186.0667,
         w_mm=26.5209,
         h_mm=8.0081,
         anname='u40c',
@@ -944,10 +942,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
     _ig_data, _ig_ext = _inline_brand_icon("social-media-icon-instagram-weiss.png")
-    # P5/playbook y_mm_shift.py: y_mm 193.25 → 193.758 (paired with u412 via distance_y; same shift +0.5080mm)
     page1.add(ImageFrame(
         x_mm=210.90,
-        y_mm=193.758,
+        y_mm=193.25,
         w_mm=5.0,
         h_mm=5.0,
         anname='u3f0',
@@ -957,10 +954,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.2017mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
-    # P5/playbook y_mm_shift.py: y_mm 191.6586 → 192.1666 (uniform +-1.44pt × sign=-1 → +0.5080mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=192.1666,
+        y_mm=191.6586,
         w_mm=29.1209,
         h_mm=8.0081,
         anname='u412',
@@ -969,10 +965,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         runs=[Run(text='@diegruenen', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
     _tt_data, _tt_ext = _inline_brand_icon("social-media-icon-tiktok-weiss.png")
-    # P5/playbook y_mm_shift.py: y_mm 198.95 → 197.0873 (paired with u45b via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=210.90,
-        y_mm=197.0873,
+        y_mm=198.95,
         w_mm=5.0,
         h_mm=5.0,
         anname='u3f5',
@@ -982,10 +977,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         scale_type=0,
     ))
     # h_mm widened 3.3522mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
-    # P5/playbook y_mm_shift.py: y_mm 197.2992 → 195.4365 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=217.8791,
-        y_mm=195.4365,
+        y_mm=197.2992,
         w_mm=36.0209,
         h_mm=8.0081,
         anname='u45b',
@@ -993,10 +987,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='@diegruenenaustria', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
-    # P5/playbook y_mm_shift.py: y_mm 187.6 → 185.7373 (paired with u47b via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=256.28,
-        y_mm=185.7373,
+        y_mm=187.6,
         w_mm=5.0,
         h_mm=5.0,
         anname='u477',
@@ -1006,10 +999,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
-    # P5/playbook y_mm_shift.py: y_mm 186.0667 → 184.204 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=184.204,
+        y_mm=186.0667,
         w_mm=26.4583,
         h_mm=8.0081,
         anname='u47b',
@@ -1017,10 +1009,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='@gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
-    # P5/playbook y_mm_shift.py: y_mm 193.25 → 191.3873 (paired with u4a6 via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=256.28,
-        y_mm=191.3873,
+        y_mm=193.25,
         w_mm=5.0,
         h_mm=5.0,
         anname='u4a2',
@@ -1030,10 +1021,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
-    # P5/playbook y_mm_shift.py: y_mm 191.7073 → 189.8446 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=189.8446,
+        y_mm=191.7073,
         w_mm=27.74,
         h_mm=8.0081,
         anname='u4a6',
@@ -1041,10 +1031,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         style='idml/absatzformat-1',
         runs=[Run(text='gruene.at', font='Gotham Narrow Book', paragraph_style='idml/absatzformat-1', paragraph_attrs={'ALIGN': '3'})],
     ))
-    # P5/playbook y_mm_shift.py: y_mm 198.95 → 197.0873 (paired with u4df via distance_y; same shift -1.8627mm)
     page1.add(ImageFrame(
         x_mm=256.28,
-        y_mm=197.0873,
+        y_mm=198.95,
         w_mm=5.0,
         h_mm=5.0,
         anname='u4da',
@@ -1054,10 +1043,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         local_scale=(0.091554, 0.091554),
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
-    # P5/playbook y_mm_shift.py: y_mm 197.4231 → 195.5604 (uniform ++5.28pt × sign=-1 → -1.8627mm)
     page1.add(TextFrame(
         x_mm=263.26,
-        y_mm=195.5604,
+        y_mm=197.4231,
         w_mm=27.74,
         h_mm=8.0081,
         anname='u4df',
