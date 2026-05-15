@@ -108,6 +108,23 @@ tolerances:
     in run_style_audit.
   follow_up_issue: engine-bug; pdftotext rotation-aware text extraction
   max_issues: 1
+- id: tol:u16c-mixed-font-headline-line-wrap
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  max_issues: 1
+  reason: >-
+    u16c is a 3-paragraph mixed-font headline ("Das ist die /
+    dreizeilige / Headline.") with Gotham Narrow Ultra → Vollkorn
+    Black Italic → Gotham Narrow Ultra at 38pt. Scribus renders
+    Vollkorn Black Italic 1 character wider per line than InDesign,
+    causing different line wraps. Audit reports baseline=1 line vs
+    preview=2 lines for the third paragraph. Visually the text is
+    fully readable; the inter-paragraph gap is also slightly wider
+    in preview which pushes the subheadline (u155) down. Same gap
+    class as the sibling falz templates' u16c worked example.
+    Future fix: split into per-paragraph TextFrames at calibrated
+    y_mm (mirror of zweigeteiltes-cover u16c approach).
+  follow_up_issue: engine-bug; mixed-font-headline split-frame fix tracked
 - id: tol:visual-diff-image-size-mismatch
   audit: visual_diff_regions
   classification: scribus-engine-bug
