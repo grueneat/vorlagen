@@ -113,6 +113,9 @@ preflight:
   bleed_mm: 3
   cmyk_only: true
   min_image_dpi: 300
+category: postkarte
+category_label: Postkarte
+variant_label: Wahlaufruf A6 quer
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/wahlaufruf-postkarte-a6-quer/template.sla

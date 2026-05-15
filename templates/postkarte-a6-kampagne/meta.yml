@@ -5,112 +5,93 @@ format: A6
 orientation: portrait
 pages: 2
 preview_dpi: 100
-audience: [bezirksgruppe, landesgruppe, ortsgruppe]
-description: >
-  Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Badge),
-  Call-to-Action, QR-Code-Rückseite mit Impressum. Skelett-Vorlage —
-  in Scribus öffnen, eigene Inhalte einsetzen.
+audience:
+- bezirksgruppe
+- landesgruppe
+- ortsgruppe
+description: 'Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Badge),
+  Call-to-Action, QR-Code-Rückseite mit Impressum. Skelett-Vorlage — in Scribus öffnen,
+  eigene Inhalte einsetzen.
 
-# Source-of-truth is build.py. The template.sla in this folder is a build
-# artifact regenerable via `python3 build.py`. Recommended workflow:
-#  - Open template.sla in Scribus
-#  - Replace placeholder content (text and images)
-#  - Save under a new name (e.g. postkarte-a6-klimaschutz.sla)
+  '
 build:
   script: build.py
   output: template.sla
-
-# Round-trip validation (issue #2): structural-diff target, plus the per-template
-# overrides for `tools/check_ci.py` allowing the document-local non-CI styles and
-# colors that the original Postkarte ships with.
 original_sla: ../../postkarte-vorlage-original.sla
 previews_for_sla: 53171599e1cf9ce38aed39a3cd407f6d3e8c8f937be7df447d5ed87bbdf1e14a
 brand_overrides:
-  - id: brand:line_spacing_0.9
-    reason: >-
-      Production template auto-generated from postkarte-vorlage-original.sla;
-      the original's per-template para-styles drift from Quickguide 0.9 factor
-      (e.g. Fließtext 13/12=1.083, Headline sehr wichtig 23/27=0.85). Round-
-      trip diff (tools/sla_diff.py --strict) is the byte-stable contract for
-      this template; tightening linesp would break round-trip.
-  - id: brand:visual_adjacency_drift
-    reason: >-
-      Per-template alignment encoding scheduled for the #22 follow-up.
-      Spine-safety is a no-op (single-page-per-side template) and the new
-      rule infrastructure ships globally in #22; CONSTRAINTS encoding for
-      this template is deferred (Issue #22 locked decision #12). Issue #23
-      renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.
-  - id: brand:image_text_overlap
-    reason: >-
-      Scheduled for follow-up audit per #23 — caption-on-photo / decorative
-      overlaps audited at time of #23, not yet reviewed for fix-vs-override
-      classification.
-  - id: brand:image_fills_frame
-    reason: >-
-      Scheduled for follow-up audit per #24 — image-fills-frame check
-      added in #24 surfaces letterbox/INJECT_MAP-drift class globally;
-      per-template review for fix-vs-override classification deferred
-      to follow-up issue (#25). Zeitung is the only template with
-      verified clean image-content extents post-#24.
-  - id: brand:band_consistency
-    reason: >-
-      Scheduled for follow-up audit per #25 — band-consistency check
-      added in #25 needs per-template body_block_margins spec authoring;
-      deferred to follow-up issue. Zeitung is the only template with
-      verified body-pool band model post-#25.
+- id: brand:line_spacing_0.9
+  reason: Production template auto-generated from postkarte-vorlage-original.sla;
+    the original's per-template para-styles drift from Quickguide 0.9 factor (e.g.
+    Fließtext 13/12=1.083, Headline sehr wichtig 23/27=0.85). Round- trip diff (tools/sla_diff.py
+    --strict) is the byte-stable contract for this template; tightening linesp would
+    break round-trip.
+- id: brand:visual_adjacency_drift
+  reason: 'Per-template alignment encoding scheduled for the #22 follow-up. Spine-safety
+    is a no-op (single-page-per-side template) and the new rule infrastructure ships
+    globally in #22; CONSTRAINTS encoding for this template is deferred (Issue #22
+    locked decision #12). Issue #23 renamed brand:undeclared_alignment_drift -> brand:visual_adjacency_drift.'
+- id: brand:image_text_overlap
+  reason: 'Scheduled for follow-up audit per #23 — caption-on-photo / decorative overlaps
+    audited at time of #23, not yet reviewed for fix-vs-override classification.'
+- id: brand:image_fills_frame
+  reason: 'Scheduled for follow-up audit per #24 — image-fills-frame check added in
+    #24 surfaces letterbox/INJECT_MAP-drift class globally; per-template review for
+    fix-vs-override classification deferred to follow-up issue (#25). Zeitung is the
+    only template with verified clean image-content extents post-#24.'
+- id: brand:band_consistency
+  reason: 'Scheduled for follow-up audit per #25 — band-consistency check added in
+    #25 needs per-template body_block_margins spec authoring; deferred to follow-up
+    issue. Zeitung is the only template with verified body-pool band model post-#25.'
 ci_overrides:
   non_ci_styles:
-    - "Default Paragraph Style"
-    - "Fließtext"
-    - "Impressum"
-    - "Default Paragraph Style (2)"
-    - "Schrift rosa Kreis"
-    - "Headline sehr wichtig"
-    - "Kontaktmöglichkeiten"
-    - "Vollkorn Headline sehr wichtig"
-    - "Unterüberschrift"
+  - Default Paragraph Style
+  - Fließtext
+  - Impressum
+  - Default Paragraph Style (2)
+  - Schrift rosa Kreis
+  - Headline sehr wichtig
+  - Kontaktmöglichkeiten
+  - Vollkorn Headline sehr wichtig
+  - Unterüberschrift
   non_ci_colors:
-    - "Green"
-
-# Slots are documented hints for editors, not fill-targets.
-# Each slot's ANNAME (visible in Scribus's Object Properties panel) names
-# the frame so users can find the right element to edit.
+  - Green
 slots:
   headline:
     type: text
     description: 4-zeilige Hauptbotschaft (Vorderseite, alternierend Weiß/Gelb)
     lines: 4
     max_chars_per_line: 22
-    anname: "Headline 4-zeilig (Brand-Wechselfarbe)"
+    anname: Headline 4-zeilig (Brand-Wechselfarbe)
   cta:
     type: text
     description: Call-to-Action unter Headline (1 Zeile)
-    anname: "CTA"
+    anname: CTA
   stoerer:
     type: text
     description: 3-zeiliger Störer-Text im Magenta-Kreis
     lines: 3
-    anname: "Störer-Text 3-zeilig"
+    anname: Störer-Text 3-zeilig
   body:
     type: text
     description: Erklärtext auf der Rückseite
     multiline: true
-    anname: "Erklärtext Rückseite"
+    anname: Erklärtext Rückseite
   url:
     type: text
     description: Kampagnen-URL unterm QR-Code
-    pattern: "^https?://"
-    anname: "Kampagnen-URL"
+    pattern: ^https?://
+    anname: Kampagnen-URL
   social:
     type: text
     description: Social-Handles (4 Zeilen)
     lines: 4
-    anname: "Social Handles (4-zeilig)"
+    anname: Social Handles (4-zeilig)
   impressum:
     type: text
     description: Impressum-Block, gesetzlich vorgeschrieben
     multiline: true
-    anname: "Impressum (1-zeilig)"
+    anname: Impressum (1-zeilig)
   hero:
     type: image
     description: Hauptbild Vorderseite (optional, sonst Vollfarbe)
@@ -119,13 +100,15 @@ slots:
     type: image
     description: Grünen-Logo (Vorderseite, zentriert unten)
     source: shared/logos/gruene-weiss.png
-    anname: "Logo Grüne (weiss, zentriert)"
+    anname: Logo Grüne (weiss, zentriert)
   qr:
     type: image
     description: QR-Code zum Kampagnen-URL (kann manuell eingefügt werden)
-    anname: "QR-Code (wird aus URL generiert)"
-
+    anname: QR-Code (wird aus URL generiert)
 preflight:
   bleed_mm: 3
   cmyk_only: true
   min_image_dpi: 300
+category: postkarte
+category_label: Postkarte
+variant_label: Kampagne A6

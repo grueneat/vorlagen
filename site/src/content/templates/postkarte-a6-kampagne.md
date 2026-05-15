@@ -19,7 +19,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../postkarte-vorlage-original.sla
-previews_for_sla: 988fefe04151d2dedb731cd44b7e5a52e0c9e59cd8960df07844871afa4f9174
+previews_for_sla: 53171599e1cf9ce38aed39a3cd407f6d3e8c8f937be7df447d5ed87bbdf1e14a
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from postkarte-vorlage-original.sla;
@@ -110,6 +110,9 @@ preflight:
   bleed_mm: 3
   cmyk_only: true
   min_image_dpi: 300
+category: postkarte
+category_label: Postkarte
+variant_label: Kampagne A6
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/postkarte-a6-kampagne/template.sla

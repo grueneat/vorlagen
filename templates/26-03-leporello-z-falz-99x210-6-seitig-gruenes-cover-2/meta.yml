@@ -1,0 +1,29 @@
+asset_policy:
+  embedded:
+  - bluesky-weiss.png
+  - gruene-logo-bund-weiss-cmyk.png
+  - mail-weiss.png
+  - social-media-icon-facebook.png
+  - social-media-icon-instagram.png
+  - social-media-icon-tiktok.png
+  - social-media-icons-weiss.png
+  - website-weiss.png
+  external:
+  - green-pine-trees-covered-with-fog-crop.png
+  - green-pine-trees-covered-with-fog-srgb.png
+  - green-pine-trees-covered-with-fog.jpg
+  - plakat-dunkel-fuer-flyer.png
+  shipped: []
+build:
+  output: template.sla
+  script: build.py
+format: A4
+id: 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2
+idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover
+  2 Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2.idml
+previews_for_sla: 95719b09617d3be4ccd6d4afe5e5ec088f99a12ada1499087189c6275f582a15
+title: 26-03 Leporello z-Falz 99×210 6-seitig (grünes Cover 2)
+version: 0.1.0
+category: falzflyer
+category_label: Falzflyer
+variant_label: Z-Falz 6-seitig (grünes Cover 2)

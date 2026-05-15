@@ -1,3 +1,4 @@
+---
 id: kandidat-falzflyer-din-lang-gruenes-cover-v2
 version: 0.1.0
 title: Kandidat-Falzflyer DIN-lang (Grünes Cover v2)
@@ -280,3 +281,14 @@ slots:
 category: falzflyer
 category_label: Falzflyer
 variant_label: Kandidat DIN-lang (grünes Cover v2)
+_downloads:
+- label: Vollständig (SLA + PDF)
+  sla: /templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/template.sla
+  pdf: /templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/preview.pdf
+_previews:
+- label: Seite 1
+  src: /templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/page-01.png
+- label: Seite 2
+  src: /templates/kandidat-falzflyer-din-lang-gruenes-cover-v2/page-02.png
+---
+

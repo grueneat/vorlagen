@@ -156,6 +156,9 @@ preflight:
   min_image_dpi: 300
   cut_layer: Stanzkontur
   cut_layer_alternative: CutContour
+category: tueranhaenger
+category_label: Türanhänger
+variant_label: Wahltag
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/wahltag-tueranhaenger/template.sla

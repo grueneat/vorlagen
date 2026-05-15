@@ -18,7 +18,7 @@ description: 'A4 quer (297×210 mm) gefalzt zu A5-Tent. Steht selbsttragend auf 
 build:
   script: build.py
   output: template.sla
-previews_for_sla: 88a1ddfa18ef8494ec070580600a57d99284f284bc01ed6e30d52f772b112cc6
+previews_for_sla: e644ea537f8701a38aef221e621964c13bd309123d72ad29fd19d85ec3065c1a
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Body 1.3× and Termine 1.3× and CTA-Footer 1.27× linesp ratios are intentional
@@ -160,6 +160,9 @@ preflight:
   - 105
   cmyk_only: true
   min_image_dpi: 300
+category: infostand
+category_label: Infostand
+variant_label: Tent-Card A5 quer
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/infostand-tent-card-a5-quer/template.sla

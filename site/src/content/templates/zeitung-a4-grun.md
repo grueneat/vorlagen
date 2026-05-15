@@ -17,7 +17,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 984e6ee59b104941eb404aa3148e2455ade83443f8aa10b0146878e5f85c79c0
+previews_for_sla: b008d0d0bd6eb51d513f59496311c17068c9a1490cd69188d3f947a5d8f57096
 sla_diff_strict: false
 brand_overrides:
 - id: brand:line_spacing_0.9
@@ -121,6 +121,9 @@ preflight:
   bleed_mm: 3
   cmyk_only: true
   min_image_dpi: 300
+category: zeitung
+category_label: Zeitung
+variant_label: A4 grün
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/zeitung-a4-grun/template.sla

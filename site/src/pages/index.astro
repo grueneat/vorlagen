@@ -3,7 +3,6 @@ import Base from '../layouts/Base.astro';
 import { getCollection } from 'astro:content';
 
 const templates = await getCollection('templates');
-templates.sort((a, b) => a.data.title.localeCompare(b.data.title));
 
 // Astro's import.meta.env.BASE_URL ends with a slash and equals the base
 // config (currently '/vorlagen/'). Asset paths emitted by gallery_build.py
@@ -11,10 +10,41 @@ templates.sort((a, b) => a.data.title.localeCompare(b.data.title));
 // '//templates/...' when joining.
 const BASE = import.meta.env.BASE_URL;
 const url = (p: string) => BASE + p.replace(/^\//, '');
+
+// Group templates by category. Templates without a category land in
+// `other:` so they remain visible until tagged.
+type T = typeof templates[number];
+const groups = new Map<string, { label: string; items: T[] }>();
+for (const t of templates) {
+  const id = t.data.category ?? 'other';
+  const label = t.data.category_label ?? 'Sonstige';
+  if (!groups.has(id)) groups.set(id, { label, items: [] });
+  groups.get(id)!.items.push(t);
+}
+
+const PRIMARY_ORDER = ['falzflyer', 'plakat', 'postkarte', 'zeitung', 'infostand', 'tueranhaenger'];
+const orderedCategories = [
+  ...PRIMARY_ORDER.filter(c => groups.has(c)),
+  ...[...groups.keys()].filter(c => !PRIMARY_ORDER.includes(c)).sort(),
+];
+
+function pickPreview(items: T[]): string | null {
+  for (const t of items) {
+    const p = t.data._previews?.[0]?.src;
+    if (p) return url(p);
+  }
+  return null;
+}
+
+for (const g of groups.values()) {
+  g.items.sort((a, b) =>
+    (a.data.variant_label ?? a.data.title).localeCompare(b.data.variant_label ?? b.data.title)
+  );
+}
 ---
 <Base title="Vorlagen-Galerie">
   <h1>Vorlagen-Galerie</h1>
-  <p>Skelett-Vorlagen für Postkarten, Plakate und Zeitungen. Datei runterladen, in Scribus öffnen, eigene Inhalte einsetzen.</p>
+  <p>Skelett-Vorlagen für Falzflyer, Plakate, Postkarten, Zeitungen und mehr. Datei runterladen, in Scribus öffnen, eigene Inhalte einsetzen.</p>
   <a
     href={url('experiments/')}
     style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; padding: 1rem 1.25rem; background: var(--gruen-dunkel); color: white; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
@@ -25,21 +55,37 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
     </div>
     <span style="font-size: 0.9em; padding: 0.4rem 0.8rem; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; white-space: nowrap;">Ansehen →</span>
   </a>
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
-    {templates.map(t => (
-      <a href={url(`templates/${t.id}/`)} style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;">
-        {t.data._previews && t.data._previews.length > 0 && (
-          <div style="aspect-ratio: 3 / 4; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-            <img src={url(t.data._previews[0].src)} alt={t.data.title} loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+
+  <h2 style="margin-top: 2.5rem;">Vorlagen-Typen</h2>
+  <p style="color: #666; margin-top: -0.25rem;">{orderedCategories.length} Typen · {templates.length} Varianten</p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+    {orderedCategories.map(cat => {
+      const g = groups.get(cat)!;
+      const cover = pickPreview(g.items);
+      const n = g.items.length;
+      return (
+        <a
+          href={url(`typ/${cat}/`)}
+          style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;"
+        >
+          {cover && (
+            <div style="aspect-ratio: 3 / 4; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+              <img src={cover} alt={g.label} loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            </div>
+          )}
+          <div style="padding: 1rem;">
+            <h3 style="margin: 0 0 0.5rem 0;">{g.label}</h3>
+            <span style="color: #666; font-size: 0.85em;">{n} {n === 1 ? 'Variante' : 'Varianten'}</span>
+            <ul style="margin: 0.5rem 0 0 0; padding-left: 1rem; color: #666; font-size: 0.85em;">
+              {g.items.slice(0, 3).map(t => (
+                <li>{t.data.variant_label ?? t.data.title}</li>
+              ))}
+              {g.items.length > 3 && <li>… {g.items.length - 3} weitere</li>}
+            </ul>
           </div>
-        )}
-        <div style="padding: 1rem;">
-          <h3 style="margin: 0 0 0.5rem 0;">{t.data.title}</h3>
-          {t.data.format && <span style="color: #666; font-size: 0.85em;">{t.data.format}{t.data.pages ? ` · ${t.data.pages} Seiten` : ''}</span>}
-          {t.data.type === 'family' && <span style="color: #666; font-size: 0.85em;">Familie · {t.data.sizes?.length} Größen</span>}
-          <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.9em;">{t.data.description}</p>
-        </div>
-      </a>
-    ))}
+        </a>
+      );
+    })}
   </div>
 </Base>
