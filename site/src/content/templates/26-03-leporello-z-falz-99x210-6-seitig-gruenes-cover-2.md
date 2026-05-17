@@ -22,12 +22,40 @@ format: A4
 id: 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2
 idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover
   2 Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2.idml
-previews_for_sla: 95719b09617d3be4ccd6d4afe5e5ec088f99a12ada1499087189c6275f582a15
+previews_for_sla: 6311ec3263fbc629bc80c1b66fdb044bbf6afcd09cc816e0af8a59c6eed4e99a
 title: 26-03 Leporello z-Falz 99×210 6-seitig (grünes Cover 2)
 version: 0.1.0
+build_py_sha256: 3c8c0469617894bc270cd9372d3855512067cf17228795be772a86e8d830fc83
 category: falzflyer
 category_label: Falzflyer
 variant_label: Z-Falz 6-seitig (grünes Cover 2)
+brand_overrides:
+- id: brand:line_spacing_0.9
+  reason: IDML-imported leporello (scaffold). The original InDesign ParagraphStyles
+    (idml/* and ci/*) carry leading values that do NOT follow the Quickguide 0.9-factor
+    convention — same gap class as the sibling zweigeteiltes-cover and v2 falzflyer.
+    The converter emits these verbatim from the IDML Resources/Styles.xml; changing
+    them would diverge from the InDesign-authored baseline.pdf which is the convergence
+    target. Resolution path — per-template tune pass (deferred).
+- id: brand:bleed_3mm
+  reason: IDML-imported leporello (scaffold). The IDML's InDesign document was authored
+    with bleed=0; the converter emits page geometry verbatim. Same gap class as the
+    sibling zweigeteiltes-cover. Resolution path — extend tools/idml_to_dsl.py to
+    inject the brand-required 3mm bleed at scaffold time (deferred).
+- id: brand:inside_page
+  reason: IDML-imported leporello (scaffold). The IDML's spread coordinate system
+    places multi-panel content on a single oversized canvas while the converter declares
+    an A4 page; ~40 frames sit outside the declared trim box. Same gap class as the
+    sibling zweigeteiltes-cover. Resolution path — emit a 6-panel spread layout from
+    the converter so frames register inside one of the panel pages (deferred — same
+    blocker as bleed_3mm).
+- id: brand:image_text_overlap
+  reason: IDML-imported leporello (scaffold). The original InDesign layout deliberately
+    overlays text on full-bleed photo backdrops (Zitat frames over green-pine backgrounds)
+    — the brand rule fires because the rule cannot distinguish intentional design
+    overlay from accidental clipping. Same gap class as the sibling zweigeteiltes-cover.
+    Resolution path — per-frame intent annotation in the rule, deferred to a separate
+    pass.
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/template.sla

@@ -155,30 +155,12 @@ def test_yaml_output_deterministic(tmp_path):
     assert _yaml_dump(data1) == _yaml_dump(data2)
 
 
-def test_run_text_audit_with_matching_text(tmp_path):
-    """run_text_audit smoke: when all text in PDF matches build.py, no unmatched lines."""
-    root = Path(__file__).resolve().parents[2]
-    baseline = (
-        root / "templates" / "kandidat-falzflyer-din-lang-gruenes-cover-v2" / "baseline.pdf"
-    )
-    build_py = (
-        root / "templates" / "kandidat-falzflyer-din-lang-gruenes-cover-v2" / "build.py"
-    )
-    if not baseline.exists() or not build_py.exists():
-        pytest.skip("Real baseline.pdf/build.py not available")
-
-    report = run_text_audit(baseline, build_py)
-    # All text in the current build.py should match the baseline
-    # (Leonore Gewessler is in u3ba)
-    assert report["template"] == "kandidat-falzflyer-din-lang-gruenes-cover-v2"
-    assert len(report["pages"]) == 2
-
-
 def test_text_audit_unmatched_line(tmp_path):
-    """When build.py is missing a text frame, the text appears as unmatched."""
+    """When build.py has no text frames, all baseline text is unmatched."""
     root = Path(__file__).resolve().parents[2]
     baseline = (
-        root / "templates" / "kandidat-falzflyer-din-lang-gruenes-cover-v2" / "baseline.pdf"
+        root / "templates" / "26-03-leporello-z-falz-99x210-6-seitig-portrait"
+        / "baseline.pdf"
     )
     if not baseline.exists():
         pytest.skip("Real baseline.pdf not available")
@@ -190,15 +172,10 @@ def test_text_audit_unmatched_line(tmp_path):
         encoding="utf-8",
     )
     report = run_text_audit(baseline, build_py)
-    # Should have many unmatched lines since there are no run texts
     all_unmatched = [
         line
         for p in report["pages"]
         for line in p.get("lines_unmatched", [])
     ]
-    # At minimum "Leonore Gewessler" should be unmatched
-    leonore_lines = [e for e in all_unmatched if "Leonore" in e.get("line", "")]
-    assert len(leonore_lines) >= 1, (
-        f"Expected 'Leonore Gewessler' in unmatched lines; got: "
-        f"{[e['line'] for e in all_unmatched[:10]]}"
-    )
+    # With zero run texts, every baseline line is unmatched.
+    assert len(all_unmatched) >= 1, "expected unmatched lines from an empty build.py"

@@ -27,7 +27,7 @@ category_label: Falzflyer
 variant_label: Z-Falz 6-seitig (Portrait)
 
 # brand_overrides — IDML-import gap parity with sibling falz templates
-# (zweigeteiltes-cover, kandidat-falzflyer-din-lang-gruenes-cover-v2).
+# (zweigeteiltes-cover, gruenes-cover-2).
 # Every entry below documents an audit-engine gap the converter cannot
 # close per the current pipeline; each is mirrored by a TOLERANCE_LOG.md row.
 # See TOLERANCE_LOG.md and TOLERANCES.yml for the full context.
