@@ -1,0 +1,63 @@
+tolerances:
+- id: tol:text-position-structural-cross-renderer-wrap
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 260
+  reason: '254 large (>5pt) word-position drifts. Verified page-by-page (pages
+    1, 2, 5, 6) that rendered content and frame geometry are correct; the drift
+    is dominated by cross-renderer line-wrap differences — Scribus and InDesign
+    break the justified body / bullet-list paragraphs at slightly different
+    words because their font-metric and hyphenation models differ. One
+    wrap-point difference flips a word from end-of-line to start-of-line
+    (dx ~= -160..-187pt) and cascades into dozens of downstream words counted
+    as "drifted". Not a converter bug and not a routing bug. NOT FIXED, NOT
+    TOLERATED-AS-PASSING — preflight stays red until a Scribus
+    justification/hyphenation alignment lands or the baseline is re-flowed.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+- id: tol:text-position-jitter-suppressed
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 35
+  reason: '29 sub-perceptible (<=5pt) per-word position drifts. The y_mm_shift
+    playbook reported "no reliable calibration frame (no line-count match)" and
+    emitted only tentative recommendations — no deterministic shift could be
+    derived. Sub-perceptible jitter, below the visible threshold.'
+  follow_up_issue: playbook-extension; y_mm_shift needs a no-calibration-frame path
+- id: tol:systematic-text-line-wrap-no-sim-rows
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 11
+  reason: '8 frames flagged sim-actionable. The line_spacing playbook simulator
+    (tools/line_spacing_sim.py) returned NO ROWS for every frame — the drift is
+    line-WRAP-count divergence, not a leading value. line_spacing_pixel_audit
+    confirms line-count mismatches (u1242 16->17, u129e 10->9, u12b5 11->12).
+    No single (LINESPMode, LINESP) reconciles a wrap-count difference. The
+    per-line GAP is correct (line_spacing_full_audit: u1242 baseline gap 14.3pt
+    == preview gap 14.3pt).'
+  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)
+- id: tol:image-content-radial-gradient-psd-conversion
+  audit: image_content_audit
+  classification: human-review
+  severity: structural
+  max_issues: 1
+  reason: 'Frame u1386 (Schwarzer Verlauf radial). The source PSD is CMYK; the
+    asset pipeline converted it to schwarzer-verlauf-radial.png (RGB) with a
+    broken CMYK->RGB step — PSD corner CMYK (40,255,255,255) (near-black)
+    became RGB (0,173,233) (cyan) in the PNG. The radial vignette renders as a
+    pale-blue blob over the page-6 portrait (mean_delta_rgb 102.8). The IDENTICAL
+    broken asset ships in the sibling template 26-03-flyer-a6-hochformat-portrait.
+    Shared asset-conversion pipeline bug — fixing it belongs in the Stage-1
+    asset/PSD-conversion pipeline, out of scope for a Stage-2 tune.'
+  follow_up_issue: converter/asset-pipeline; PSD CMYK->RGB conversion produces wrong colours
+- id: tol:image-audit-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 45
+  reason: '40 vector-path deltas, derivative of the Scribus image-rendering
+    differences plus brand-colour ICC profile shifts on full-bleed Dunkelgruen
+    / photo content.'
+  follow_up_issue: engine-bug; intrinsic raster + ICC differences
