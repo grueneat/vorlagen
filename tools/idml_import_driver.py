@@ -46,6 +46,10 @@ _HERE = Path(__file__).resolve().parent
 ROOT = _HERE.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
+# The repo root must also be importable so ``from tools import …`` resolves
+# to the worktree's package (PEP 420 namespace package — no __init__.py).
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +236,119 @@ def _classify_assets(assets_dir: Path) -> dict[str, list[str]]:
     return {"embedded": embedded, "external": external, "shipped": []}
 
 
+def _detect_trim_box(pdf_path: Path) -> tuple[float, float, float, float] | None:
+    """Detect a trim box from an InDesign export's crop marks.
+
+    InDesign can export a PDF with printer's marks (crop/registration marks,
+    color bars, page-info) baked into a MediaBox LARGER than the trimmed
+    page. The converter emits a trim-only SLA, so a marks-on baseline.pdf
+    would never page-match the preview — every word reads as "drifted" and
+    the marks-area furniture reads as "missing words".
+
+    The trim corners are marked by short L-shaped line segments. This walks
+    the first page's lines, collects the short axis-aligned segments, and
+    derives the trim rectangle as the inner bounding box of the corner
+    marks. Returns ``(x0, top, x1, bottom)`` in pdfplumber top-origin
+    coordinates, or ``None`` when no marks are found (already trim-only).
+    """
+    try:
+        import pdfplumber  # local import — heavy dependency
+    except ImportError:
+        return None
+    with pdfplumber.open(pdf_path) as pdf:
+        page = pdf.pages[0]
+        page_w, page_h = float(page.width), float(page.height)
+        # Short horizontal segments → their `top` marks a trim Y edge.
+        # Short vertical segments → their `x0` marks a trim X edge.
+        h_tops: list[float] = []
+        v_xs: list[float] = []
+        for ln in page.lines:
+            dx = abs(ln["x1"] - ln["x0"])
+            dy = abs(ln["bottom"] - ln["top"])
+            if 4.0 < dx < 22.0 and dy < 1.0:
+                h_tops.append(round(float(ln["top"]), 1))
+            elif 4.0 < dy < 22.0 and dx < 1.0:
+                v_xs.append(round(float(ln["x0"]), 1))
+    if not h_tops or not v_xs:
+        return None
+    # Crop marks cluster near the page PERIMETER, one cluster per trim
+    # edge. InDesign also draws fold/registration marks near the page
+    # CENTRE — those must be excluded or the "trim box" collapses to a
+    # fraction of the page. Restrict each edge to the outer band of the
+    # page (≤20% from the corresponding page edge), then take the mark
+    # nearest the page interior within that band as the trim edge.
+    band_x = page_w * 0.20
+    band_y = page_h * 0.20
+    left_edges = sorted(x for x in v_xs if x <= band_x)
+    right_edges = sorted(x for x in v_xs if x >= page_w - band_x)
+    top_edges = sorted(t for t in h_tops if t <= band_y)
+    bot_edges = sorted(t for t in h_tops if t >= page_h - band_y)
+    if not (top_edges and bot_edges and left_edges and right_edges):
+        return None
+    # Innermost mark within each perimeter band = the trim edge.
+    x0 = left_edges[-1]
+    x1 = right_edges[0]
+    top = top_edges[-1]
+    bottom = bot_edges[0]
+    w, h = x1 - x0, bottom - top
+    # Sanity: a real trim box must be a sizeable fraction of the MediaBox.
+    if w < page_w * 0.4 or h < page_h * 0.4 or w <= 0 or h <= 0:
+        return None
+    # If the "trim" is essentially the whole page, there are no marks.
+    if w > page_w * 0.98 and h > page_h * 0.98:
+        return None
+    return (x0, top, x1, bottom)
+
+
+def _normalize_baseline_to_trim(baseline_src: Path, dest: Path) -> bool:
+    """Copy ``baseline_src`` to ``dest``, cropping printer's marks if present.
+
+    Returns True when a marks-on baseline was cropped to its trim box,
+    False when the source was copied verbatim (already trim-only, or no
+    Ghostscript available). The trim crop keeps the PDF vector — only the
+    MediaBox shrinks and content is offset so (0,0) is the trim corner.
+    """
+    trim = _detect_trim_box(baseline_src)
+    if trim is None:
+        shutil.copy(baseline_src, dest)
+        return False
+    gs = shutil.which("gs")
+    if gs is None:
+        # No Ghostscript — fall back to verbatim copy; the geometry
+        # mismatch surfaces in the audits for human review.
+        shutil.copy(baseline_src, dest)
+        return False
+    try:
+        import pdfplumber
+        with pdfplumber.open(baseline_src) as pdf:
+            page_h = float(pdf.pages[0].height)
+    except Exception:  # noqa: BLE001
+        shutil.copy(baseline_src, dest)
+        return False
+    x0, top, x1, bottom = trim
+    w = x1 - x0
+    h = bottom - top
+    # pdfplumber tops are page-top-origin; PDF y is bottom-origin.
+    llx, lly = x0, page_h - bottom
+    cmd = [
+        gs, "-o", str(dest), "-sDEVICE=pdfwrite",
+        f"-dDEVICEWIDTHPOINTS={w}", f"-dDEVICEHEIGHTPOINTS={h}",
+        "-dFIXEDMEDIA", "-dQUIET", "-dBATCH", "-dNOPAUSE",
+        "-c", f"<</PageOffset [{-llx} {-lly}]>> setpagedevice",
+        "-f", str(baseline_src),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0 or not dest.exists():
+        shutil.copy(baseline_src, dest)
+        return False
+    print(
+        f"idml-import: baseline.pdf had printer's marks — cropped to trim "
+        f"box {w:.1f}x{h:.1f}pt so it page-matches the trim-only preview.",
+        file=sys.stderr,
+    )
+    return True
+
+
 def _scaffold_template_dir(
     slug: str,
     baseline_src: Path,
@@ -282,7 +399,7 @@ def _scaffold_template_dir(
         yaml.safe_dump(diff, sort_keys=True),
         encoding="utf-8",
     )
-    shutil.copy(baseline_src, tdir / "baseline.pdf")
+    _normalize_baseline_to_trim(baseline_src, tdir / "baseline.pdf")
 
 
 def _run_converter(
@@ -458,6 +575,22 @@ def _stage1_gate_check(inv, slug: str) -> str | None:
     # (or vice versa) — e.g. an octagon star IDML polygon becomes a
     # PolyLine path in build.py. So the check is a CROSS-KIND anname
     # presence test, not a per-kind shape match.
+    #
+    # PageItems the converter deliberately skipped (off-page registration
+    # marks, hidden layers, Falz/print-mark lines) are recorded as
+    # ``# idml-skip: <self_id> — <reason>`` lines in build.py. Those are an
+    # intentional non-emit, NOT a silent drop, so they're exempt from Rule 2.
+    skipped_self_ids: set[str] = set()
+    build_py_path = ROOT / "templates" / slug / "build.py"
+    if build_py_path.exists():
+        for line in build_py_path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("# idml-skip:"):
+                payload = stripped[len("# idml-skip:"):].strip()
+                # Format: "<self_id> — <reason>"; take the leading token.
+                self_id = payload.split(" ", 1)[0].strip()
+                if self_id:
+                    skipped_self_ids.add(self_id)
     bp_annames: set[str] = set()
     for kind in ("text_frames", "image_frames", "polygon_frames"):
         for row in getattr(inv.frames, kind):
@@ -473,17 +606,33 @@ def _stage1_gate_check(inv, slug: str) -> str | None:
         for row in getattr(inv.frames, kind):
             if row.source != "idml":
                 continue
+            if str(row.idml_self) in skipped_self_ids:
+                # Deliberate converter skip (off-page artifact / hidden
+                # layer / Falz line) — recorded via # idml-skip in build.py.
+                continue
             if row.anname not in bp_annames:
                 return (
                     f"frames.{kind}: IDML frame {row.anname!r} "
                     f"(Self={row.idml_self}) has no build.py counterpart"
                 )
 
-    # Rule 3: every IDML paragraph style must have a build_py emit.
+    # Rule 3: every IDML paragraph style that is actually USED by content
+    # must have a build_py emit. The converter intentionally emits
+    # add_para_style() only for styles referenced by a story's text runs
+    # (plus their BasedOn parents) — an IDML style that is declared in
+    # Resources/Styles.xml but applied to no run is correctly dropped.
+    used_pstyles = {
+        row.style
+        for row in inv.text_runs.by_paragraph_style
+        if getattr(row, "idml_count", 0) > 0
+    }
     for ps in inv.paragraph_styles:
         # Skip the inert "$ID/[No paragraph style]" sentinel — that's not a
         # real style and IDML emits it for runs that don't carry one.
         if "[No paragraph style]" in ps.idml:
+            continue
+        # A declared-but-unused style legitimately has no add_para_style call.
+        if ps.idml not in used_pstyles:
             continue
         if not (ps.build_py or ps.build_py_extra_pstyle):
             return (
@@ -694,7 +843,14 @@ def _process_one(
         if not args.no_inventory:
             try:
                 from tools import inventory_extract as _ie
-                inv = _ie.build_inventory(slug)
+                # Resolve paths against this checkout's ROOT so the import
+                # works from a git worktree (where templates/ is the
+                # worktree copy, not /workspace/templates).
+                inv = _ie.build_inventory(
+                    slug,
+                    templates_dir=ROOT / "templates",
+                    repo_root=ROOT,
+                )
                 inv_yaml = _ie.to_yaml(inv)
                 # Review fix F10: NEVER overwrite a committed baseline. The
                 # baseline is the calibrated truth; if it already exists we

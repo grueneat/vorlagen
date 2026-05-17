@@ -1,0 +1,20 @@
+asset_policy:
+  embedded:
+  - gruene-logo-bund-weiss-cmyk.png
+  external:
+  - 26-05-25-gewessler-gruenen-odd-0452-2.jpg
+  - green-pine-trees-covered-with-fog.jpg
+  - plakat-dunkel-fuer-flyer.png
+  - schwarzer-verlauf-radial.png
+  shipped: []
+build:
+  output: template.sla
+  script: build.py
+format: A4
+id: 26-03-flyer-a6-hochformat-portrait
+idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Portrait Ordner/26-03-Flyer
+  A6 Hochformat Portrait.idml
+previews_for_sla: 90a95a437f1bc9f0d592d4cc08f3682bff5f46c33c8481491a43ad42bcb33407
+title: 26-03-flyer-a6-hochformat-portrait
+version: 0.1.0
+build_py_sha256: 13eaa52a95694f5c3d0a3d09380c53def0f06c070673a89aabdb15c12a907ae7

@@ -3235,45 +3235,106 @@ def _walk_csr(
     return runs
 
 
+def _route_item_to_page(
+    child: Any,
+    spread_t: str,
+    pages: list[dict[str, Any]],
+    guard_pt: float,
+) -> Optional[int]:
+    """Pick which page of a multi-page spread a top-level item belongs to.
+
+    For a single-page spread this is trivial (index 0). For a facing-pages
+    spread (PageCount > 1) every page carries its own ItemTransform + bbox;
+    an item's spread geometry resolves to a different page-local bbox under
+    each page's transform. The item belongs to the page whose page-local
+    bbox CENTRE lands inside that page's [-guard, w+guard] x [-guard, h+guard]
+    region. Falls back to the page with the smallest centre-distance when no
+    region contains the centre (e.g. a bleed-only item straddling the spine).
+
+    Returns the local page index, or None when anchor extraction fails so the
+    caller can defer to its own out-of-page guard.
+    """
+    if len(pages) == 1:
+        return 0
+    child_t = child.get("ItemTransform", "1 0 0 1 0 0")
+    try:
+        anchors = _extract_anchors(child)
+    except UnhandledElement:
+        return None
+    best_idx: Optional[int] = None
+    best_dist = float("inf")
+    for idx, pg in enumerate(pages):
+        try:
+            x_pt, y_pt, w_pt, h_pt, _ = _compute_page_local_bbox_pt(
+                child_t, anchors, [], spread_t, pg["page_t"], pg["page_gb"]
+            )
+        except UnhandledElement:
+            continue
+        cx = x_pt + w_pt / 2.0
+        cy = y_pt + h_pt / 2.0
+        if (
+            -guard_pt <= cx <= pg["page_w_pt"] + guard_pt
+            and -guard_pt <= cy <= pg["page_h_pt"] + guard_pt
+        ):
+            return idx
+        # Distance of the centre from this page's region, for the fallback.
+        dx = max(0.0, -cx, cx - pg["page_w_pt"])
+        dy = max(0.0, -cy, cy - pg["page_h_pt"])
+        dist = dx * dx + dy * dy
+        if dist < best_dist:
+            best_dist = dist
+            best_idx = idx
+    return best_idx
+
+
 def _emit_pages(ctx: _Ctx) -> None:
-    """Phase H driver: emit one _add_page_<i> function body per page."""
+    """Phase H driver: emit one _add_page_<i> function body per page.
+
+    Handles both one-page-per-spread documents and facing-pages spreads
+    (PageCount > 1). The global page index increments page-by-page within
+    each spread, matching ``pkg.pages`` document order.
+    """
     spreads = list(ctx.pkg.spreads)
     pages = list(ctx.pkg.pages)
-    if len(spreads) != len(pages):
-        raise UnhandledElement(
-            f"Expected one Page per Spread, got {len(spreads)} spreads "
-            f"and {len(pages)} pages "
-            f"(extend tools/idml_to_dsl.py:_emit_pages)"
-        )
-    for i, (sp_path, page_obj) in enumerate(zip(spreads, pages)):
+    # Items more than this many mm outside the page+bleed area are treated
+    # as InDesign design artifacts (e.g. guide markers on printable layers)
+    # that InDesign does not export to PDF.  Bleed is typically ≤3 mm so
+    # a 20 mm guard safely excludes true out-of-page artifacts.
+    _OUT_OF_PAGE_GUARD_MM = 20.0
+    _guard_pt = _OUT_OF_PAGE_GUARD_MM / PT_TO_MM
+
+    global_page_idx = 0
+    for sp_path in spreads:
         xml = ctx.pkg.open(sp_path).read()
         root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
         spread_node = root.find(".//Spread")
         spread_t = spread_node.get("ItemTransform", "1 0 0 1 0 0")
-        page_node = spread_node.find("Page")
-        page_t = page_node.get("ItemTransform", "1 0 0 1 0 0")
-        page_gb = _parse_geometric_bounds(page_node.get("GeometricBounds", "0 0 0 0"))
-        page_var = f"page{i}"
-        ctx._current_page_var = page_var  # type: ignore[attr-defined]
 
-        # Override the task-3 stub for this page.
-        ctx.out.w("")
-        ctx.out.w(f"def _add_page_{i}(doc: Document, {page_var}) -> None:  # overrides task-3 stub")
-        ctx.out.indent += 1
-        ctx.out.w(f'"""Auto-generated page-items for page {i + 1} (Spread {sp_path})."""')
+        # Every <Page> in this spread, in document order. Each carries its
+        # own ItemTransform + GeometricBounds.
+        spread_pages: list[dict[str, Any]] = []
+        for page_node in spread_node.findall("Page"):
+            page_gb = _parse_geometric_bounds(
+                page_node.get("GeometricBounds", "0 0 0 0")
+            )
+            page_gb_y1, page_gb_x1, page_gb_y2, page_gb_x2 = page_gb
+            spread_pages.append({
+                "page_t": page_node.get("ItemTransform", "1 0 0 1 0 0"),
+                "page_gb": page_gb,
+                "page_w_pt": page_gb_x2 - page_gb_x1,
+                "page_h_pt": page_gb_y2 - page_gb_y1,
+            })
+        if not spread_pages:
+            raise UnhandledElement(
+                f"Spread {sp_path} contains no <Page> "
+                f"(extend tools/idml_to_dsl.py:_emit_pages)"
+            )
 
-        # Page dimensions for the out-of-page guard below.
-        page_gb_y1, page_gb_x1, page_gb_y2, page_gb_x2 = page_gb
-        page_w_pt = page_gb_x2 - page_gb_x1
-        page_h_pt = page_gb_y2 - page_gb_y1
-        # Items more than this many mm outside the page+bleed area are treated
-        # as InDesign design artifacts (e.g. guide markers on printable layers)
-        # that InDesign does not export to PDF.  Bleed is typically ≤3 mm so
-        # a 20 mm guard safely excludes true out-of-page artifacts.
-        _OUT_OF_PAGE_GUARD_MM = 20.0
-        _guard_pt = _OUT_OF_PAGE_GUARD_MM / PT_TO_MM
-
-        emit_count = 0
+        # Route each top-level item to the page it belongs to before emitting,
+        # so a facing-pages spread's two pages each get only their own items.
+        items_by_local_page: dict[int, list[Any]] = {
+            i: [] for i in range(len(spread_pages))
+        }
         for child in spread_node:
             if not isinstance(child.tag, str):
                 continue
@@ -3286,16 +3347,10 @@ def _emit_pages(ctx: _Ctx) -> None:
                 # reach the InDesign PDF baseline either. Items on visible
                 # but non-printing layers (e.g. "Info") DO reach the baseline
                 # and must emit; ctx.printable_layer_ids is built from
-                # Visible, not Printable. (Falz lines, if authored on Info,
-                # would now leak through — but the corpus does not put Falz
-                # on Info; if a future template does, add a GraphicLine-on-
-                # Info skip here.)
+                # Visible, not Printable.
                 _ch_sid = child.get("Self", "")
                 if _ch_sid:
-                    ctx.record_skipped(
-                        _ch_sid,
-                        f"hidden layer {item_layer!r}",
-                    )
+                    ctx.record_skipped(_ch_sid, f"hidden layer {item_layer!r}")
                 continue
             if tag not in _DISPATCHED_PAGEITEM_TAGS:
                 # GraphicLine on a visible-but-non-printable layer (Info) is
@@ -3316,58 +3371,101 @@ def _emit_pages(ctx: _Ctx) -> None:
                     f"layer {item_layer!r} not handled "
                     f"(extend tools/idml_to_dsl.py:_emit_pages)"
                 )
-            # Out-of-page guard: skip items that lie entirely outside the page
-            # bounds by more than _guard_pt. These are InDesign design artifacts
-            # (guides, registration marks) that InDesign excludes from PDF export
-            # even when placed on a printable layer.
-            #
-            # Groups are EXCLUDED from this guard: InDesign Group containers
-            # store their PathGeometry anchors in a design-time local space that
-            # does not directly map to page coordinates via the Group's own
-            # ItemTransform. The guard would use the Group's container bbox
-            # (which can appear wildly off-page) while the Group's children are
-            # placed correctly via their own transforms. Skipping the guard for
-            # Groups lets recursion in _emit_pageitem handle child placement.
-            if tag != "Group":
-                child_t = child.get("ItemTransform", "1 0 0 1 0 0")
-                try:
-                    child_anchors = _extract_anchors(child)
-                    child_x_pt, child_y_pt, child_w_pt, child_h_pt, _ = _compute_page_local_bbox_pt(
-                        child_t, child_anchors, [], spread_t, page_t, page_gb
-                    )
-                    if (
-                        child_x_pt + child_w_pt < -_guard_pt
-                        or child_x_pt > page_w_pt + _guard_pt
-                        or child_y_pt + child_h_pt < -_guard_pt
-                        or child_y_pt > page_h_pt + _guard_pt
-                    ):
-                        sid = child.get("Self", "?")
-                        print(
-                            f"  [skip] {tag} Self={sid!r}: entirely outside page "
-                            f"bounds (x={child_x_pt * PT_TO_MM:.1f}mm "
-                            f"y={child_y_pt * PT_TO_MM:.1f}mm "
-                            f"w={child_w_pt * PT_TO_MM:.1f}mm "
-                            f"h={child_h_pt * PT_TO_MM:.1f}mm) — "
-                            f"InDesign design artifact, not emitted",
-                            file=sys.stderr,
+            local_idx = _route_item_to_page(
+                child, spread_t, spread_pages, _guard_pt
+            )
+            if local_idx is None:
+                # Anchor extraction failed — default to the first page so the
+                # per-page out-of-page guard below still gets a chance to run.
+                local_idx = 0
+            items_by_local_page[local_idx].append(child)
+
+        # Emit one _add_page_<i> per page in this spread.
+        for local_idx, page_info in enumerate(spread_pages):
+            i = global_page_idx
+            global_page_idx += 1
+            page_t = page_info["page_t"]
+            page_gb = page_info["page_gb"]
+            page_w_pt = page_info["page_w_pt"]
+            page_h_pt = page_info["page_h_pt"]
+            page_var = f"page{i}"
+            ctx._current_page_var = page_var  # type: ignore[attr-defined]
+
+            # Override the task-3 stub for this page.
+            ctx.out.w("")
+            ctx.out.w(
+                f"def _add_page_{i}(doc: Document, {page_var}) -> None:  "
+                f"# overrides task-3 stub"
+            )
+            ctx.out.indent += 1
+            ctx.out.w(
+                f'"""Auto-generated page-items for page {i + 1} '
+                f'(Spread {sp_path})."""'
+            )
+
+            emit_count = 0
+            for child in items_by_local_page[local_idx]:
+                tag = etree.QName(child).localname
+                item_layer = child.get("ItemLayer", "")
+                # Out-of-page guard: skip items that lie entirely outside the
+                # page bounds by more than _guard_pt. These are InDesign design
+                # artifacts (guides, registration marks) that InDesign excludes
+                # from PDF export even when placed on a printable layer.
+                #
+                # Groups are EXCLUDED from this guard: InDesign Group containers
+                # store their PathGeometry anchors in a design-time local space
+                # that does not directly map to page coordinates via the Group's
+                # own ItemTransform. Skipping the guard for Groups lets recursion
+                # in _emit_pageitem handle child placement.
+                if tag != "Group":
+                    child_t = child.get("ItemTransform", "1 0 0 1 0 0")
+                    try:
+                        child_anchors = _extract_anchors(child)
+                        (
+                            child_x_pt,
+                            child_y_pt,
+                            child_w_pt,
+                            child_h_pt,
+                            _,
+                        ) = _compute_page_local_bbox_pt(
+                            child_t, child_anchors, [], spread_t, page_t, page_gb
                         )
-                        if sid:
-                            ctx.record_skipped(
-                                sid,
-                                "InDesign design artifact (entirely outside page+bleed)",
+                        if (
+                            child_x_pt + child_w_pt < -_guard_pt
+                            or child_x_pt > page_w_pt + _guard_pt
+                            or child_y_pt + child_h_pt < -_guard_pt
+                            or child_y_pt > page_h_pt + _guard_pt
+                        ):
+                            sid = child.get("Self", "?")
+                            print(
+                                f"  [skip] {tag} Self={sid!r}: entirely outside "
+                                f"page bounds (x={child_x_pt * PT_TO_MM:.1f}mm "
+                                f"y={child_y_pt * PT_TO_MM:.1f}mm "
+                                f"w={child_w_pt * PT_TO_MM:.1f}mm "
+                                f"h={child_h_pt * PT_TO_MM:.1f}mm) — "
+                                f"InDesign design artifact, not emitted",
+                                file=sys.stderr,
                             )
-                        continue
-                except UnhandledElement:
-                    # If anchor extraction fails for a non-Group, skip the guard.
-                    pass
-            layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
-            _emit_pageitem(ctx.out, child, [], spread_t, page_t, page_gb,
-                           page_var, ctx, layer_idx)
-            emit_count += 1
-        if emit_count == 0:
-            ctx.out.w("return None")
-        ctx.out.indent -= 1
-        ctx.out.w("")
+                            if sid:
+                                ctx.record_skipped(
+                                    sid,
+                                    "InDesign design artifact "
+                                    "(entirely outside page+bleed)",
+                                )
+                            continue
+                    except UnhandledElement:
+                        # Anchor extraction failed for a non-Group — skip guard.
+                        pass
+                layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
+                _emit_pageitem(
+                    ctx.out, child, [], spread_t, page_t, page_gb,
+                    page_var, ctx, layer_idx,
+                )
+                emit_count += 1
+            if emit_count == 0:
+                ctx.out.w("return None")
+            ctx.out.indent -= 1
+            ctx.out.w("")
 
 
 _PAGE_ITEM_LEAF_TAGS = frozenset({
@@ -3795,7 +3893,14 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             f"If this is a .indd, re-export from InDesign: "
             f"File > Export > InDesign Markup (IDML)."
         )
-    if assets_dir is not None and not assets_dir.exists():
+    # The legacy --assets-dir is only consulted when no Phase-2 --asset-map
+    # manifest is supplied. Validate its existence only in that case, so a
+    # missing/auto-derived assets dir never masks the real --asset-map error.
+    if (
+        asset_map_path is None
+        and assets_dir is not None
+        and not assets_dir.exists()
+    ):
         raise UnhandledElement(
             f"--assets-dir {assets_dir} does not exist "
             f"(extend tools/idml_to_dsl.py:convert or pass a different directory)"
@@ -3931,6 +4036,20 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         if not allow_dropped_pageitems:
             _assert_conversion_completeness(ctx)
 
+        # Emit a machine-readable manifest of IDML PageItems the converter
+        # deliberately skipped (off-page artifacts, hidden layers, Falz/print
+        # marks). The Stage-1 inventory gate reads these ``# idml-skip:`` lines
+        # to distinguish a deliberate skip from a silent drop.
+        if ctx.skipped_with_reason:
+            ctx.out.w("")
+            ctx.out.w(
+                "# --- IDML PageItems intentionally not emitted "
+                "(machine-readable; do not delete) ---"
+            )
+            for entry in ctx.skipped_with_reason:
+                reason = str(entry["reason"]).replace("\n", " ")
+                ctx.out.w(f"# idml-skip: {entry['self_id']} — {reason}")
+
         # Write emitted Python source
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(ctx.out.render(), encoding="utf-8")
@@ -4009,13 +4128,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--assets-dir",
         type=Path,
         required=False,
-        default=Path(
-            "originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/Links"
-        ),
+        default=None,
         help=(
             "Legacy: directory containing the IDML's linked raster assets "
             "(resolves file: URIs by basename). Used when --asset-map is "
-            "not supplied. Prefer --asset-map for new templates."
+            "not supplied. When omitted, defaults to the IDML's sibling "
+            "Links/ directory. Prefer --asset-map for new templates."
         ),
     )
     ap.add_argument(
@@ -4041,6 +4159,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         ),
     )
     args = ap.parse_args(argv)
+
+    # Resolve the legacy --assets-dir default to the IDML's sibling Links/
+    # directory. The legacy fallback is only consulted when --asset-map is
+    # absent; deriving it from the source IDML keeps multi-template runs
+    # independent of each other.
+    if args.assets_dir is None:
+        args.assets_dir = args.source.parent / "Links"
 
     # Auto-invoke fallback: no --asset-map AND no --logo-map AND a sibling
     # Links/ directory exists → run tools/links_export.py to produce one.

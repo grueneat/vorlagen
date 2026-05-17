@@ -1272,7 +1272,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             from line_spacing_full_audit import main as _lsfa_main
             slug = tid
             originals_dir = Path("/workspace/originals")
-            templates_dir = Path("/workspace/templates")
+            templates_dir = (ROOT / "templates")
             _lsfa_main([
                 "--slug", slug,
                 "--templates-dir", str(templates_dir),
@@ -1326,7 +1326,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     if preview_pdf.exists() and baseline.exists() and build_py.exists():
         try:
             from line_spacing_pixel_audit import main as _lspa_main
-            templates_dir = Path("/workspace/templates")
+            templates_dir = (ROOT / "templates")
             _lspa_main([
                 "--slug", tid,
                 "--templates-dir", str(templates_dir),
@@ -1383,7 +1383,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             from external_asset_substitution_audit import main as _eas_main
             _eas_main([
                 "--slug", tid,
-                "--templates-dir", str(Path("/workspace/templates")),
+                "--templates-dir", str((ROOT / "templates")),
                 "--out-yaml", str(eas_path),
                 "--out-md", str(eas_md),
             ])
@@ -1422,7 +1422,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             from image_content_audit import main as _ica_main
             _ica_main([
                 "--slug", tid,
-                "--templates-dir", str(Path("/workspace/templates")),
+                "--templates-dir", str((ROOT / "templates")),
                 "--dpi", "150",
                 "--out-yaml", str(image_content_path),
                 "--out-md", str(image_content_md),
@@ -1461,7 +1461,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     if preview_pdf.exists() and baseline.exists() and build_py.exists():
         try:
             from image_frame_visibility_audit import main as _ifv_main
-            templates_dir = Path("/workspace/templates")
+            templates_dir = (ROOT / "templates")
             _ifv_main([
                 "--slug", tid,
                 "--templates-dir", str(templates_dir),
