@@ -211,8 +211,18 @@ def render_sla_to_pdf(sla_path: Path, pdf_path: Path) -> None:
 
 
 def rasterise(pdf_path: Path, prefix: Path, dpi: int) -> list[Path]:
-    """Run pdftoppm to produce <prefix>-<NN>.png; return sorted list of PNGs."""
+    """Run pdftoppm to produce <prefix>-<NN>.png; return sorted list of PNGs.
+
+    Stale <prefix>-<NN>.png files from a prior render are removed first:
+    ``pdftoppm`` only overwrites the page numbers the *current* PDF has, so
+    if the page count DECREASED since the last run (e.g. a converter change
+    that merges facing-pages spreads 6->4 pages) the leftover higher-numbered
+    PNGs would inflate the returned list and trigger a spurious
+    "page count mismatch" RuntimeError.
+    """
     prefix.parent.mkdir(parents=True, exist_ok=True)
+    for stale in prefix.parent.glob(prefix.name + "-*.png"):
+        stale.unlink()
     _run(["pdftoppm", "-r", str(dpi), "-png", str(pdf_path), str(prefix)])
     return sorted(prefix.parent.glob(prefix.name + "-*.png"))
 

@@ -195,6 +195,8 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         text='',
         fill='C_88_M_44_Y_100_K_0',
     ))
+    # noinject: external content photo (asset_policy external bucket); the
+    # IDML's own placed image IS the intended content — no library substitution.
     page0.add(ImageFrame(
         x_mm=63.75,
         y_mm=9.9892,
@@ -386,9 +388,10 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         trail_attrs={'LINESPMode': '1'},
     ))
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 14.8444 → 15.5217 (uniform +-1.92pt × sign=-1 → +0.6773mm)
     page1.add(TextFrame(
         x_mm=163,
-        y_mm=14.8444,
+        y_mm=15.5217,
         w_mm=75,
         h_mm=24.6944,
         anname='u6c1',
@@ -470,6 +473,8 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
         layer=0,
         rotation_deg=180,
     ))
+    # noinject: external content photo (asset_policy external bucket); the
+    # IDML's own placed image IS the intended content — no library substitution.
     page2.add(ImageFrame(
         x_mm=148,
         y_mm=-3,
@@ -501,9 +506,10 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
         fill='Magenta',
     ))
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 15.0 → 15.5927 (uniform +-1.68pt × sign=-1 → +0.5927mm)
     page2.add(TextFrame(
         x_mm=15,
-        y_mm=15,
+        y_mm=15.5927,
         w_mm=118,
         h_mm=24.6944,
         anname='u872',
@@ -573,6 +579,8 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
 
 def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
     """Auto-generated page-items for spread 4 (Spread Spreads/Spread_u781.xml)."""
+    # noinject: external content photo (asset_policy external bucket); the
+    # IDML's own placed image IS the intended content — no library substitution.
     page3.add(ImageFrame(
         x_mm=-3,
         y_mm=108,
@@ -598,9 +606,25 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         trail_attrs={'ALIGN': '1', 'LINESPMode': '1'},
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 70.6685 → 71.1685 (calibration probe (+0.5mm))
+    # P5/playbook y_mm_shift.py: y_mm 71.1685 → 68.7978 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 68.7978 → 70.9991 (uniform +-6.24pt × sign=-1 → +2.2013mm)
+    # P5/playbook y_mm_shift.py: y_mm 70.9991 → 68.6284 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 68.6284 → 70.9991 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 70.9991 → 68.6284 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 68.6284 → 70.9991 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 70.9991 → 68.6284 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 68.6284 → 70.9991 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 70.9991 → 68.6284 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 68.6284 → 70.9991 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 70.9991 → 68.6284 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 68.6284 → 70.9991 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 70.9991 → 68.6284 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 68.6284 → 70.9991 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 70.9991 → 68.6284 (uniform ++6.72pt × sign=-1 → -2.3707mm)
     page3.add(TextFrame(
         x_mm=53.1686,
-        y_mm=70.6685,
+        y_mm=68.6284,
         w_mm=41.6629,
         h_mm=8.0081,
         anname='u997',
