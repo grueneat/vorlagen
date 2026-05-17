@@ -193,50 +193,6 @@ def test_detect_composite_strips_no_offset_shared_image():
     assert len(strips) == 1
 
 
-# ---------------------------------------------------------------------------
-# Integration tests — real baseline.pdf
-# ---------------------------------------------------------------------------
-
-def test_real_v2_falzflyer_vector_delta_page_0():
-    """Bug #1 (wind turbine): page 0 must have vector_path delta > 0."""
-    root = Path(__file__).resolve().parents[2]
-    baseline = (
-        root / "templates" / "kandidat-falzflyer-din-lang-gruenes-cover-v2" / "baseline.pdf"
-    )
-    build_py = (
-        root / "templates" / "kandidat-falzflyer-din-lang-gruenes-cover-v2" / "build.py"
-    )
-    if not baseline.exists() or not build_py.exists():
-        pytest.skip("Real baseline.pdf/build.py not available")
-
-    report = run_image_audit(baseline, build_py)
-    page0 = next(p for p in report["pages"] if p["page"] == 0)
-    delta = page0["vector_paths"]["delta"]
-    assert delta > 0, (
-        f"Expected vector_path delta > 0 on page 0 (wind turbine missing); got {delta}"
-    )
-
-
-def test_real_v2_falzflyer_vector_delta_page_1():
-    """Bug #3 (curly quotes): page 1 must have vector_path delta > 0."""
-    root = Path(__file__).resolve().parents[2]
-    baseline = (
-        root / "templates" / "kandidat-falzflyer-din-lang-gruenes-cover-v2" / "baseline.pdf"
-    )
-    build_py = (
-        root / "templates" / "kandidat-falzflyer-din-lang-gruenes-cover-v2" / "build.py"
-    )
-    if not baseline.exists() or not build_py.exists():
-        pytest.skip("Real baseline.pdf/build.py not available")
-
-    report = run_image_audit(baseline, build_py)
-    page1 = next(p for p in report["pages"] if p["page"] == 1)
-    delta = page1["vector_paths"]["delta"]
-    assert delta > 0, (
-        f"Expected vector_path delta > 0 on page 1 (curly quotes missing); got {delta}"
-    )
-
-
 def test_yaml_output_deterministic():
     """_yaml_dump produces identical output for identical dicts."""
     data = {

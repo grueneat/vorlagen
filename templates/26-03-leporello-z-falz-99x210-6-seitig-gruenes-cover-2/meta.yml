@@ -41,7 +41,7 @@ brand_overrides:
     IDML-imported leporello (scaffold). The original InDesign ParagraphStyles
     (idml/* and ci/*) carry leading values that do NOT follow the Quickguide
     0.9-factor convention — same gap class as the sibling zweigeteiltes-cover
-    and v2 falzflyer. The converter emits these verbatim from the IDML
+    and the sibling leporello falz templates. The converter emits these verbatim from the IDML
     Resources/Styles.xml; changing them would diverge from the
     InDesign-authored baseline.pdf which is the convergence target.
     Resolution path — per-template tune pass (deferred).

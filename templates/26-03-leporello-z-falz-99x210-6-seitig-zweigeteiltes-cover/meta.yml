@@ -32,8 +32,8 @@ category: falzflyer
 category_label: Falzflyer
 variant_label: Z-Falz 6-seitig (zweigeteiltes Cover)
 
-# brand_overrides — IDML-import gap parity with sibling v2 falzflyer
-# (kandidat-falzflyer-din-lang-gruenes-cover-v2). Every entry below
+# brand_overrides — IDML-import gap parity with sibling leporello falz templates
+# (portrait, gruenes-cover-2). Every entry below
 # documents an audit-engine gap the converter cannot close per the
 # current pipeline; each is mirrored by a TOLERANCE_LOG.md row.
 # See TOLERANCE_LOG.md and TOLERANCES.yml for the full context.
@@ -52,7 +52,7 @@ brand_overrides:
       emits these verbatim from the IDML Resources/Styles.xml; changing
       them would diverge from the InDesign-authored baseline.pdf which
       is the convergence target (issue 35 P1). Same gap class as the
-      sibling v2 falzflyer.
+      sibling leporello falz templates.
   - id: brand:font_family
     reason: >-
       IDML-imported template. 11 text frames inherit FONT="Times Roman"
@@ -63,7 +63,7 @@ brand_overrides:
       baseline.pdf convergence target. Resolution path: extend
       tools/idml_to_dsl.py font resolution; tracked alongside issue 37
       as a converter completeness gap. Same gap class as the sibling
-      v2 falzflyer.
+      leporello falz templates.
   - id: brand:bleed_3mm
     reason: >-
       IDML-imported template. The IDML's InDesign document was authored
@@ -72,7 +72,7 @@ brand_overrides:
       bleed would force a deviation from the InDesign-authored output.
       Brand-team review pending — the canonical Quickguide requires
       3mm but the existing IDML asset predates that requirement. Same
-      gap class as the sibling v2 falzflyer.
+      gap class as the sibling leporello falz templates.
   - id: brand:inside_page
     reason: >-
       IDML-imported template. Multiple frames in the original IDML
@@ -82,7 +82,7 @@ brand_overrides:
       side bleed/extension marks in the source asset. The converter
       preserves the source geometry verbatim per issue 35 P1
       (baseline.pdf is the convergence target). Same gap class as the
-      sibling v2 falzflyer.
+      sibling leporello falz templates.
   - id: brand:image_text_overlap
     reason: >-
       IDML-imported template. The IDML places impressum text and other
@@ -91,10 +91,10 @@ brand_overrides:
       visually correct against baseline.pdf. The brand:image_text_overlap
       rule cannot distinguish "text on a colored polygon backdrop"
       (intentional) from "text on a raster image" (overlap concern).
-      Same gap class as the sibling v2 falzflyer.
+      Same gap class as the sibling leporello falz templates.
 
 # ci_overrides — non-CI styles / colors / layers the IDML preserves
-# verbatim from the InDesign source. Mirrors the v2 falzflyer pattern.
+# verbatim from the InDesign source. Mirrors the leporello falz template pattern.
 ci_overrides:
   non_ci_styles:
     - "idml/absatzformat-1"

@@ -33,11 +33,7 @@ ALL_TEMPLATES = [
     "postkarte-a6-kampagne",
     "plakat-a1-hochformat",
     "zeitung-a4-grun",
-    "themen-plakat-a3-quer",
-    "wahlaufruf-postkarte-a6-quer",
-    "wahltag-tueranhaenger",
     "infostand-tent-card-a5-quer",
-    "kandidat-falzflyer-din-lang",
 ]
 
 PROMPT_PATH = ROOT / "tools" / "visual_review" / "prompt_template.md"
