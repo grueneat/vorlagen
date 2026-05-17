@@ -386,16 +386,42 @@ def _compute_page_local_bbox_pt(
         for (px, py) in spread_local
     ]
 
-    xs = [p[0] for p in page_local]
-    ys = [p[1] for p in page_local]
-    min_x, max_x = min(xs), max(xs)
-    min_y, max_y = min(ys), max(ys)
-    w = max_x - min_x
-    h = max_y - min_y
-
     rotation_deg = math.degrees(math.atan2(b, a))
 
-    return (min_x, min_y, w, h, rotation_deg)
+    # NON-ROTATED frame (the common case): the axis-aligned bbox of the
+    # transformed anchors IS the frame rectangle. Return it unchanged.
+    if abs(rotation_deg) <= 1e-3:
+        xs = [p[0] for p in page_local]
+        ys = [p[1] for p in page_local]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        return (min_x, min_y, max_x - min_x, max_y - min_y, rotation_deg)
+
+    # ROTATED frame: the axis-aligned bbox of the rotated anchors is NOT the
+    # frame — Scribus stores XPOS/YPOS/WIDTH/HEIGHT for the *un-rotated*
+    # frame and rotates it CCW around (XPOS, YPOS). Emit that model:
+    #
+    #   WIDTH/HEIGHT = the un-rotated frame extent = item-local anchor
+    #                  extent × the transform's uniform scale.
+    #   XPOS/YPOS    = the image of the item-local top-left anchor
+    #                  (min-x, min-y in item-local space) under the full
+    #                  item→page transform. Because R·(0,0) == (0,0), this
+    #                  point is exactly the rotation pivot.
+    #
+    # This makes a -90°/180°/270° full-bleed background land on-page instead
+    # of sweeping off the top of the sheet (axis-aligned-bbox emission put
+    # the pivot at the bbox corner, which is wrong for any non-zero ROT).
+    a_xs = [p[0] for p in anchors]
+    a_ys = [p[1] for p in anchors]
+    a_min_x, a_max_x = min(a_xs), max(a_xs)
+    a_min_y, a_max_y = min(a_ys), max(a_ys)
+    w = (a_max_x - a_min_x) * sx
+    h = (a_max_y - a_min_y) * sy
+    # Map the item-local top-left anchor through the full transform chain.
+    tl_spread = _apply_matrix(item_to_spread, a_min_x, a_min_y)
+    pivot_x = tl_spread[0] - page_top_left_in_spread[0]
+    pivot_y = tl_spread[1] - page_top_left_in_spread[1]
+    return (pivot_x, pivot_y, w, h, rotation_deg)
 
 
 def _pt_to_mm(value_pt: float) -> float:
@@ -3287,15 +3313,82 @@ def _route_item_to_page(
     return best_idx
 
 
-def _emit_pages(ctx: _Ctx) -> None:
-    """Phase H driver: emit one _add_page_<i> function body per page.
+def _collect_spread_pages(ctx: _Ctx) -> list[dict[str, Any]]:
+    """Return one entry per IDML spread describing its rendered SLA page.
 
-    Handles both one-page-per-spread documents and facing-pages spreads
-    (PageCount > 1). The global page index increments page-by-page within
-    each spread, matching ``pkg.pages`` document order.
+    InDesign's default PDF export is **spread-based**: a single-page spread
+    exports as one PDF page, and a multi-page (facing) spread exports as ONE
+    wider PDF page whose width is the sum of its constituent pages' widths.
+    To keep the rendered SLA comparable to the baseline.pdf page-for-page,
+    the converter emits ONE SLA page per spread (not per IDML page).
+
+    Each returned dict carries:
+
+    * ``sp_path``      — Spreads/<id>.xml member name.
+    * ``spread_t``     — the Spread's own ItemTransform string.
+    * ``pages``        — list of per-page dicts (page_t, page_gb, page_w_pt,
+                         page_h_pt) in document order, exactly as
+                         ``_emit_pages`` previously built ``spread_pages``.
+    * ``origin_t``     — the LEFTMOST page's ItemTransform. All items in the
+                         spread are placed relative to this page's top-left
+                         so a 2-page spread's right-hand items naturally land
+                         at +(left-page-width) in x.
+    * ``origin_gb``    — the leftmost page's GeometricBounds.
+    * ``page_w_pt``    — total rendered SLA page width (sum of page widths).
+    * ``page_h_pt``    — rendered SLA page height (max page height).
     """
-    spreads = list(ctx.pkg.spreads)
-    pages = list(ctx.pkg.pages)
+    out: list[dict[str, Any]] = []
+    for sp_path in ctx.pkg.spreads:
+        xml = ctx.pkg.open(sp_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        spread_node = root.find(".//Spread")
+        spread_t = spread_node.get("ItemTransform", "1 0 0 1 0 0")
+        spread_pages: list[dict[str, Any]] = []
+        for page_node in spread_node.findall("Page"):
+            page_gb = _parse_geometric_bounds(
+                page_node.get("GeometricBounds", "0 0 0 0")
+            )
+            gb_y1, gb_x1, gb_y2, gb_x2 = page_gb
+            spread_pages.append({
+                "page_t": page_node.get("ItemTransform", "1 0 0 1 0 0"),
+                "page_gb": page_gb,
+                "page_w_pt": gb_x2 - gb_x1,
+                "page_h_pt": gb_y2 - gb_y1,
+            })
+        if not spread_pages:
+            raise UnhandledElement(
+                f"Spread {sp_path} contains no <Page> "
+                f"(extend tools/idml_to_dsl.py:_collect_spread_pages)"
+            )
+        # The leftmost page is the one whose top-left in spread coordinates
+        # has the smallest x. page_top_left_x = page_tx + page_gb_x1.
+        def _page_left_x(pg: dict[str, Any]) -> float:
+            _, _, _, _, ptx, _ = _parse_matrix(pg["page_t"])
+            _, gx1, _, _ = pg["page_gb"]
+            return ptx + gx1
+        leftmost = min(spread_pages, key=_page_left_x)
+        out.append({
+            "sp_path": sp_path,
+            "spread_t": spread_t,
+            "pages": spread_pages,
+            "origin_t": leftmost["page_t"],
+            "origin_gb": leftmost["page_gb"],
+            "page_w_pt": sum(p["page_w_pt"] for p in spread_pages),
+            "page_h_pt": max(p["page_h_pt"] for p in spread_pages),
+        })
+    return out
+
+
+def _emit_pages(ctx: _Ctx) -> None:
+    """Phase H driver: emit one _add_page_<i> function body per SPREAD.
+
+    InDesign exports spread-based PDFs: a facing-pages spread (PageCount > 1)
+    becomes ONE wide PDF page. The converter mirrors that — one SLA page per
+    spread — so the rendered preview compares page-for-page against the
+    baseline. All items in a spread are placed relative to the leftmost
+    page's top-left origin (see ``_collect_spread_pages``); the right-hand
+    page's items therefore land at +(left-page-width) automatically.
+    """
     # Items more than this many mm outside the page+bleed area are treated
     # as InDesign design artifacts (e.g. guide markers on printable layers)
     # that InDesign does not export to PDF.  Bleed is typically ≤3 mm so
@@ -3303,38 +3396,24 @@ def _emit_pages(ctx: _Ctx) -> None:
     _OUT_OF_PAGE_GUARD_MM = 20.0
     _guard_pt = _OUT_OF_PAGE_GUARD_MM / PT_TO_MM
 
-    global_page_idx = 0
-    for sp_path in spreads:
+    spread_infos = _collect_spread_pages(ctx)
+    for spread_idx, sp_info in enumerate(spread_infos):
+        i = spread_idx
+        sp_path = sp_info["sp_path"]
+        spread_t = sp_info["spread_t"]
+        # All items in this spread are placed relative to the leftmost page's
+        # top-left origin, so a facing-pages spread becomes ONE wide SLA page.
+        page_t = sp_info["origin_t"]
+        page_gb = sp_info["origin_gb"]
+        page_w_pt = sp_info["page_w_pt"]
+        page_h_pt = sp_info["page_h_pt"]
+
+        # Collect every emittable top-level item in this spread (no per-page
+        # routing — they all share one merged SLA page).
+        spread_items: list[Any] = []
         xml = ctx.pkg.open(sp_path).read()
         root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
         spread_node = root.find(".//Spread")
-        spread_t = spread_node.get("ItemTransform", "1 0 0 1 0 0")
-
-        # Every <Page> in this spread, in document order. Each carries its
-        # own ItemTransform + GeometricBounds.
-        spread_pages: list[dict[str, Any]] = []
-        for page_node in spread_node.findall("Page"):
-            page_gb = _parse_geometric_bounds(
-                page_node.get("GeometricBounds", "0 0 0 0")
-            )
-            page_gb_y1, page_gb_x1, page_gb_y2, page_gb_x2 = page_gb
-            spread_pages.append({
-                "page_t": page_node.get("ItemTransform", "1 0 0 1 0 0"),
-                "page_gb": page_gb,
-                "page_w_pt": page_gb_x2 - page_gb_x1,
-                "page_h_pt": page_gb_y2 - page_gb_y1,
-            })
-        if not spread_pages:
-            raise UnhandledElement(
-                f"Spread {sp_path} contains no <Page> "
-                f"(extend tools/idml_to_dsl.py:_emit_pages)"
-            )
-
-        # Route each top-level item to the page it belongs to before emitting,
-        # so a facing-pages spread's two pages each get only their own items.
-        items_by_local_page: dict[int, list[Any]] = {
-            i: [] for i in range(len(spread_pages))
-        }
         for child in spread_node:
             if not isinstance(child.tag, str):
                 continue
@@ -3371,23 +3450,10 @@ def _emit_pages(ctx: _Ctx) -> None:
                     f"layer {item_layer!r} not handled "
                     f"(extend tools/idml_to_dsl.py:_emit_pages)"
                 )
-            local_idx = _route_item_to_page(
-                child, spread_t, spread_pages, _guard_pt
-            )
-            if local_idx is None:
-                # Anchor extraction failed — default to the first page so the
-                # per-page out-of-page guard below still gets a chance to run.
-                local_idx = 0
-            items_by_local_page[local_idx].append(child)
+            spread_items.append(child)
 
-        # Emit one _add_page_<i> per page in this spread.
-        for local_idx, page_info in enumerate(spread_pages):
-            i = global_page_idx
-            global_page_idx += 1
-            page_t = page_info["page_t"]
-            page_gb = page_info["page_gb"]
-            page_w_pt = page_info["page_w_pt"]
-            page_h_pt = page_info["page_h_pt"]
+        # Emit one _add_page_<i> per SPREAD.
+        if True:
             page_var = f"page{i}"
             ctx._current_page_var = page_var  # type: ignore[attr-defined]
 
@@ -3399,12 +3465,12 @@ def _emit_pages(ctx: _Ctx) -> None:
             )
             ctx.out.indent += 1
             ctx.out.w(
-                f'"""Auto-generated page-items for page {i + 1} '
+                f'"""Auto-generated page-items for spread {i + 1} '
                 f'(Spread {sp_path})."""'
             )
 
             emit_count = 0
-            for child in items_by_local_page[local_idx]:
+            for child in spread_items:
                 tag = etree.QName(child).localname
                 item_layer = child.get("ItemLayer", "")
                 # Out-of-page guard: skip items that lie entirely outside the
@@ -3674,6 +3740,19 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     prefs = ctx.doc_prefs
     trim_w_mm = prefs["page_width_pt"] * PT_TO_MM
     trim_h_mm = prefs["page_height_pt"] * PT_TO_MM
+    # The master must be at least as large as the widest doc page. With
+    # spread-merged pages a facing spread is wider than a single page, so
+    # the master is sized to the widest spread (it stays empty either way
+    # for this brand — see Phase C MasterSpread emptiness check).
+    _spread_infos_for_master = _collect_spread_pages(ctx)
+    master_w_mm = max(
+        (sp["page_w_pt"] * PT_TO_MM for sp in _spread_infos_for_master),
+        default=trim_w_mm,
+    )
+    master_h_mm = max(
+        (sp["page_h_pt"] * PT_TO_MM for sp in _spread_infos_for_master),
+        default=trim_h_mm,
+    )
     # InDesign's default PDF export emits a trim-only MediaBox (no bleed
     # area); our baselines were captured that way. Emit bleed_mm=0 so the
     # Scribus PDF MediaBox matches and visual_diff can compare like-for-like.
@@ -3694,7 +3773,14 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     out.w(f"title={_py_value(ctx.template_id)},")
     out.w(f"template_id={_py_value(ctx.template_id)},")
     out.w('author="Die Grünen Niederösterreich",')
-    out.w(f"facing_pages={_py_value(prefs['facing_pages'])},")
+    # The converter emits one SLA page per IDML SPREAD (a facing-pages
+    # spread becomes ONE wide page — see _emit_pages / _collect_spread_pages),
+    # so each rendered page is already a self-contained spread. facing_pages
+    # is therefore forced False: the two-column scratch stacking it triggers
+    # is meaningless once spreads are merged, and single-column stacking
+    # keeps page geometry simple. The IDML's authored FacingPages value is
+    # preserved in DocumentSetupPreference for downstream print prep.
+    out.w("facing_pages=False,")
     out.w("layers=[")
     out.indent += 1
     for lyr in ctx.layers:
@@ -3748,18 +3834,23 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     out.w(f"doc.add_master(")
     out.indent += 1
     out.w('name="Normal",')
-    out.w(f"size=({_py_value(trim_w_mm)}, {_py_value(trim_h_mm)}),")
+    out.w(f"size=({_py_value(master_w_mm)}, {_py_value(master_h_mm)}),")
     out.w(f"bleed_mm={_py_value(bleed_mm)},")
     out.w("margins_mm=(0.0, 0.0, 0.0, 0.0),")
     out.indent -= 1
     out.w(")")
     out.w("")
-    # One add_page per page in pkg.pages
-    page_count = len(list(ctx.pkg.pages))
-    for i in range(page_count):
+    # One add_page per IDML SPREAD. A single-page spread is trim-sized;
+    # a facing-pages spread is as wide as the sum of its pages (InDesign
+    # exports spread-based PDFs — see _collect_spread_pages).
+    spread_infos = _collect_spread_pages(ctx)
+    page_count = len(spread_infos)
+    for i, sp_info in enumerate(spread_infos):
+        sp_w_mm = sp_info["page_w_pt"] * PT_TO_MM
+        sp_h_mm = sp_info["page_h_pt"] * PT_TO_MM
         out.w(f"page{i} = doc.add_page(")
         out.indent += 1
-        out.w(f"size=({_py_value(trim_w_mm)}, {_py_value(trim_h_mm)}),")
+        out.w(f"size=({_py_value(sp_w_mm)}, {_py_value(sp_h_mm)}),")
         out.w(f"bleed_mm={_py_value(bleed_mm)},")
         out.w("margins_mm=(0.0, 0.0, 0.0, 0.0),")
         out.w('master="Normal",')
@@ -3786,12 +3877,17 @@ def _emit_styles_stub(out: PythonRepr, ctx: _Ctx) -> None:
 
 
 def _emit_page_stubs(out: PythonRepr, ctx: _Ctx) -> None:
-    """Task 3 stub: emit empty _add_page_<i> functions. Task 6+7 fill them."""
-    page_count = len(list(ctx.pkg.pages))
+    """Task 3 stub: emit empty _add_page_<i> functions, one per SPREAD.
+
+    The converter emits one SLA page per IDML spread (a facing-pages spread
+    becomes one wide page — see _emit_pages), so the stub count matches the
+    spread count, not the IDML page count.
+    """
+    page_count = len(list(ctx.pkg.spreads))
     for i in range(page_count):
         out.w(f"def _add_page_{i}(doc: Document, page) -> None:")
         out.indent += 1
-        out.w(f'"""Page {i + 1} page items — populated by tools/idml_to_dsl.py Phase H."""')
+        out.w(f'"""Spread {i + 1} page items — populated by tools/idml_to_dsl.py Phase H."""')
         out.w("# (no page items in this task-3 skeleton)")
         out.w("return None")
         out.indent -= 1
