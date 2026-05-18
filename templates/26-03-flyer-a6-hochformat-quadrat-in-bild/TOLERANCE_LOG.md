@@ -15,6 +15,56 @@ break). The re-import regenerated `build.py` from the fully-fixed
 converter, overwriting the prior pass's `build.py`; the prior tune's
 hand-edits were re-applied below (rows 2-4).
 
+---
+
+## FINAL re-render (template 2 of 8, FINAL pass) — newest
+
+This re-import + tune cycle was driven against the full committed
+converter/audit fix set including the 6 audit-coordinate fixes from
+template 1. The re-import regenerated `build.py`; the converter this
+time emitted a structurally clean scaffold (the prior pass's `u1336`
+logo swap and `u12b5` widening were NOT needed — the inline logo
+renders and `text_render_audit` is OK without the widening). The
+tune-stage edits this pass:
+
+### Edits applied (build.py)
+
+| # | What | Values (before → after) | Drift it resolves | Why conservative |
+|---|------|--------------------------|-------------------|------------------|
+| F1 | `space_after_pt` on green body ParaStyle `idml/fliesstext-auf-gruenem-hintergrund` (build.py `_add_styles`) | (absent) → `space_after_pt=5.6693` | `text_position_audit_structural` 253 → **46**; `systematic_text_audit` 9 → 6. The IDML drops `SpaceAfter` on the green body variant — its `BasedOn` is `[No paragraph style]` (`SpaceAfter=0`) while the white sibling `fliesstext-auf-weissem-hintergrund` carries `5.669…` explicitly. `baseline.pdf` measured: ~14pt within-paragraph line gaps vs ~20pt at paragraph boundaries on the green body AND green bullet lists — i.e. ~5.67pt `SpaceAfter` is present in the InDesign render. | Restores the IDML-rendered spacing exactly (5.6693pt, the white-sibling value). The bullet style `aufzaehlungen-auf-gruenem-hintergrund` inherits it (parent = the green body style) — matches the measured ~20pt bullet-item gaps. Same fix template 1's run needed. |
+| F2 | `u133f` 3-line headline split frames: `ALIGN` restored + frame width set to text-column width (build.py) | lines 2-3 `paragraph_attrs` gained `ALIGN: '1'`; all three `trail_attrs` gained `ALIGN: '1'`; `w_mm` 70.4538 → 58.4538 | `line_match_audit` `u133f_l3` Δ-21.72pt → Δ-1.04pt (`u133f` Δ-4.92→-1.24, `u133f_l2` Δ-3.82→-1.24). The converter split the mixed-font headline into 3 single-line frames but lost the `Justification="CenterAlign"` on lines 2-3 and on the `<trail>` of all three — they rendered left-aligned. | The IDML story is `Justification="CenterAlign"` for the whole headline (verified in `Story_u1342.xml`). A single-Run frame's only paragraph is closed by `<trail>`, so `ALIGN` must live in `trail_attrs` (the sibling `u1358` carries it there and renders centred). The width 58.4538mm is the IDML `TextColumnFixedWidth` (165.696pt) — the text centres in the column, not the wider frame; using the column width lands the centred lines on the baseline's text-column centre. |
+| F3 | `u133f_l2` (Vollkorn "dreizeilige" line) `y_mm` (build.py) | `y_mm=57.7804` → `59.9813` (+6.24pt) | `line_spacing_pixel_audit` 2 major drifts (>3pt) → 0 major. The pixel audit (authoritative) measured the Vollkorn line ink-top 6.24pt too high vs baseline — Vollkorn Black Italic's cap-top sits higher than the IDML expects under FLOP top-align. | The shift is exactly the measured pixel drift (6.24pt = 2.2009mm). Only the one Vollkorn split frame moved; the two Gotham lines (`u133f`, `u133f_l3`) measured 0.0 / 0.48pt and were left untouched. `per_region_regression` clean after the edit. |
+| F4 | `# noinject:` comment on ImageFrame `u1386` (build.py) | `external_asset_substitution_audit`: 1 missing → 0 | Cleared `external_asset_substitution_audit` (`u1386` flagged "missing INJECT_MAP/noinject"). | `u1386` is the genuine IDML-placed radial-gradient vignette overlay (`Schwarzer Verlauf radial.psd`) — real template content, a fixed dark vignette over the page-6 portrait so the white citation stays legible. Not a substitutable demo photo. `# noinject:` with a content reason is the audit's documented correct disposition. |
+
+### Tolerance cap growth
+
+| Audit | Cap before → after | Reason |
+|-------|--------------------|--------|
+| `text_position_audit_jitter` | 35 → **38** | The jitter count rose 19 → 37 because the F1 `SpaceAfter` fix moved ~207 words off the structural (>5pt) cascade — the tail of that correction lands sub-5pt in the jitter bucket. Same cross-renderer line-wrap root cause, `severity: cosmetic`, sub-perceptible (≤5pt). The bump is the smallest that covers the post-fix count (37 + 1 headroom). No other cap grew; structural/systematic/visual_diff/image_audit all hold within prior caps with room to spare. |
+
+### Accepted residuals — preflight RED (documented, genuinely unclosable in Stage 2)
+
+| Audit | Residual | Classification | Reason accepted |
+|-------|----------|----------------|-----------------|
+| `line_match_audit` | 16 of 70 lines mismatched | scribus-engine | 2 rotated Impressum frames (`u11fd`/`u126f`, Δ28.34pt = the 10mm frame width — Scribus centres `-90°`-rotated `VerticalJustification=CenterAlign` text on the opposite cross-axis edge; documented rotated-frame engine limit). 6 body line-wrap differences (`u1242`, `u129e` — Scribus breaks justified paragraphs at different words). 8 sub-2pt centred-line residuals (`u133f`×3 Δ~1.2pt, `u12fb` Δ-1.9pt, `u1390`×2 Δ~1.8pt — the ~0.75% Vollkorn/Gotham glyph-width difference shifts a centred line's start by ~half the width delta; `u1358` Δ-1.47pt rotated). `bin/tune-fix` exhausted every playbook; `line_spacing_sim` returned no rows. No single fix closes these. |
+| `text_position_audit_structural` | 46 large drifts (>5pt) | scribus-engine | Cross-renderer line-wrap. Down from 253 (the F1 `SpaceAfter` fix). The remaining 46 are 2 wrap events (`u1242`, `u129e`) cascading downstream words on their pages. Page content + frame geometry verified correct. Within cap 260. `severity: structural` — preflight stays red by design. |
+| `systematic_text_audit` | 6 frames sim-actionable | scribus-engine | `line_spacing_sim` returned no rows for every frame — line-WRAP-count divergence, not a leading value. `line_spacing_pixel_audit` confirms per-line GAP is correct in both renderers. Within cap 11. |
+| `image_frame_visibility_audit` | 1 faint frame: `u1386` | accepted (CMYK→sRGB tone) | `u1386` visibility_ratio 0.686, `asset_render_ratio` 0.987 — the radial vignette renders, just lighter than baseline (small CMYK→sRGB tone shift on the dark PSD; the brief classifies this acceptable). 0 invisible frames. |
+
+### Audits driven GREEN this pass
+
+`squiggle_alignment_audit` (8 yellow squiggles, all on their words),
+`idml_attribute_coverage` (0 unconsumed), `image_content_audit`
+(5 ok / 0 broken), `text_render_audit` (all text rendered),
+`per_region_regression` (no regression), `frame_vertical_position`
+(no finding — the prior `u1358` finding cleared), `inventory` (exit 0).
+The DIE GRÜNEN logo `u1336` `asset_render_ratio` 0.849 — well above
+the 0.35 floor.
+
+---
+
+## Prior pass (history)
+
 | # | What | Values (before → after) | Drift it resolves | Why conservative | Classification |
 |---|------|--------------------------|-------------------|------------------|----------------|
 | 1 | Converter fix — rotated-TextFrame W/H convention (`tools/idml_to_dsl.py`, TextFrame emission) | `_compute_page_local_bbox_pt` un-rotated extent passed straight through → for ±90° non-empty TextFrames, converted to the axis-aligned-bbox-of-rotated-rect form before emission | `text_render_audit`: 2 words missing (`impressum`, `xxxxxx` → clipped to `impressu`), `per_region_regression`: 2 regressions (`u137f`, `u1386`). The `de96b7c`/`5e48f81` rotated-frame branch in `_compute_page_local_bbox_pt` emits the *un-rotated* frame extent + pivot — correct for ImageFrames and empty background frames. But the TextFrame primitive (`sla_lib/builder/primitives.py`) applies a text-flow W/H swap to any ±90° frame carrying text. Feeding it the un-rotated model AND letting it swap is a double-correction: the visible Impressum frames (`u11fd`, `u126f`) collapsed from a 53.4mm-wide text strip to a 10mm-wide one and clipped after 8 characters. | The fix is in the converter (Stage-1-permitted; structural gate failure). It is scoped to ±90° **non-empty** TextFrames only — the un-rotated model is left untouched for ImageFrames and empty background frames, which the primitive places verbatim. The conversion is closed-form geometry (axis-aligned bbox of the rotated rectangle), not a guess; verified the result reproduces the pre-`dcc52c7` working `u11fd` geometry exactly (`x=95, y=82.6, w=10, h=53.4`). | converter-bug — fixed in Stage 1 |

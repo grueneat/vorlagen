@@ -7,144 +7,126 @@ anchors:
 - anname: u11e3
   page: 1
   target_frame: u1242
-  word: Lia
-  word_index: 51
+  word: iuntem
+  word_index: 43
   baseline_word_box_pt:
-    x0: 42.523
-    top: 244.784
-    x1: 56.317
-    bottom: 255.784
+    x0: 72.024
+    top: 235.173
+    x1: 104.815
+    bottom: 246.173
   baseline_squiggle_box_mm:
     x_mm: 14.8006
     y_mm: 89.8339
     w_mm: 19.1982
     h_mm: 0.9961
   offset_from_word_mm:
-    dx_mm: -0.2006
-    dy_mm: 3.4795
+    dx_mm: -10.6079
+    dy_mm: 6.8701
 - anname: u11e4
   page: 1
   target_frame: u1242
-  word: in
+  word: cus
   word_index: 5
   baseline_word_box_pt:
-    x0: 233.303
-    top: 119.054
-    x1: 241.762
-    bottom: 130.054
+    x0: 235.077
+    top: 115.108
+    x1: 250.939
+    bottom: 126.108
   baseline_squiggle_box_mm:
     x_mm: 80.869
     y_mm: 41.8
     w_mm: 11.749
     h_mm: 3.8145
   offset_from_word_mm:
-    dx_mm: -1.4351
-    dy_mm: -0.1996
+    dx_mm: -2.0609
+    dy_mm: 1.1925
 - anname: u11e2
   page: 2
   target_frame: u11e6
-  word: vellaccum
-  word_index: 5
+  word: iuntem
+  word_index: 2
   baseline_word_box_pt:
-    x0: 136.992
-    top: 119.054
-    x1: 183.97
-    bottom: 130.054
+    x0: 109.633
+    top: 130.024
+    x1: 144.217
+    bottom: 141.024
   baseline_squiggle_box_mm:
     x_mm: 48.7981
     y_mm: 45.3856
     w_mm: 25.0055
     h_mm: 1.1564
   offset_from_word_mm:
-    dx_mm: 0.4704
-    dy_mm: 3.386
+    dx_mm: 10.122
+    dy_mm: -0.484
 - anname: u11e5
   page: 2
   target_frame: u122b
-  word: auch
-  word_index: 2
+  word: Headline.
+  word_index: 8
   baseline_word_box_pt:
-    x0: 138.223
-    top: 42.519
-    x1: 203.593
-    bottom: 72.519
+    x0: 135.594
+    top: 33.868
+    x1: 263.061
+    bottom: 63.868
   baseline_squiggle_box_mm:
     x_mm: 48.6007
     y_mm: 23.0943
     w_mm: 25.399
     h_mm: 1.8007
   offset_from_word_mm:
-    dx_mm: -0.1613
-    dy_mm: 8.0945
+    dx_mm: 0.7662
+    dy_mm: 11.1464
 - anname: u126c
   page: 3
   target_frame: u129e
-  word: volor
-  word_index: 7
+  word: Ute
+  word_index: 2
   baseline_word_box_pt:
-    x0: 42.523
-    top: 125.677
-    x1: 66.459
-    bottom: 136.677
+    x0: 72.024
+    top: 121.73
+    x1: 88.524
+    bottom: 132.73
   baseline_squiggle_box_mm:
     x_mm: 14.506
     y_mm: 47.3934
     w_mm: 51.5317
     h_mm: 2.1749
   offset_from_word_mm:
-    dx_mm: -0.4952
-    dy_mm: 3.0573
+    dx_mm: -10.9025
+    dy_mm: 4.4498
 - anname: u126e
   page: 3
   target_frame: u129e
-  word: volor
-  word_index: 7
+  word: Ute
+  word_index: 2
   baseline_word_box_pt:
-    x0: 42.523
-    top: 125.677
-    x1: 66.459
-    bottom: 136.677
+    x0: 72.024
+    top: 121.73
+    x1: 88.524
+    bottom: 132.73
   baseline_squiggle_box_mm:
     x_mm: 14.506
     y_mm: 47.3934
     w_mm: 51.5317
     h_mm: 2.1749
   offset_from_word_mm:
-    dx_mm: -0.4952
-    dy_mm: 3.0573
-- anname: u1286
-  page: 3
-  target_frame: u129e
-  word: Nam
-  word_index: 52
-  baseline_word_box_pt:
-    x0: 143.105
-    top: 237.107
-    x1: 165.248
-    bottom: 248.107
-  baseline_squiggle_box_mm:
-    x_mm: 50.0921
-    y_mm: 82.6
-    w_mm: 21.211
-    h_mm: 5.1895
-  offset_from_word_mm:
-    dx_mm: -0.3922
-    dy_mm: -1.0461
+    dx_mm: -10.9025
+    dy_mm: 4.4498
 - anname: u1269
   page: 4
   target_frame: u12b5
-  word: ex
-  word_index: 30
+  word: non
+  word_index: 20
   baseline_word_box_pt:
-    x0: 59.749
-    top: 248.061
-    x1: 70.573
-    bottom: 259.061
+    x0: 72.024
+    top: 238.449
+    x1: 89.943
+    bottom: 249.449
   baseline_squiggle_box_mm:
     x_mm: 23.8023
     y_mm: 87.5834
     w_mm: 17.252
     h_mm: 3.7129
   offset_from_word_mm:
-    dx_mm: 2.7242
-    dy_mm: 0.073
+    dx_mm: -1.6062
+    dy_mm: 3.4639
