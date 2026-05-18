@@ -4,6 +4,7 @@ asset_policy:
   external:
   - 2026-03-leonore-fuer-flyer.png
   - green-pine-trees-covered-with-fog.jpg
+  - green-pine-trees-covered-with-fog.png
   shipped: []
 build:
   output: template.sla
@@ -12,7 +13,7 @@ format: A4
 id: 26-03-flyer-a6-hochformat-gruenes-cover
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat gruenes Cover Ordner/26-03-Flyer
   A6 Hochformat gruenes Cover.idml
-previews_for_sla: 2fdc38b4740558b1e4f66e0aa23195437d0934529f34e2e972952b03e9f2c6ed
+previews_for_sla: e4ba31aefe0bf7851f1a1b28f1ba5d1044474540adcdf9adb83474a420c91d70
 title: 26-03-flyer-a6-hochformat-gruenes-cover
 version: 0.1.0
-build_py_sha256: e8daf418274ab79687c9ec388b00ae9bf11245566987fa947e0d11cd07d34891
+build_py_sha256: 5a83e63628358318965cfe473100c3d748d9bd3b4ea136c2153caa35c5851237

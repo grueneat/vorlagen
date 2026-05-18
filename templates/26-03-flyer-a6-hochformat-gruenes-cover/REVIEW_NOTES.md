@@ -1,153 +1,176 @@
 # Review Notes — 26-03-flyer-a6-hochformat-gruenes-cover
 
+Prose summary for a human reviewer. Read alongside `TOLERANCE_LOG.md`
+(every edit + accepted residual) and `TOLERANCES.yml` (structured).
+
+This is the **combined-fidelity re-render pass** (template 3 of 8). The
+template was re-imported (`/idml-scaffold --reimport`) to pick up the
+full converter/audit fix set at HEAD `7144731`: CMYK→sRGB + aspect-fill
+crop, squiggle colour + re-anchoring, the five consumed Tier-A
+attributes, `SpaceAfter`/`FLOP=1`/`min_glyph_shrink`, the four layout
+fixes, colour-managed comparison, and the full audit chain.
+
+It is the A6-Hochformat sibling of `26-03-flyer-a6-hochformat-portrait`
+and `26-03-flyer-a6-hochformat-quadrat-in-bild`; the residual handling
+below mirrors those templates' established, user-reviewed outcome for
+the same IDML-import gap classes.
+
 ## What this template is
 
 A **6-page A6-Hochformat flyer** for Die Grünen, "grünes Cover" variant.
 Source: `26-03-Flyer A6 Hochformat gruenes Cover.idml` — a 4-spread
 InDesign document (spreads 1 and 4 single-page, spreads 2 and 3
-facing-pages with 2 pages each = 6 pages).
+facing-pages = 6 pages). Trim ~105 × 148 mm per page.
 
-Content: page 1 cover (two-line headline "Ich bin eine / Headline." +
-Störer badge + Wahlkreis-ellipse ornament + DIE GRÜNEN logo), pages 2-5
-inner content (headlines, body paragraphs, bullet lists, Impressum),
-page 6 a quote page with the Leonore Gewessler portrait.
+Content: page 1 cover (two-line mixed-font headline "Ich bin eine /
+Headline." + yellow encircling-ellipse squiggle around "eine" + magenta
+Störer badge + DIE GRÜNEN logo), pages 2-5 inner content (headlines,
+justified body paragraphs, bullet lists, rotated Impressum), page 6 a
+quote page with the Leonore Gewessler portrait. All body copy is
+lorem-ipsum placeholder (the IDML ships it that way).
 
-It is the A6-Hochformat sibling of `26-03-flyer-a6-hochformat-portrait`
-and `26-03-flyer-a6-hochformat-quadrat-in-bild`; the tolerance handling
-below mirrors those templates' established, user-reviewed outcome for
-the same IDML-import gap classes.
+## Re-import outcome — GREEN
 
-## Scaffold outcome — GREEN
+Stage 1 (`/idml-scaffold --reimport`) regenerated `build.py` from the
+fully-fixed converter. `bin/idml-import --scaffold-only` completed
+(exit 0).
 
-`bin/idml-import --scaffold-only` completed (exit 0). The Stage-1
-inventory gate passed: every IDML `<CharacterStyleRange>` run is present
-in build.py (`every_idml_run_present_in_build_py: true`), all 3
-`<Link>` assets resolve and are on disk (`asset_audit.yml::ok: true`),
-build.py runs clean, render produced all 6 pages, and the preview word
-count equals the baseline word count (342 == 342, 0 % delta).
+- Asset audit `ok: true` — all 3 `<Link>` files resolved and converted
+  (pine-forest JPG, Leonore PSD, DIE GRÜNEN AI logo). No missing
+  assets — no BLOCKED condition.
+- Inventory gate: `inventory_compare` exits 0 — a perfect match against
+  the committed `SCAFFOLD_INVENTORY.yml` after the build.py re-applied
+  edits below. No frame anname, run, colour or style regressed.
 
-**No converter changes were needed** — the facing-pages support,
-assets-dir resolution, `# idml-skip:` annotation handling, and
-worktree-path fixes landed by batch templates 1-2 already cover this
-template. The two `inventory` "dropped elements" (`u141f`, `u1424`) are
-off-page registration-mark rectangles the converter deliberately skips
-(see tolerance below) — not a structural gap.
+## Tune outcome — RESIDUAL (image/squiggle/coverage/image-content green; line-wrap red)
 
-`SCAFFOLD_INVENTORY.yml` was committed as the Stage-2 source of truth.
+Stage 2 (`/idml-tune`) ran the `bin/tune-render` → `bin/tune-fix` loop.
+The image-visibility, squiggle, attribute-coverage, image-content,
+text-render and per-region-regression audits were driven fully green;
+the line-wrap-driven text-position audits remain at the documented
+cross-renderer floor. Those carry `severity: structural` in
+`TOLERANCES.yml` — DOCUMENTED but deliberately non-preflight-flipping —
+so the render was promoted via `bin/tune-render --no-transactional`
+(the same terminal state as the sibling templates and the prior run).
 
-## Tune outcome — RESIDUAL (preflight not green)
+### The headline win — green-body SpaceAfter
 
-`bin/tune-render` → `bin/tune-fix` ran. The playbook loop could not
-drive preflight green: `line_spacing_sim` returned no rows for any of
-the 12 systematic-audit frames, and `y_mm_shift` found no reliable
-calibration frame. The residual is accepted per the overnight gate
-policy and the established sibling-template precedent.
+The bare re-import dropped `SpaceAfter` on the green body paragraph
+style `idml/fliesstext-auf-gruenem-hintergrund`. The IDML's green
+`Fließtext` variant carries no `SpaceAfter` (verified in
+`Resources/Styles.xml`), while the white sibling `Fließtext auf weißem`
+carries `5.669…` explicitly. But `baseline.pdf` shows the same ~5.67pt
+inter-paragraph spacing on the green body. `space_after_pt=5.6693` was
+added to the green style (the bullet style inherits it). This single
+fix collapsed `text_position_audit_structural` 155 → **46** and
+`systematic_text_audit` 10 → 8. Same fix as siblings 1 and 2.
 
-Three high-leverage image-frame fixes were made during tuning (all
-playbook-class, `frame_visibility`):
+### Edits applied (build.py)
 
-- **u13e4 (DIE GRÜNEN logo, page 1)** — was `inline_image_data` PNG +
-  `scale_type=1` + `local_scale`/`local_offset_mm`; rendered fully
-  transparent under the Scribus 1.6.x SCALETYPE=1 bug (preview ink
-  density 0.0). Switched to a direct `image=` reference
-  (`gruene-logo-bund-weiss-cmyk.png`) + `scale_type=0`. Logo now
-  renders correctly.
-- **u1260 (pine-forest photo, page 5)** — was `scale_type=1` +
-  `local_scale`/`local_offset_mm`; rendered invisible (ink density
-  0.0) under the same bug. Switched to `scale_type=0`. Photo now
-  renders correctly.
-- **u145b (Leonore portrait, page 6)** — switched `scale_type=1` +
-  `local_*` to `scale_type=0`; frame now renders (positioned and
-  cropped correctly). The colour distortion that remains is the
-  separate CMYK-PSD authoring-bug below.
-- **2× `# noinject:` markers** added above the `u1260` and `u145b`
-  ImageFrame `add()` calls — both are real IDML-placed content photos,
-  not demo placeholders. Cleared `external_asset_substitution_audit`.
+1. **Green-body `SpaceAfter`** (above) — `space_after_pt=5.6693` on
+   `idml/fliesstext-auf-gruenem-hintergrund`.
+2. **u13cd / u13cd_l2 split-headline ALIGN + width** — the converter
+   splits the mixed-font headline "Ich bin eine" (Gotham Ultra) /
+   "Headline." (Vollkorn Black Italic) into two single-line frames but
+   loses the IDML `CenterAlign` justification on the `<trail>`
+   paragraph (a single-Run frame's only line is closed by `<trail>`,
+   so the ALIGN must live there). `ALIGN: '1'` added to `trail_attrs`
+   of both frames and to u13cd_l2's Run `paragraph_attrs`. Frame width
+   corrected 102mm → 90mm (the IDML `TextColumnFixedWidth` 255.118pt);
+   the converter over-widened it, shifting the centred text right.
+   Together these closed the two worst `line_match` findings
+   (u13cd Δ-24.18pt, u13cd_l2 Δ-33.08pt → matched); line_match 17 → 15.
+3. **u13ca squiggle geometry** — the re-import converter mis-emits this
+   yellow encircling-ellipse Polygon on the IDML `[0 -1 -1 0]`
+   ItemTransform: swapped w/h, anchored on the wrong corner, and added
+   a redundant `rotation_deg=-90` that the HEAD PolyLine builder
+   applies, turning the wide ellipse vertical and dropping it off to
+   the right of the headline. Restored to an un-rotated wide ellipse
+   at the IDML-transform-verified page-local bbox (x 60.097mm,
+   y 43.2715mm, w 35.0628 × h 12.4143mm, w/h from the path's own
+   bbox), `fill='Gelb'`. The squiggle now encircles "eine", matching
+   the baseline (verified visually). **Escalation note:** the rotated-
+   PolyLine geometry mis-emit is a converter regression — Stage 1
+   should fix `tools/idml_to_dsl.py`'s `[0 -1 -1 0]` ItemTransform
+   handling for Polygon paths so the re-import emits u13ca correctly
+   without a build.py hand-fix.
 
-## Tolerances granted (7 entries — see TOLERANCE_LOG.md / TOLERANCES.yml)
+### Accepted residuals — what stays red
 
-No `brand_overrides`, `non_ci_*`, or `meta.yml` numeric growth was
-required (parity with the flyer siblings — `check_ci` is `ok: true`
-warnings-only, `region_color_audit` and `run_style_audit` are green).
-All 7 tolerances live in `TOLERANCES.yml`:
+- `text_position_audit_structural`: 46 large (>5pt) word drifts
+  (prior run: 254 — the SpaceAfter fix collapsed it). Within cap 260.
+  Cross-renderer line-wrap divergence — Scribus and InDesign break the
+  justified body/bullet paragraphs at different words; one wrap point
+  cascades into dozens of word drifts. `severity: structural`.
+- `line_match_audit`: 15 of 71 lines mismatched (was 17 — the
+  split-headline ALIGN fix closed the 2 closeable findings). NOT
+  tolerance-able per the gate policy; documented as honest residual.
+  Breakdown: 2 rotated Impressum frames (`u11fd`/`u126f`, Δ28.34pt =
+  the 10mm frame width — Scribus measures `-90°` rotated text from the
+  opposite cross-axis edge, the documented rotated-frame engine
+  limit); 1 rotated Störer frame (`u1403` Δ-1.48pt); 7 body line-wrap
+  differences (`u1242` ×1, `u129e` ×6 cascade); 5 sub-2pt centred-line
+  residuals (`u12fb` Δ-1.9pt, `u13eb` ×2 Δ~1.4pt, `u14b1` ×2 Δ~1.8pt —
+  the ~0.75% Vollkorn/Gotham glyph-width difference shifts a centred
+  line's start by ~half the width delta). No single per-frame fix
+  closes any of these — all genuinely-unclosable cross-renderer
+  residual. See TOLERANCE_LOG.md for the full per-finding breakdown.
+- `systematic_text_audit`: 8 frames (prior run: 12). 5 are the
+  single-line mixed-font headline-split frames whose split bbox the
+  audit cannot match against the multi-line baseline region (measured
+  0pt drift — a matching artifact); the rest are body-text wrap. Same
+  root cause as the structural bucket. `line_spacing_sim` returned no
+  rows for any frame — no leading value reconciles a wrap-count
+  difference. `severity: structural`.
+- `visual_diff_regions`: phase error — `image size mismatch
+  baseline=(620,874) preview=(621,875)`, a 1-pixel pdftocairo
+  rasterisation rounding. A phase error is a hard red regardless of
+  tolerances; documentation only.
 
-| id | audit | severity | cap | classification |
-|----|-------|----------|-----|----------------|
-| `tol:inventory-offpage-registration-marks` | inventory | cosmetic | 2 | human-review |
-| `tol:image-audit-vector-path-delta` | image_audit | cosmetic | 45 | scribus-engine-bug |
-| `tol:text-position-jitter-freetype-kerning` | text_position_audit_jitter | cosmetic | 40 | scribus-engine-bug |
-| `tol:text-position-structural-cross-renderer-wrap` | text_position_audit_structural | structural | 260 | scribus-engine-bug |
-| `tol:systematic-text-line-count-divergence` | systematic_text_audit | structural | 12 | scribus-engine-bug |
-| `tol:image-content-leonore-cmyk-psd-conversion` | image_content_audit | structural | 1 | authoring-bug |
-| `tol:visual-diff-image-size-mismatch` | visual_diff_regions | cosmetic | 0 | scribus-engine-bug |
+`text_position_audit_jitter` (36 ≤ cap 40), `image_audit` (41 ≤ 45)
+and `inventory` (2 ≤ 2) are within their tolerance caps — green.
 
-The 3 `cosmetic` entries (inventory, image_audit, jitter) flip their
-audits green. The 3 `structural` entries (structural text drift,
-systematic text, image_content) are **documented only** — they keep
-preflight RED on purpose. The `visual_diff_regions` entry documents a
-phase error that is a hard red regardless of tolerances.
+## IMAGE AUDIT — verified
 
-## Residual drift numbers (final preflight)
+| Audit | Result | Outcome |
+|-------|--------|---------|
+| `image_content_audit` | **0 broken, 3 ok** | every image frame ok; the u145b Leonore portrait is **no longer distorted** — the ICC-aware CMYK→sRGB asset recipe fixed it this re-import (mean_delta_rgb low). The prior pass's `tol:image-content-leonore-cmyk-psd-conversion` tolerance is now obsolete (audit passes). |
+| `image_frame_visibility_audit` | **0 invisible**, 3 ok | the DIE GRÜNEN logo `u13e4` renders (`asset_render_ratio` 0.798 — well above the 0.35 floor); pine photo `u1260` 0.994; Leonore portrait `u145b` 0.998 |
 
-| Audit | Issues | Status |
-|-------|--------|--------|
-| `text_position_audit_structural` | 254 large drifts (>5pt) | accepted — cross-renderer line-wrap divergence |
-| `systematic_text_audit` | 12 frames (line-count differs) | accepted — same wrap divergence, per-frame |
-| `image_content_audit` | 1 broken (u145b) | accepted — CMYK-PSD authoring-bug |
-| `visual_diff_regions` | phase error (1px size mismatch) | accepted — pdftocairo DPI rounding |
-| `image_audit` | 41 vector-path delta | green via tolerance (cap 45) |
-| `text_position_audit_jitter` | 31 sub-perceptible (≤5pt) | green via tolerance (cap 40) |
-| `inventory` | 2 dropped (u141f, u1424) | green via tolerance (cap 2) |
-| green outright | asset_extraction, external_asset_substitution, font_audit, run_style, text_audit, text_render, region_color, image_frame_visibility, line_spacing | — |
+No CMYK or photo frame is broken; the logo renders correctly (verified
+visually on page 1).
 
-The Stage-2 inventory gate (`inventory_compare`) exits 0 (match) — no
-structural regression: every run, frame anname, colour and word is
-preserved from the scaffold snapshot.
+## SQUIGGLE AUDIT (ground-truth) — verified
 
-## human-review / authoring-bug items
+`squiggle_alignment_audit`: `ok: true`, 0 issues. All 7 thin-underline
+squiggle PolyLines (`u11e3`/`u11e4`/`u11e2`/`u11e5`/`u126c`/`u126e`/
+`u1269`) carry `fill='Gelb'` and the audit reports each `status: ok`
+with `vgap_mm` ≈ 0 and healthy `hoverlap_mm`. The page-1 encircling-
+ellipse squiggle `u13ca` (not tracked by the audit — a different motif
+kind) was geometry-fixed by hand and verified visually to encircle
+"eine" in yellow, matching the baseline.
 
-- **u145b — CMYK-PSD colour distortion (authoring-bug).** The page-6
-  portrait `2026-03-Leonore für Flyer.psd` is a **CMYK-mode** Photoshop
-  document. The Stage-1 asset pipeline (`shared/assets/<slug>/
-  links_export.yml` recipe `convert -flatten`) flattened it to RGB PNG
-  WITHOUT an ICC-aware CMYK→RGB conversion, producing a posterized
-  rainbow distortion. This is the documented shared PSD→PNG CMYK→RGB
-  conversion bug confirmed on batch templates 1-2. Per the overnight
-  brief this is NOT a converter fix — the frame renders and is
-  positioned correctly; only the pixels are wrong. The fix belongs
-  upstream in `tools/links_export.py` (the `raster_psd` recipe needs an
-  ICC CMYK→RGB step).
-- **u141f / u1424 — off-page registration marks (human-review).** Two
-  5.2×5.1mm Rectangle elements the IDML places ~26mm off the left page
-  edge. The converter correctly skips them; InDesign also omits them
-  from the trimmed PDF. The inventory audit counts them as "dropped"
-  — correct, conservative behaviour, no action needed.
-- **Cross-renderer line-wrap divergence (engine-bug, follow-up).**
-  Scribus and InDesign break justified body/bullet paragraphs at
-  slightly different words; one wrap point cascades into 254 reported
-  word drifts. Not converter-fixable; needs Scribus
-  justification/hyphenation alignment or a baseline re-flow.
+## COVERAGE GATE — verified
+
+`idml_attribute_coverage`: `ok: true`, 0 issues — "all significant
+unconsumed attributes accounted for (920-entry baseline)". No new
+significant unconsumed attribute.
 
 ## What to eyeball in preview.pdf vs baseline.pdf
 
-1. **Page 1 (cover)** — confirm the **DIE GRÜNEN logo** renders (white
-   "G" + "DIE GRÜNEN" wordmark, centred below the subheadline). This
-   was invisible before the u13e4 fix. Also confirm the Störer badge
-   and the headline are present. The Wahlkreis-ellipse ornament around
-   "eine" renders **black/outline** in preview vs **yellow** in the
-   baseline — a vector-path/colour rendering difference (covered by
-   `tol:image-audit-vector-path-delta`).
-2. **Page 5** — confirm the **pine-forest photo** fills the top band
-   (was invisible before the u1260 fix).
-3. **Page 6** — the **Leonore portrait** renders but with **wrong,
-   posterized rainbow colours**. This is the known CMYK-PSD
-   authoring-bug — eyeball that the framing/crop is correct; the colour
-   is expected to be wrong until the asset pipeline is fixed upstream.
-4. **Body / bullet-list paragraphs (pages 2-4)** — expect line breaks
-   to fall at slightly different words than the baseline (e.g. page-3
-   bullet 1 wraps to 3 lines in preview vs 2 in the baseline). This is
-   the accepted cross-renderer wrap divergence — check the *text* is
-   complete and correct, not the exact wrap column.
+1. **Page 1 (cover)** — the **DIE GRÜNEN logo** renders (white "G" +
+   "DIE GRÜNEN" wordmark). The two-line headline "Ich bin eine /
+   Headline." is centred. The **yellow squiggle encircles "eine"** (the
+   converter mis-emitted it; restored by hand). Störer badge present.
+2. **Page 6** — the **Leonore portrait** renders with **natural
+   colours** (the prior pass's CMYK posterization is fixed by the
+   ICC-aware asset recipe).
+3. **Body / bullet-list paragraphs (pages 2-4)** — expect line breaks
+   to fall at slightly different words than the baseline. Accepted
+   cross-renderer wrap divergence — check the *text* is complete, not
+   the exact wrap column.
+4. **Rotated Impressum (pages 2/3)** — the `-90°` "Impressum: xxxxxx"
+   text renders; its measured 28.34pt drift is the documented rotated-
+   frame engine limit (Scribus cross-axis origin), not a misplacement.
 5. **Facing-pages routing** — pages 3 and 5 are the right-hand pages of
-   the two facing-pages spreads. Confirm each shows its own content (a
-   wrong-page content leak would show here first).
+   the two facing-pages spreads. Confirm each shows its own content.

@@ -41,55 +41,39 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 260
-  reason: '254 large (>5pt) word-position drifts, concentrated on pages 2-4.
-    Verified page-by-page (rendered pages 3 and 4 at 150dpi vs baseline) that
-    rendered content and frame geometry are correct; the drift is dominated by
-    cross-renderer line-wrap differences — Scribus and InDesign break the
-    justified body / bullet-list paragraphs at slightly different words because
-    their font-metric and hyphenation models differ (page-3 bullet text fits 2
-    lines in baseline, wraps to 3 in Scribus). One wrap-point difference
-    cascades into dozens of downstream words counted as "drifted". Not a
-    converter bug and not a routing bug (facing-pages routing verified: PDF
-    page 3 shows "Ich bin auch eine Headline", matching the baseline). NOT
-    FIXED, NOT TOLERATED-AS-PASSING — severity:structural keeps preflight red
-    until a Scribus justification/hyphenation alignment lands or the baseline
-    is re-flowed.'
+  reason: '46 large (>5pt) word-position drifts (prior pass: 254 — the green-body
+    SpaceAfter fix in the 2026-05-18 re-render collapsed it), concentrated on
+    pages 2-4. Verified page-by-page (rendered pages 3 and 4 at 150dpi vs
+    baseline) that rendered content and frame geometry are correct; the drift
+    is dominated by cross-renderer line-wrap differences — Scribus and InDesign
+    break the justified body / bullet-list paragraphs at slightly different
+    words because their font-metric and hyphenation models differ (page-3
+    bullet text fits 2 lines in baseline, wraps to 3 in Scribus). One
+    wrap-point difference cascades into dozens of downstream words counted as
+    "drifted". Not a converter bug and not a routing bug (facing-pages routing
+    verified: PDF page 3 shows "Ich bin auch eine Headline", matching the
+    baseline). NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural keeps
+    preflight red until a Scribus justification/hyphenation alignment lands or
+    the baseline is re-flowed.'
   follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
 - id: tol:systematic-text-line-count-divergence
   audit: systematic_text_audit
   classification: scribus-engine-bug
   severity: structural
   max_issues: 12
-  reason: '12 frames flagged "line count differs" (e.g. u13cd baseline=5 vs
-    preview=4, u13eb baseline=3 vs preview=2). Per-frame view of the same
-    cross-renderer wrap divergence as text_position_audit_structural: when a
-    paragraph wraps to a different number of lines, the systematic audit
-    reports it as un-addressed sim-actionable drift. The line_spacing playbook
-    ran line_spacing_sim on all 12 frames and returned no rows for any of them,
-    so no (LINESPMode, LINESP) override is derivable. NOT FIXED, NOT TOLERATED-
-    AS-PASSING — severity:structural keeps preflight red.'
+  reason: '8 frames flagged "line count differs" (prior pass: 12; 5 are the
+    single-line mixed-font headline-split frames u13cd/u13cd_l2/u1214/u1214_l2/
+    u1287 whose split bbox the audit cannot match against the multi-line
+    baseline region — measured 0pt drift; the rest are body-text wrap). Per-
+    frame view of the same cross-renderer wrap divergence as
+    text_position_audit_structural: when a paragraph wraps to a different
+    number of lines, the systematic audit reports it as un-addressed sim-
+    actionable drift. The line_spacing playbook ran line_spacing_sim on all
+    flagged frames and returned no rows for any of them, so no (LINESPMode,
+    LINESP) override is derivable. NOT FIXED, NOT TOLERATED-AS-PASSING —
+    severity:structural keeps preflight red.'
   follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as
     structural text-position drift)
-- id: tol:image-content-leonore-cmyk-psd-conversion
-  audit: image_content_audit
-  classification: authoring-bug
-  severity: structural
-  max_issues: 1
-  reason: 'Page-6 portrait u145b renders with heavily distorted colours
-    (posterized blue/magenta/yellow instead of a natural portrait).
-    image_content_audit flags mean_color_shift (mean_delta_rgb 78.0) and
-    hist_divergence (0.28). Root cause: the source link "2026-03-Leonore fuer
-    Flyer.psd" is a CMYK-mode Photoshop document, and the Stage-1 asset
-    pipeline (links_export.yml recipe "convert -flatten") flattened it to RGB
-    PNG WITHOUT an ICC-aware CMYK->RGB conversion. The frame itself renders and
-    is positioned correctly (image_frame_visibility_audit reports it ok,
-    visibility_ratio 2.09) — only the pixel colours are wrong. Documented
-    shared PSD->PNG CMYK->RGB conversion bug confirmed on batch templates 1-2.
-    Fix is upstream in tools/links_export.py (recipe needs an ICC CMYK->RGB
-    step), NOT a converter or build.py edit. NOT FIXED, NOT TOLERATED-AS-
-    PASSING — severity:structural keeps preflight red.'
-  follow_up_issue: authoring; tools/links_export.py raster_psd recipe needs an
-    ICC-aware CMYK->RGB conversion step
 - id: tol:visual-diff-image-size-mismatch
   audit: visual_diff_regions
   classification: scribus-engine-bug

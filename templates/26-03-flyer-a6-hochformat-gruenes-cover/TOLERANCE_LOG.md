@@ -187,3 +187,89 @@ rasterisation DPI rounding).
 
 None of these grows a numeric tolerance; all are playbook-class
 structural image-frame fixes.
+
+---
+
+## Re-render pass — 2026-05-18 (template 3 of 8, combined-fidelity)
+
+Re-imported `--reimport` to pick up the HEAD `7144731` converter/audit
+fix set. Inventory gate exit 0 (perfect match against the committed
+`SCAFFOLD_INVENTORY.yml`). The build.py edits below were re-applied on
+top of the fresh converter output; none grows a numeric tolerance.
+
+- **Green-body `SpaceAfter`** — the bare re-import dropped `SpaceAfter`
+  on the green body paragraph style `idml/fliesstext-auf-gruenem-
+  hintergrund` (the IDML's green `Fließtext` variant carries no
+  `SpaceAfter`, while the white sibling `Fließtext auf weißem` carries
+  `5.669…` explicitly; verified in `Resources/Styles.xml`). The
+  `baseline.pdf` shows ~5.67pt inter-paragraph spacing on the green
+  body, so `space_after_pt=5.6693` was added to the green style (the
+  bullet style `aufzaehlungen-auf-gruenem-hintergrund` inherits it).
+  This collapsed `text_position_audit_structural` 155 → 46 and
+  `systematic_text_audit` 10 → 8. Same fix as siblings 1 and 2.
+- **u13cd / u13cd_l2 split-headline ALIGN** — the converter splits the
+  mixed-font headline "Ich bin eine" (Gotham Ultra) / "Headline."
+  (Vollkorn Black Italic) into two single-line frames but loses the
+  IDML `CenterAlign` justification on the `<trail>` paragraph of each.
+  A single-Run frame's only line is closed by `<trail>`, so the ALIGN
+  must live there. `ALIGN: '1'` added to `trail_attrs` of both frames
+  and to the `paragraph_attrs` of u13cd_l2's Run. Also corrected the
+  frame width 102mm → 90mm (the IDML `TextColumnFixedWidth`
+  255.118pt); the converter had over-widened it, shifting the centred
+  text right. Together these closed the two worst `line_match`
+  findings (u13cd Δ-24.18pt, u13cd_l2 Δ-33.08pt → matched); line_match
+  17 → 15.
+- **u13ca squiggle geometry** — the re-import converter mis-emits this
+  yellow encircling-ellipse Polygon on the IDML `[0 -1 -1 0]`
+  ItemTransform: it swaps w/h, anchors on the wrong corner, and adds a
+  redundant `rotation_deg=-90` that the HEAD PolyLine builder now
+  applies, turning the wide ellipse vertical and dropping it off to
+  the right of the headline. Restored to an un-rotated wide ellipse
+  at the IDML-transform-verified page-local bbox (x 60.097mm,
+  y 43.2715mm, w 35.0628mm × h 12.4143mm — w/h from the path's own
+  bbox 99.4×35.2pt), keeping `fill='Gelb'`. The squiggle now encircles
+  "eine", matching the baseline (verified visually). This is a build.py
+  edit, not a converter change; the converter regression in rotated-
+  PolyLine geometry should be addressed in Stage 1 (escalation noted in
+  REVIEW_NOTES.md).
+
+No numeric tolerance changed: `text_position_audit_structural` 46 ≤ cap
+260, `systematic_text_audit` 8 ≤ cap 12, `text_position_audit_jitter`
+36 ≤ cap 40, `image_audit` 41 ≤ cap 45 — all within the prior caps.
+
+### line_match_audit residual — 15 of 71 lines (DOCUMENTED honest residual)
+
+`line_match_audit` is not tolerance-able per the gate policy. After the
+ALIGN fix closed the 2 closeable findings (17 → 15), the remaining 15
+are all genuinely-unclosable cross-renderer residual — no per-frame fix
+closes them:
+
+- **2× rotated Impressum frames** (`u11fd`, `u126f`, `first_word_x`
+  Δ28.34pt). 28.34pt = the 10mm frame width — Scribus measures `-90°`
+  rotated text from the opposite cross-axis edge. Documented rotated-
+  frame engine limit; text content matches (`:musserpmI xxxxxx` both
+  renders). Verified visually (page 2 impressum strip).
+- **1× rotated Störer frame** (`u1403`, `baseline_y` Δ-1.48pt). Same
+  rotated-frame engine limit, sub-2pt.
+- **7× body line-wrap** (`u1242` ×1, `u129e` ×6 cascade). Scribus and
+  InDesign break the justified body paragraphs at different words; one
+  wrap-point difference cascades. Same root cause as
+  `text_position_audit_structural`. Frame widths verified correct
+  (IDML `TextColumnFixedWidth` 212.6pt = 75mm).
+- **5× sub-2pt centred-line residual** (`u12fb` Δ-1.92pt, `u13eb` ×2
+  Δ~1.4pt, `u14b1` ×2 Δ~1.8pt). The ~0.75% Vollkorn/Gotham glyph-width
+  difference shifts a centred line's start by ~half the width delta.
+  Below the visible threshold; FreeType-vs-InDesign kerning.
+
+Classification: scribus-engine-bug. Documented per the gate policy;
+preflight stays honestly RED on `line_match_audit`.
+
+### REMOVED tol:image-content-leonore-cmyk-psd-conversion — 2026-05-18
+
+The 2026-05-18 re-import picked up the ICC-aware CMYK→sRGB asset recipe
+(`links_export.yml` recipe is now `convert -profile sRGB -strip
+(ICC-aware)`). The page-6 portrait `u145b` no longer renders distorted:
+`image_content_audit` reports `0 broken, 3 ok`, `u145b` `classification:
+ok`, `mean_delta_rgb` 9.1 (was 78.0), no flags. The tolerance is
+obsolete — the audit passes outright — and has been removed from
+`TOLERANCES.yml`.

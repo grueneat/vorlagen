@@ -266,6 +266,19 @@ text_runs:
     fcolor: ''
     paragraph_style: idml/fliesstext-auf-weissem-hintergrund
     text_source: build_py
+  - text: Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et
+      ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Headline in einem grünen Kasten '
+    font: Gotham Narrow Bold
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/headline-in-gruenem-kasten
+    text_source: build_py
   - text: 'Ea doluptatas suntota consequi acero dollani storae sitatus maximi, sita
       sam qui iminum fugiae no nonsed quae non porum fugiat harum que nihil ipsam
       is id quis eri om:'
@@ -305,19 +318,6 @@ text_runs:
     fontsize: 30.0
     fcolor: White
     paragraph_style: idml/normalparagraphstyle
-    text_source: build_py
-  - text: Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et
-      ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.
-    font: Gotham Narrow Book
-    fontsize: 0.0
-    fcolor: ''
-    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
-    text_source: build_py
-  - text: 'Headline in einem grünen Kasten '
-    font: Gotham Narrow Bold
-    fontsize: 0.0
-    fcolor: ''
-    paragraph_style: idml/headline-in-gruenem-kasten
     text_source: build_py
   - text: Ich bin ein Zitat. Ich bin ein prägnantes
     font: Vollkorn Black Italic
@@ -640,10 +640,10 @@ frames:
     build_py_position_mm:
     - 7.5
     - 42.1113
-    - 90.0
-    - 43.7444
+    - 102.0
+    - 25.4
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u13eb
     idml_self: u13eb
@@ -669,8 +669,8 @@ frames:
     - 4.129
     build_py_position_mm:
     - 74.8518
-    - 28.4232
-    - 28.1482
+    - 32.7792
+    - 27.8451
     - 10.4069
     sla_pageobject_present: true
     sla_storytext_runs: 1
@@ -715,10 +715,10 @@ frames:
     build_py_position_mm:
     - 15.0
     - 15.0
-    - 75.0
-    - 33.1611
+    - 87.0
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u122b
     idml_self: u122b
@@ -791,7 +791,7 @@ frames:
     - 15.0
     - 39.2915
     - 75.0
-    - 69.1444
+    - 57.8556
     sla_pageobject_present: true
     sla_storytext_runs: 6
     source: idml
@@ -806,7 +806,7 @@ frames:
     - 15.0
     - 65.3333
     - 75.0
-    - 74.7889
+    - 63.5
     sla_pageobject_present: true
     sla_storytext_runs: 6
     source: idml
@@ -833,7 +833,7 @@ frames:
     - 65.0
     - 18.239
     build_py_position_mm:
-    - -85.03
+    - 19.97
     - 111.4614
     - 65.0
     - 29.6333
@@ -848,7 +848,7 @@ frames:
     - 65.0
     - 3.387
     build_py_position_mm:
-    - -85.25
+    - 19.75
     - 104.4368
     - 65.0
     - 8.6078
@@ -900,6 +900,28 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: u13cd_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 7.5
+    - 50.0876
+    - 102.0
+    - 25.4
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1214_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 15.0
+    - 20.8737
+    - 87.0
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   image_frames:
   - anname: u13e4
     idml_self: u13e4
@@ -927,7 +949,7 @@ frames:
     - -77.0
     - 108.0
     - 62.034
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-gruenes-cover/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-gruenes-cover/crops/green-pine-trees-covered-with-fog-u1260.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -945,12 +967,12 @@ frames:
     - -1.409
     - 66.281
     - 78.409
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-gruenes-cover/2026-03-leonore-fuer-flyer.png
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-gruenes-cover/crops/2026-03-leonore-fuer-flyer-u145b.png
     build_py_position_mm:
-    - -4.5
+    - 5.6098
     - 72.5913
-    - 66.2807
-    - 78.4087
+    - 46.0611
+    - 78.3836
     sla_pageobject_present: true
     sla_pfile_present: true
     pdf_image_present: true
@@ -988,10 +1010,10 @@ frames:
     - 27.845
     - 27.845
     build_py_position_mm:
-    - 75.6847
-    - 19.3992
-    - 26.4823
-    - 26.4823
+    - 71.3824
+    - 23.7015
+    - 27.8451
+    - 27.8451
     sla_pageobject_present: true
     source: idml
   - anname: u141f
@@ -1268,14 +1290,24 @@ frames:
     - 3.6
     sla_pageobject_present: true
     source: idml
+  - anname: u11e1_p1
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - -108.0
+    - -3.0
+    - 216.0
+    - 154.0
+    sla_pageobject_present: true
+    source: build_py
   - anname: u13ca
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 59.1094
-    - 43.2715
-    - 33.3215
+    - 92.431
+    - 55.3132
     - 12.0417
+    - 33.3215
     sla_pageobject_present: false
     source: manual
   - anname: u11e3
@@ -1540,11 +1572,10 @@ assets:
 - basename: 2026-03-leonore-fuer-flyer.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u145b
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 03dd2b64987c30730c1a01026f26501f46eda120b7913406b5d8700f3e90428e
-  byte_length: 5112548
+  sha256: 79485f82cdd9f9f02e82befcb6f97b916445283d5efe3f3f8a2f5baa2c1bfe3e
+  byte_length: 3737420
 - basename: gruene-logo-bund-weiss-cmyk.png
   on_disk: true
   classified: embedded
@@ -1561,14 +1592,36 @@ assets:
   parent_composite: null
   sha256: 152dcdea289ffc33102d5e169894486a61fce3a717cf9d41d7ce13d7d80a660c
   byte_length: 101374
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
 - basename: green-pine-trees-covered-with-fog.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
+  byte_length: 6896771
+- basename: green-pine-trees-covered-with-fog-u1260.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u1260
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
+- basename: 2026-03-leonore-fuer-flyer-u145b.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u145b
+  parent_composite: null
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 342
   preview_pdf_count: 342
