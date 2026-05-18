@@ -165,9 +165,32 @@ def test_multi_run_line_not_split():
 
 
 def test_font_flop_ratio_vollkorn_vs_gotham():
-    """Vollkorn carries the measured 0.345 FLOP correction; Gotham is the 0.0
-    reference (and any unmapped font defaults to 0.0)."""
-    assert _font_flop_ratio("Vollkorn Black Italic") == 0.345
+    """Vollkorn carries the rendered-ink-calibrated 0.15 FLOP correction;
+    Gotham is the 0.0 reference (and any unmapped font defaults to 0.0).
+
+    The ratio was RECALIBRATED from 0.345 (which had been measured against
+    pdfplumber text-matrix coordinates, not rendered ink) to 0.15: the old
+    value over-shifted a Vollkorn headline line ~5-8pt upward in the
+    rasterised output. 0.15 leaves a sub-0.3pt rendered-ink residual on the
+    26-03-flyer-a6-hochformat-portrait page-1 (38pt) and page-2 (30pt)
+    headlines — verified by ink-top measurement of preview.pdf vs baseline.
+    """
+    assert _font_flop_ratio("Vollkorn Black Italic") == 0.15
     assert _font_flop_ratio("Gotham Narrow Ultra") == 0.0
     assert _font_flop_ratio("Some Unknown Sans") == 0.0
     assert _font_flop_ratio(None) == 0.0
+
+
+def test_mixed_font_headline_correction_is_rendered_ink_calibrated():
+    """The Vollkorn FLOP correction must shift the line UP by 0.15*fontsize.
+
+    Regression guard for the mixed-font headline split mis-calibration: the
+    correction relative to a Gotham line-1 reference is
+    ``(ratio_vollkorn - ratio_gotham) * fontsize``. At 38pt that is 5.7pt
+    and at 30pt 4.5pt — markedly smaller than the old 0.345 ratio's 13.1pt /
+    10.35pt, which rendered the Vollkorn line visibly too high.
+    """
+    ref = _font_flop_ratio("Gotham Narrow Ultra")
+    for fontsize, expected in ((38.0, 5.7), (30.0, 4.5)):
+        correction = (_font_flop_ratio("Vollkorn Black Italic") - ref) * fontsize
+        assert abs(correction - expected) < 1e-6

@@ -226,6 +226,85 @@ def test_non_informational_line_spacing_audit_still_fails_preflight(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Split mixed-font headline gate (line_spacing_pixel_audit kind=split_headline)
+# ---------------------------------------------------------------------------
+
+
+def test_split_headline_within_tolerance_passes_preflight(tmp_path):
+    """A split mixed-font headline whose per-line ink-top and inter-line
+    spacing both stay within SPLIT_HEADLINE_TOL_PT must NOT fail preflight."""
+    _all_ok_payloads(tmp_path)
+    lspa = tmp_path / "line_spacing_pixel_audit.yml"
+    _write(lspa, {
+        "row_count": 1,
+        "summary": {"match": 1, "minor": 0, "major": 0, "unmatched_count": 0},
+        "rows": [{
+            "anname": "u1175", "kind": "split_headline", "page": 0,
+            "group": ["u1175", "u1175_l2", "u1175_l3"],
+            "max_drift_pt": 0.3, "max_spacing_drift_pt": 0.3,
+        }],
+    })
+    result = _build_preflight(
+        tmp_path, "tpl",
+        line_spacing_pixel_path=lspa,
+        **_paths(tmp_path),
+    )
+    assert result["ok"] is True
+    assert result["audits"]["split_headline_spacing"]["ok"] is True
+
+
+def test_split_headline_mis_spaced_fails_preflight(tmp_path):
+    """A split mixed-font headline whose Vollkorn accent line is mis-spaced
+    beyond SPLIT_HEADLINE_TOL_PT MUST fail preflight — this is the gate that
+    catches the FLOP-ascent-ratio mis-calibration so it cannot ship."""
+    _all_ok_payloads(tmp_path)
+    lspa = tmp_path / "line_spacing_pixel_audit.yml"
+    _write(lspa, {
+        "row_count": 1,
+        "summary": {"match": 0, "minor": 0, "major": 1, "unmatched_count": 0},
+        "rows": [{
+            "anname": "u1175", "kind": "split_headline", "page": 0,
+            "group": ["u1175", "u1175_l2", "u1175_l3"],
+            # The mis-calibrated Vollkorn line: 7.2pt per-line drift.
+            "max_drift_pt": 7.2, "max_spacing_drift_pt": 7.2,
+        }],
+    })
+    result = _build_preflight(
+        tmp_path, "tpl",
+        line_spacing_pixel_path=lspa,
+        **_paths(tmp_path),
+    )
+    assert result["ok"] is False
+    assert result["audits"]["split_headline_spacing"]["ok"] is False
+    assert result["audits"]["split_headline_spacing"]["issues"] == 1
+    assert "u1175" in result["audits"]["split_headline_spacing"]["detail"]
+
+
+def test_split_headline_spacing_drift_alone_fails_preflight(tmp_path):
+    """Even when each line's absolute ink-top drift is small, a divergent
+    inter-line SPACING (line N too tight / too loose vs its neighbour) fails
+    preflight — the spacing channel is graded independently."""
+    _all_ok_payloads(tmp_path)
+    lspa = tmp_path / "line_spacing_pixel_audit.yml"
+    _write(lspa, {
+        "row_count": 1,
+        "summary": {"match": 0, "minor": 0, "major": 1, "unmatched_count": 0},
+        "rows": [{
+            "anname": "u1214", "kind": "split_headline", "page": 1,
+            "group": ["u1214", "u1214_l2"],
+            "max_drift_pt": 1.0, "max_spacing_drift_pt": 5.6,
+        }],
+    })
+    result = _build_preflight(
+        tmp_path, "tpl",
+        line_spacing_pixel_path=lspa,
+        **_paths(tmp_path),
+    )
+    assert result["ok"] is False
+    assert result["audits"]["split_headline_spacing"]["ok"] is False
+
+
+# ---------------------------------------------------------------------------
 # Audit-reliability review: phase_errors visibility in preflight
 # ---------------------------------------------------------------------------
 

@@ -2200,6 +2200,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         color_audit_path=color_audit_path,
         visual_diff_regions_path=vd_region_path,
         line_spacing_audit_path=line_spacing_audit_path,
+        line_spacing_pixel_path=line_spacing_pixel_path,
         asset_audit_path=asset_audit_path,
         systematic_text_audit_path=systematic_audit_path,
         image_visibility_path=image_visibility_path,
@@ -2250,6 +2251,7 @@ def _build_preflight(
     line_match_audit_path: Path | None = None,
     visual_diff_regions_path: Path | None = None,
     line_spacing_audit_path: Path | None = None,
+    line_spacing_pixel_path: Path | None = None,
     asset_audit_path: Path | None = None,
     systematic_text_audit_path: Path | None = None,
     image_visibility_path: Path | None = None,
@@ -2447,6 +2449,45 @@ def _build_preflight(
                 True if informational else bool(lsa.get("ok", True)),
                 drift_count,
                 detail,
+            )
+
+    # Phase E4 (split mixed-font headline gate): line_spacing_pixel_audit
+    # rows of kind=split_headline measure a reconstructed mixed-font headline
+    # — the converter splits it into N overlapping single-line frames, so the
+    # ordinary per-frame ink scan reads a sibling line and reports a phantom
+    # 0.0 drift. A split_headline row with a per-line ink-top or inter-line
+    # spacing drift beyond SPLIT_HEADLINE_TOL_PT is a real mis-spacing (the
+    # FLOP-ascent-ratio calibration is wrong) and MUST fail preflight — it
+    # cannot ship and cannot be silently rationalised past. The ordinary
+    # per-frame rows of this audit stay informational (engine-floor jitter is
+    # the canonical-signal debate elsewhere); only split_headline majors gate.
+    if line_spacing_pixel_path is not None:
+        lspa = _load_yml(line_spacing_pixel_path)
+        if lspa is not None:
+            try:
+                from line_spacing_pixel_audit import SPLIT_HEADLINE_TOL_PT
+            except Exception:
+                SPLIT_HEADLINE_TOL_PT = 2.0
+            bad_headlines = []
+            for row in lspa.get("rows") or []:
+                if row.get("kind") != "split_headline":
+                    continue
+                md = row.get("max_drift_pt")
+                sd = row.get("max_spacing_drift_pt")
+                worst = max(
+                    abs(md) if md is not None else 0.0,
+                    abs(sd) if sd is not None else 0.0,
+                )
+                if worst > SPLIT_HEADLINE_TOL_PT:
+                    bad_headlines.append(
+                        f"{row.get('anname')} (worst {round(worst, 2)}pt)"
+                    )
+            _record(
+                "split_headline_spacing",
+                len(bad_headlines) == 0,
+                len(bad_headlines),
+                ("mixed-font headline mis-spaced: " + ", ".join(bad_headlines))
+                if bad_headlines else "",
             )
 
     # Phase E5b (LESSONS_LEARNED L-010/L-011): systematic_text_audit

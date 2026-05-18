@@ -174,12 +174,6 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp_mode=0,
         tab_stops=((15, 0),),
         min_glyph_shrink=0.98,
-        # P5/tune: the green body style carries no SpaceAfter in the IDML,
-        # but the .indd-exported baseline.pdf renders ~5.2pt of inter-
-        # paragraph space (pixel audit: u1242/u11e6/u129e para gaps ~19.5pt
-        # vs ~14.3pt intra-line). The white sibling style carries the same
-        # 5.669pt SpaceAfter — the IDML lost it on the green variant.
-        space_after_pt=5.6693,
     ))
     doc.add_para_style(ParaStyle(
         name='idml/headline-in-gruenem-kasten',
@@ -298,7 +292,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     page0.add(TextFrame(
         x_mm=6.3,
-        y_mm=97.5343,
+        y_mm=100.1484,
         w_mm=83.6562,
         h_mm=24.2006,
         anname='u1175_l2',
@@ -417,7 +411,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=15,
-        y_mm=20.8737,
+        y_mm=22.9375,
         w_mm=87,
         h_mm=19.4028,
         anname='u1214_l2',

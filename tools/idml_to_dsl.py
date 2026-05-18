@@ -154,14 +154,22 @@ _FRAME_HEIGHT_SAFETY_PT = 4.0  # absolute cushion for lineGap + Scribus rounding
 # accent word), each line is emitted as its own single-line TextFrame; Scribus
 # places each line's first baseline FLOP=1 ("Font Ascent") below the frame
 # top, and the ascent of Vollkorn Black Italic differs from Gotham. Without a
-# correction the Vollkorn line renders ~0.345×fontsize too low (an InDesign↔
-# Scribus font-metric mismatch). The 0.345 value was measured directly:
-# Gotham→Vollkorn line on the A6 flyer headline at 38pt needs the frame
-# shifted up 13.12pt (13.12/37.93=0.346) and at 30pt up 10.36pt (10.36/30=
-# 0.345) — two independent confirmations. A font absent from this map is
-# treated as the 0.0 reference (Gotham, and any sans-serif headline face).
+# correction the Vollkorn line renders too low relative to a Gotham line at
+# the same frame top (an InDesign↔Scribus font-metric mismatch).
+#
+# RECALIBRATED (issue: mixed-font headline split mis-calibration). The prior
+# 0.345 value was calibrated against pdfplumber text-matrix coordinates, NOT
+# the actual rendered ink. Measured against rendered ink-tops it over-shifted
+# the Vollkorn line UPWARD: on 26-03-flyer-a6-hochformat-portrait the page-1
+# headline "dreizeilige" (38pt) rendered 7.68pt too high and the page-2
+# headline "Headline." (30pt) 5.60pt too high vs baseline.pdf. The Gotham
+# lines were pixel-exact in both renders, isolating the whole error to the
+# Vollkorn correction. Correcting the ratio per page gives 0.345-7.68/38=
+# 0.1429 and 0.345-5.60/30=0.1583; the mean 0.15 leaves a ±0.27pt rendered-
+# ink residual on both — within the sub-2pt fidelity bar. A font absent from
+# this map is treated as the 0.0 reference (Gotham, any sans-serif face).
 _FONT_FLOP_ASCENT_RATIO: dict[str, float] = {
-    "vollkorn": 0.345,
+    "vollkorn": 0.15,
 }
 
 
@@ -2093,9 +2101,9 @@ def _emit_mixed_font_headline(
 
     where ``correction_N`` is the per-font FLOP=1 baseline correction relative
     to line 1's font (see ``_FONT_FLOP_ASCENT_RATIO``): 0 for a line in the
-    same family as line 1, ``0.345*fontsize`` upward for a Vollkorn line under
-    a Gotham line 1. This makes every line's baseline land on the IDML leading
-    grid regardless of font, matching the InDesign baseline.
+    same family as line 1, ``0.15*fontsize`` upward for a Vollkorn line under
+    a Gotham line 1. This makes every line's RENDERED ink land on the IDML
+    leading grid regardless of font, matching the InDesign baseline.
 
     The frame width is widened by a margin so a Vollkorn accent word (which
     Scribus renders wider than InDesign) does not clip; the frames are

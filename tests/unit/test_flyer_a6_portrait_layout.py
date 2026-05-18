@@ -50,6 +50,30 @@ class FlyerA6PortraitLayoutTest(unittest.TestCase):
         for anname in ("u1214", "u1214_l2"):
             self.assertIn(anname, self.pos, f"{anname} headline frame missing")
 
+    def test_vollkorn_split_line_uses_rendered_ink_correction(self):
+        """The Vollkorn accent line of a split headline must stack with the
+        recalibrated 0.15 FLOP correction, not the old 0.345.
+
+        Each split frame's YPOS (points) is line-1-y + N*Leading minus a
+        per-font correction. For the Vollkorn line that correction is
+        ``0.15*fontsize`` upward; the old 0.345 placed it ``0.195*fontsize``
+        too high (rendered 5-8pt above the baseline ink). This pins the
+        rendered-ink-calibrated geometry on both split headlines.
+        """
+        # Page-1 headline u1175: 38pt, IDML leading 34.13430472639402pt.
+        leading_p1 = 34.13430472639402
+        y1 = float(self.pos["u1175"].get("YPOS"))
+        y2 = float(self.pos["u1175_l2"].get("YPOS"))
+        y3 = float(self.pos["u1175_l3"].get("YPOS"))
+        corr_p1 = 0.15 * 38.0  # Vollkorn line correction in points
+        self.assertAlmostEqual(y2, y1 + leading_p1 - corr_p1, delta=0.5)
+        self.assertAlmostEqual(y3, y1 + 2 * leading_p1, delta=0.5)
+        # Page-2 headline u1214: 30pt, IDML leading 27.0pt.
+        p1 = float(self.pos["u1214"].get("YPOS"))
+        p2 = float(self.pos["u1214_l2"].get("YPOS"))
+        corr_p2 = 0.15 * 30.0
+        self.assertAlmostEqual(p2, p1 + 27.0 - corr_p2, delta=0.5)
+
     def test_no_pageobject_emits_linespmode_2(self):
         """Defects 2/3/4 — no <para>/<trail> may carry LINESPMode=2.
 
