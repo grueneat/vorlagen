@@ -14,31 +14,32 @@ tolerances:
     as "drifted". Not a converter bug and not a routing bug. NOT FIXED, NOT
     TOLERATED-AS-PASSING — preflight stays red until a Scribus
     justification/hyphenation alignment lands or the baseline is re-flowed.
-    253 this re-render vs 254 prior overnight run.'
+    253 this combined-fidelity re-render vs 254 the prior overnight run —
+    stable, no regression.'
   follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
 - id: tol:text-position-jitter-suppressed
   audit: text_position_audit_jitter
   classification: scribus-engine-bug
   severity: cosmetic
   max_issues: 35
-  reason: '30 sub-perceptible (<=5pt) per-word position drifts. The y_mm_shift
-    playbook reported "no reliable calibration frame (no line-count match)" and
-    emitted only tentative recommendations — no deterministic shift could be
-    derived. Sub-perceptible jitter, below the visible threshold. This audit
-    is GREEN under the cap.'
+  reason: '19 sub-perceptible (<=5pt) per-word position drifts (30 the prior
+    overnight run). The y_mm_shift playbook reported "no reliable calibration
+    frame (no line-count match)" and emitted only tentative recommendations —
+    no deterministic shift could be derived. Sub-perceptible jitter, below the
+    visible threshold. This audit is GREEN under the cap.'
   follow_up_issue: playbook-extension; y_mm_shift needs a no-calibration-frame path
 - id: tol:systematic-text-line-wrap-no-sim-rows
   audit: systematic_text_audit
   classification: scribus-engine-bug
   severity: structural
   max_issues: 11
-  reason: '10 frames flagged sim-actionable. The line_spacing playbook simulator
-    (tools/line_spacing_sim.py) returned NO ROWS for every frame — the drift is
-    line-WRAP-count divergence, not a leading value. line_spacing_pixel_audit
-    confirms line-count mismatches (u1242 16->17, u129e 10->9, u12b5 11->12).
-    No single (LINESPMode, LINESP) reconciles a wrap-count difference. The
-    per-line GAP is correct in both renderers (baseline gaps 13.9-14.9pt ==
-    preview gaps 13.9-14.9pt).'
+  reason: '9 frames flagged sim-actionable (10 the prior overnight run). The
+    line_spacing playbook simulator (tools/line_spacing_sim.py) returned NO ROWS
+    for every frame — the drift is line-WRAP-count divergence, not a leading
+    value. line_spacing_pixel_audit confirms line-count mismatches (u1242
+    16->17, u129e 10->9, u12b5 11->12). No single (LINESPMode, LINESP)
+    reconciles a wrap-count difference. The per-line GAP is correct in both
+    renderers (baseline gaps 13.9-14.9pt == preview gaps 13.9-14.9pt).'
   follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)
 - id: tol:visual-diff-regions-text-driven
   audit: visual_diff_regions
