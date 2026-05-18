@@ -69,10 +69,18 @@ import yaml
 # the sibling audits so all three tools see identical word boxes / frames.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from text_position_audit import extract_words_with_positions  # noqa: E402
-from line_spacing_pixel_audit import parse_textframes_from_build_py  # noqa: E402
+from line_spacing_pixel_audit import (  # noqa: E402
+    parse_textframes_from_build_py,
+    _scan_frame_lines,
+    render_pdf_pages_to_png,
+)
 import pdfplumber  # noqa: E402
 
 _MM_TO_PT = 2.834645669
+
+# DPI for the ink-based corroboration scan in _check_frame_vposition.
+# Matches line_spacing_pixel_audit's default so the two audits agree.
+_INK_SCAN_DPI = 150
 
 
 def _page_sizes(pdf_path: Path) -> dict[int, tuple[float, float]]:
@@ -158,11 +166,26 @@ def _assign_words_to_frames(
         dy = max(y0 - cy, 0.0, cy - y1)
         return (dx * dx + dy * dy) ** 0.5
 
+    def _center_dist(cx: float, cy: float, box: tuple) -> float:
+        """Distance from a point to the box CENTRE. Tie-breaker for a word
+        whose centre is inside several overlapping boxes — _dist is 0 for
+        all of them. The mixed-font headline splitter (u1214/u1175 →
+        u1214_l2 etc.) stacks single-line frames whose authored bboxes keep
+        the FULL original frame height, so adjacent split frames overlap by
+        a whole line; without a centre tie-break every word would land in
+        the first-defined frame and the sibling line frame reads empty
+        ('unmatched'). Nearest-centre routes each line to its own frame."""
+        _, _, x0, y0, x1, y1 = box
+        bx = (x0 + x1) / 2.0
+        by = (y0 + y1) / 2.0
+        return ((cx - bx) ** 2 + (cy - by) ** 2) ** 0.5
+
     # Generous slack: a frame's first/last line can drift up to ~12pt out
     # of the authored bbox (first-line-offset, leading drift) and must
     # still land in its own frame. When several frames' (slack-expanded)
     # boxes contain the centre, pick the one whose UNEXPANDED box is
-    # nearest — avoids a drifted word being claimed by a neighbour.
+    # nearest — and, when several unexpanded boxes all contain the centre
+    # (overlapping split-headline frames), the one whose CENTRE is nearest.
     SLACK = 12.0
     for rec in words:
         cx = (rec["x0_pt"] + rec["x1_pt"]) / 2.0
@@ -174,7 +197,10 @@ def _assign_words_to_frames(
             and b[3] - SLACK <= cy <= b[5] + SLACK
         ]
         if candidates:
-            hit = min(candidates, key=lambda b: _dist(cx, cy, b))[0]
+            hit = min(
+                candidates,
+                key=lambda b: (_dist(cx, cy, b), _center_dist(cx, cy, b)),
+            )[0]
         else:
             hit = "__unframed__"
         buckets.setdefault(hit, []).append(rec)
@@ -321,8 +347,20 @@ def _check_line(
     page: int,
     pos_tol: float,
     space_tol: float,
+    ink_top_ok: bool = False,
 ) -> dict[str, Any] | None:
-    """Return a finding dict when the line pair fails, else None."""
+    """Return a finding dict when the line pair fails, else None.
+
+    ``ink_top_ok`` — set when a 150dpi ink scan of this line's frame has
+    confirmed the frame's first-line ink-top matches the baseline within
+    tolerance. The per-line ``baseline_y`` check below reads pdfplumber
+    word-box ``y0_pt`` (the recorded glyph BBox top), which carries a
+    per-font text-matrix-to-ink offset that differs between InDesign's and
+    Scribus's font subsets — a phantom 2-4pt drift on heavy display fonts
+    whose ink is pixel-perfect. When ink confirms the frame top is right,
+    a uniform-looking ``baseline_y`` drift is that artefact and is
+    suppressed. First-word-x and wrap checks are unaffected (the artefact
+    is vertical-only)."""
     if base is None or prev is None:
         present = base if base is not None else prev
         return {
@@ -364,9 +402,11 @@ def _check_line(
             ),
         }
 
-    # STRICT: line baseline y.
+    # STRICT: line baseline y. Skipped when an ink scan confirmed the
+    # frame's first-line top is correct — the pdfplumber word-box dy is
+    # then a per-font text-matrix artefact, not a real shift.
     dy = prev[0]["y0_pt"] - base[0]["y0_pt"]
-    if abs(dy) > pos_tol:
+    if abs(dy) > pos_tol and not ink_top_ok:
         return {
             "page": page,
             "baseline_text": b_txt,
@@ -417,12 +457,31 @@ def _block_vextent(words: list[dict[str, Any]]) -> tuple[float, float, float] | 
     return top, centroid, bottom
 
 
+def _ink_vextent(
+    img: "Any",
+    bbox_mm: tuple[float, float, float, float],
+) -> tuple[float, float] | None:
+    """Return (ink_top_pt, ink_bottom_pt) for a frame bbox in a rasterised page.
+
+    Reuses ``line_spacing_pixel_audit._scan_frame_lines`` — the same
+    ink-row scan the authoritative E4 pixel audit uses. ``ink_top`` is the
+    first ink row of the first line, ``ink_bottom`` the last ink row of the
+    last line. Returns ``None`` when no ink is found in the bbox.
+    """
+    tops, bottoms = _scan_frame_lines(img, bbox_mm, _INK_SCAN_DPI)
+    if not tops or not bottoms:
+        return None
+    return min(tops), max(bottoms)
+
+
 def _check_frame_vposition(
     base_words: list[dict[str, Any]],
     prev_words: list[dict[str, Any]],
     frame: str,
     page: int,
     tol: float,
+    ink_extents: tuple[tuple[float, float] | None,
+                       tuple[float, float] | None] | None = None,
 ) -> dict[str, Any] | None:
     """Catch a whole text block rendered at the wrong vertical position.
 
@@ -438,6 +497,24 @@ def _check_frame_vposition(
     A bare difference in word count does NOT trip this on its own: the
     centroid of a partial word cloud is stable enough that a genuine
     block shift still registers, while a few suppressed words do not.
+
+    INK-BASED GATE: the word-cloud extent above is derived from pdfplumber
+    word boxes, i.e. the glyph BBox the renderer recorded — NOT where the
+    ink actually lands. Heavy display fonts (Gotham Narrow Ultra, Vollkorn
+    Black Italic) have a per-font text-matrix-to-ink offset that differs
+    between InDesign's and Scribus's font subsets, so pdfplumber can report
+    a 2-4pt phantom block shift on a frame whose ink is pixel-perfect (the
+    E4 pixel audit confirmed cap-tops within 0.1pt). When ``ink_extents``
+    is supplied — the (baseline, preview) ink top/bottom from a 150dpi
+    raster scan of this frame's bbox — and the ink-measured FIRST-LINE TOP
+    shift is within ``tol``, the frame's text starts at the right vertical
+    position and the pdfplumber finding is that artefact — suppressed.
+    Ink-top is the right signal: a genuine block mispositioning moves the
+    first line; the ink-bottom legitimately differs when a split mixed-font
+    headline's build.py bbox overlaps its sibling line frame (the baseline
+    un-split frame holds both lines in that bbox) or when body text wraps
+    to a different line count. The ink scan is authoritative for "where
+    does the block start"; it never suppresses a real first-line shift.
     """
     bv = _block_vextent(base_words)
     pv = _block_vextent(prev_words)
@@ -453,6 +530,18 @@ def _check_frame_vposition(
     # centroid without the block actually moving.
     edge = d_top if abs(d_top) >= abs(d_bot) else d_bot
     if abs(d_cen) > tol and abs(edge) > tol and (d_cen > 0) == (edge > 0):
+        # Ink-based corroboration before reporting: if the rasterised ink
+        # FIRST-LINE TOP of this frame sits within tol, the block starts at
+        # the right vertical position and the pdfplumber word-box shift is
+        # a text-matrix artefact — do not report. (Ink-bottom is not gated:
+        # it legitimately differs for split mixed-font headlines and
+        # different body-text wraps; ink-top is the block-position signal.)
+        if ink_extents is not None:
+            base_ink, prev_ink = ink_extents
+            if base_ink is not None and prev_ink is not None:
+                ink_d_top = prev_ink[0] - base_ink[0]
+                if abs(ink_d_top) <= tol:
+                    return None
         return {
             "page": page,
             "baseline_text": _line_text(sorted(base_words, key=lambda w: (w["y0_pt"], w["x0_pt"])))[:80],
@@ -489,6 +578,29 @@ def run_audit(
     if build_py is not None and build_py.exists():
         frames = parse_textframes_from_build_py(build_py)
 
+    # Rasterise both PDFs once so the frame-vertical-position check can
+    # corroborate a pdfplumber word-box shift against actual ink. Best
+    # effort: if pdftoppm or PIL are unavailable the check falls back to
+    # the word-box-only path (still correct, just without artefact
+    # suppression for heavy display fonts).
+    base_inkpages: list[Any] = []
+    prev_inkpages: list[Any] = []
+    if frames:
+        try:
+            import tempfile
+            from PIL import Image  # noqa: F401
+
+            _tmp = Path(tempfile.mkdtemp(prefix="line_match_ink_"))
+            base_pngs = render_pdf_pages_to_png(
+                baseline, _INK_SCAN_DPI, _tmp / "base")
+            prev_pngs = render_pdf_pages_to_png(
+                preview, _INK_SCAN_DPI, _tmp / "prev")
+            base_inkpages = [Image.open(p).convert("RGB") for p in base_pngs]
+            prev_inkpages = [Image.open(p).convert("RGB") for p in prev_pngs]
+        except Exception:  # noqa: BLE001 — fall back to word-box-only
+            base_inkpages = []
+            prev_inkpages = []
+
     findings: list[dict[str, Any]] = []
     lines_total = 0
     lines_matched = 0
@@ -523,13 +635,36 @@ def run_audit(
                     bw = _rotate_words_to_frame_space(bw, rot)
                     pw = _rotate_words_to_frame_space(pw, rot)
                 groups = [(bw, pw, pg)]
+            # Ink-scan this frame ONCE: a 150dpi raster of the frame bbox
+            # in both PDFs. ink_top_ok gates the per-line baseline_y check
+            # (text-matrix artefact suppression); ink_extents feeds the
+            # frame-level vposition check. Skipped for rotated frames and
+            # the unframed bucket.
+            _rot = frames[key].rotation_deg if key in frames else 0.0
+            frame_ink_extents: tuple | None = None
+            ink_top_ok = False
+            if (key in frames and not _rot
+                    and base_inkpages and prev_inkpages):
+                _fpg = frames[key].page
+                if 0 <= _fpg < len(base_inkpages) and _fpg < len(prev_inkpages):
+                    _bbox = frames[key].bbox_mm
+                    frame_ink_extents = (
+                        _ink_vextent(base_inkpages[_fpg], _bbox),
+                        _ink_vextent(prev_inkpages[_fpg], _bbox),
+                    )
+                    _bi, _pi = frame_ink_extents
+                    if _bi is not None and _pi is not None:
+                        ink_top_ok = abs(_pi[0] - _bi[0]) <= _FRAME_VPOS_TOL_PT
             for gb, gp, pg in groups:
                 base_lines = _cluster_lines(gb)
                 prev_lines = _cluster_lines(gp)
                 lines_total += max(len(base_lines), len(prev_lines))
                 line_finding_count = 0
                 for b, p in _pair_lines(base_lines, prev_lines):
-                    finding = _check_line(b, p, pg, pos_tol, space_tol)
+                    finding = _check_line(
+                        b, p, pg, pos_tol, space_tol,
+                        ink_top_ok=ink_top_ok,
+                    )
                     if finding is None:
                         lines_matched += 1
                     else:
@@ -544,8 +679,12 @@ def run_audit(
                 # avoid a duplicate page-wide finding.
                 run_vpos = key != "__unframed__" or line_finding_count == 0
                 if run_vpos:
+                    # Ink-based corroboration uses the frame ink scan done
+                    # above — a pdfplumber text-matrix artefact on a heavy
+                    # display font is then not mis-reported as a shift.
                     vpos = _check_frame_vposition(
                         gb, gp, key, pg, _FRAME_VPOS_TOL_PT,
+                        ink_extents=frame_ink_extents,
                     )
                     if vpos is not None:
                         findings.append(vpos)

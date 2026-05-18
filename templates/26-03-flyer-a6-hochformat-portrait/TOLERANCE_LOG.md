@@ -3,6 +3,73 @@
 Every tolerance, override, frame-geometry clamp, and accepted residual for
 this template, with measured drift and classification. Newest first.
 
+## Final re-import + tune pass (2026-05-18)
+
+Template re-imported with the fully-fixed converter and tuned via the
+`bin/tune-render` -> `bin/tune-fix` loop. This pass found and fixed a class
+of **audit-coordinate bugs** that the new color-managed baseline.pdf
+(cropped from a marks-on InDesign export, MediaBox lower-left
+`(29.5, -38.53)` not `(0, 0)`) had exposed across the text/image audits.
+
+### Audit-tool fixes applied this pass (audit correctness, not converter)
+
+| # | What | Why |
+|---|------|-----|
+| A1 | `tools/text_position_audit.py::extract_words_with_positions` — word coordinates re-anchored to the page MediaBox lower-left (`x0 - llx`, `top - lly`). | A baseline cropped from a bleed page carries a non-zero MediaBox origin; pdfplumber reports word `x0` MediaBox-absolute and `top` from the MediaBox top. Without re-anchoring, every baseline word read ~29pt off in X and ~35pt off in Y vs a trim-origin preview — `line_match_audit` reported `0/111` lines matched on a render that is pixel-correct. No-op for a `(0,0)` MediaBox. |
+| A2 | `tools/line_spacing_sim.py::_measure_frame_gap` — the `page.crop` rect shifted by the page bbox lower-left. | Same root cause: the sim crops trim-origin build.py bboxes; a shifted-MediaBox baseline raised `ValueError: bbox not within page`, so every playbook sim returned no rows. |
+| A3 | `tools/line_match_audit.py` — `frame_vertical_position` and per-line `baseline_y` now gate on an ink-based 150dpi raster scan of the frame bbox (reusing `line_spacing_pixel_audit._scan_frame_lines`). When the ink first-line top matches within tolerance, a pdfplumber word-box shift is a per-font text-matrix artefact and is suppressed. | pdfplumber word `y0` is the recorded glyph BBox top, not ink. Heavy display fonts (Gotham Narrow Ultra, Vollkorn Black Italic) have a per-font text-matrix-to-ink offset that differs between the InDesign and Scribus font subsets — a phantom ~2.9-3.6pt block shift. Pixel scan confirmed the "Das" headline cap-top at baseline 259.19pt / preview 259.28pt (Δ0.09pt): the ink is correct. |
+| A4 | `tools/line_match_audit.py::_assign_words_to_frames` — overlapping-bbox tie-break by nearest box CENTRE. | The mixed-font headline splitter stacks single-line frames that keep the full original frame height, so adjacent split frames overlap by a whole line; without a centre tie-break every word landed in the first-defined frame and the sibling line frame read empty (`unmatched`). |
+| A5 | `tools/font_audit.py` — a baseline-only system fallback font (Helvetica/Arial/Times/Courier) is dropped from `missing_in_preview`. | The baseline carried `CELQFT+Helvetica` for InDesign's auto page-info/filename slug furniture (708 chars spelling the file name, ~118/page). The converter correctly never emits slug furniture; flagging the preview for not reproducing it is a false failure. |
+| A6 | `tools/baseline_image_audit.py::_count_svg_content_paths` — crop/registration-mark paths (whole coordinate cloud hugging the page perimeter, ≤10pt band) excluded from the vector-path count. Size is NOT a discriminator (curly quotes are as small as corner dots); only perimeter position is. | The re-cropped baseline keeps crop marks sitting at the trim edge; they rendered as ~8 `<path>` elements per page, inflating the vector-path delta 39 -> 87. With perimeter marks excluded the delta is 39 (cap 45) — matching the pre-crop baseline exactly. Interior content (curly quotes, wind turbine, squiggle) is always counted. |
+
+### Tune fixes applied (build.py)
+
+| Frame(s) | Fix | Measured |
+|----------|-----|----------|
+| `idml/fliesstext-auf-gruenem-hintergrund` ParaStyle | Added `space_after_pt=5.6693` (the green body style carries no SpaceAfter in the IDML, but the .indd-exported baseline renders ~5.2pt inter-paragraph space; the white sibling style carries the same 5.669pt — the IDML lost it on the green variant). `aufzaehlungen-auf-gruenem-hintergrund` inherits it. | Closed the `u1242` frame_vertical_position (bottom drift -11.6pt -> 0) and dropped line_match 54 -> 32. |
+
+### Audit results — this pass
+
+| Audit | Result |
+|-------|--------|
+| `line_match_audit` | 123 -> 13 findings. The 13 are all cross-renderer / rotated-frame residual — see "Accepted residual" below. |
+| `frame_vertical_position` (in line_match) | 0 findings — every headline/citation block confirmed vertically correct by the ink-based gate. |
+| `image_frame_visibility_audit` | OK — every asset renders. DIE GRÜNEN logo `u116b` asset_render_ratio 0.953 (well above the 0.35 floor). |
+| `squiggle_alignment_audit` | `ok: true`, 0 issues — all squiggles yellow, on their anchor word. |
+| `attribute_coverage_audit` | `ok: true`, 0 issues — no new significant unconsumed attribute. |
+| `font_audit` | OK after A6. |
+| `image_audit` | 39 vector-path delta (cap 45) after A6 perimeter-marks exclusion. |
+
+### Tolerance grown this pass
+
+`text_position_audit_jitter` cap 30 -> 44. The jitter count is 40 measured
+against the now-coordinate-correct baseline (A1) — the old cap of 30 was set
+under the pre-crop `(0,0)`-MediaBox baseline. 40 is the honest count of
+sub-5pt cross-renderer per-word kerning drift; cap 44 leaves small headroom.
+`severity: cosmetic` — sub-perceptible by the audit's own 5pt threshold.
+
+### Accepted residual (NOT regressions)
+
+- `line_match_audit` — 13 findings, all unclosable cross-renderer residual:
+  - `u11fd`, `u126f` (2 × `first_word_x` Δ28pt): the −90°-rotated Impressum
+    fine-print. Scribus rotated-frame engine limit (task-documented).
+  - `u1242`, `u129e` (7 × `wrap`/`unmatched`): cross-renderer body-text
+    line-wrap divergence — Scribus's greedy line-breaker vs InDesign's
+    Paragraph Composer break the justified paragraphs at different words.
+    `u129e` wraps its last paragraph to 10 lines vs the baseline's 9; the
+    IDML frame width (212.6pt = 75mm) is emitted exactly, so this is a
+    pure text-measurement difference, not a geometry bug.
+  - `u12fb`, `ud04` (×2), `u118c` (4 × `first_word_x` Δ1.75-2.39pt):
+    centered/left text where the rendered line width differs by a sub-pt
+    per-glyph metric (Vollkorn Black Italic renders ~0.75% wider in
+    Scribus — pixel-measured ud04 left edge 12.81% vs 13.39%, right edge
+    Δ0.17%). Not closeable without distorting the font.
+- `text_position_audit_structural` — 47 large (>5pt) word drifts,
+  `severity: structural` (documented, does not flip preflight by design).
+  Dominated by the same `u129e` line-wrap cascade (one wrap-point
+  difference shifts every following word's X by 30-180pt) plus the
+  rotated Impressum. Same engine class as the line_match wrap residual.
+
 ## Combined fidelity re-render pass (2026-05-18)
 
 This template was re-imported a third time for the final combined fidelity

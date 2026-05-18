@@ -9,6 +9,51 @@ with 2 pages each (6 pages total). Page 1 cover (three-line headline + Störer
 badge + Gewessler portrait photo), pages 2-5 inner content, page 6 a quote
 page on a dark crumpled-paper background.
 
+## Latest pass — final re-import + tune (2026-05-18)
+
+Re-imported with the fully-fixed converter (`bin/idml-import --reimport`),
+then tuned via the `bin/tune-render` -> `bin/tune-fix` loop.
+
+**Re-import: GREEN** — the converter regenerated `build.py` byte-identical
+to the prior committed version (no structural change needed).
+
+**Tune preflight: RED** — 2 sub-audits red, both documented honest residual:
+`line_match_audit` (13 findings) and `text_position_audit_structural` (47).
+All other audits OK.
+
+### The headline finding — audit-coordinate bugs, not render bugs
+
+The color-managed baseline.pdf (commit `e3707d3`, cropped from a marks-on
+InDesign export) carries a MediaBox whose lower-left is `(29.5, -38.53)`,
+not `(0, 0)`. pdfplumber reports word coordinates MediaBox-absolute, so
+every text/position audit read the baseline ~29pt off in X / ~35pt off in
+Y vs the trim-origin preview. `line_match_audit` reported `0/111` lines
+matched on a render that is, in fact, pixel-correct (the "Das" headline
+cap-top measures baseline 259.19pt / preview 259.28pt — Δ0.09pt). Six
+audit-tool fixes (A1-A6, see `TOLERANCE_LOG.md`) re-anchor coordinates,
+add an ink-based gate for the per-font text-matrix artefact on heavy
+display fonts, fix overlapping split-frame word attribution, exclude
+InDesign slug-furniture fonts, and exclude crop-mark vectors. line_match
+fell 123 -> 13; `frame_vertical_position` 12 -> 0.
+
+### One build.py tune fix
+
+`idml/fliesstext-auf-gruenem-hintergrund` ParaStyle gained
+`space_after_pt=5.6693`: the green body style carries no SpaceAfter in
+the IDML, but the .indd-exported baseline renders ~5.2pt inter-paragraph
+space. The white sibling style carries exactly 5.669pt — the IDML lost it
+on the green variant. This closed the `u1242` `frame_vertical_position`
+(bottom drift -11.6pt -> 0).
+
+### Residual (all documented in TOLERANCE_LOG.md, NOT regressions)
+
+- `line_match_audit` 13: 2 rotated-Impressum (`u11fd`/`u126f`), 7
+  cross-renderer body-text line-wrap (`u1242`/`u129e`), 4 centered/left
+  text first-word-x <=2.4pt (cross-renderer glyph-width).
+- `text_position_audit_structural` 47: same `u129e` line-wrap cascade +
+  rotated Impressum; `severity: structural` — documented, does not flip
+  preflight green by design.
+
 ## Latest pass — combined fidelity re-render (2026-05-18)
 
 This template was re-imported a third time for the **final combined fidelity

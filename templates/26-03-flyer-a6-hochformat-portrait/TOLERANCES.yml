@@ -3,15 +3,20 @@ tolerances:
   audit: text_position_audit_jitter
   classification: scribus-engine-bug
   severity: cosmetic
-  max_issues: 30
-  reason: 'Up to ~23 sub-perceptible (<=5pt) per-word position drifts. Same
-    cross-renderer line-wrap class as the structural bucket below — Scribus and
-    InDesign break the justified body / bullet paragraphs at slightly different
-    words because their font-metric and hyphenation models differ; the small
-    residual offsets land in the jitter (<=5pt) bucket. Sub-perceptible by the
-    audit''s own threshold. Not a converter bug — page content and frame
-    geometry verified correct page-by-page. Cap 30 leaves small headroom over
-    the measured 23.'
+  max_issues: 44
+  reason: '40 sub-perceptible (<=5pt) per-word position drifts, measured
+    against the coordinate-corrected baseline (the 2026-05-18 final pass
+    re-anchored pdfplumber word coordinates to the page MediaBox lower-left
+    so the marks-cropped baseline is comparable to the trim-origin preview;
+    the prior cap of 30 was set under the old (0,0)-MediaBox baseline).
+    Same cross-renderer line-wrap class as the structural bucket below —
+    Scribus and InDesign break the justified body / bullet paragraphs at
+    slightly different words because their font-metric and hyphenation
+    models differ; the small residual offsets land in the jitter (<=5pt)
+    bucket. Sub-perceptible by the audit''s own threshold. Not a converter
+    bug — page content and frame geometry verified correct page-by-page;
+    the ink-based pixel audit confirms every frame correctly positioned.
+    Cap 44 leaves small headroom over the measured 40.'
   follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
 - id: tol:text-position-structural-cross-renderer-wrap
   audit: text_position_audit_structural

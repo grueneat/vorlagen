@@ -16,7 +16,7 @@ format: A4
 id: 26-03-flyer-a6-hochformat-portrait
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Portrait Ordner/26-03-Flyer
   A6 Hochformat Portrait.idml
-previews_for_sla: ceee0f3f773c032f93a30b64f295ad82152e1c4cde71696618e178d5c015ae1e
+previews_for_sla: 3a914bb3a7049ef54dadfc1caa448637f6ab74882d0860020ec4fe9c5d610655
 title: 26-03-flyer-a6-hochformat-portrait
 version: 0.1.0
-build_py_sha256: 4809a5313c92c4657808691d9b0619edafde632cb8043219926df288281c2b89
+build_py_sha256: 5ccb52b2b9a235c98cac5eed67ac763a838ac2ae10c1d9be352f8b88b6f1ea69

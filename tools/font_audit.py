@@ -113,8 +113,27 @@ def run_font_audit(
     missing = sorted(baseline_set - preview_set)
     extra = sorted(preview_set - baseline_set)
 
+    # A baseline-only SYSTEM fallback font (Helvetica, Arial, Times,
+    # Courier) is InDesign export furniture — the auto-printed page-info /
+    # filename slug, or a fallback glyph for an unmapped character — never
+    # deliberate template content. The converter emits the IDML's real
+    # content fonts; it does not (and must not) reproduce InDesign's slug
+    # furniture. Flagging the preview for NOT carrying such a font is a
+    # false failure, so a baseline-only system font is dropped from
+    # ``missing`` and recorded separately for transparency.
+    _SYSTEM_FONTS = ("helvetica", "arial", "times", "courier")
+
+    def _is_system_font(name: str) -> bool:
+        low = name.lower()
+        return any(sf in low for sf in _SYSTEM_FONTS)
+
+    system_only = sorted(f for f in missing if _is_system_font(f))
+    missing = sorted(f for f in missing if not _is_system_font(f))
+
     report["missing_in_preview"] = missing
     report["extra_in_preview"] = extra
+    if system_only:
+        report["baseline_only_system_fonts"] = system_only
 
     if errors:
         report["error"] = "; ".join(errors)

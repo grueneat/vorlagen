@@ -19,7 +19,7 @@
     <STYLE NAME="ci/stoerer" PARENT="ci/default" ALIGN="1" LINESP="11" FONTSIZE="10" FONT="Gotham Narrow Ultra" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/cta" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="13" FONT="Gotham Narrow Bold" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="idml/no-paragraph-style" ALIGN="0" LINESPMode="0" LINESP="17.4" FONTSIZE="12" FONT="Minion Pro Regular" FCOLOR="Black"/>
-    <STYLE NAME="idml/fliesstext-auf-gruenem-hintergrund" PARENT="idml/no-paragraph-style" ALIGN="3" LINESPMode="0" LINESP="14.3" FONTSIZE="11" MinGlyphShrink="0.98" FONT="Gotham Narrow Book" FCOLOR="White">
+    <STYLE NAME="idml/fliesstext-auf-gruenem-hintergrund" PARENT="idml/no-paragraph-style" ALIGN="3" LINESPMode="0" LINESP="14.3" FONTSIZE="11" NACH="5.6693" MinGlyphShrink="0.98" FONT="Gotham Narrow Book" FCOLOR="White">
       <Tabs Type="0" Pos="15" Fill=""/>
     </STYLE>
     <STYLE NAME="idml/headline-in-gruenem-kasten" PARENT="idml/no-paragraph-style" ALIGN="1" LINESPMode="0" LINESP="12" FONTSIZE="12" FONT="Gotham Narrow Bold" FCOLOR="White"/>
