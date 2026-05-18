@@ -42,32 +42,32 @@ def _add_styles(doc: Document) -> None:
     return None
 
 def _add_page_0(doc: Document, page) -> None:
-    """Page 1 page items — populated by tools/idml_to_dsl.py Phase H."""
+    """Render page 1 items — populated by tools/idml_to_dsl.py Phase H."""
     # (no page items in this task-3 skeleton)
     return None
 
 def _add_page_1(doc: Document, page) -> None:
-    """Page 2 page items — populated by tools/idml_to_dsl.py Phase H."""
+    """Render page 2 items — populated by tools/idml_to_dsl.py Phase H."""
     # (no page items in this task-3 skeleton)
     return None
 
 def _add_page_2(doc: Document, page) -> None:
-    """Page 3 page items — populated by tools/idml_to_dsl.py Phase H."""
+    """Render page 3 items — populated by tools/idml_to_dsl.py Phase H."""
     # (no page items in this task-3 skeleton)
     return None
 
 def _add_page_3(doc: Document, page) -> None:
-    """Page 4 page items — populated by tools/idml_to_dsl.py Phase H."""
+    """Render page 4 items — populated by tools/idml_to_dsl.py Phase H."""
     # (no page items in this task-3 skeleton)
     return None
 
 def _add_page_4(doc: Document, page) -> None:
-    """Page 5 page items — populated by tools/idml_to_dsl.py Phase H."""
+    """Render page 5 items — populated by tools/idml_to_dsl.py Phase H."""
     # (no page items in this task-3 skeleton)
     return None
 
 def _add_page_5(doc: Document, page) -> None:
-    """Page 6 page items — populated by tools/idml_to_dsl.py Phase H."""
+    """Render page 6 items — populated by tools/idml_to_dsl.py Phase H."""
     # (no page items in this task-3 skeleton)
     return None
 
@@ -81,7 +81,7 @@ def build_template() -> Document:
         title='26-03-flyer-a6-hochformat-portrait',
         template_id='26-03-flyer-a6-hochformat-portrait',
         author="Die Grünen Niederösterreich",
-        facing_pages=True,
+        facing_pages=False,
         layers=[
             DocumentLayer(name='Ebene 1'),
         ],
@@ -222,8 +222,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
 
 
 def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
-    """Auto-generated page-items for page 1 (Spread Spreads/Spread_ud0.xml)."""
-    # noinject: real IDML-placed cover photo (Gewessler portrait); genuine template content, not a demo placeholder
+    """Auto-generated page-items for spread 1 (Spread Spreads/Spread_ud0.xml)."""
     page0.add(ImageFrame(
         x_mm=-3,
         y_mm=-3,
@@ -231,12 +230,8 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=154,
         anname='u115d',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/26-05-25-gewessler-gruenen-odd-0452-2.jpg',
-        local_scale=(0.770067, 0.770067),
-        scale_type=1,
-        local_offset_mm=(-47.1667, 0),
+        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/26-05-25-gewessler-gruenen-odd-0452-2-u115d.png',
     ))
-    # noinject: real IDML-placed radial-gradient overlay asset; genuine template content, not a demo placeholder
     page0.add(ImageFrame(
         x_mm=-4,
         y_mm=80.5,
@@ -244,9 +239,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=70.5,
         anname='u1164',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/schwarzer-verlauf-radial.png',
-        local_scale=(0.1104, 0.1104),
-        scale_type=1,
+        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/schwarzer-verlauf-radial-u1164.png',
     ))
     page0.add(ImageFrame(
         x_mm=79.8,
@@ -272,17 +265,12 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         runs=[Run(text='Mehrzeilige Subheadline –', font='Gotham Narrow Book', fontsize=18, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}, separator='para'), Run(text='mehr Info zum Thema', font='Gotham Narrow Book', fontsize=18, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
         trail_attrs={'LINESPMode': '1'},
     ))
-    # h_mm clamped 81.8444mm→52.0mm (tune): the converter's Pattern-9 auto-adjust
-    # counted the empty para-separator Runs as text lines (4 instead of the real
-    # 3-line headline) and inflated the frame to 232pt. At y_mm=90.12 that
-    # 232pt frame bottom (507pt pasteboard) overflowed page 1 and Scribus
-    # rendered the spill onto PDF page 3. 52mm fits all 3 lines (38pt headline,
-    # ~34.13pt leading) and keeps the frame inside page 1 (90.12+52=142.1<148).
+    # h_mm widened 34.7873mm→81.8444mm: Scribus clips lines when frame_h < 4 explicit lines × line height (leading=34.13pt; IDML overflows silently)
     page0.add(TextFrame(
         x_mm=6.3,
         y_mm=90.1174,
         w_mm=71.6562,
-        h_mm=52.0,
+        h_mm=81.8444,
         anname='u1175',
         layer=0,
         style='idml/normalparagraphstyle',
@@ -290,21 +278,21 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         trail_attrs={'LINESPMode': '1'},
     ))
     page0.add(Polygon(
-        x_mm=61.4247,
-        y_mm=76.7139,
-        w_mm=19.8617,
-        h_mm=19.8617,
+        x_mm=58.198,
+        y_mm=79.9406,
+        w_mm=20.8838,
+        h_mm=20.8838,
         anname='u11a4',
         layer=0,
         rotation_deg=-18,
         fill='Magenta',
         shape='ellipse',
     ))
-    # h_mm widened 6.3257mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=9.88pt; IDML overflows silently)
+    # h_mm widened 3.0968mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=9.88pt; IDML overflows silently)
     page0.add(TextFrame(
         x_mm=60.8,
-        y_mm=83.4819,
-        w_mm=21.1112,
+        y_mm=86.7489,
+        w_mm=20.8838,
         h_mm=8.0081,
         anname='u11a5',
         layer=0,
@@ -325,7 +313,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
 
 
 def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
-    """Auto-generated page-items for page 2 (Spread Spreads/Spread_u11d.xml)."""
+    """Auto-generated page-items for spread 2 (Spread Spreads/Spread_u11d.xml)."""
     page1.add(Polygon(
         x_mm=-3,
         y_mm=-3,
@@ -359,9 +347,9 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=95,
-        y_mm=82.6,
-        w_mm=10,
-        h_mm=53.4,
+        y_mm=136,
+        w_mm=53.4,
+        h_mm=10,
         anname='u11fd',
         layer=0,
         rotation_deg=-90,
@@ -404,7 +392,16 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
 
 
 def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
-    """Auto-generated page-items for page 3 (Spread Spreads/Spread_u11d.xml)."""
+    """Auto-generated page-items for spread 3 (Spread Spreads/Spread_u11d.xml)."""
+    page2.add(Polygon(
+        x_mm=-108,
+        y_mm=-3,
+        w_mm=216,
+        h_mm=154,
+        anname='u11e1_p1',
+        layer=0,
+        fill='Dunkelgrün',
+    ))
     page2.add(PolyLine(
         x_mm=48.7981,
         y_mm=45.3856,
@@ -438,9 +435,10 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
         runs=[Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='•', font='Gotham Narrow Book', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='Scim rem ', font='Gotham Narrow Black'), Run(text='utas si vellaccum eatus\u2028nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='•', font='Gotham Narrow Book'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='Tissi iuntem ressiti ', font='Gotham Narrow Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='•', font='Gotham Narrow Book'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='Uaerum ium ', font='Gotham Narrow Black'), Run(text='verior alicide liquuntio. ', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='•', font='Gotham Narrow Book'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='Ur, omniet ', font='Gotham Narrow Book'), Run(text='vello modi ', font='Gotham Narrow Black'), Run(text='aceprate pem ssi iuntem ilis', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='•', font='Gotham Narrow Book'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='Lia vellam, conemporro ', font='Gotham Narrow Book'), Run(text='moditatque', font='Gotham Narrow Black'), Run(text=' nimil maxim voluptur.', font='Gotham Narrow Book'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Gotham Narrow Book', separator='tab'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para')],
     ))
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 15.0 → 15.6773 (uniform +-1.92pt × sign=-1 → +0.6773mm)
     page2.add(TextFrame(
         x_mm=15,
-        y_mm=15,
+        y_mm=15.6773,
         w_mm=75,
         h_mm=24.6944,
         anname='u122b',
@@ -474,7 +472,7 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
 
 
 def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
-    """Auto-generated page-items for page 4 (Spread Spreads/Spread_u68d.xml)."""
+    """Auto-generated page-items for spread 4 (Spread Spreads/Spread_u68d.xml)."""
     page3.add(Polygon(
         x_mm=15,
         y_mm=98.1368,
@@ -508,9 +506,9 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
     ))
     page3.add(TextFrame(
         x_mm=95,
-        y_mm=82.6,
-        w_mm=10,
-        h_mm=53.4,
+        y_mm=136,
+        w_mm=53.4,
+        h_mm=10,
         anname='u126f',
         layer=0,
         rotation_deg=-90,
@@ -530,9 +528,10 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         layer=0,
     ))
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 15.0 → 15.5927 (uniform +-1.68pt × sign=-1 → +0.5927mm)
     page3.add(TextFrame(
         x_mm=15,
-        y_mm=15,
+        y_mm=15.5927,
         w_mm=75,
         h_mm=24.6944,
         anname='u1287',
@@ -551,6 +550,30 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         layer=0,
         style='idml/fliesstext-auf-weissem-hintergrund',
         runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='', paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Tinvend igenis ', font='Gotham Narrow Bold', paragraph_style='idml/zwischenueberschrift-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}), Run(text='', has_itext=False, paragraph_style='idml/zwischenueberschrift-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='', paragraph_style='idml/zwischenueberschrift-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Ute voloria qui cus et ut optate vendam ilmolo ipsum fuga. volorro qui optate nis eaquamus.', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Licatissi iuntem ressiti orerovi tectouuntur eriatur. Oditibust, quis et qui iminum fugiae no nonsed quae non et quaturem. ctouuntur eriatur, sit, quattatib. Nam quatur.', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-weissem-hintergrund')],
+    ))
+    # h_mm widened 18.2386mm→29.6333mm: Scribus clips lines when frame_h < 5 explicit lines × line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 111.4614 → 109.5987 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    page3.add(TextFrame(
+        x_mm=19.97,
+        y_mm=109.5987,
+        w_mm=65,
+        h_mm=29.6333,
+        anname='u12e4',
+        layer=0,
+        style='idml/fliesstext-auf-gruenem-hintergrund',
+        runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'})],
+    ))
+    # h_mm widened 3.3866mm→8.6078mm: Scribus clips lines when frame_h < effective line height (leading=12.00pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 104.4368 → 103.5901 (uniform ++2.40pt × sign=-1 → -0.8467mm)
+    page3.add(TextFrame(
+        x_mm=19.75,
+        y_mm=103.5901,
+        w_mm=65,
+        h_mm=8.6078,
+        anname='u12fb',
+        layer=0,
+        style='idml/headline-in-gruenem-kasten',
+        runs=[Run(text='Headline in einem grünen Kasten ', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'})],
     ))
     page3.add(Polygon(
         x_mm=-19.45,
@@ -591,8 +614,7 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
 
 
 def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
-    """Auto-generated page-items for page 5 (Spread Spreads/Spread_u68d.xml)."""
-    # noinject: real IDML-placed pine-forest photo; genuine template content, not a demo placeholder
+    """Auto-generated page-items for spread 5 (Spread Spreads/Spread_u68d.xml)."""
     page4.add(ImageFrame(
         x_mm=0,
         y_mm=-3,
@@ -600,10 +622,7 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
         h_mm=62.0333,
         anname='u1260',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/green-pine-trees-covered-with-fog.jpg',
-        local_scale=(0.490989, 0.490989),
-        scale_type=1,
-        local_offset_mm=(0, -3.6833),
+        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/green-pine-trees-covered-with-fog-u1260.png',
     ))
     page4.add(PolyLine(
         x_mm=23.8023,
@@ -639,28 +658,6 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
         runs=[Run(text='Ich bin auch ', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '1'}, separator='para'), Run(text='eine Headline.', font='Gotham Narrow Ultra', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
         trail_attrs={'LINESPMode': '1'},
     ))
-    # h_mm widened 18.2386mm→29.6333mm: Scribus clips lines when frame_h < 5 explicit lines × line height (leading=14.30pt; IDML overflows silently)
-    page4.add(TextFrame(
-        x_mm=-85.03,
-        y_mm=111.4614,
-        w_mm=65,
-        h_mm=29.6333,
-        anname='u12e4',
-        layer=0,
-        style='idml/fliesstext-auf-gruenem-hintergrund',
-        runs=[Run(text='Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.', font='Gotham Narrow Book', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'})],
-    ))
-    # h_mm widened 3.3866mm→8.6078mm: Scribus clips lines when frame_h < effective line height (leading=12.00pt; IDML overflows silently)
-    page4.add(TextFrame(
-        x_mm=-85.25,
-        y_mm=104.4368,
-        w_mm=65,
-        h_mm=8.6078,
-        anname='u12fb',
-        layer=0,
-        style='idml/headline-in-gruenem-kasten',
-        runs=[Run(text='Headline in einem grünen Kasten ', font='Gotham Narrow Bold', paragraph_style='idml/headline-in-gruenem-kasten', paragraph_attrs={'ALIGN': '1'})],
-    ))
     page4.add(Polygon(
         x_mm=119.8,
         y_mm=52.7,
@@ -682,8 +679,7 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
 
 
 def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
-    """Auto-generated page-items for page 6 (Spread Spreads/Spread_uddd.xml)."""
-    # noinject: real IDML-placed dark-plakat background photo; genuine template content, not a demo placeholder
+    """Auto-generated page-items for spread 6 (Spread Spreads/Spread_uddd.xml)."""
     page5.add(ImageFrame(
         x_mm=-3,
         y_mm=-3,
@@ -691,10 +687,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         h_mm=154,
         anname='ubc2',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/plakat-dunkel-fuer-flyer.png',
-        local_scale=(0.700058, 0.700058),
-        scale_type=1,
-        local_offset_mm=(-59.9018, 0),
+        image='../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/plakat-dunkel-fuer-flyer-ubc2.png',
     ))
     # h_mm widened 22.0927mm→37.9236mm: Scribus clips lines when frame_h < 3 explicit lines × line height (leading=20.48pt; IDML overflows silently)
     page5.add(TextFrame(
@@ -709,9 +702,14 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         trail_attrs={'ALIGN': '1', 'LINESPMode': '1'},
     ))
     # h_mm widened 3.1044mm→8.0081mm: Scribus clips lines when frame_h < effective line height (leading=14.30pt; IDML overflows silently)
+    # P5/playbook y_mm_shift.py: y_mm 92.1685 → 90.3058 (uniform ++5.28pt × sign=-1 → -1.8627mm)
+    # P5/playbook y_mm_shift.py: y_mm 90.3058 → 92.6765 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 92.6765 → 90.3058 (uniform ++6.72pt × sign=-1 → -2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 90.3058 → 92.6765 (uniform +-6.72pt × sign=-1 → +2.3707mm)
+    # P5/playbook y_mm_shift.py: y_mm 92.6765 → 90.3058 (uniform ++6.72pt × sign=-1 → -2.3707mm)
     page5.add(TextFrame(
         x_mm=31.6686,
-        y_mm=92.1685,
+        y_mm=90.3058,
         w_mm=41.6629,
         h_mm=8.0081,
         anname='ud1b',

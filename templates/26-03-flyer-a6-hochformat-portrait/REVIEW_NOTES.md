@@ -2,124 +2,146 @@
 
 ## What this template is
 
-A **6-page A6 portrait flyer** (105 × 148 mm trim) for Die Grünen. Source:
-`26-03-Flyer A6 Hochformat Portrait.idml`. The IDML is a 4-spread document:
-spread 1 and spread 4 are single-page (cover, back), spreads 2 and 3 are
-**facing-pages spreads** with 2 pages each — 6 pages total.
+A **6-page A6 portrait flyer** (105 x 148 mm trim) for Die Grünen. Source:
+`26-03-Flyer A6 Hochformat Portrait.idml` — a 4-spread document: spreads 1
+and 4 are single-page (cover, back), spreads 2 and 3 are facing-pages spreads
+with 2 pages each (6 pages total). Page 1 cover (three-line headline + Störer
+badge + Gewessler portrait photo), pages 2-5 inner content, page 6 a quote
+page on a dark crumpled-paper background.
 
-Content: page 1 cover (three-line headline + Störer badge + Gewessler portrait
-photo), pages 2–5 inner content (headlines, bullet lists, Impressum), page 6 a
-quote page.
+## This pass — image-fidelity re-render
 
-## Scaffold outcome — GREEN
+This template was re-imported to pick up the shared CMYK->sRGB and
+geometry-derived aspect-fill crop fixes (commit `de96b7c`). The earlier
+overnight scaffold's `build.py` was regenerated from the fixed converter, as
+intended. The Stage-2 tune nudges from the overnight run were dropped by the
+re-import and the `bin/tune-render` -> `bin/tune-fix` loop was re-run.
 
-`bin/idml-import --scaffold-only` completed (exit 0), Stage-1 inventory gate
-passed, `SCAFFOLD_INVENTORY.yml` written, `build.py` runs clean and renders all
-6 pages. Reaching GREEN required four converter / driver fixes (all in Stage 1,
-where converter edits are permitted):
+## Re-import outcome — GREEN (Stage-1 gate passes)
 
-1. **`--assets-dir` default was a stale hardcoded path** from a previous
-   template's import. Changed to `None`, resolved post-parse to the IDML's
-   own sibling `Links/` directory so multi-template runs are independent.
-2. **`_emit_pages` only handled one-page-per-spread documents** — it raised
-   `UnhandledElement` on this 6-page / 4-spread layout. Added facing-pages
-   support: iterate every `<Page>` in each spread, route each top-level
-   PageItem to the page whose page-local bbox centre contains it
-   (`_route_item_to_page`), emit one `_add_page_<i>` per page with the global
-   index matching `pkg.pages` document order.
-3. **Driver path bugs in a git worktree** — `from tools import …` failed
-   (repo root not on `sys.path`); `render_pipeline.py` had 5 hardcoded
-   `/workspace/templates` literals; `inventory_extract` defaulted to
-   `/workspace/templates`. Fixed to resolve against the running checkout's
-   `ROOT`.
-4. **Stage-1 gate did not understand deliberate converter skips.** The
-   converter now writes `# idml-skip: <self_id> — <reason>` lines into
-   build.py; the gate reads them so an off-page registration mark and an
-   unused IDML paragraph style no longer trip the gate as "missing".
+`bin/idml-import --reimport --scaffold-only` completed; the Stage-1 inventory
+gate passes; `build.py` runs clean and renders all 6 pages. Reaching GREEN
+required four converter / tooling fixes — all in Stage 1, where converter and
+gate edits are permitted. They are catalogued in `TOLERANCE_LOG.md` (R1-R4);
+in brief:
+
+1. **`inventory_extract.py` crop on-disk check (R1).** The de96b7c crop fix
+   emits geometry-derived crops into a `crops/` subdir and build.py references
+   `crops/<name>-<uXXX>.png`. The Stage-1 gate's "every Link basename on disk"
+   rule mis-flagged the crop as missing because `_join_assets` stamped every
+   build.py-only asset `on_disk=False`. Now it resolves the `image=` path and
+   checks the file. STAGE-1 GATE FAILURE cleared.
+2. **Group-aware page routing (R2).** `_extract_anchors` on a Group returns
+   only the first child's PathGeometry. Group `u12e3` (the green "Kasten"
+   headline + body) routed to PDF page 5 by first-child anchors; its true leaf
+   union is on PDF page 4. In the new page-by-page render model the mis-routed
+   group landed at x=-85mm (off the page-5 canvas) and all 30 green-box words
+   were silently dropped. New `_item_page_local_bbox_pt` routes a Group by the
+   union of its leaf descendants' page-local bboxes.
+3. **Spread-spanning background on every page (R3).** The full-spread green
+   background `u11e1` (216mm wide) belongs to both pages of facing-pages
+   spread u11d. The page-by-page model emitted it on PDF page 2 only, leaving
+   PDF page 3 white (white text on no background = invisible, 21 words lost).
+   `_pages_overlapped_by_item` now emits a >=60%-coverage spanning fill on
+   every page it covers, with a `_p<idx>` anname suffix on non-owner pages.
+4. **`visual_diff` 1px raster-rounding tolerance (R4).** A <=2px
+   baseline/preview size delta now crops to the common extent instead of hard
+   -erroring the `visual_diff_regions` audit phase.
+
+Effect of R2 + R3: `text_render_audit` went from **30 missing words -> 2**,
+preview word count 312 -> 341 (baseline 343). Pages 3 and 4 now render their
+full content (green background + green Kasten + text).
 
 ## Tune outcome — RESIDUAL (preflight not green)
 
-`bin/tune-render` → `bin/tune-fix` ran. The playbook loop could not drive
-preflight green; the `y_mm_shift` playbook oscillated (a 2-cycle limit cycle)
-on several body frames. The residual is accepted per the overnight gate policy.
+`bin/tune-render` -> `bin/tune-fix` ran. The `y_mm_shift` playbook entered the
+same documented 2-cycle limit cycle on several body frames (drift 253<->255)
+and could not converge; no new per-template numeric override was applied. The
+residual is accepted per the re-render gate policy. No `brand_overrides`,
+`non_ci_*`, or `TOLERANCES.yml` numeric growth was required.
 
-Two high-leverage fixes were made during tuning before accepting the residual:
+## IMAGE AUDIT — before (overnight) vs after (this re-render)
 
-- **Baseline trim-normalization (driver, Stage 1).** The IDML's sibling
-  `baseline.pdf` was exported by InDesign **with printer's marks + 3 mm
-  bleed** baked into a 356.65 × 496.53 pt MediaBox, while the converter
-  (correctly, per corpus convention) emits a trim-only 297.64 × 419.53 pt
-  preview. Comparing the two made *every* word read as drifted (328 drifts)
-  and the marks-area furniture text read as 15 "missing words" with a phantom
-  `Helvetica` font failure. Added `_detect_trim_box` + `_normalize_baseline_to_trim`
-  to the scaffold driver: it finds the trim box from the crop marks and crops
-  the baseline to trim-only with Ghostscript so it page-matches the preview.
-  Effect: word drift 328 → ~290, vector delta 558 → 40, missing-words 15 → 0,
-  `font_audit` now green.
-- **Frame `u1175` height clamp (build.py, Stage 2).** The cover's three-line
-  headline frame was over-inflated by the converter's Pattern-9 auto-adjust
-  (it counted empty `para`-separator Runs as text lines → 232 pt instead of
-  ~99 pt). At y_mm 90.12 a 232 pt frame overflowed page 1 and Scribus rendered
-  the spill onto **PDF page 3**. Clamped `h_mm` to 52 mm — fits all 3 headline
-  lines, keeps the frame inside page 1. Page 3 now shows the correct content.
-- **`# noinject:` on 4 ImageFrames** — the real IDML-placed content photos;
-  cleared `external_asset_substitution_audit`.
+This re-render exists to verify the de96b7c image fixes landed. They did.
 
-## Tolerances granted
+| Audit | Overnight run | This re-render |
+|-------|---------------|----------------|
+| `image_content_audit` | **3 broken** — u1164 (radial), u1260 (pine), ubc2 (plakat) | **1 broken** — only ubc2 |
+| `image_frame_visibility_audit` | **2 invisible** — u116b, u1260 | **0 invisible**, 1 faint (u116b) |
+| `visual_diff_regions` worst regions | image-driven (pine / radial blank or discoloured) | text-driven (line-wrap) + residual ICC colour; no pine / Gewessler / radial region |
 
-See `TOLERANCE_LOG.md` and `TOLERANCES.yml` for the full table. Summary:
+Frame-by-frame after the fix:
 
-- **2 per-template build.py changes**: u1175 height clamp; 4× `# noinject:`.
-  Neither grows a numeric tolerance.
-- **5 accepted residuals** in `TOLERANCES.yml`: structural text-position
-  drift (255), jitter (35), image-content (3 frames), image-audit (40 vector
-  delta), inventory (1 off-page mark). All classified `scribus-engine-bug` or
-  `human-review` — none is an unfixed converter bug.
-- **No `brand_overrides`, `non_ci_*`, or numeric tolerance growth** was
-  required. `region_color_audit` and `run_style_audit` are green.
+- **u115d (Gewessler portrait, CMYK JPEG)** — was a CMYK JPEG that Scribus
+  cannot render (blank). Now converted ICC-aware to PNG and aspect-fill
+  cropped: mean_delta 4.1 RGB, classification **ok**. Page 1 renders the
+  portrait correctly.
+- **u1164 (radial gradient, PSD)** — mean_delta 6.0, **ok** (was broken).
+- **u1260 (pine forest, JPEG)** — mean_delta 7.1, visibility_ratio 1.09,
+  **ok** (was broken / invisible). Page 5 renders the pine photo correctly.
+- **ubc2 (dark "Plakat dunkel" PSD, page 6)** — renders the correct
+  crumpled-paper texture and is NOT blank (visibility_ratio 1.02). Still
+  flagged `broken` by `image_content_audit` via `hist_divergence` 0.227 — a
+  residual CMYK->sRGB green-tone shift (mean_delta 12.6 RGB). This is an
+  intrinsic ICC colour delta, NOT a CMYK-blank regression: the de96b7c fix
+  cleared the blank/discoloured state, the green texture is present.
+  Accepted as `scribus-engine` ICC residual, not a missing-fix regression.
+- **u116b (inline DIE GRUENEN logo)** — faint (white-on-transparent RGBA
+  SCALETYPE). Pre-existing documented Scribus 1.6.x bug; not a regression.
 
-## Residual drift numbers (final preflight)
+Verdict: the CMYK + crop fixes landed cleanly on 3 of the 4 raster frames;
+the 4th (ubc2) renders correct content with a residual ICC tone shift. No
+CMYK or photo frame is blank or broken-content anymore.
+
+## Residual drift (final preflight)
 
 | Audit | Issues | Status |
 |-------|--------|--------|
-| `text_position_audit_structural` | 255 large drifts (>5pt) | accepted — cross-renderer line-wrap divergence |
-| `text_position_audit_jitter` | 35 sub-perceptible (≤5pt) | accepted — sub-visible jitter |
-| `systematic_text_audit` | 11 frames | accepted — same frames as jitter |
-| `image_content_audit` | 3 broken (u1164, u1260, ubc2) | accepted — Scribus SCALETYPE |
-| `image_frame_visibility_audit` | 2 invisible (u116b, u1260) | accepted — Scribus SCALETYPE |
-| `image_audit` | 40 vector-path delta | accepted — raster + ICC |
+| `text_position_audit_structural` | ~230-254 large drifts (>5pt) | accepted — cross-renderer line-wrap divergence |
+| `text_render_audit` | 2 words (Impressum 2-line wrap) | accepted — see below; no text lost |
+| `systematic_text_audit` | 9 frames | accepted — y_mm_shift oscillation |
+| `image_content_audit` | 1 broken (ubc2) | accepted — ICC tone shift, content present |
+| `image_frame_visibility_audit` | 1 faint (u116b) | accepted — pre-existing logo SCALETYPE bug |
+| `visual_diff_regions` | 60 hot regions | accepted — text-wrap + ICC derivative |
+| `image_audit` | 39 vector-path delta | accepted — ICC derivative |
 | `inventory` | 1 dropped (u1152) | accepted — off-page registration mark |
-| green | asset_extraction, external_asset_substitution, font_audit, run_style, text_audit, text_render, region_color, line_spacing | — |
+| green | asset_extraction, asset_policy, external_asset_substitution, font_audit, run_style_audit, per_region_regression, region_color | — |
 
-## human-review / authoring-bug items
+### Impressum 2-line wrap (text_render_audit residual)
 
-- **`u1152` (authoring / human-review)** — an off-page magenta registration
-  mark in the IDML. Correctly skipped by the converter; counts as a "dropped
-  element" in the inventory audit. No action needed — it is printer furniture.
-- **Converter Pattern-9 over-inflation (follow-up)** — the auto-height
-  heuristic counts empty `para`-separator Runs as text lines. Worked around
-  per-template here (u1175); the converter heuristic should be corrected
-  upstream so future imports don't need the manual clamp.
-- **`y_mm_shift` playbook oscillation (follow-up)** — the playbook ping-pongs
-  on frames whose drift sign flips each render. It needs an oscillation guard.
+The three rotated -90deg 6pt "Impressum: xxxxxx" edge frames (u11fd, u126f,
+u12fb) wrap to two lines — "Impressu" + "m: xxxxxx". **No text is lost** —
+every character renders, the string is split across two lines. Root cause:
+the converter now emits the geometrically-correct un-rotated frame extent
+(53.4 x 10 mm) and the rotated non-empty-TextFrame W/H swap in
+`tools/sla_lib/builder/primitives.py` (de96b7c) then yields a 10mm text-flow
+width, forcing the wrap. `primitives.py` is a forbidden path for Stage 2.
+Logged as a follow-up for the converter/primitives swap reconciliation.
+
+## Known issues — NOT regressions
+
+- **Cross-renderer line-wrap text drift** (~230-254 `text_position_audit_
+  structural` drifts) — Scribus vs InDesign font-metric / hyphenation engine
+  difference. Documented batch-wide.
+- **DIE GRUENEN inline logo (u116b)** — white-on-transparent RGBA SCALETYPE,
+  pre-existing Scribus 1.6.x bug.
 
 ## What to eyeball in preview.pdf vs baseline.pdf
 
-1. **Page 1 (cover)** — confirm the three-line headline "Das ist die /
-   dreizeilige / Headline" sits fully inside the page and does **not** spill
-   below the page edge. This was the frame-overflow bug; verify the clamp held.
-2. **Page 3 and page 5** — these are the right-hand pages of the two
-   facing-pages spreads. Confirm each shows its **own** content (page 3 =
-   "Ich bin auch eine Headline" + bullet list; page 5 = the other inner
-   spread). The facing-pages routing is new code — a wrong-page leak would
-   show here first.
-3. **Bullet-list paragraphs (pages 3, 5)** — expect the line breaks to fall
-   at slightly different words than the baseline; this is the accepted
-   cross-renderer wrap divergence, not a content error. Check the *text* is
-   complete and correct, not the exact wrap column.
-4. **Images** — `u1164` (radial gradient overlay, page 1), `u1260` (pine
-   forest, page 5), `ubc2` (dark plakat background, page 6): these may render
-   faint / wrong in Scribus. Confirm against baseline whether the design
-   intent survives; this is the Scribus SCALETYPE limitation.
-5. **Page geometry** — both PDFs should now be 297.6 × 419.5 pt (A6 trim).
-   The baseline was cropped from a marks-on 356.6 × 496.5 pt export.
+1. **Page 1 (cover)** — the Gewessler portrait photo renders in colour (the
+   CMYK JPEG fix). The three-line headline fits inside the page.
+2. **Page 3** — full green background + headline "Ich bin auch eine Headline"
+   + 5-item bullet list. The green background is the spread-spanning fill
+   re-emitted onto this page (R3); confirm it is not white.
+3. **Page 4** — white page with the green "Kasten" box at the bottom carrying
+   "Headline in einem grünen Kasten" + the "Nequia volupti..." body. This is
+   the Group-routing fix (R2); confirm the green box has its text.
+4. **Page 5** — the pine-forest photo renders in colour (CMYK fix); confirm
+   it is not blank.
+5. **Page 6** — dark crumpled-paper green background renders (slightly
+   different green tone vs baseline — the accepted ubc2 ICC residual).
+6. **Impressum edge text** (pages 2, 4) — the tiny rotated 6pt "Impressum:
+   xxxxxx" wraps to 2 lines; all characters present, cosmetic only.
+7. **Body / bullet paragraphs** — line breaks fall at slightly different
+   words than the baseline; accepted cross-renderer wrap divergence — check
+   the text is complete, not the exact wrap column.

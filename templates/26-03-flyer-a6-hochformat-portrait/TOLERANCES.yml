@@ -4,49 +4,81 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 260
-  reason: '255 large (>5pt) word-position drifts. Verified page-by-page that
-    rendered content and frame geometry are correct; the drift is dominated by
-    cross-renderer line-wrap differences — Scribus and InDesign break the
-    justified bullet-list / body paragraphs at slightly different words because
-    their font-metric and hyphenation models differ. One wrap-point difference
-    cascades into dozens of downstream words counted as "drifted". Not a
-    converter bug and not a routing bug (the facing-pages multi-page routing was
-    verified correct: PDF page 3 shows "Ich bin auch eine Headline", matching
-    the baseline). NOT FIXED, NOT TOLERATED-AS-PASSING — preflight stays red
-    until a Scribus justification/hyphenation alignment lands or the baseline is
-    re-flowed.'
+  reason: 'Up to ~254 large (>5pt) word-position drifts. Verified page-by-page
+    that rendered content and frame geometry are correct; the drift is dominated
+    by cross-renderer line-wrap differences — Scribus and InDesign break the
+    justified body / bullet paragraphs at slightly different words because their
+    font-metric and hyphenation models differ. One wrap-point difference cascades
+    into dozens of downstream words counted as drifted. Not a converter bug and
+    not a routing bug — the facing-pages multi-page routing was verified correct
+    (PDF page 3 green background, PDF page 4 green Kasten + text both render).
+    Documented known issue for the IDML import batch.'
   follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
-- id: tol:text-position-jitter-suppressed
-  audit: text_position_audit_jitter
+- id: tol:text-render-impressum-rotated-frame-wrap
+  audit: text_render_audit
   classification: scribus-engine-bug
   severity: cosmetic
-  max_issues: 40
-  reason: '35 sub-perceptible (<=5pt) per-word position drifts. Residual uniform
-    ~2-6pt offsets on several body frames. The y_mm_shift playbook entered a
-    2-cycle limit cycle on these frames (shift +X; next render the measured
-    drift flips sign; shift -X) and could not converge. Needs a playbook
-    oscillation guard. Sub-perceptible jitter, below the visible threshold.'
+  max_issues: 4
+  reason: 'The three rotated -90deg 6pt "Impressum: xxxxxx" edge frames (u11fd,
+    u126f, u12fb) wrap to two lines ("Impressu" + "m: xxxxxx"). NO text is lost
+    — every character renders. Root cause: the converter emits the geometrically
+    correct un-rotated frame extent (53.4x10mm) and the rotated non-empty
+    TextFrame W/H swap in tools/sla_lib/builder/primitives.py (commit de96b7c)
+    then yields a 10mm text-flow width, forcing the wrap. primitives.py is a
+    forbidden path for the tune stage. Cosmetic 2-line wrap of tiny edge
+    furniture.'
+  follow_up_issue: converter/primitives; rotated non-empty TextFrame W/H swap vs
+    un-rotated extent emission needs reconciliation
+- id: tol:systematic-text-jitter-suppressed
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 12
+  reason: '9 frames sim-actionable. Residual sub-perceptible per-word position
+    jitter. The y_mm_shift playbook entered a 2-cycle limit cycle (shift +X;
+    next render the measured drift flips sign; shift -X) and could not converge;
+    the line_spacing simulator returned no actionable rows. Needs a playbook
+    oscillation guard.'
   follow_up_issue: playbook-extension; y_mm_shift needs an oscillation guard
-- id: tol:image-content-scribus-scaletype
+- id: tol:image-content-ubc2-icc-tone-shift
   audit: image_content_audit
   classification: scribus-engine-bug
-  severity: structural
-  max_issues: 4
-  reason: '3 image frames (u1164 radial-gradient PNG, u1260 pine-forest JPG,
-    ubc2 dark-plakat PNG) render as wrong content / invisible. Known Scribus
-    1.6.x limitation handling SCALETYPE for scaled raster content. The
-    frame_visibility playbook ESCALATED ("not inline_image_data form"). Assets
-    are on disk, embedded, and the SLA references them correctly.'
-  follow_up_issue: engine-bug; Scribus 1.6.x SCALETYPE raster rendering
+  severity: cosmetic
+  max_issues: 2
+  reason: 'ubc2 (dark "Plakat dunkel" PSD, page 6) renders the correct crumpled
+    -paper texture and is NOT blank (visibility_ratio 1.02). The broken flag is
+    hist_divergence 0.227 from a residual CMYK->sRGB green-tone shift (mean_delta
+    12.6 RGB). The de96b7c CMYK fix cleared the prior blank / discoloured state
+    for ubc2 and fully cleared the pine (u1260), Gewessler (u115d) and radial
+    (u1164) frames; what remains on ubc2 is an intrinsic ICC colour delta, not
+    a CMYK-blank failure.'
+  follow_up_issue: engine-bug; intrinsic CMYK->sRGB ICC colour delta
+- id: tol:image-visibility-u116b-white-on-transparent
+  audit: image_frame_visibility_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 1
+  reason: 'u116b — the inline DIE GRUENEN logo (white-on-transparent RGBA,
+    SCALETYPE) renders faint. Pre-existing, documented Scribus 1.6.x white-on
+    -transparent SCALETYPE rendering bug. Not a regression from this re-render.'
+  follow_up_issue: none; pre-existing Scribus 1.6.x bug
 - id: tol:image-audit-vector-path-delta
   audit: image_audit
   classification: scribus-engine-bug
   severity: cosmetic
   max_issues: 45
-  reason: '40 vector-path deltas, derivative of the Scribus image-rendering
-    differences above plus brand-colour ICC profile shifts on full-bleed
-    Dunkelgruen / photo content.'
+  reason: '39 vector-path deltas, derivative of the residual ICC image-colour
+    shifts above plus full-bleed Dunkelgruen colour shifts.'
   follow_up_issue: engine-bug; intrinsic raster + ICC differences
+- id: tol:visual-diff-regions-cross-renderer
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 70
+  reason: '60 hot regions, derivative of the cross-renderer line-wrap text drift
+    and the residual ICC image-colour deltas. No region is image-frame-driven on
+    the pine / Gewessler / radial frames — the de96b7c image fixes cleared those.'
+  follow_up_issue: engine-bug; cross-renderer text wrap + ICC colour
 - id: tol:inventory-u1152-offpage-registration-mark
   audit: inventory
   classification: human-review
@@ -56,6 +88,5 @@ tolerances:
     places ~28mm off the left page edge. The converter correctly skips it as an
     off-page design artifact (recorded via a "# idml-skip:" line in build.py);
     InDesign also omits it from the trimmed PDF export. The inventory audit
-    counts it as a dropped element — it is a deliberate, documented non-emit,
-    not a silent drop.'
+    counts it as a dropped element — a deliberate, documented non-emit.'
   follow_up_issue: none; correct converter behaviour, audit is conservative

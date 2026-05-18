@@ -573,6 +573,10 @@ def _join_assets(idml_inv: Inventory, build_data: dict, slug: str,
     # Build basename → [anname,...] map from build.py image frames whose
     # ``image=`` kwarg names a file directly.
     refs: dict[str, list[str]] = {}
+    # Track the full ``image=`` path per basename so build.py-only assets
+    # (e.g. the geometry-derived crops/ derivatives the converter emits) can
+    # be checked on disk. The path is authored relative to templates/<slug>/.
+    ref_paths: dict[str, str] = {}
     for img in build_data["frames"]["image_frames"]:
         ref = img.get("image") or ""
         anname = img.get("anname") or ""
@@ -580,6 +584,7 @@ def _join_assets(idml_inv: Inventory, build_data: dict, slug: str,
             continue
         basename = Path(ref).name
         refs.setdefault(basename, []).append(anname)
+        ref_paths.setdefault(basename, ref)
     # Composite-AI split refs come from the split manifest, not from build.py
     # (the splits enter the document via inline_image_data, no image= ref).
     for basename, annames in _composite_ai_refs(slug, repo_root).items():
@@ -688,12 +693,21 @@ def _join_assets(idml_inv: Inventory, build_data: dict, slug: str,
         ))
         seen.add(a.basename)
     # Any build.py-referenced assets we didn't already catch from the manifest.
+    # These include the converter's geometry-derived crops/ derivatives, which
+    # are real files on disk — resolve the ``image=`` path (authored relative
+    # to templates/<slug>/) and check it rather than assuming on_disk=False.
+    templates_dir = repo_root / "templates" / slug
     for basename, annames in refs.items():
         if basename in seen:
             continue
+        ref = ref_paths.get(basename, "")
+        on_disk = False
+        if ref:
+            candidate = (templates_dir / ref).resolve()
+            on_disk = candidate.is_file()
         out.append(AssetEntry(
             basename=basename,
-            on_disk=False,
+            on_disk=on_disk,
             classified="external",
             referenced_from_frames=annames,
         ))

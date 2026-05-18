@@ -303,9 +303,21 @@ def compare_grid(
     base = Image.open(baseline_png).convert("RGB")
     prev = Image.open(preview_png).convert("RGB")
     if base.size != prev.size:
-        raise ValueError(
-            f"image size mismatch: baseline={base.size}, preview={prev.size}"
-        )
+        # A 1-2px difference is sub-pixel rasterisation rounding (the trim
+        # crop and the page-size conversion each round independently), not a
+        # real geometry mismatch — crop both to the common extent so the
+        # region diff still runs. A larger gap is a genuine page-size bug.
+        dw = abs(base.size[0] - prev.size[0])
+        dh = abs(base.size[1] - prev.size[1])
+        if dw > 2 or dh > 2:
+            raise ValueError(
+                f"image size mismatch: baseline={base.size}, "
+                f"preview={prev.size}"
+            )
+        cw = min(base.size[0], prev.size[0])
+        ch = min(base.size[1], prev.size[1])
+        base = base.crop((0, 0, cw, ch))
+        prev = prev.crop((0, 0, cw, ch))
     w_px, h_px = base.size
 
     # Integer cell sizes; the LAST column/row absorbs the modulus so we

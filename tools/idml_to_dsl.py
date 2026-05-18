@@ -3581,6 +3581,76 @@ def _walk_csr(
     return runs
 
 
+def _item_page_local_bbox_pt(
+    child: Any,
+    spread_t: str,
+    pg: dict[str, Any],
+) -> Optional[tuple[float, float, float, float, float]]:
+    """Page-local bbox of a top-level spread item for routing.
+
+    For a leaf PageItem this is a single ``_compute_page_local_bbox_pt`` call.
+    For a Group it is the UNION of the group's leaf descendants' page-local
+    bboxes — ``_extract_anchors`` on a Group returns only the first child's
+    PathGeometry (Groups have no PathGeometry of their own), so routing a
+    Group by ``_extract_anchors`` mis-places it. Recursing into the leaves
+    with the group ItemTransform chain gives the true occupied rect.
+
+    Returns ``(x_pt, y_pt, w_pt, h_pt, 0.0)`` or ``None`` when no leaf yields
+    geometry.
+    """
+    tag = etree.QName(child).localname
+
+    def _leaf_bboxes(node: Any, ancestor_ts: list[str]) -> list[tuple[float, float, float, float]]:
+        out: list[tuple[float, float, float, float]] = []
+        node_tag = etree.QName(node).localname
+        if node_tag == "Group":
+            grp_t = node.get("ItemTransform", "1 0 0 1 0 0")
+            for sub in node:
+                if not isinstance(sub.tag, str):
+                    continue
+                if etree.QName(sub).localname not in _DISPATCHED_PAGEITEM_TAGS:
+                    continue
+                out.extend(_leaf_bboxes(sub, [grp_t, *ancestor_ts]))
+            return out
+        try:
+            anchors = _extract_anchors(node)
+            x, y, w, h, _ = _compute_page_local_bbox_pt(
+                node.get("ItemTransform", "1 0 0 1 0 0"),
+                anchors,
+                ancestor_ts,
+                spread_t,
+                pg["page_t"],
+                pg["page_gb"],
+            )
+        except UnhandledElement:
+            return out
+        out.append((x, y, w, h))
+        return out
+
+    if tag == "Group":
+        boxes = _leaf_bboxes(child, [])
+        if not boxes:
+            return None
+        x0 = min(b[0] for b in boxes)
+        y0 = min(b[1] for b in boxes)
+        x1 = max(b[0] + b[2] for b in boxes)
+        y1 = max(b[1] + b[3] for b in boxes)
+        return (x0, y0, x1 - x0, y1 - y0, 0.0)
+
+    try:
+        anchors = _extract_anchors(child)
+        return _compute_page_local_bbox_pt(
+            child.get("ItemTransform", "1 0 0 1 0 0"),
+            anchors,
+            [],
+            spread_t,
+            pg["page_t"],
+            pg["page_gb"],
+        )
+    except UnhandledElement:
+        return None
+
+
 def _route_item_to_page(
     child: Any,
     spread_t: str,
@@ -3602,20 +3672,13 @@ def _route_item_to_page(
     """
     if len(pages) == 1:
         return 0
-    child_t = child.get("ItemTransform", "1 0 0 1 0 0")
-    try:
-        anchors = _extract_anchors(child)
-    except UnhandledElement:
-        return None
     best_idx: Optional[int] = None
     best_dist = float("inf")
     for idx, pg in enumerate(pages):
-        try:
-            x_pt, y_pt, w_pt, h_pt, _ = _compute_page_local_bbox_pt(
-                child_t, anchors, [], spread_t, pg["page_t"], pg["page_gb"]
-            )
-        except UnhandledElement:
+        bbox = _item_page_local_bbox_pt(child, spread_t, pg)
+        if bbox is None:
             continue
+        x_pt, y_pt, w_pt, h_pt, _ = bbox
         cx = x_pt + w_pt / 2.0
         cy = y_pt + h_pt / 2.0
         if (
@@ -3631,6 +3694,55 @@ def _route_item_to_page(
             best_dist = dist
             best_idx = idx
     return best_idx
+
+
+def _pages_overlapped_by_item(
+    child: Any,
+    spread_t: str,
+    pages: list[dict[str, Any]],
+    guard_pt: float,
+) -> Optional[list[int]]:
+    """Return every page of a multi-page spread an item visibly covers.
+
+    ``_route_item_to_page`` answers "which ONE page owns this item" by the
+    bbox centre — correct for ordinary content. But a spread-spanning
+    background rectangle (e.g. a full-bleed coloured fill drawn across both
+    pages of a facing-pages spread) genuinely belongs to *every* page it
+    covers: in the legacy side-by-side "spread" SLA layout it rendered onto
+    both pages automatically; in the page-by-page SLA layout each page is a
+    separate canvas, so the item must be emitted once per overlapped page.
+
+    The owning page (by ``_route_item_to_page``'s centre rule) is always in
+    the result. An EXTRA page is added only when the item's page-local bbox
+    covers most of that page — a true full-bleed background fill, not an
+    ordinary content frame that merely bleeds a few mm past the spine. This
+    keeps routing identical for normal content (one index) and only widens
+    for spanning backgrounds. Returns ``None`` when anchor extraction fails
+    so the caller can fall back to its own guard.
+    """
+    if len(pages) == 1:
+        return [0]
+    owner = _route_item_to_page(child, spread_t, pages, guard_pt)
+    if owner is None:
+        return None
+    # An extra page qualifies only when the item covers >= this fraction of
+    # the page's area — a spanning background, not a spine-bleeding frame.
+    _COVER_FRACTION = 0.6
+    hit: list[int] = [owner]
+    for idx, pg in enumerate(pages):
+        if idx == owner:
+            continue
+        bbox = _item_page_local_bbox_pt(child, spread_t, pg)
+        if bbox is None:
+            continue
+        x_pt, y_pt, w_pt, h_pt, _ = bbox
+        pw = pg["page_w_pt"]
+        ph = pg["page_h_pt"]
+        ix = max(0.0, min(x_pt + w_pt, pw) - max(x_pt, 0.0))
+        iy = max(0.0, min(y_pt + h_pt, ph) - max(y_pt, 0.0))
+        if pw > 0 and ph > 0 and (ix * iy) >= _COVER_FRACTION * pw * ph:
+            hit.append(idx)
+    return sorted(hit)
 
 
 def _count_idml_pages(ctx: _Ctx) -> int:
@@ -3824,8 +3936,12 @@ def _emit_pages(ctx: _Ctx) -> None:
 
         # Collect every emittable top-level item for this render page. In
         # "page" mode, _route_item_to_page filters items to the single
-        # IDML page this entry represents.
+        # IDML page this entry represents. ``spread_item_suffix`` runs in
+        # lock-step with ``spread_items``: it is "" for the page that owns
+        # the item and "_p<idx>" for a spanning background re-emitted onto
+        # a non-owner page (the suffix keeps the duplicate anname unique).
         spread_items: list[Any] = []
+        spread_item_suffix: list[str] = []
         xml = ctx.pkg.open(sp_path).read()
         root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
         spread_node = root.find(".//Spread")
@@ -3866,19 +3982,26 @@ def _emit_pages(ctx: _Ctx) -> None:
                     f"(extend tools/idml_to_dsl.py:_emit_pages)"
                 )
             # Page-based mode: a facing spread becomes N render-page entries.
-            # Route each top-level item to the IDML page it sits on so it is
-            # emitted exactly once, on the correct page. When routing cannot
-            # resolve (anchor extraction failed) the item lands on page 0 so
-            # it is never dropped and never duplicated.
+            # Route each top-level item to the IDML page(s) it covers so it is
+            # emitted on the correct page. A spread-spanning background fill
+            # covers BOTH pages and is emitted on each (with a "_p<idx>"
+            # anname suffix on every non-owner page so the duplicate is
+            # unique). When routing cannot resolve (anchor extraction failed)
+            # the item lands on page 0 so it is never dropped.
             if page_local_idx is not None and len(spread_page_dicts) > 1:
-                routed = _route_item_to_page(
+                covered = _pages_overlapped_by_item(
                     child, spread_t, spread_page_dicts, _guard_pt
                 )
-                if routed is None:
-                    routed = 0
-                if routed != page_local_idx:
+                if not covered:
+                    covered = [0]
+                if page_local_idx not in covered:
                     continue
+                owner = covered[0]
+                suffix = "" if page_local_idx == owner else f"_p{page_local_idx}"
+            else:
+                suffix = ""
             spread_items.append(child)
+            spread_item_suffix.append(suffix)
 
         # Emit one _add_page_<i> per SPREAD.
         if True:
@@ -3898,7 +4021,7 @@ def _emit_pages(ctx: _Ctx) -> None:
             )
 
             emit_count = 0
-            for child in spread_items:
+            for child, _an_suffix in zip(spread_items, spread_item_suffix):
                 tag = etree.QName(child).localname
                 item_layer = child.get("ItemLayer", "")
                 # Out-of-page guard: skip items that lie entirely outside the
@@ -3951,10 +4074,22 @@ def _emit_pages(ctx: _Ctx) -> None:
                         # Anchor extraction failed for a non-Group — skip guard.
                         pass
                 layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
-                _emit_pageitem(
-                    ctx.out, child, [], spread_t, page_t, page_gb,
-                    page_var, ctx, layer_idx,
-                )
+                # A spanning background re-emitted onto a non-owner page
+                # carries a "_p<idx>" anname suffix so the duplicate frame
+                # is uniquely named. _emit_pageitem reads the anname from
+                # the element's Self attribute — set it for this emit, then
+                # restore so the next page sees the original ID.
+                _orig_self = child.get("Self")
+                if _an_suffix and _orig_self is not None:
+                    child.set("Self", f"{_orig_self}{_an_suffix}")
+                try:
+                    _emit_pageitem(
+                        ctx.out, child, [], spread_t, page_t, page_gb,
+                        page_var, ctx, layer_idx,
+                    )
+                finally:
+                    if _an_suffix and _orig_self is not None:
+                        child.set("Self", _orig_self)
                 emit_count += 1
             if emit_count == 0:
                 ctx.out.w("return None")

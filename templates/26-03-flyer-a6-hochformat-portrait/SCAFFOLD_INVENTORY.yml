@@ -272,6 +272,19 @@ text_runs:
     fcolor: ''
     paragraph_style: idml/fliesstext-auf-weissem-hintergrund
     text_source: build_py
+  - text: Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et
+      ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Headline in einem grünen Kasten '
+    font: Gotham Narrow Bold
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/headline-in-gruenem-kasten
+    text_source: build_py
   - text: 'Ea doluptatas suntota consequi acero dollani storae sitatus maximi, sita
       sam qui iminum fugiae no nonsed quae non porum fugiat harum que nihil ipsam
       is id quis eri om:'
@@ -311,19 +324,6 @@ text_runs:
     fontsize: 30.0
     fcolor: White
     paragraph_style: idml/normalparagraphstyle
-    text_source: build_py
-  - text: Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et
-      ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.
-    font: Gotham Narrow Book
-    fontsize: 0.0
-    fcolor: ''
-    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
-    text_source: build_py
-  - text: 'Headline in einem grünen Kasten '
-    font: Gotham Narrow Bold
-    fontsize: 0.0
-    fcolor: ''
-    paragraph_style: idml/headline-in-gruenem-kasten
     text_source: build_py
   - text: Ich bin ein Zitat. Ich bin ein prägnantes
     font: Vollkorn Black Italic
@@ -681,8 +681,8 @@ frames:
     - 3.097
     build_py_position_mm:
     - 60.8
-    - 83.4819
-    - 21.1112
+    - 86.7489
+    - 20.8838
     - 8.0081
     sla_pageobject_present: true
     sla_storytext_runs: 1
@@ -711,9 +711,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 95.0
-    - 82.6
-    - 10.0
+    - 136.0
     - 53.4
+    - 10.0
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -771,9 +771,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 95.0
-    - 82.6
-    - 10.0
+    - 136.0
     - 53.4
+    - 10.0
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -845,7 +845,7 @@ frames:
     - 65.0
     - 18.239
     build_py_position_mm:
-    - -85.03
+    - 19.97
     - 111.4614
     - 65.0
     - 29.6333
@@ -860,7 +860,7 @@ frames:
     - 65.0
     - 3.387
     build_py_position_mm:
-    - -85.25
+    - 19.75
     - 104.4368
     - 65.0
     - 8.6078
@@ -906,7 +906,7 @@ frames:
     - -77.0
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/26-05-25-gewessler-gruenen-odd-0452-2.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/26-05-25-gewessler-gruenen-odd-0452-2-u115d.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -924,7 +924,7 @@ frames:
     - 6.5
     - 96.588
     - 70.5
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/schwarzer-verlauf-radial.png
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/schwarzer-verlauf-radial-u1164.png
     build_py_position_mm:
     - -4.0
     - 80.5
@@ -960,7 +960,7 @@ frames:
     - -77.0
     - 108.0
     - 62.034
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/green-pine-trees-covered-with-fog-u1260.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -978,7 +978,7 @@ frames:
     - -77.0
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/plakat-dunkel-fuer-flyer.png
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/plakat-dunkel-fuer-flyer-ubc2.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -997,10 +997,10 @@ frames:
     - 20.884
     - 20.884
     build_py_position_mm:
-    - 61.4247
-    - 76.7139
-    - 19.8617
-    - 19.8617
+    - 58.198
+    - 79.9406
+    - 20.8838
+    - 20.8838
     sla_pageobject_present: true
     source: idml
   - anname: u1152
@@ -1295,6 +1295,16 @@ frames:
     - 3.6
     sla_pageobject_present: true
     source: idml
+  - anname: u11e1_p1
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - -108.0
+    - -3.0
+    - 216.0
+    - 154.0
+    sla_pageobject_present: true
+    source: build_py
   - anname: u11e3
     idml_self: null
     idml_position_mm: null
@@ -1546,14 +1556,13 @@ colors:
   build_py_extra_color: false
   sla_color_present: false
 assets:
-- basename: 26-05-25-gewessler-gruenen-odd-0452-2.jpg
+- basename: 26-05-25-gewessler-gruenen-odd-0452-2.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u115d
+  referenced_from_frames: []
   parent_composite: null
-  sha256: f83ce0f5e224efe657b8adab99355c2081bbb0ba82d25d2fa2716afa3169eb9d
-  byte_length: 9732943
+  sha256: 35c7939c536d6e32d3546ca7103ab1a85e2ca04111a18d8d8efe228df7785c34
+  byte_length: 11106332
 - basename: gruene-logo-bund-weiss-cmyk.png
   on_disk: true
   classified: embedded
@@ -1573,30 +1582,76 @@ assets:
 - basename: plakat-dunkel-fuer-flyer.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - ubc2
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 7322fb3409a5d5eb2dc223bface1552a9622bfb47f11cc37c9d145c00290aa1c
-  byte_length: 8558653
+  sha256: fe934fcae32f83c4683b33d2bb1eba5ce0cb2656f076aa0a316d9ff6aa3f7158
+  byte_length: 8514698
 - basename: schwarzer-verlauf-radial.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: cfc1dea2de639280f7577a9ae37f01a9294754358e69216bc11c1428bfd73d12
+  byte_length: 92212
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
+- basename: 26-05-25-gewessler-gruenen-odd-0452-2.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: f83ce0f5e224efe657b8adab99355c2081bbb0ba82d25d2fa2716afa3169eb9d
+  byte_length: 9732943
+- basename: green-pine-trees-covered-with-fog.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
+  byte_length: 6896771
+- basename: 26-05-25-gewessler-gruenen-odd-0452-2-u115d.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u115d
+  parent_composite: null
+  sha256: null
+  byte_length: null
+- basename: schwarzer-verlauf-radial-u1164.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u1164
   parent_composite: null
-  sha256: 3224fbcf1253e28f10d05baa220c55e161708f3e5ddc21f334cf7fb5d32e77c0
-  byte_length: 932180
-- basename: green-pine-trees-covered-with-fog.jpg
+  sha256: null
+  byte_length: null
+- basename: green-pine-trees-covered-with-fog-u1260.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u1260
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
+- basename: plakat-dunkel-fuer-flyer-ubc2.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - ubc2
+  parent_composite: null
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 343
-  preview_pdf_count: 343
-  missing_from_preview: []
-  extra_in_preview: []
+  preview_pdf_count: 341
+  missing_from_preview:
+  - impressum
+  - xxxxxx
+  extra_in_preview:
+  - impressu
 parse_warnings: []
