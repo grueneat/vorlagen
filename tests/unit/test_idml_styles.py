@@ -328,6 +328,33 @@ def test_space_after_own_value_overrides_parent():
     assert resolved["space_after"] == 3.0
 
 
+def test_ancestor_has_nonzero_detects_explicit_zero_override():
+    """A child that sets SpaceAfter=0 over a non-zero parent must be
+    detectable as an explicit override — _ancestor_has_nonzero is True so
+    the emitter writes space_after_pt=0 (cancels the inherited spacing)
+    rather than omitting it (which makes Scribus inherit the parent's air).
+    """
+    from idml_to_dsl import _ancestor_has_nonzero
+
+    xml = _styles_xml(
+        {"Self": "ParagraphStyle/Parent", "Name": "Parent",
+         "point_size": 11, "justification": "LeftAlign",
+         "space_after": "5.669291338582678"},
+        {"Self": "ParagraphStyle/Child", "Name": "Child",
+         "justification": "LeftAlign", "space_after": "0",
+         "based_on": "ParagraphStyle/Parent"},
+    )
+    styles = _read_paragraph_styles_from_xml(xml)
+    child = styles["ParagraphStyle/Child"]
+    # Child's own value is an explicit 0 …
+    assert child["space_after"] == 0.0
+    # … and an ancestor carries a non-zero value → explicit override.
+    assert _ancestor_has_nonzero(child, styles, "space_after") is True
+    # A child with no non-zero ancestor is NOT an override.
+    parent = styles["ParagraphStyle/Parent"]
+    assert _ancestor_has_nonzero(parent, styles, "space_after") is False
+
+
 # ---------------------------------------------------------------------------
 # TextFramePreference + BlendingSetting extraction (converter attribute fix).
 # ---------------------------------------------------------------------------

@@ -605,6 +605,16 @@ class TextFrame(_Frame):
     # silently dropped to ``<DefaultStyle/>`` and the rendered hero text
     # drifted in size and alignment.
     default_style_attrs: Optional[dict] = None
+    # First-line offset mode (Scribus FLOP attribute): controls where the
+    # first baseline sits relative to the frame top.
+    #   0 = Maximum Ascent   1 = Font Ascent   2 = Line Spacing   3 = Baseline Grid
+    # InDesign's default FirstBaselineOffset is "AscentOffset" — first
+    # baseline at the font ascent below the frame top — which maps to
+    # Scribus FLOP=1. FLOP=2 (the legacy default) places the first baseline
+    # a full LINESP below the top, ~5-6pt too low for body text. The
+    # converter sets this per-frame from the IDML's FirstBaselineOffset; a
+    # template may override it. None → the builder's default (FLOP=1).
+    first_line_offset: Optional[int] = None
     next_item: Optional["TextFrame"] = field(default=None, repr=False, compare=False)
     # Internal: pre-allocated ItemID for chain ordering. Set by Document._build_xml.
     _preallocated_id: Optional[int] = field(default=None, repr=False, compare=False)
@@ -690,14 +700,17 @@ class TextFrame(_Frame):
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
             "COLUMNS": str(self.columns), "COLGAP": _fmt_num(mm_to_pt(self.col_gap_mm)),
             "AUTOTEXT": "0", "EXTRA": "0", "TEXTRA": "0", "BEXTRA": "0", "REXTRA": "0",
-            # FLOP=2 (Line Spacing): first baseline = LINESP below frame
-            # top. Matches InDesign's "AscentOffset" closer than FLOP=0/1
-            # for this corpus' Gotham/Vollkorn fonts — empirically baseline
-            # puts the first cap ~15pt below frame top for a 30pt headline
-            # frame, which corresponds to LINESP-1 ascent (~6pt) not the
-            # raw font-ascent (~24pt). FLOP=0/1 placed text flush against
-            # the frame top; FLOP=2 pushes it down by the line height.
-            "VAlign": "0", "FLOP": "2", "PLTSHOW": "0", "BASEOF": "0",
+            # FLOP (first-line offset): InDesign's default FirstBaselineOffset
+            # is "AscentOffset" — first baseline at the font ascent below the
+            # frame top — which is Scribus FLOP=1 ("Font Ascent"). FLOP=2
+            # ("Line Spacing") places the first baseline a full LINESP below
+            # the top, ~5-6pt too low for body text (measured on the A6 flyer
+            # body frames). Default FLOP=1; per-frame override via
+            # TextFrame.first_line_offset (the converter sets it from the
+            # IDML FirstBaselineOffset).
+            "VAlign": "0",
+            "FLOP": str(self.first_line_offset if self.first_line_offset is not None else 1),
+            "PLTSHOW": "0", "BASEOF": "0",
             "textPathType": "0", "textPathFlipped": "0",
             "gXpos": _fmt_num(x), "gYpos": _fmt_num(y),
             "gWidth": "0", "gHeight": "0",

@@ -1403,6 +1403,32 @@ def _resolve_paragraph_style(
     return resolved
 
 
+def _ancestor_has_nonzero(
+    style: dict[str, Any],
+    all_styles: dict[str, dict[str, Any]],
+    key: str,
+) -> bool:
+    """True when an ANCESTOR (BasedOn chain) of ``style`` carries a non-zero
+    value for ``key``.
+
+    Used to detect an explicit zero-override: a child ParagraphStyle that
+    sets e.g. ``SpaceAfter="0"`` while its parent's resolved value is
+    non-zero. Such a 0 is NOT noise — emitting it cancels the inherited
+    value; omitting it makes Scribus inherit the parent's non-zero spacing.
+    Cycle-safe.
+    """
+    visited = {style["self_id"]}
+    parent_self = style.get("based_on_self")
+    while parent_self and parent_self in all_styles and parent_self not in visited:
+        visited.add(parent_self)
+        parent = all_styles[parent_self]
+        v = parent.get(key)
+        if v is not None and abs(float(v)) > 1e-6:
+            return True
+        parent_self = parent.get("based_on_self")
+    return False
+
+
 def _emit_paragraph_styles(out: PythonRepr, ctx: _Ctx) -> dict[str, str]:
     """Phase G driver. Populates ctx.paragraph_styles + ctx.paragraph_style_map
     AND emits doc.add_para_style(ParaStyle(...)) calls into the _add_styles
@@ -1539,17 +1565,32 @@ def _emit_paragraph_styles_to_function(
                     multiplier = 1.45 if model == "LeadingModelAkiBelow" else 1.2
                     kwargs["linesp"] = float(pt) * multiplier
             # Paragraph spacing (IDML SpaceBefore/SpaceAfter, in points) →
-            # SLA STYLE VOR/NACH. Emit only a non-zero resolved value: 0 is
-            # both the IDML and SLA default, so emitting it would add noise
-            # without changing the render. A non-zero value (e.g. the corpus
-            # body style's SpaceAfter=5.669pt) inserts vertical air between
-            # consecutive paragraphs that was previously dropped.
+            # SLA STYLE VOR/NACH. Emit a non-zero resolved value (e.g. the
+            # corpus body style's SpaceAfter=5.669pt). ALSO emit an explicit
+            # 0 when this style's OWN value is 0 but an ancestor in the
+            # BasedOn chain is non-zero — that 0 is a deliberate override
+            # (e.g. the sub-headline "Zwischenüberschrift" sets SpaceAfter=0
+            # over the body parent's 5.669pt). Omitting it makes Scribus
+            # inherit the parent's spacing, adding ~one half-line of air
+            # below the paragraph that InDesign never shows.
             sb = resolved.get("space_before")
             if sb is not None and abs(sb) > 1e-6:
                 kwargs["space_before_pt"] = round(sb, 4)
+            elif (
+                st.get("space_before") is not None
+                and abs(float(st["space_before"])) <= 1e-6
+                and _ancestor_has_nonzero(st, styles, "space_before")
+            ):
+                kwargs["space_before_pt"] = 0.0
             sa = resolved.get("space_after")
             if sa is not None and abs(sa) > 1e-6:
                 kwargs["space_after_pt"] = round(sa, 4)
+            elif (
+                st.get("space_after") is not None
+                and abs(float(st["space_after"])) <= 1e-6
+                and _ancestor_has_nonzero(st, styles, "space_after")
+            ):
+                kwargs["space_after_pt"] = 0.0
             # Tab stops: emit only those defined directly on THIS style (not inherited),
             # so child styles don't redundantly repeat the parent's tab stops.
             own_tabs = st.get("tab_stops")
@@ -1571,6 +1612,21 @@ def _emit_paragraph_styles_to_function(
                     max_tab_pt = max(pos for pos, _ in own_tabs)
                     kwargs["left_indent_pt"] = round(max_tab_pt, 4)
                     kwargs["first_indent_pt"] = round(-max_tab_pt, 4)
+            # Justification-compatibility default. Scribus's justified line-
+            # breaker runs looser than InDesign's: with no glyph-scaling
+            # headroom Scribus's word-spaces stretch wider, so it fits fewer
+            # words per line and the wrap diverges from the baseline. A small
+            # MinGlyphShrink budget (glyphs may compress to 98%) lets Scribus
+            # fit the same words InDesign does — empirically closes the bulk
+            # of the cross-renderer wrap drift on justified body text (A6
+            # flyer body frames: 254 -> ~130 word-position drifts). Applied
+            # to justified styles (ALIGN 3=justified, 4=forced) only; left/
+            # centre/right styles do not justify so glyph scaling never
+            # triggers. A template may still override per-frame in the tune
+            # stage. MinWordTrack is left at the Scribus default — tightening
+            # it as well over-packs some frames (per-template sweep finding).
+            if kwargs.get("align") in (3, 4) and "min_glyph_shrink" not in kwargs:
+                kwargs["min_glyph_shrink"] = 0.98
             ctx.out.w("doc.add_para_style(ParaStyle(")
             ctx.out.indent += 1
             for k, v in kwargs.items():

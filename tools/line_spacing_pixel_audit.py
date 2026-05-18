@@ -83,6 +83,10 @@ class FrameInfo:
     anname: str
     page: int
     bbox_mm: tuple[float, float, float, float]
+    # Frame rotation in degrees (build.py ``rotation_deg=`` kwarg). 0.0 for
+    # the common un-rotated frame. Rotation is around the frame's unrotated
+    # top-left corner — the same pivot Scribus uses for ``ROT``.
+    rotation_deg: float = 0.0
 
 
 def _ast_kw(call: ast.Call, name: str):
@@ -134,6 +138,7 @@ def parse_textframes_from_build_py(build_py: Path) -> dict[str, FrameInfo]:
         h = _ast_literal(_ast_kw(node, "h_mm")) or _ast_literal(_ast_kw(node, "h"))
         if None in (x, y, w, h):
             continue
+        rot = _ast_literal(_ast_kw(node, "rotation_deg"))
         page = 0
         cur = parent_map.get(node)
         while cur is not None:
@@ -152,6 +157,7 @@ def parse_textframes_from_build_py(build_py: Path) -> dict[str, FrameInfo]:
             anname=str(anname),
             page=page,
             bbox_mm=(float(x), float(y), float(w), float(h)),
+            rotation_deg=float(rot) if rot is not None else 0.0,
         )
     return out
 

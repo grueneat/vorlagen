@@ -1159,6 +1159,47 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase D8b: line_match_audit — strict per-line, per-frame layout match.
+    # Where D8 matches words by text + nearest neighbour (blind to line
+    # structure), D8b clusters words into lines within each build.py frame
+    # and checks first-word x + line baseline y STRICTLY (zero tolerance
+    # beyond a 1pt raster epsilon) and inter-word spacing with a minimal
+    # tolerance. NO issue cap — a single wrong line fails preflight.
+    line_match_audit_path = out_dir / "line_match_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from line_match_audit import run_audit as _run_line_match
+            lma_report = _run_line_match(
+                preview_pdf, baseline, tid,
+                build_py=(tdir / "build.py") if (tdir / "build.py").exists() else None,
+            )
+            line_match_audit_path.write_text(
+                yaml.safe_dump(lma_report, sort_keys=False, allow_unicode=True),
+                encoding="utf-8",
+            )
+            if not lma_report["ok"]:
+                print(
+                    f"[{tid}] line_match_audit: {lma_report['issues']} line(s) "
+                    f"mismatched ({lma_report['lines_matched']}/"
+                    f"{lma_report['lines_total']} match) → FAIL",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"{lma_report['issues']} line(s) with layout mismatch"
+                )
+            else:
+                print(f"[{tid}] line_match_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "line_match_audit",
+                "D8b (line_match_audit)", exc, tid,
+            )
+    else:
+        print(
+            f"[{tid}] audit D8b (line_match_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
     # Phase F: run_style_audit — per-Run font/size/color fidelity.
     # Catches wrong font assigned to a Run (e.g. Gotham where Vollkorn was expected),
     # wrong PointSize (fractional rounding artifacts), wrong color (bad brand mapping).
@@ -2154,6 +2195,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         font_audit_path=font_audit_path,
         text_render_audit_path=text_render_audit_path,
         text_position_audit_path=text_position_audit_path,
+        line_match_audit_path=line_match_audit_path,
         run_style_audit_path=run_style_audit_path,
         color_audit_path=color_audit_path,
         visual_diff_regions_path=vd_region_path,
@@ -2205,6 +2247,7 @@ def _build_preflight(
     text_position_audit_path: Path,
     run_style_audit_path: Path,
     color_audit_path: Path,
+    line_match_audit_path: Path | None = None,
     visual_diff_regions_path: Path | None = None,
     line_spacing_audit_path: Path | None = None,
     asset_audit_path: Path | None = None,
@@ -2327,6 +2370,22 @@ def _build_preflight(
         # both buckets are individually addressed (the new audits gate).
         _record("text_position_audit", True, int(tpa.get("large_deltas_count", 0) or 0),
                 f"split into jitter + structural buckets")
+
+    # line_match_audit (D8b): strict per-line, per-frame layout match.
+    # First-word x and line baseline y must match; inter-word spacing gets
+    # a minimal tolerance. No issue cap — any finding fails preflight.
+    if line_match_audit_path is not None:
+        lma = _load_yml(line_match_audit_path)
+        if lma is not None:
+            n_lma = int(lma.get("issues", 0) or 0)
+            _record(
+                "line_match_audit",
+                bool(lma.get("ok", False)),
+                n_lma,
+                (f"{n_lma} line(s) mismatched "
+                 f"({lma.get('lines_matched', 0)}/{lma.get('lines_total', 0)} match)")
+                if n_lma else "",
+            )
 
     rsa = _load_yml(run_style_audit_path)
     if rsa is not None:
