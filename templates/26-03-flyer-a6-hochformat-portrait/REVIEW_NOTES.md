@@ -9,7 +9,41 @@ with 2 pages each (6 pages total). Page 1 cover (three-line headline + Störer
 badge + Gewessler portrait photo), pages 2-5 inner content, page 6 a quote
 page on a dark crumpled-paper background.
 
-## This pass — image-fidelity re-render
+## Latest pass — combined image + squiggle re-render (2026-05-18)
+
+This template was re-imported again to pick up the shared squiggle fixes that
+landed after the first image re-render: yellow-filled squiggle polygons
+(`fill='Gelb'`, CMYK Y=100) and squiggle word re-anchoring. The converter now
+writes `templates/<slug>/squiggle_anchors.yml` binding each squiggle Polygon
+to the word it underlines; the `squiggle_realign` playbook + the
+`squiggle_alignment_audit` keep each squiggle tracking its word across
+Scribus's different line-wrap.
+
+### Squiggle audit — before vs after
+
+| Audit | Fresh re-import (before) | After tune loop (after) |
+|-------|--------------------------|-------------------------|
+| `squiggle_alignment_audit` | `ok: false` — 7 of 8 squiggles off their word: u11e3 2.06mm, u11e4 1.94mm, u11e2 1.94mm, u126c 1.94mm, u126e 1.94mm, u1286 13.08mm, u1269 4.99mm | `ok: true`, **0 issues** — every squiggle drift ≤0.68mm |
+
+The `squiggle_realign` playbook re-anchored all 8 squiggles in build.py
+(8 `# playbook squiggle_realign.py:` markers). Verified VISUALLY against
+baseline.pdf, page by page:
+
+- **Page 1** — yellow brush band behind "dreizeilige" (yellow Vollkorn-italic
+  headline line). Matches baseline.
+- **Page 2** — yellow loop around "in et", yellow underline under
+  "Lia vellam". Match baseline.
+- **Page 3** — yellow underline under "auch" (headline) and under "vellaccum"
+  (first bullet). Match baseline.
+- **Page 4** — yellow underline under "volor re doleceat laciisci nectur" and
+  yellow loop around "Nam". The "Nam" squiggle moved ~13mm down because the
+  word "Nam" itself drifted down under Scribus's wider body-text wrap; the
+  squiggle correctly follows the word (post-fix drift 0.0mm).
+
+All 8 squiggles render YELLOW. No squiggle is black; no squiggle is off its
+word.
+
+## First re-render pass — image-fidelity
 
 This template was re-imported to pick up the shared CMYK->sRGB and
 geometry-derived aspect-fill crop fixes (commit `de96b7c`). The earlier
@@ -97,15 +131,24 @@ CMYK or photo frame is blank or broken-content anymore.
 
 | Audit | Issues | Status |
 |-------|--------|--------|
-| `text_position_audit_structural` | ~230-254 large drifts (>5pt) | accepted — cross-renderer line-wrap divergence |
-| `text_render_audit` | 2 words (Impressum 2-line wrap) | accepted — see below; no text lost |
-| `systematic_text_audit` | 9 frames | accepted — y_mm_shift oscillation |
-| `image_content_audit` | 1 broken (ubc2) | accepted — ICC tone shift, content present |
+| `text_position_audit_structural` | 232 large drifts (>5pt) | accepted — cross-renderer line-wrap divergence (cap 260; `severity: structural` keeps preflight red by design) |
+| `text_position_audit_jitter` | 23 sub-perceptible drifts (≤5pt) | tolerated this pass — cosmetic, cap 30, same wrap class (TOLERANCES T1) |
+| `text_render_audit` | 0 | green — all baseline text renders |
+| `systematic_text_audit` | 9 frames | tolerated — y_mm_shift oscillation (cap 12) |
+| `squiggle_alignment_audit` | 0 | **green** — all 8 squiggles on their word, yellow |
+| `image_content_audit` | 1 broken (ubc2) | tolerated — ICC tone shift, content present (cap 2) |
 | `image_frame_visibility_audit` | 1 faint (u116b) | accepted — pre-existing logo SCALETYPE bug |
-| `visual_diff_regions` | 60 hot regions | accepted — text-wrap + ICC derivative |
-| `image_audit` | 39 vector-path delta | accepted — ICC derivative |
-| `inventory` | 1 dropped (u1152) | accepted — off-page registration mark |
-| green | asset_extraction, asset_policy, external_asset_substitution, font_audit, run_style_audit, per_region_regression, region_color | — |
+| `visual_diff_regions` | 60 hot regions | tolerated — text-wrap + ICC derivative (cap 70); worst regions all text-row driven |
+| `image_audit` | 39 vector-path delta | tolerated — ICC derivative (cap 45) |
+| `inventory` | 1 dropped (u1152) | tolerated — off-page registration mark (cap 1) |
+| `per_region_regression` | 0 | green — no frame regressed from the squiggle re-anchoring |
+| green | asset_extraction, asset_policy, external_asset_substitution, font_audit, run_style_audit, region_color | — |
+
+**Final preflight: `ok: false`** — the single un-tolerated failing audit is
+`text_position_audit_structural` (232 issues). Its tolerance is deliberately
+`severity: structural`: it documents the residual but does NOT flip preflight
+green, because >5pt drift is visible. This is the documented accepted residual
+for the batch — cross-renderer line-wrap divergence, not a converter bug.
 
 ### Impressum 2-line wrap (text_render_audit residual)
 
@@ -120,11 +163,14 @@ Logged as a follow-up for the converter/primitives swap reconciliation.
 
 ## Known issues — NOT regressions
 
-- **Cross-renderer line-wrap text drift** (~230-254 `text_position_audit_
-  structural` drifts) — Scribus vs InDesign font-metric / hyphenation engine
-  difference. Documented batch-wide.
+- **Cross-renderer line-wrap text drift** (232 `text_position_audit_
+  structural` + 23 `text_position_audit_jitter` drifts) — Scribus vs InDesign
+  font-metric / hyphenation engine difference. Documented batch-wide.
 - **DIE GRUENEN inline logo (u116b)** — white-on-transparent RGBA SCALETYPE,
   pre-existing Scribus 1.6.x bug.
+- **`ubc2` ICC tone shift** — the dark "Plakat dunkel" PSD renders the correct
+  green crumpled-paper texture; the `image_content_audit` `broken` flag is a
+  residual CMYK->sRGB tone delta (`hist_divergence` 0.227), not a blank frame.
 
 ## What to eyeball in preview.pdf vs baseline.pdf
 
@@ -145,3 +191,9 @@ Logged as a follow-up for the converter/primitives swap reconciliation.
 7. **Body / bullet paragraphs** — line breaks fall at slightly different
    words than the baseline; accepted cross-renderer wrap divergence — check
    the text is complete, not the exact wrap column.
+8. **Yellow squiggles** — page 1 ("dreizeilige"), page 2 ("in et",
+   "Lia vellam"), page 3 ("auch", "vellaccum"), page 4 ("volor re doleceat
+   laciisci nectur", "Nam"). Confirm each squiggle is YELLOW and sits on its
+   word. On page 4 the "Nam" squiggle sits lower than the baseline because
+   the word "Nam" itself drifted down under Scribus's body-text wrap — the
+   squiggle correctly tracks the word.

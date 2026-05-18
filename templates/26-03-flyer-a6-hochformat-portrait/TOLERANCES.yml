@@ -1,4 +1,18 @@
 tolerances:
+- id: tol:text-position-jitter-cross-renderer-wrap
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 30
+  reason: 'Up to ~23 sub-perceptible (<=5pt) per-word position drifts. Same
+    cross-renderer line-wrap class as the structural bucket below — Scribus and
+    InDesign break the justified body / bullet paragraphs at slightly different
+    words because their font-metric and hyphenation models differ; the small
+    residual offsets land in the jitter (<=5pt) bucket. Sub-perceptible by the
+    audit''s own threshold. Not a converter bug — page content and frame
+    geometry verified correct page-by-page. Cap 30 leaves small headroom over
+    the measured 23.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
 - id: tol:text-position-structural-cross-renderer-wrap
   audit: text_position_audit_structural
   classification: scribus-engine-bug

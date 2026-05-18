@@ -3,6 +3,44 @@
 Every tolerance, override, frame-geometry clamp, and accepted residual for
 this template, with measured drift and classification. Newest first.
 
+## Combined image + squiggle re-render pass (2026-05-18)
+
+This template was re-imported a second time to pick up the shared squiggle
+fixes that landed after the first re-import: yellow-filled squiggle polygons
+(`fill='Gelb'`) + squiggle word re-anchoring (the converter writes
+`squiggle_anchors.yml`, the `squiggle_realign` playbook + `squiggle_alignment
+_audit` keep each squiggle on its word). The `bin/tune-render` ->
+`bin/tune-fix` loop ran; the `squiggle_realign` playbook re-anchored all 8
+squiggles.
+
+### Squiggle audit — before vs after this pass
+
+| Audit | Before (fresh re-import) | After (tune loop) |
+|-------|--------------------------|-------------------|
+| `squiggle_alignment_audit` | `ok: false`, 7 squiggle(s) off word (u11e3 2.06mm, u11e4 1.94mm, u11e2 1.94mm, u126c/u126e 1.94mm, u1286 13.08mm, u1269 4.99mm) | `ok: true`, **0 issues** — all 8 squiggles drift ≤0.68mm |
+
+All 8 squiggles render YELLOW (`fill='Gelb'`, CMYK Y=100) and sit on their
+anchor word — verified visually on pages 1-4 against baseline.pdf. The
+`u1286` "Nam" squiggle moved ~13mm down to track its word: the word "Nam"
+itself drifted down due to the cross-renderer body-text line-wrap divergence,
+and the squiggle correctly follows the word (squiggle drift 0.0mm post-fix).
+
+### Image audit — this pass (unchanged from first re-import; fixes confirmed landed)
+
+| Audit | Result |
+|-------|--------|
+| `image_content_audit` | 4 ok, 1 "broken" (`ubc2`) — ubc2 renders the correct green crumpled-paper texture, NOT blank; the flag is `hist_divergence` 0.227 residual CMYK->sRGB tone shift. No CMYK/photo frame is blank or discoloured. |
+| `image_frame_visibility_audit` | 0 invisible, 1 faint (`u116b` — pre-existing DIE GRUENEN white-on-transparent RGBA SCALETYPE Scribus 1.6.x bug). |
+
+### Tolerance grown this pass
+
+| # | Audit | Severity | Cap | Before/after | Reason |
+|---|-------|----------|-----|--------------|--------|
+| T1 | `text_position_audit_jitter` | cosmetic | 30 | new entry (was un-documented; 23 issues) | The ≤5pt sub-perceptible per-word position drifts are the same cross-renderer line-wrap class as the structural bucket — Scribus and InDesign break justified paragraphs at slightly different words. 23 issues; cap set to 30 (small headroom). Cosmetic: sub-perceptible by the audit's own ≤5pt definition. preflight stays red on the structural bucket regardless (by design — `severity: structural`). |
+
+No numeric growth was needed on `text_position_audit_structural` (232 issues
+≤ existing 260 cap). No `brand_overrides`, `non_ci_*` growth required.
+
 ## Re-import pass (image-fidelity re-render, 2026-05-18)
 
 This template was re-imported to pick up the shared CMYK->sRGB and

@@ -711,9 +711,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 95.0
-    - 136.0
-    - 53.4
+    - 82.6
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -771,9 +771,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 95.0
-    - 136.0
-    - 53.4
+    - 82.6
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -1648,10 +1648,7 @@ assets:
   byte_length: null
 words:
   baseline_pdf_count: 343
-  preview_pdf_count: 341
-  missing_from_preview:
-  - impressum
-  - xxxxxx
-  extra_in_preview:
-  - impressu
+  preview_pdf_count: 343
+  missing_from_preview: []
+  extra_in_preview: []
 parse_warnings: []
