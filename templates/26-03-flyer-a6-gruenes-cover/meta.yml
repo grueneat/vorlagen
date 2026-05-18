@@ -12,7 +12,7 @@ format: A4
 id: 26-03-flyer-a6-gruenes-cover
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat gruenes Cover Ordner/26-03-Flyer
   A6 gruenes Cover.idml
-previews_for_sla: 251de4eb584686840dca78cb93bf5511f34cdc5cec7f5c66354e976221424b04
+previews_for_sla: bad79cf571782df968ed6a1156db9d3ebd20b5ab3bcbd392d325e65f5687cd71
 title: 26-03-flyer-a6-gruenes-cover
 version: 0.1.0
-build_py_sha256: dba2108b2aeffedbc85bacf2c6498cab20897f89c2223e2db7c592f6ae2ace68
+build_py_sha256: f2b9dd32f2c2d68cc04693a558e95ef08bbe7dbffd80f37f2bdff2ff098462fd

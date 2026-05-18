@@ -1,0 +1,131 @@
+tolerances:
+- id: tol:inventory-offpage-registration-marks
+  audit: inventory
+  classification: human-review
+  severity: cosmetic
+  max_issues: 4
+  reason: '4 dropped elements. The converter deliberately skips four 6.3x6.3mm
+    Rectangle elements (u6f0, u6f2, u77f, u964) that the IDML places far outside
+    the page (x=-29.8mm or x~=180mm — beyond the page edges). They are inline
+    vector paths with no <Image>/<PDF> child (registration / colour-control
+    furniture on the pasteboard). The converter logs each as "[skip] Rectangle
+    ... entirely outside page bounds ... InDesign design artifact, not emitted";
+    InDesign also omits them from the trimmed PDF export. A deliberate,
+    documented non-emit — not a silent drop (the scaffold completeness
+    assertion every_idml_run_present_in_build_py passes).'
+  follow_up_issue: none; correct converter behaviour, audit is conservative
+- id: tol:image-audit-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 45
+  reason: '41 vector-path / image deltas, derivative of the Scribus raster/ICC
+    rendering differences on full-bleed Dunkelgruen page backgrounds and photo
+    content, plus the IDML inline decorative vector paths the converter
+    extracts as inline images rather than re-emitting as Scribus Polygon items.
+    Same gap class as the sibling flyer template
+    26-03-flyer-a6-hochformat-gruenes-cover (41 deltas, cap 45).'
+  follow_up_issue: engine-bug; intrinsic raster + ICC differences
+- id: tol:text-position-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 26
+  reason: '22 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+    InDesign per-character kerning jitter intrinsic to the two rasterisers. The
+    y_mm_shift playbook found no reliable calibration frame and the
+    line_spacing sim returned no rows for any frame. The structural bucket
+    (text_position_audit_structural) catches the larger >5pt shifts.'
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:text-position-structural-cross-renderer-wrap
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 265
+  reason: '257 large (>5pt) word-position drifts, dominated by cross-renderer
+    line-wrap differences — Scribus and InDesign break the justified body /
+    bullet-list paragraphs at slightly different words because their
+    font-metric and hyphenation models differ. One wrap-point difference
+    cascades into dozens of downstream words counted as "drifted". The
+    line_spacing_pixel_audit probe of the worst frame (u67c) shows 7 lines in
+    both baseline and preview with the preview text starting ~62pt lower and
+    the lines compressed to catch up — a reflow cascade, not a per-line leading
+    error (line_spacing_full_audit classifies every paragraph drift_minor,
+    ~1pt). Not a converter bug. Documented cross-renderer line-wrap gap for
+    Querformat flyers. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural
+    keeps preflight red.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+- id: tol:systematic-text-line-count-divergence
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 11
+  reason: '10 frames flagged "line count differs" / "SPLIT offset" / "text
+    wrapped differently" — the per-frame view of the same cross-renderer wrap
+    divergence as text_position_audit_structural. The line_spacing playbook ran
+    line_spacing_sim on all flagged frames and returned no rows for any of
+    them, so no (LINESPMode, LINESP) override is derivable. NOT FIXED, NOT
+    TOLERATED-AS-PASSING — severity:structural keeps preflight red.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as
+    structural text-position drift)
+- id: tol:text-render-cross-renderer-wrap-wordsplit
+  audit: text_render_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 12
+  reason: '12 unique words reported "missing" (impressum, consent., eaque,
+    eosenihicto, quaturem, volor, xxxxxx, et, ipis, nam, quatur., quis) — all
+    verified present in build.py (2-3 occurrences each). The audit also reports
+    extra_in_preview: impressu, confirming the words are SPLIT at a different
+    line-wrap point (impressum -> impressu + m) so the per-word string
+    comparison no longer matches. The same cross-renderer line-wrap divergence
+    surfacing in the text-extraction word comparison; no text is actually
+    suppressed. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural keeps
+    preflight red.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap word-split in text
+    extraction
+- id: tol:image-content-cmyk-render
+  audit: image_content_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 2
+  reason: '2 image frames classified broken. ube9 (2026-03-leonore-fuer-flyer,
+    converted from a CMYK PSD) renders with a mean-RGB shift (mean_delta_rgb
+    75.5, hist_divergence 0.19) — the known broken CMYK-PSD conversion:
+    tools/links_export.py convert -flatten produces non-ICC CMYK->RGB output
+    that posterizes/discolours the portrait. u906
+    (green-pine-trees-covered-with-fog.jpg, CMYK JPEG, recipe passthrough)
+    renders fully blank — Scribus 1.6.x cannot rasterise CMYK JPEGs. Both are
+    Stage-1 asset-pipeline limitations from the overnight brief''s known-shared-
+    issues list, not converter or build.py bugs. NOT FIXED, NOT TOLERATED-AS-
+    PASSING — severity:structural keeps preflight red.'
+  follow_up_issue: authoring/asset-pipeline; links_export.py CMYK handling
+- id: tol:image-frame-visibility-cmyk-jpeg-blank
+  audit: image_frame_visibility_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 1
+  reason: '1 invisible frame. u906 (green-pine-trees-covered-with-fog.jpg) is
+    invisible in the preview (preview_ink_density 0.0). The frame was already
+    switched to scale_type=0 (the documented frame_visibility playbook fix); it
+    remained invisible because the source is a CMYK JPEG Scribus 1.6.x cannot
+    decode at all — the same CMYK-JPEG blank-render shared issue as
+    image_content_audit. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:
+    structural keeps preflight red.'
+  follow_up_issue: authoring/asset-pipeline; Scribus CMYK-JPEG decode failure
+- id: tol:visual-diff-image-size-mismatch
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 0
+  reason: 'visual_diff_regions errors with "image size mismatch:
+    baseline=(874, 620), preview=(875, 621)" — a 1-pixel difference in each
+    dimension. The scaffold cropped the baseline.pdf to remove printer''s marks
+    (cropped to trim box 419.5x297.6pt); the auto-crop box does not land on an
+    exact pixel boundary at 150dpi, so the cropped baseline rasterises to
+    874x620 while the trim-only SLA preview rasterises to 875x621. This
+    surfaces as a phase ERROR (not an audit issue); preflight treats any
+    errors-dict entry as a hard red regardless of tolerances, so this entry is
+    documentation only. The sibling querformat-portrait template — whose
+    baseline had no printer''s marks — does not hit this error.'
+  follow_up_issue: authoring; baseline.pdf printer's-marks crop pixel rounding
