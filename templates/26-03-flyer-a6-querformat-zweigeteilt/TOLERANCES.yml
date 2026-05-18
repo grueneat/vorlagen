@@ -1,0 +1,139 @@
+tolerances:
+- id: tol:inventory-offpage-registration-marks
+  audit: inventory
+  classification: human-review
+  severity: cosmetic
+  max_issues: 4
+  reason: '4 dropped elements. The converter deliberately skips four 17.9x17.9pt
+    Rectangle elements (u6f0, u6f2, u77f, u964) that the IDML places far outside
+    the page bounds (x=-29.8mm / x=179..180mm — beyond the 174mm trim width).
+    They are inline vector paths with no <Image>/<PDF> child (registration /
+    colour-control furniture on the pasteboard). The converter logs each as
+    "[skip] Rectangle ... entirely outside page bounds ... InDesign design
+    artifact, not emitted"; InDesign also omits them from the trimmed PDF
+    export. A deliberate, documented non-emit — not a silent drop (the scaffold
+    completeness assertion passes: every element is either emitted or explicitly
+    recorded as skipped). Same class as the sibling 26-03-flyer-a6-querformat-
+    portrait template.'
+  follow_up_issue: none; correct converter behaviour, audit is conservative
+- id: tol:image-audit-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 48
+  reason: '44 vector-path / image deltas. Derivative of the Scribus raster/ICC
+    rendering differences on full-bleed Dunkelgruen page backgrounds and photo
+    content, plus the IDML inline decorative vector paths (Wahlkreis ellipse /
+    underline ornaments, curly quotes) that the converter extracts as inline
+    images rather than re-emitting as Scribus Polygon items. Same gap class as
+    the sibling flyer templates (26-03-flyer-a6-querformat-portrait,
+    26-03-flyer-a6-hochformat-*). Cap 48 vs 44 measured — small headroom for
+    raster-count jitter.'
+  follow_up_issue: engine-bug; intrinsic raster + ICC differences
+- id: tol:image-content-cmyk-jpeg-blank
+  audit: image_content_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 1
+  reason: '1 image frame classified broken. u906 (green-pine-trees-covered-with-
+    fog.jpg, a CMYK JPEG, links_export recipe "passthrough") renders fully blank
+    — preview mean-RGB [248,248,244] vs baseline [103,106,84], histogram
+    divergence 0.47. Scribus 1.6.x fails to rasterise CMYK JPEGs (passed through
+    unchanged by tools/links_export.py). A documented batch-wide Stage-1 asset-
+    pipeline limitation, not a converter or build.py bug. The build.py ImageFrame
+    carries a `# noinject:` justification comment. No converter fix per the
+    overnight-batch known-issues policy.'
+  follow_up_issue: authoring/asset-pipeline; Scribus CMYK-JPEG rasterisation
+- id: tol:image-frame-visibility-cmyk-jpeg-blank
+  audit: image_frame_visibility_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 2
+  reason: '2 invisible image frames, both CMYK JPEGs. u906 (green-pine-trees-
+    covered-with-fog.jpg) preview ink density 0.0 — fully blank. uace
+    (ziesel.jpg) preview ink density 0.06 vs baseline 0.33 — near-blank,
+    visibility ratio 0.18. Both trace to the same Scribus 1.6.x CMYK-JPEG
+    rasterisation failure; identify -verbose confirms both assets are
+    Colorspace: CMYK / Type: ColorSeparation. The DIE GRUENEN logo frame uad7
+    (RGBA PNG) was repaired in this tune pass — switched from inline_image_data
+    to a direct image= reference with scale_type=0 (Scribus 1.6.x SCALETYPE=1
+    white-on-transparent bug) — and is no longer flagged. Both ImageFrames carry
+    `# noinject:` justification comments.'
+  follow_up_issue: authoring/asset-pipeline; Scribus CMYK-JPEG rasterisation
+- id: tol:systematic-text-line-wrap-no-sim-rows
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 11
+  reason: '11 frames flagged sim-actionable. The line_spacing playbook simulator
+    (tools/line_spacing_sim.py) returned NO ROWS / 0 changes for every frame
+    across all tune-fix iterations — the drift is line-WRAP-count divergence,
+    not a leading value. line_spacing_pixel_audit / systematic_text_audit.md
+    confirm line-count mismatches (uaf8 baseline 4 vs preview 5, u9df 8 vs 6,
+    ub3b 4 vs 6, u6d8 10 vs 11). No single (LINESPMode, LINESP) reconciles a
+    wrap-count difference. The y_mm_shift playbook either applied tentative
+    uniform shifts or escalated when the implied shift exceeded MAX_SHIFT_MM
+    (u67c needs ~22mm — a line-wrap artifact, not a real anchor offset). The
+    ub52 frame was reverted to its scaffold y_mm after the playbook oscillated
+    it without converging.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)
+- id: tol:text-position-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 34
+  reason: '21 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+    InDesign per-character kerning jitter intrinsic to the two rasterisers. The
+    line_spacing sim returned no rows for any frame; the y_mm_shift playbook
+    applied what uniform shifts it could derive. Sub-perceptible jitter, below
+    the visible threshold. Cap 34 gives headroom because the jitter count
+    fluctuated 21-31 across tune-fix iterations. The structural bucket
+    (text_position_audit_structural) catches the larger >5pt shifts.'
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:text-position-structural-cross-renderer-wrap
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 269
+  reason: '269 large (>5pt) word-position drifts. The drift is dominated by
+    cross-renderer line-wrap differences — Scribus and InDesign break the
+    justified body / bullet-list paragraphs at slightly different words because
+    their font-metric and hyphenation models differ. The count sits squarely in
+    the documented Querformat-flyer range (~257-279 per the overnight-batch
+    known-issues note) and is close to the sibling 26-03-flyer-a6-querformat-
+    portrait (279). Not a converter bug and not a routing bug. NOT FIXED, NOT
+    TOLERATED-AS-PASSING — preflight stays red until a Scribus
+    justification/hyphenation alignment lands or the baseline is re-flowed.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+- id: tol:text-render-cross-renderer-wrap-overflow
+  audit: text_render_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 12
+  reason: '12 unique words (28 occurrences, 132 characters) of baseline body
+    text missing from the render. The missing words (consent., nam, quatur.,
+    quaturem., et, eaque, eosenihicto, ipis, quis, volor, impressum, xxxxxx) are
+    the TAIL words of justified lorem-ipsum body-text paragraphs. Scribus wraps
+    the justified paragraphs to more lines than InDesign, so the last line(s)
+    overflow the frame height and Scribus clips them. The converter already
+    widened several frames (see "# h_mm widened" comments in build.py); the
+    residual overflow is driven by the cross-renderer wrap-count divergence, not
+    by a converter geometry error. Same root cause as
+    text_position_audit_structural.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap overflow
+- id: tol:visual-diff-regions-raster-size-mismatch
+  audit: visual_diff_regions
+  classification: human-review
+  severity: structural
+  max_issues: 1
+  reason: 'The visual_diff_regions audit phase errors out with "ValueError:
+    image size mismatch: baseline=(874, 620), preview=(875, 621)" — the baseline
+    and preview rasterise to pixel dimensions differing by 1px in each axis
+    (sub-mm rounding at 150 dpi on the 419.5x297.6pt trim box). This is a
+    tooling artifact in the heatmap-overlay phase, not a template defect; no
+    build.py / inject.yml / meta.yml edit changes it. It surfaces as a phase
+    ERROR (not an audit row), so _build_preflight cannot tolerate it via
+    max_issues — preflight stays red. The same phase error occurs on sibling
+    batch templates (26-03-flyer-a6-querformat-quadrat-in-bild,
+    26-03-flyer-a6-gruenes-cover). Entry kept for the human record.'
+  follow_up_issue: tooling; visual_diff_regions raster-size rounding mismatch
