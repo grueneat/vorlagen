@@ -300,22 +300,117 @@ def _detect_trim_box(pdf_path: Path) -> tuple[float, float, float, float] | None
     return (x0, top, x1, bottom)
 
 
+def _crop_pdf_page_boxes(
+    src: Path, dest: Path, trim_box_pdf: tuple[float, float, float, float],
+) -> bool:
+    """Crop every page of ``src`` to ``trim_box_pdf`` by rewriting page boxes.
+
+    ``trim_box_pdf`` is ``(llx, lly, urx, ury)`` in PDF bottom-origin points.
+
+    Sets ``/MediaBox`` and ``/CropBox`` on every ``/Type /Page`` dict to the
+    trim rectangle and drops any ``/TrimBox /BleedBox /ArtBox``. The page
+    content is NOT re-distilled and NOT offset — pdftoppm, pdftocairo and gs
+    all rasterise the CropBox region, so a CropBox = trim-rect makes the PDF
+    page-match a trim-origin preview.
+
+    Crucially this preserves the PDF's colour data and its
+    ``/OutputIntents`` ICC profile verbatim. A Ghostscript ``pdfwrite``
+    re-distill (the former implementation) silently strips the output
+    intent AND re-encodes every DeviceCMYK colour into Ghostscript's
+    default CMYK — which made the baseline.pdf colour-incomparable with the
+    preview.pdf (see tools/pdf_color.py). A pure box rewrite avoids both.
+
+    Returns True on a successful crop, False if no ``/Type /Page`` dict was
+    found (caller should fall back to a verbatim copy).
+    """
+    data = src.read_bytes()
+    llx, lly, urx, ury = trim_box_pdf
+    box = (
+        f"[{llx:.4f} {lly:.4f} {urx:.4f} {ury:.4f}]".encode("ascii")
+    )
+
+    def _page_dict_spans(buf: bytes) -> list[tuple[int, int]]:
+        """Byte spans of every direct ``/Type /Page`` dict in ``buf``."""
+        spans: list[tuple[int, int]] = []
+        for tm in re.finditer(rb"/Type\s*/Page\b(?![A-Za-z])", buf):
+            # Walk back to the enclosing dict's "<<" at depth 0.
+            depth = 0
+            j = tm.start()
+            dict_start = -1
+            while j > 1:
+                pair = buf[j - 1 : j + 1]
+                if pair == b">>":
+                    depth += 1
+                    j -= 2
+                    continue
+                if pair == b"<<":
+                    if depth == 0:
+                        dict_start = j - 1
+                        break
+                    depth -= 1
+                    j -= 2
+                    continue
+                j -= 1
+            if dict_start < 0:
+                continue
+            # Walk forward to the matching ">>" at depth 0.
+            depth = 0
+            k = dict_start
+            dict_end = -1
+            while k < len(buf) - 1:
+                pair = buf[k : k + 2]
+                if pair == b"<<":
+                    depth += 1
+                    k += 2
+                    continue
+                if pair == b">>":
+                    depth -= 1
+                    if depth == 0:
+                        dict_end = k + 2
+                        break
+                    k += 2
+                    continue
+                k += 1
+            if dict_end > dict_start:
+                spans.append((dict_start, dict_end))
+        return spans
+
+    spans = _page_dict_spans(data)
+    if not spans:
+        return False
+
+    pieces: list[bytes] = []
+    last = 0
+    for start, end in spans:
+        dct = data[start:end]
+        # Drop any pre-existing box entries, then set MediaBox + CropBox.
+        for key in (b"CropBox", b"TrimBox", b"BleedBox", b"ArtBox"):
+            dct = re.sub(rb"/" + key + rb"\s*\[[^\]]*\]", b"", dct)
+        if re.search(rb"/MediaBox\s*\[[^\]]*\]", dct):
+            dct = re.sub(rb"/MediaBox\s*\[[^\]]*\]", b"/MediaBox " + box, dct)
+        else:
+            dct = dct[:2] + b"/MediaBox " + box + b" " + dct[2:]
+        dct = dct[:2] + b"/CropBox " + box + b" " + dct[2:]
+        pieces.append(data[last:start])
+        pieces.append(dct)
+        last = end
+    pieces.append(data[last:])
+    dest.write_bytes(b"".join(pieces))
+    return True
+
+
 def _normalize_baseline_to_trim(baseline_src: Path, dest: Path) -> bool:
     """Copy ``baseline_src`` to ``dest``, cropping printer's marks if present.
 
     Returns True when a marks-on baseline was cropped to its trim box,
-    False when the source was copied verbatim (already trim-only, or no
-    Ghostscript available). The trim crop keeps the PDF vector — only the
-    MediaBox shrinks and content is offset so (0,0) is the trim corner.
+    False when the source was copied verbatim (already trim-only, or the
+    crop could not be applied). The crop is a pure page-box rewrite (see
+    :func:`_crop_pdf_page_boxes`) — it preserves the PDF's vector content,
+    DeviceCMYK colour values, and ``/OutputIntents`` ICC profile, so the
+    baseline.pdf stays colour-comparable with the preview.pdf.
     """
     trim = _detect_trim_box(baseline_src)
     if trim is None:
-        shutil.copy(baseline_src, dest)
-        return False
-    gs = shutil.which("gs")
-    if gs is None:
-        # No Ghostscript — fall back to verbatim copy; the geometry
-        # mismatch surfaces in the audits for human review.
         shutil.copy(baseline_src, dest)
         return False
     try:
@@ -329,21 +424,21 @@ def _normalize_baseline_to_trim(baseline_src: Path, dest: Path) -> bool:
     w = x1 - x0
     h = bottom - top
     # pdfplumber tops are page-top-origin; PDF y is bottom-origin.
-    llx, lly = x0, page_h - bottom
-    cmd = [
-        gs, "-o", str(dest), "-sDEVICE=pdfwrite",
-        f"-dDEVICEWIDTHPOINTS={w}", f"-dDEVICEHEIGHTPOINTS={h}",
-        "-dFIXEDMEDIA", "-dQUIET", "-dBATCH", "-dNOPAUSE",
-        "-c", f"<</PageOffset [{-llx} {-lly}]>> setpagedevice",
-        "-f", str(baseline_src),
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0 or not dest.exists():
+    llx = x0
+    lly = page_h - bottom
+    urx = x1
+    ury = page_h - top
+    try:
+        cropped = _crop_pdf_page_boxes(baseline_src, dest, (llx, lly, urx, ury))
+    except Exception:  # noqa: BLE001 — defensive; fall back to verbatim copy
+        cropped = False
+    if not cropped or not dest.exists():
         shutil.copy(baseline_src, dest)
         return False
     print(
         f"idml-import: baseline.pdf had printer's marks — cropped to trim "
-        f"box {w:.1f}x{h:.1f}pt so it page-matches the trim-only preview.",
+        f"box {w:.1f}x{h:.1f}pt (page-box rewrite, output intent preserved) "
+        f"so it page-matches the trim-only preview.",
         file=sys.stderr,
     )
     return True
