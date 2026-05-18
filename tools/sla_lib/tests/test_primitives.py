@@ -64,7 +64,46 @@ class TestPackInlineImage(unittest.TestCase):
 
 
 from sla_lib.builder import Document, TextFrame  # noqa: E402
+from sla_lib.builder.primitives import PolyLine  # noqa: E402
 from lxml import etree as _etree  # noqa: E402
+
+
+class TestPolyLineFill(unittest.TestCase):
+    """The PolyLine primitive supports an optional polygon fill (PCOLOR).
+
+    A stroked outline (wind turbine icon) leaves PCOLOR='None'; a filled
+    silhouette (the Grüne yellow squiggle motif) sets PCOLOR to the fill."""
+
+    def _pageobject(self, pl: PolyLine):
+        doc = Document(title="t", template_id="t")
+        page = doc.add_page(size="A6")
+        page.add(pl)
+        root = doc._build_xml()
+        for po in root.iter("PAGEOBJECT"):
+            if po.get("ANNAME") == pl.anname:
+                return po
+        raise AssertionError("PAGEOBJECT not found")
+
+    def test_fill_none_keeps_pcolor_none(self):
+        pl = PolyLine(
+            x_mm=10, y_mm=10, w_mm=20, h_mm=20,
+            sla_path="M0 0 L10 10", line_color="Gelb",
+            line_width_pt=2, anname="turbine",
+        )
+        po = self._pageobject(pl)
+        self.assertEqual(po.get("PCOLOR"), "None")
+        self.assertEqual(po.get("PCOLOR2"), "Gelb")
+
+    def test_fill_set_emits_pcolor(self):
+        pl = PolyLine(
+            x_mm=10, y_mm=10, w_mm=20, h_mm=2,
+            sla_path="M0 0 L10 1 Z", fill="Gelb",
+            line_color="None", line_width_pt=0, anname="squiggle",
+        )
+        po = self._pageobject(pl)
+        self.assertEqual(po.get("PCOLOR"), "Gelb")
+        self.assertEqual(po.get("PCOLOR2"), "None")
+        self.assertEqual(po.get("PTYPE"), "7")
 
 
 class TestRotatedTextFrameSwap(unittest.TestCase):

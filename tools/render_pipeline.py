@@ -1548,6 +1548,37 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase E5e: squiggle_alignment_audit — for templates carrying the
+    # Grüne yellow squiggle motif, verify each squiggle still sits on the
+    # word it underlines. Scribus wraps text differently from InDesign, so
+    # the emphasised word can drift while the squiggle (placed at absolute
+    # coordinates) does not. The matching remediation is the
+    # squiggle_realign playbook dispatched by bin/tune-fix.
+    squiggle_alignment_path = out_dir / "squiggle_alignment_audit.yml"
+    try:
+        from squiggle_alignment_audit import (
+            run_squiggle_alignment_audit as _saa_run,
+            _yaml_dump as _saa_yaml,
+        )
+        saa_report = _saa_run(tid, repo=Path(__file__).resolve().parent.parent)
+        squiggle_alignment_path.write_text(_saa_yaml(saa_report), encoding="utf-8")
+        n_saa = int(saa_report.get("issues", 0) or 0)
+        if n_saa:
+            issue_parts.append(
+                f"{n_saa} squiggle(s) off their word"
+            )
+            print(
+                f"[{tid}] squiggle_alignment_audit: {saa_report.get('detail')}",
+                file=sys.stderr,
+            )
+        else:
+            print(f"[{tid}] squiggle_alignment_audit: OK")
+    except Exception as exc:
+        _record_phase_error(
+            phase_errors, "squiggle_alignment_audit",
+            "E5e (squiggle_alignment_audit)", exc, tid,
+        )
+
     # Phase E6: per_region_regression_check — compares the just-emitted
     # E4 + E5 per-frame measurements against the previous render's
     # measurements (persisted in build/<slug>/per_region_history.jsonl).
@@ -2079,6 +2110,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         image_visibility_path=image_visibility_path,
         image_content_path=image_content_path,
         external_asset_substitution_path=eas_path,
+        squiggle_alignment_path=squiggle_alignment_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -2126,6 +2158,7 @@ def _build_preflight(
     image_visibility_path: Path | None = None,
     image_content_path: Path | None = None,
     external_asset_substitution_path: Path | None = None,
+    squiggle_alignment_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -2359,6 +2392,18 @@ def _build_preflight(
                 n_invisible == 0,  # faint is sub-threshold; invisible blocks
                 issues,
                 f"{n_invisible} invisible, {n_faint} faint" if issues else "",
+            )
+
+    # Phase E5e: squiggle_alignment_audit — yellow squiggle vs word tracking.
+    if squiggle_alignment_path is not None:
+        saa = _load_yml(squiggle_alignment_path)
+        if saa is not None:
+            n_saa = int(saa.get("issues", 0) or 0)
+            _record(
+                "squiggle_alignment_audit",
+                bool(saa.get("ok", True)),
+                n_saa,
+                saa.get("detail", "") or "",
             )
 
     # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the

@@ -972,10 +972,15 @@ class Polygon(_Frame):
 class PolyLine:
     """A complex multi-segment polyline (PTYPE=7 in Scribus).
 
-    Used for complex open or mixed-open/closed vector paths emitted with a
-    stroke (linescolor) and no fill. The canonical use case is importing
-    InDesign Polygon elements whose PathGeometry has multiple sub-paths
-    (e.g. wind turbines, logos, icons).
+    Used for complex open or mixed-open/closed vector paths. Two shapes:
+
+    * **stroked outline** — ``line_color`` set, ``fill`` left ``None``
+      (PCOLOR stays ``"None"``). The canonical case is a wind turbine /
+      logo / icon imported from an InDesign Polygon with multiple sub-paths.
+    * **filled silhouette** — ``fill`` set to a colour name. PCOLOR emits
+      the fill so closed bezier sub-paths paint as a solid shape. The
+      canonical case is the Grüne yellow squiggle emphasis motif (a closed
+      brush-stroke silhouette filled with Color/Yellow, drawn behind text).
 
     ``sla_path`` is a verbatim Scribus SLA SVG-like path string in **local
     points** (origin = frame top-left = 0,0). The frame bounding box
@@ -993,6 +998,20 @@ class PolyLine:
             line_width_pt=4.204,
             anname="u2b0",
         ))
+
+    Filled-silhouette example (yellow squiggle, no stroke)::
+
+        page.add(PolyLine(
+            x_mm=14.8,
+            y_mm=89.8,
+            w_mm=19.2,
+            h_mm=1.0,
+            sla_path="M53.27 0.659 C46.44 0.318 ... Z",
+            fill="Gelb",
+            line_color="None",
+            line_width_pt=0,
+            anname="u11e3",
+        ))
     """
     x_mm: float = 0
     y_mm: float = 0
@@ -1001,6 +1020,9 @@ class PolyLine:
     sla_path: str = "M0 0 L10 10"  # local-pt SVG path string
     line_color: str = "Black"
     line_width_pt: float = 1.0
+    # Optional polygon fill (PCOLOR). When None the shape is stroke-only and
+    # PCOLOR stays "None" — preserving the legacy stroked-outline behaviour.
+    fill: Optional[str] = None
     layer: int = 0
     anname: str = ""
     rotation_deg: float = 0.0
@@ -1028,7 +1050,7 @@ class PolyLine:
             "HEIGHT": _fmt_num(h_pt),
             "FRTYPE": "3",
             "CLIPEDIT": "1",
-            "PCOLOR": "None",
+            "PCOLOR": self.fill if self.fill is not None else "None",
             "PCOLOR2": self.line_color,
             "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1",

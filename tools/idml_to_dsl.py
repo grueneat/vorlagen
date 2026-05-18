@@ -160,16 +160,26 @@ COLOR_CMYK_TO_BRAND: dict[tuple[int, int, int, int], str] = {
     (0,   100, 0,   0):   "Magenta",
 }
 
-# IDML built-in swatches that should not be emitted (process inks, registration,
-# transparency placeholders). See locked decision #1 commentary.
+# IDML built-in swatches that NEVER reach the SLA, even when referenced —
+# transparency placeholders and registration ink. These have no CMYK value
+# the brand map could resolve.
 IDML_BUILTIN_COLORS_SKIP = {
     "Color/None",
     "Color/Registration",
+    "Swatch/None",
+}
+
+# IDML latent process inks (Cyan/Magenta/Yellow/Black). InDesign ships these
+# as Hiddenreserved swatches that are normally unused — when unused they are
+# dropped. But a PageItem can legitimately reference one as FillColor /
+# StrokeColor (e.g. the Grüne yellow squiggle motif fills with Color/Yellow).
+# When that happens the swatch IS in ``used_colors`` and must be routed
+# through COLOR_CMYK_TO_BRAND like any other CMYK swatch instead of skipped.
+IDML_BUILTIN_PROCESS_INKS = {
     "Color/Cyan",
     "Color/Magenta",
     "Color/Yellow",
     "Color/Black",
-    "Swatch/None",
 }
 
 # Defence-in-depth XML parser settings. lxml 5.4 is XXE-safe by default on
@@ -868,6 +878,13 @@ class _Ctx:
     # inventory and fires UnhandledElement when the gap is non-empty.
     emitted_self_ids: set[str] = field(default_factory=set)
     skipped_with_reason: list[dict] = field(default_factory=list)
+    # Squiggle re-anchoring (yellow emphasis motif). Each filled-silhouette
+    # PolyLine (FillColor=Color/Yellow, closed path) records its page-local
+    # bbox so a post-emit pass can associate it with the word it underlines.
+    # Keyed lists are populated by _emit_pageitem; consumed by
+    # _emit_squiggle_anchors which writes templates/<slug>/squiggle_anchors.yml.
+    squiggle_records: list[dict] = field(default_factory=list)
+    textframe_records: list[dict] = field(default_factory=list)
 
     def record_skipped(self, self_id: str, reason: str) -> None:
         """Explicitly skip an IDML PageItem with a reason — bypasses the
@@ -1059,13 +1076,19 @@ def _emit_colors_from_xml(
     for c in root.findall(".//Color"):
         self_id = c.get("Self", "")
         if self_id in IDML_BUILTIN_COLORS_SKIP:
-            # Color/None / Swatch/None / Registration / Process inks listed
-            # in IDML_BUILTIN_COLORS_SKIP never reach the SLA.
+            # Color/None / Swatch/None / Registration never reach the SLA —
+            # they carry no resolvable CMYK value.
             continue
         override = c.get("ColorOverride", "")
-        if "Hiddenreserved" in override:
-            # Latent process inks (Cyan/Magenta/Yellow/Black) marked as hidden;
-            # never used, never emitted.
+        # Latent process inks (Cyan/Magenta/Yellow/Black) ship as
+        # Hiddenreserved. Drop them ONLY when truly unused; when a PageItem
+        # references one (e.g. the yellow squiggle motif fills with
+        # Color/Yellow) it is in ``used_colors`` and must resolve like a
+        # normal CMYK swatch via COLOR_CMYK_TO_BRAND below.
+        is_referenced_process_ink = (
+            self_id in IDML_BUILTIN_PROCESS_INKS and self_id in used_colors
+        )
+        if "Hiddenreserved" in override and not is_referenced_process_ink:
             continue
         space = c.get("Space", "")
         model = c.get("Model", "")
@@ -1666,6 +1689,30 @@ def _is_complex_polygon(item: Any) -> bool:
     return False
 
 
+def _is_open_polygon(item: Any) -> bool:
+    """Return True when ANY of the Polygon's sub-paths is an open path.
+
+    A squiggle silhouette is always closed (PathOpen=false on every
+    GeometryPathType) so it can be flood-filled. An open sub-path means
+    the shape is a stroked outline, never a fill motif.
+    """
+    pg = item.find("Properties/PathGeometry")
+    if pg is None:
+        pg = item.find(".//PathGeometry")
+    if pg is None:
+        return False
+    for sp in pg.findall("GeometryPathType"):
+        if sp.get("PathOpen", "false").lower() in ("true", "1"):
+            return True
+    return False
+
+
+def _page_index_from_var(page_var: str) -> int:
+    """Map a ``pageN`` receiver variable to its integer render-page index."""
+    digits = "".join(ch for ch in page_var if ch.isdigit())
+    return int(digits) if digits else 0
+
+
 def _extract_idml_sla_path(
     item: Any,
     item_transform_str: str,
@@ -2126,6 +2173,16 @@ def _emit_pageitem(
             ctx.out, "TextFrame", kwargs,
             receiver=page_var, multiline=True,
         )
+        # Record the frame's page-local bbox so the squiggle re-anchoring
+        # pass can pick the text frame a squiggle sits beneath.
+        ctx.textframe_records.append({
+            "anname": self_id,
+            "page": _page_index_from_var(page_var),
+            "x_mm": _round_mm(x_mm),
+            "y_mm": _round_mm(y_mm),
+            "w_mm": _round_mm(w_mm),
+            "h_mm": _round_mm(h_mm),
+        })
         return
 
     if tag in ("Rectangle", "Polygon", "Oval"):
@@ -2134,14 +2191,32 @@ def _emit_pageitem(
         # emit as PolyLine (PTYPE=7) with verbatim SLA path data extracted from
         # the IDML PathGeometry (transform chain: item → ancestors → page-local).
         if tag == "Polygon" and _is_complex_polygon(item):
-            sc = _resolve_fill(item.get("StrokeColor"), ctx.color_map)
-            if not sc:
-                sc = "Black"
+            # A complex Polygon can be a stroked outline (wind turbine icon),
+            # a filled silhouette (the Grüne yellow squiggle motif — closed
+            # bezier sub-paths filled with Color/Yellow, no stroke), or both.
+            # Resolve FillColor and StrokeColor independently:
+            #   - FillColor present  → emit it as the PolyLine fill (PCOLOR).
+            #   - StrokeColor present → emit it as the line colour (PCOLOR2).
+            # NEVER default a fill-only shape's stroke to Black — that turned
+            # the yellow squiggle into a black 1pt outline.
+            fill_color = _resolve_fill(item.get("FillColor"), ctx.color_map)
+            stroke_color = _resolve_fill(item.get("StrokeColor"), ctx.color_map)
             sw = item.get("StrokeWeight", "0")
             try:
                 sw_pt = float(sw)
             except (ValueError, TypeError):
                 sw_pt = 0.0
+            # ``line_color`` keeps the StrokeColor when a real stroke exists.
+            # A shape with a fill but no stroke must not paint an outline, so
+            # only fall back to Black when there is neither a fill nor a
+            # stroke (a degenerate Polygon — keep the legacy visible default).
+            if stroke_color:
+                line_color = stroke_color
+            elif fill_color:
+                line_color = "None"
+                sw_pt = 0.0
+            else:
+                line_color = "Black"
             sla_path = _extract_idml_sla_path(
                 item, item_t, ancestor_transforms,
                 spread_t, page_t, page_gb,
@@ -2153,11 +2228,13 @@ def _emit_pageitem(
                 "w_mm": _round_mm(w_mm),
                 "h_mm": _round_mm(h_mm),
                 "sla_path": sla_path,
-                "line_color": sc,
+                "line_color": line_color,
                 "line_width_pt": sw_pt,
                 "anname": self_id,
                 "layer": layer_idx,
             }
+            if fill_color:
+                pl_kwargs["fill"] = fill_color
             if abs(rot) > 1e-3:
                 pl_kwargs["rotation_deg"] = _round_rot(rot)
             # IDML EndCap / EndJoin → Scribus PLINEEND / PLINEJOIN (Qt::PenCapStyle
@@ -2186,6 +2263,24 @@ def _emit_pageitem(
                 ctx.out, "PolyLine", pl_kwargs,
                 receiver=page_var, multiline=True,
             )
+            # Squiggle re-anchoring: the Grüne yellow emphasis motif is a
+            # closed-path Polygon filled with the builtin Color/Yellow ink
+            # and no stroke. Record its page-local bbox so _emit_squiggle_
+            # anchors can bind it to the word it underlines. The discriminator
+            # is the builtin Color/Yellow (a named C=0 M=0 Y=100 K=0 swatch is
+            # a normal yellow shape, not the brush motif).
+            if (
+                item.get("FillColor") == "Color/Yellow"
+                and not _is_open_polygon(item)
+            ):
+                ctx.squiggle_records.append({
+                    "anname": self_id,
+                    "page": _page_index_from_var(page_var),
+                    "x_mm": _round_mm(x_mm),
+                    "y_mm": _round_mm(y_mm),
+                    "w_mm": _round_mm(w_mm),
+                    "h_mm": _round_mm(h_mm),
+                })
             return
 
         # No nested image/pdf — emit as a Polygon.
@@ -4548,6 +4643,228 @@ def _emit_footer(out: PythonRepr) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Squiggle re-anchoring (Part B).
+#
+# The yellow squiggle motif is a free-standing Polygon placed at absolute page
+# coordinates. Scribus wraps text differently from InDesign, so the underlined
+# WORD shifts while the squiggle does not — it ends up under the wrong word.
+# This pass binds each squiggle to the word it underlines in baseline.pdf and
+# persists the mapping to templates/<slug>/squiggle_anchors.yml. The render-
+# time playbook (tools/playbooks/squiggle_realign.py) reads that mapping,
+# locates the same word in preview.pdf, and shifts the squiggle to track it.
+# ---------------------------------------------------------------------------
+
+# A squiggle is taller than a single underline only when it loops around a
+# word (a circle-style emphasis). Treat any word whose ink box vertically
+# overlaps the squiggle band — extended by this many points above the band —
+# as a candidate; the squiggle is drawn BEHIND the text it emphasises.
+_SQUIGGLE_WORD_Y_TOL_PT = 16.0
+
+
+def _words_in_frame(page_words: list[dict], frame_box_pt: tuple[float, float, float, float]) -> list[dict]:
+    """Return baseline.pdf words whose center lies inside ``frame_box_pt``.
+
+    ``frame_box_pt`` is (x0, top, x1, bottom) in PDF points. The word list is
+    kept in pdfplumber reading order so each word's index is a stable, render-
+    independent ordinal that survives a different line-wrap in preview.pdf.
+    """
+    fx0, ft, fx1, fb = frame_box_pt
+    out: list[dict] = []
+    for w in page_words:
+        cx = (w["x0"] + w["x1"]) / 2.0
+        cy = (w["top"] + w["bottom"]) / 2.0
+        if fx0 - 2.0 <= cx <= fx1 + 2.0 and ft - 2.0 <= cy <= fb + 2.0:
+            out.append(w)
+    return out
+
+
+def _associate_squiggle_to_word(
+    sq_box_pt: tuple[float, float, float, float],
+    frame_words: list[dict],
+) -> Optional[dict]:
+    """Pick the anchor word a squiggle underlines from a frame's word list.
+
+    The squiggle is a band drawn behind text. The anchor word is the
+    LEFTMOST word on the line whose baseline best matches the squiggle band:
+    that word's left edge is the most stable handle to translate the squiggle
+    by when the line wraps elsewhere.
+
+    Returns a dict ``{index, text, x0, top, x1, bottom}`` (index = position
+    in ``frame_words``), or None when no word overlaps.
+    """
+    sx0, st, sx1, sb = sq_box_pt
+    candidates: list[tuple[int, dict, float]] = []
+    for idx, w in enumerate(frame_words):
+        # Horizontal overlap with the squiggle band.
+        ox = min(sx1, w["x1"]) - max(sx0, w["x0"])
+        if ox <= 0.5:
+            continue
+        # Vertical proximity: the word's ink box must touch the squiggle band
+        # (extended upward — the squiggle sits at/below the text baseline).
+        if w["bottom"] < st - _SQUIGGLE_WORD_Y_TOL_PT:
+            continue
+        if w["top"] > sb + _SQUIGGLE_WORD_Y_TOL_PT:
+            continue
+        # Score: vertical distance from the word baseline to the squiggle
+        # center (smaller = better match), tie-broken by leftmost x.
+        sq_cy = (st + sb) / 2.0
+        v_dist = abs(w["bottom"] - sq_cy)
+        candidates.append((idx, w, v_dist))
+    if not candidates:
+        return None
+    # Best line: the minimum vertical distance.
+    best_v = min(c[2] for c in candidates)
+    on_line = [c for c in candidates if c[2] <= best_v + 6.0]
+    # Leftmost word on that line is the anchor.
+    idx, w, _ = min(on_line, key=lambda c: c[1]["x0"])
+    return {
+        "index": idx,
+        "text": w["text"],
+        "x0": round(w["x0"], 3),
+        "top": round(w["top"], 3),
+        "x1": round(w["x1"], 3),
+        "bottom": round(w["bottom"], 3),
+    }
+
+
+def _emit_squiggle_anchors(ctx: _Ctx, output: Path) -> None:
+    """Write templates/<slug>/squiggle_anchors.yml for the squiggle playbook.
+
+    Reads the sibling ``baseline.pdf`` (scaffolded into the template dir before
+    the converter runs). For each recorded squiggle Polygon it:
+
+      1. Finds the text frame it geometrically overlaps (page-local mm).
+      2. Extracts that frame's words from baseline.pdf in reading order.
+      3. Picks the anchor word the squiggle underlines.
+      4. Records the squiggle bbox, the anchor word's baseline box, the word's
+         ordinal within the frame (disambiguates repeats), and the squiggle's
+         offset from the word box in the InDesign baseline.
+
+    The file is only written when at least one squiggle was bound; templates
+    with no yellow motif produce nothing.
+    """
+    if not ctx.squiggle_records:
+        return
+    try:
+        import yaml  # local import — only needed when squiggles exist
+        import pdfplumber  # type: ignore[import-not-found]
+    except ImportError as exc:  # pragma: no cover - env guard
+        print(
+            f"squiggle anchors: skipped — {exc} not available",
+            file=sys.stderr,
+        )
+        return
+
+    baseline_pdf = output.parent / "baseline.pdf"
+    if not baseline_pdf.exists():
+        print(
+            f"squiggle anchors: skipped — no baseline.pdf at {baseline_pdf}",
+            file=sys.stderr,
+        )
+        return
+
+    PT = 72.0 / 25.4
+
+    def _mm_box_to_pt(rec: dict) -> tuple[float, float, float, float]:
+        return (
+            rec["x_mm"] * PT,
+            rec["y_mm"] * PT,
+            (rec["x_mm"] + rec["w_mm"]) * PT,
+            (rec["y_mm"] + rec["h_mm"]) * PT,
+        )
+
+    anchors: list[dict] = []
+    with pdfplumber.open(str(baseline_pdf)) as pdf:
+        n_pages = len(pdf.pages)
+        # Cache extracted words per page.
+        page_words_cache: dict[int, list[dict]] = {}
+        for sq in ctx.squiggle_records:
+            page_idx = sq["page"]
+            if page_idx >= n_pages:
+                continue
+            sq_box = _mm_box_to_pt(sq)
+            # Candidate text frames on the same page, ranked by bbox overlap.
+            frame_hits: list[tuple[float, dict]] = []
+            for tf in ctx.textframe_records:
+                if tf["page"] != page_idx:
+                    continue
+                tb = _mm_box_to_pt(tf)
+                ox = min(sq_box[2], tb[2]) - max(sq_box[0], tb[0])
+                oy = min(sq_box[3], tb[3]) - max(sq_box[1], tb[1])
+                if ox > 0 and oy > -_SQUIGGLE_WORD_Y_TOL_PT:
+                    frame_hits.append((ox * max(oy, 0.1), tf))
+            if not frame_hits:
+                continue
+            frame_hits.sort(key=lambda h: -h[0])
+            if page_idx not in page_words_cache:
+                page_words_cache[page_idx] = pdf.pages[page_idx].extract_words()
+            page_words = page_words_cache[page_idx]
+            # Try each candidate frame until one yields an anchor word.
+            anchor_word = None
+            target_frame = None
+            for _, tf in frame_hits:
+                fw = _words_in_frame(page_words, _mm_box_to_pt(tf))
+                aw = _associate_squiggle_to_word(sq_box, fw)
+                if aw is not None:
+                    anchor_word = aw
+                    target_frame = tf
+                    break
+            if anchor_word is None or target_frame is None:
+                continue
+            anchors.append({
+                "anname": sq["anname"],
+                "page": page_idx,
+                "target_frame": target_frame["anname"],
+                "word": anchor_word["text"],
+                # Ordinal within the frame's reading-order word list — the
+                # disambiguator when the word string repeats.
+                "word_index": anchor_word["index"],
+                "baseline_word_box_pt": {
+                    "x0": anchor_word["x0"],
+                    "top": anchor_word["top"],
+                    "x1": anchor_word["x1"],
+                    "bottom": anchor_word["bottom"],
+                },
+                "baseline_squiggle_box_mm": {
+                    "x_mm": sq["x_mm"],
+                    "y_mm": sq["y_mm"],
+                    "w_mm": sq["w_mm"],
+                    "h_mm": sq["h_mm"],
+                },
+                # Squiggle origin offset from the anchor word's box, in mm,
+                # measured in the InDesign baseline. The playbook keeps this
+                # offset constant: new_squiggle_xy = preview_word_xy + offset.
+                "offset_from_word_mm": {
+                    "dx_mm": round(sq["x_mm"] - anchor_word["x0"] / PT, 4),
+                    "dy_mm": round(sq["y_mm"] - anchor_word["top"] / PT, 4),
+                },
+            })
+
+    if not anchors:
+        return
+    doc = {
+        "template": ctx.template_id,
+        "_schema_version": 1,
+        "_doc": (
+            "Squiggle re-anchoring map. Each entry binds a yellow squiggle "
+            "Polygon (anname) to the word it underlines in baseline.pdf. "
+            "tools/playbooks/squiggle_realign.py consumes this to keep the "
+            "squiggle tracking its word when Scribus wraps text differently."
+        ),
+        "anchors": anchors,
+    }
+    anchors_path = output.parent / "squiggle_anchors.yml"
+    anchors_path.write_text(
+        yaml.dump(doc, sort_keys=False, allow_unicode=True, default_flow_style=False),
+        encoding="utf-8",
+    )
+    print(
+        f"OK: wrote {anchors_path} ({len(anchors)} squiggle anchor(s))",
+        file=sys.stderr,
+    )
+
+
+# ---------------------------------------------------------------------------
 def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             logo_map_path: Optional[Path] = None,
             asset_map_path: Optional[Path] = None,
@@ -4741,6 +5058,14 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(ctx.out.render(), encoding="utf-8")
         print(f"OK: wrote {output}", file=sys.stderr)
+
+        # Part B: bind each yellow squiggle to the word it underlines and
+        # persist templates/<slug>/squiggle_anchors.yml for the realign
+        # playbook. Best-effort — never fails the conversion.
+        try:
+            _emit_squiggle_anchors(ctx, output)
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"squiggle anchors: skipped — {exc}", file=sys.stderr)
         print(
             f"OK: opened {source.name} — "
             f"{len(pkg.spreads_objects)} spreads, "
