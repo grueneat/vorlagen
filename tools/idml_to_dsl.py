@@ -1345,6 +1345,12 @@ def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, An
         fill_color = ps.get("FillColor")
         font_style = ps.get("FontStyle")
         justification = ps.get("Justification")
+        # Paragraph spacing — IDML stores SpaceBefore/SpaceAfter in points
+        # already (no conversion needed). InDesign's default is 0; a designer
+        # who sets a non-zero value gets vertical air above/below the
+        # paragraph. SLA stores these as STYLE VOR/NACH.
+        space_before = ps.get("SpaceBefore")
+        space_after = ps.get("SpaceAfter")
         # LeadingModel controls how nominal Leading converts to baseline-to-
         # baseline gap. "LeadingModelAkiBelow" — InDesign's Japanese-typography
         # model used by default in this corpus — adds ~12% aki below each
@@ -1369,6 +1375,8 @@ def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, An
             "justification": justification,
             "applied_font": applied_font,
             "tab_stops": tab_stops if tab_stops else None,
+            "space_before": float(space_before) if space_before is not None else None,
+            "space_after": float(space_after) if space_after is not None else None,
         }
     return styles
 
@@ -1388,7 +1396,7 @@ def _resolve_paragraph_style(
         parent = all_styles[parent_self]
         for k in ("point_size", "leading", "leading_model", "grid_alignment",
                   "fill_color", "font_style", "justification", "applied_font",
-                  "tab_stops"):
+                  "tab_stops", "space_before", "space_after"):
             if resolved.get(k) is None:
                 resolved[k] = parent.get(k)
         parent_self = parent.get("based_on_self")
@@ -1530,6 +1538,18 @@ def _emit_paragraph_styles_to_function(
                 if pt is not None:
                     multiplier = 1.45 if model == "LeadingModelAkiBelow" else 1.2
                     kwargs["linesp"] = float(pt) * multiplier
+            # Paragraph spacing (IDML SpaceBefore/SpaceAfter, in points) →
+            # SLA STYLE VOR/NACH. Emit only a non-zero resolved value: 0 is
+            # both the IDML and SLA default, so emitting it would add noise
+            # without changing the render. A non-zero value (e.g. the corpus
+            # body style's SpaceAfter=5.669pt) inserts vertical air between
+            # consecutive paragraphs that was previously dropped.
+            sb = resolved.get("space_before")
+            if sb is not None and abs(sb) > 1e-6:
+                kwargs["space_before_pt"] = round(sb, 4)
+            sa = resolved.get("space_after")
+            if sa is not None and abs(sa) > 1e-6:
+                kwargs["space_after_pt"] = round(sa, 4)
             # Tab stops: emit only those defined directly on THIS style (not inherited),
             # so child styles don't redundantly repeat the parent's tab stops.
             own_tabs = st.get("tab_stops")
@@ -1649,6 +1669,81 @@ def _strict_no_threading(item: Any) -> None:
             f"(Next/Previous != 'n'); not supported in v1 "
             f"(extend tools/idml_to_dsl.py:_strict_no_threading)"
         )
+
+
+def _extract_opacity(item: Any) -> Optional[float]:
+    """Return the page item's fill opacity in [0.0, 1.0], or None when opaque.
+
+    IDML records object transparency under
+    ``<TransparencySetting><BlendingSetting Opacity="..."/></TransparencySetting>``.
+    Opacity is a percent (0-100); InDesign's default is 100 (fully opaque).
+    Returns None for a missing element or a 100 value so opaque frames stay
+    byte-identical (the SLA primitive omits TransValue for None).
+    """
+    ts = item.find("TransparencySetting")
+    if ts is None:
+        return None
+    bs = ts.find("BlendingSetting")
+    if bs is None:
+        return None
+    raw = bs.get("Opacity")
+    if raw is None:
+        return None
+    try:
+        pct = float(raw)
+    except (ValueError, TypeError):
+        return None
+    if abs(pct - 100.0) < 1e-6:
+        return None
+    return max(0.0, min(1.0, pct / 100.0))
+
+
+# IDML TextFramePreference/VerticalJustification → SLA PAGEOBJECT ALIGN
+# (vertical text alignment within the frame). TopAlign is both the IDML and
+# SLA default; only Center/Bottom/Justify need an explicit emit.
+_VERTICAL_JUSTIFICATION_MAP = {
+    "TopAlign": 0,
+    "CenterAlign": 1,
+    "BottomAlign": 2,
+    "JustifyAlign": 3,
+}
+
+
+def _extract_textframe_prefs(item: Any) -> dict[str, Any]:
+    """Return rendering-relevant TextFramePreference settings for a TextFrame.
+
+    Keys (all optional):
+      ``vertical_text_align`` — int 0/1/2/3 from VerticalJustification, omitted
+        for the default TopAlign.
+      ``columns`` — int TextColumnCount, omitted when 1.
+      ``col_gap_pt`` — float TextColumnGutter (points), only when columns > 1.
+    InDesign defaults (TopAlign / 1 column) are dropped so single-column,
+    top-aligned frames keep emitting nothing new.
+    """
+    out: dict[str, Any] = {}
+    tfp = item.find("TextFramePreference")
+    if tfp is None:
+        return out
+    vj = tfp.get("VerticalJustification")
+    if vj is not None and vj in _VERTICAL_JUSTIFICATION_MAP:
+        v = _VERTICAL_JUSTIFICATION_MAP[vj]
+        if v != 0:
+            out["vertical_text_align"] = v
+    cc = tfp.get("TextColumnCount")
+    if cc is not None:
+        try:
+            n = int(cc)
+        except (ValueError, TypeError):
+            n = 1
+        if n > 1:
+            out["columns"] = n
+            cg = tfp.get("TextColumnGutter")
+            if cg is not None:
+                try:
+                    out["col_gap_pt"] = float(cg)
+                except (ValueError, TypeError):
+                    pass
+    return out
 
 
 def _is_complex_polygon(item: Any) -> bool:
@@ -2169,6 +2264,23 @@ def _emit_pageitem(
         fc = _resolve_fill(item.get("FillColor"), ctx.color_map)
         if fc:
             kwargs["fill"] = fc
+        # TextFramePreference: vertical justification + multi-column layout.
+        # CenterAlign vertical justification (used by every Impressum frame in
+        # the corpus) centres the text block in the frame instead of pinning
+        # it to the top; multi-column (the Querformat body frames are 2-up)
+        # splits the story into N columns with a gutter.
+        tf_prefs = _extract_textframe_prefs(item)
+        if "vertical_text_align" in tf_prefs:
+            kwargs["vertical_text_align"] = tf_prefs["vertical_text_align"]
+        if "columns" in tf_prefs:
+            kwargs["columns"] = tf_prefs["columns"]
+            if "col_gap_pt" in tf_prefs:
+                kwargs["col_gap_mm"] = round(tf_prefs["col_gap_pt"] * PT_TO_MM, 4)
+        # Object opacity (BlendingSetting/Opacity) — the Impressum frames are
+        # placed at 70% in this corpus. None when fully opaque.
+        opacity = _extract_opacity(item)
+        if opacity is not None:
+            kwargs["fill_opacity"] = round(opacity, 4)
         _emit_call(
             ctx.out, "TextFrame", kwargs,
             receiver=page_var, multiline=True,
@@ -2311,6 +2423,9 @@ def _emit_pageitem(
                     pass
         if tag == "Oval":
             kwargs["shape"] = "ellipse"
+        opacity = _extract_opacity(item)
+        if opacity is not None:
+            kwargs["fill_opacity"] = round(opacity, 4)
         _emit_call(
             ctx.out, "Polygon", kwargs,
             receiver=page_var, multiline=True,
@@ -2484,6 +2599,7 @@ def _emit_image_frame_call(
     inline_ext: Optional[str] = None,
     local_scale: Optional[tuple[float, float]] = None,
     local_offset_pt: Optional[tuple[float, float]] = None,
+    fill_opacity: Optional[float] = None,
 ) -> None:
     """Append a page.add(ImageFrame(...)) call to ctx.out."""
     kwargs: dict[str, Any] = {
@@ -2496,6 +2612,8 @@ def _emit_image_frame_call(
     }
     if abs(rot) > 1e-3:
         kwargs["rotation_deg"] = _round_rot(rot)
+    if fill_opacity is not None:
+        kwargs["fill_opacity"] = round(fill_opacity, 4)
     if image_path:
         kwargs["image"] = image_path
     if inline_data is not None and inline_ext is not None:
@@ -2645,6 +2763,7 @@ def _emit_image_or_inline(
     ctx: _Ctx,
     local_scale: Optional[tuple[float, float]] = None,
     local_offset_pt: Optional[tuple[float, float]] = None,
+    fill_opacity: Optional[float] = None,
 ) -> None:
     """Issue #39 — emit an ImageFrame call self-contained per asset_policy.
 
@@ -2694,6 +2813,7 @@ def _emit_image_or_inline(
             ctx=ctx,
             local_scale=local_scale,
             local_offset_pt=local_offset_pt,
+            fill_opacity=fill_opacity,
         )
         return
 
@@ -2713,6 +2833,7 @@ def _emit_image_or_inline(
         ctx=ctx,
         local_scale=local_scale,
         local_offset_pt=local_offset_pt,
+        fill_opacity=fill_opacity,
     )
 
 
@@ -3042,6 +3163,9 @@ def _emit_image_content(
         frame_anchors_bbox: the full ``(min_x, min_y, max_x, max_y)`` anchor
             bbox — the frame window the placed image is cropped against.
     """
+    # Object opacity (BlendingSetting/Opacity) lives on the enclosing
+    # Rectangle, not the <Image> child. None when fully opaque.
+    fill_opacity = _extract_opacity(rect)
     link = img.find(".//Link")
     uri = link.get("LinkResourceURI", "") if link is not None else ""
     basename = _basename_from_uri(uri)
@@ -3100,6 +3224,7 @@ def _emit_image_content(
                 _emit_image_or_inline(
                     ctx.out, crop.x_mm, crop.y_mm, crop.w_mm, crop.h_mm, rot,
                     self_id, layer_idx, abs_path=crop.path, ctx=ctx,
+                    fill_opacity=fill_opacity,
                 )
                 return
             # Issue #39 Phase A + C: inline-vs-relative routing.
@@ -3107,6 +3232,7 @@ def _emit_image_content(
                 ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
                 self_id, layer_idx, abs_path=abs_mapped, ctx=ctx,
                 local_scale=local_scale, local_offset_pt=local_offset_pt,
+                fill_opacity=fill_opacity,
             )
             return
         # asset_map is populated but this basename is missing → strict raise.
@@ -3138,6 +3264,7 @@ def _emit_image_content(
         ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
         self_id, layer_idx, abs_path=asset_path, ctx=ctx,
         local_scale=local_scale, local_offset_pt=local_offset_pt,
+        fill_opacity=fill_opacity,
     )
 
 

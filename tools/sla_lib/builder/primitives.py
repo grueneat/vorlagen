@@ -474,6 +474,13 @@ class _Frame:
     # the rule still TESTS every page; only individual feature frames opt
     # out, and the opt-out is visible at the frame definition.
     is_full_bleed: bool = False
+    # Object opacity in [0.0, 1.0] (1.0 = fully opaque, the default). ``None``
+    # leaves the PAGEOBJECT fully opaque (no TransValue attribute emitted —
+    # matches the original SLAs which omit it). A value < 1.0 is written as
+    # Scribus's TransValue/TransValueS, which store *transparency*
+    # (1 - opacity): InDesign's BlendingSetting/Opacity=70 → opacity 0.7 →
+    # TransValue 0.3.
+    fill_opacity: Optional[float] = None
 
     def _xy_pt(self, page) -> tuple[float, float]:
         """Return absolute XPOS/YPOS in scratch canvas space."""
@@ -540,6 +547,25 @@ def _apply_soft_shadow(attrs: dict, ss: Optional[SoftShadow]) -> None:
     attrs["SOFTSHADOWSHADE"] = str(ss.shade)
     attrs["SOFTSHADOWERASE"] = "1" if ss.erase else "0"
     attrs["SOFTSHADOWOBJTRANS"] = "1" if ss.object_trans else "0"
+
+
+def _apply_fill_opacity(attrs: dict, fill_opacity: Optional[float]) -> None:
+    """Emit Scribus TransValue/TransValueS when the frame is not fully opaque.
+
+    Scribus stores object *transparency* (TransValue for fill, TransValueS
+    for stroke) as ``1 - opacity``: 0 = opaque, 1 = invisible. The original
+    SLAs omit the attribute entirely for opaque objects, so ``None`` (or a
+    value within an ulp of 1.0) emits nothing — keeping opaque frames
+    byte-identical to the round-trip baseline.
+    """
+    if fill_opacity is None:
+        return
+    op = max(0.0, min(1.0, fill_opacity))
+    if abs(op - 1.0) < 1e-6:
+        return
+    trans = 1.0 - op
+    attrs["TransValue"] = _fmt_num(trans)
+    attrs["TransValueS"] = _fmt_num(trans)
 
 
 # ---------------------------------------------------------------------------
@@ -693,6 +719,7 @@ class TextFrame(_Frame):
             _apply_shape_attrs(attrs, self, w_pt, h_pt,
                                 default_path=rect_path, default_frtype="0")
         _apply_soft_shadow(attrs, self.soft_shadow)
+        _apply_fill_opacity(attrs, self.fill_opacity)
         if self.fill is not None:
             attrs["PCOLOR"] = self.fill
         if self.line_color is not None:
@@ -889,6 +916,7 @@ class ImageFrame(_Frame):
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=rect_path, default_frtype="0")
         _apply_soft_shadow(attrs, self.soft_shadow)
+        _apply_fill_opacity(attrs, self.fill_opacity)
         if self.anname:
             attrs["ANNAME"] = self.anname
         return etree.Element("PAGEOBJECT", attrib=attrs)
@@ -937,6 +965,7 @@ class Polygon(_Frame):
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=default_path, default_frtype=default_frtype)
         _apply_soft_shadow(attrs, self.soft_shadow)
+        _apply_fill_opacity(attrs, self.fill_opacity)
         if self.line_color is not None:
             attrs["PCOLOR2"] = self.line_color
         if self.fill_shade != 100:

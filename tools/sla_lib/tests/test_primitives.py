@@ -144,3 +144,51 @@ class TestRotatedTextFrameSwap(unittest.TestCase):
         # Swap: WIDTH becomes the un-rotated HEIGHT and vice-versa.
         self.assertAlmostEqual(float(po.get("WIDTH")), 80 * 72 / 25.4, places=2)
         self.assertAlmostEqual(float(po.get("HEIGHT")), 40 * 72 / 25.4, places=2)
+
+
+class TestFillOpacity(unittest.TestCase):
+    """``fill_opacity`` maps to Scribus TransValue/TransValueS, which store
+    *transparency* (1 - opacity). None / 1.0 emit nothing so opaque frames
+    stay byte-identical to the round-trip baseline."""
+
+    def _pageobject(self, frame):
+        doc = Document(title="t", template_id="t")
+        page = doc.add_page(size="A6")
+        page.add(frame)
+        root = doc._build_xml()
+        for po in root.iter("PAGEOBJECT"):
+            if po.get("ANNAME") == frame.anname:
+                return po
+        raise AssertionError("PAGEOBJECT not found")
+
+    def test_opacity_70_emits_transvalue(self):
+        f = TextFrame(x_mm=10, y_mm=10, w_mm=40, h_mm=20,
+                      text="Impressum", anname="imp", fill_opacity=0.7)
+        po = self._pageobject(f)
+        # opacity 0.7 → transparency 0.3
+        self.assertAlmostEqual(float(po.get("TransValue")), 0.3, places=6)
+        self.assertAlmostEqual(float(po.get("TransValueS")), 0.3, places=6)
+
+    def test_opacity_none_omits_transvalue(self):
+        f = TextFrame(x_mm=10, y_mm=10, w_mm=40, h_mm=20,
+                      text="x", anname="opaque")
+        po = self._pageobject(f)
+        self.assertIsNone(po.get("TransValue"))
+        self.assertIsNone(po.get("TransValueS"))
+
+    def test_opacity_one_omits_transvalue(self):
+        f = TextFrame(x_mm=10, y_mm=10, w_mm=40, h_mm=20,
+                      text="x", anname="full", fill_opacity=1.0)
+        po = self._pageobject(f)
+        self.assertIsNone(po.get("TransValue"))
+
+    def test_image_frame_opacity(self):
+        from sla_lib.builder.primitives import ImageFrame
+        f = ImageFrame(x_mm=0, y_mm=0, w_mm=50, h_mm=50,
+                       image="x.png", anname="img90", fill_opacity=0.9)
+        po = self._pageobject(f)
+        self.assertAlmostEqual(float(po.get("TransValue")), 0.1, places=6)
+
+
+if __name__ == "__main__":
+    unittest.main()
