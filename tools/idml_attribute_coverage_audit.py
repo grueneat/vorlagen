@@ -57,6 +57,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import yaml
 from lxml import etree
 
 _HERE = Path(__file__).resolve().parent
@@ -566,6 +567,170 @@ def audit(idml_paths: list[Path]) -> AuditResult:
 
 
 # --------------------------------------------------------------------------
+# Scaffold/import gate -- baseline of accepted unconsumed attributes.
+# --------------------------------------------------------------------------
+#
+# The audit (above) answers "what does the converter silently drop, batch-
+# wide". The gate below answers a narrower, per-import question: "does THIS
+# IDML surface a significant unconsumed attribute that is NOT already a
+# known/accepted drop?". A genuinely new significant drop fails the gate;
+# every attribute already triaged in ATTRIBUTE_FIX_LOG.md passes silently.
+#
+# The accepted set is a checked-in baseline file -- ATTRIBUTE_COVERAGE_BASELINE
+# .yml at the repo root -- regenerated from this audit's `significant` output
+# (`--write-baseline`). It is the complete set of significant unconsumed
+# (tag, attr) pairs across the batch IDMLs at the time the converter work
+# was frozen (commit 2c3f7b8); every entry is dispositioned in
+# ATTRIBUTE_FIX_LOG.md (109 Tier-A triaged fixed / not-impactful / unsupported,
+# plus the Tier-B constant-value set).
+
+# Repo root: idml_attribute_coverage_audit.py lives in tools/.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+BASELINE_PATH = _REPO_ROOT / "ATTRIBUTE_COVERAGE_BASELINE.yml"
+
+
+def _baseline_key(tag: str, attr: str) -> str:
+    """Canonical ``tag/attr`` string used as a baseline entry."""
+    return f"{tag}/{attr}"
+
+
+def load_baseline(path: Path) -> tuple[set[str], set[str]]:
+    """Load the accepted-attribute baseline.
+
+    Returns ``(accepted, batch_consumed)`` -- two sets of ``tag/attr`` keys:
+
+    * ``accepted`` -- significant unconsumed attributes triaged in
+      ATTRIBUTE_FIX_LOG.md (the converter drops them, knowingly).
+    * ``batch_consumed`` -- attributes the converter DOES consume on at
+      least one batch IDML. A single-IDML gate run exercises fewer converter
+      code paths than the 9-IDML batch, so an attribute genuinely handled by
+      the converter can show as unconsumed for one IDML; treating the batch
+      CONSUMED set as also-accepted removes that false positive.
+
+    A missing baseline yields two empty sets (the gate then flags every
+    significant unconsumed attribute -- fail-loud, never fail-silent).
+    """
+    if not path.exists():
+        return set(), set()
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return (
+        set(doc.get("accepted") or []),
+        set(doc.get("batch_consumed") or []),
+    )
+
+
+def build_baseline_doc(result: "AuditResult") -> dict:
+    """Build the baseline document from an AuditResult."""
+    accepted = sorted(
+        _baseline_key(c.tag, c.attr) for c in result.significant
+    )
+    batch_consumed = sorted(
+        _baseline_key(tag, attr) for tag, attr in result.consumed
+    )
+    return {
+        "_doc": (
+            "Accepted unconsumed-attribute baseline for the IDML->SLA "
+            "converter. `accepted` lists every significant (render-affecting) "
+            "(element-tag/attribute) pair the converter does NOT consume but "
+            "that has been triaged as fixed / not-impactful / unsupported in "
+            "ATTRIBUTE_FIX_LOG.md. `batch_consumed` lists every attribute the "
+            "converter DOES consume on at least one batch IDML -- a "
+            "single-IDML gate run exercises fewer code paths than the batch, "
+            "so this set absorbs that coverage gap. The scaffold/import gate "
+            "(idml_attribute_coverage_audit.run_attribute_coverage_gate) "
+            "fails when a converted IDML surfaces a significant unconsumed "
+            "attribute in NEITHER list. Regenerate with: python3 "
+            "tools/idml_attribute_coverage_audit.py --write-baseline."
+        ),
+        "_schema_version": 2,
+        "count": len(accepted),
+        "batch_consumed_count": len(batch_consumed),
+        "accepted": accepted,
+        "batch_consumed": batch_consumed,
+    }
+
+
+@dataclass
+class CoverageGateResult:
+    """Per-IDML outcome of the attribute-coverage scaffold gate."""
+
+    ok: bool
+    issues: int
+    detail: str
+    new_attributes: list[str]  # significant tag/attr not in the baseline
+    converter_ok: bool
+    converter_note: str
+
+    def to_report(self) -> dict:
+        """The canonical ``ok/issues/detail`` preflight contract + extras."""
+        return {
+            "ok": self.ok,
+            "issues": self.issues,
+            "detail": self.detail,
+            "new_attributes": self.new_attributes,
+            "converter_ok": self.converter_ok,
+            "converter_note": self.converter_note,
+        }
+
+
+def run_attribute_coverage_gate(
+    idml_path: Path, baseline_path: Optional[Path] = None
+) -> CoverageGateResult:
+    """Run the attribute-coverage gate on a single IDML.
+
+    Audits one IDML, classifies its unconsumed attributes, and diffs the
+    ``significant`` set against the accepted baseline. Any significant
+    unconsumed ``(tag, attr)`` not in the baseline is a NEW silent drop --
+    a converter regression or a template using an attribute the converter
+    never handled. The gate fails (``ok=False``) when any new attribute is
+    found.
+
+    The result carries the canonical ``ok / issues / detail`` preflight
+    contract so ``render_pipeline._build_preflight`` can consume it.
+    """
+    baseline_path = baseline_path or BASELINE_PATH
+    accepted, batch_consumed = load_baseline(baseline_path)
+    known = accepted | batch_consumed
+    result = audit([idml_path])
+    run = result.runs.get(idml_path.name)
+    converter_ok = bool(run.ok) if run else False
+    converter_note = run.note if run else "no converter run recorded"
+
+    new_attrs = sorted(
+        _baseline_key(c.tag, c.attr)
+        for c in result.significant
+        if _baseline_key(c.tag, c.attr) not in known
+    )
+    n_new = len(new_attrs)
+    if not accepted:
+        detail = (
+            f"baseline {baseline_path.name} missing/empty -- "
+            f"{n_new} significant unconsumed attribute(s) unverified"
+        )
+    elif n_new:
+        shown = ", ".join(new_attrs[:8])
+        if n_new > 8:
+            shown += f", ... (+{n_new - 8} more)"
+        detail = (
+            f"{n_new} NEW significant unconsumed attribute(s) not in "
+            f"baseline: {shown}"
+        )
+    else:
+        detail = (
+            f"all significant unconsumed attributes accounted for "
+            f"({len(accepted)}-entry baseline)"
+        )
+    return CoverageGateResult(
+        ok=(n_new == 0 and bool(accepted)),
+        issues=n_new,
+        detail=detail,
+        new_attributes=new_attrs,
+        converter_ok=converter_ok,
+        converter_note=converter_note,
+    )
+
+
+# --------------------------------------------------------------------------
 # Report rendering.
 # --------------------------------------------------------------------------
 
@@ -793,6 +958,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         default=None,
         help="Write the markdown report to this path (default: stdout).",
     )
+    ap.add_argument(
+        "--write-baseline",
+        action="store_true",
+        help="Regenerate the accepted-attribute baseline "
+        f"({BASELINE_PATH.name}) from the audited IDMLs' significant set, "
+        "instead of rendering the markdown report.",
+    )
+    ap.add_argument(
+        "--baseline-path",
+        type=Path,
+        default=BASELINE_PATH,
+        help=f"Baseline file path (default: {BASELINE_PATH}).",
+    )
     args = ap.parse_args(argv)
 
     idml_paths = args.idmls or [Path(p) for p in _BATCH_IDMLS]
@@ -803,6 +981,20 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 2
 
     result = audit(idml_paths)
+
+    if args.write_baseline:
+        doc = build_baseline_doc(result)
+        args.baseline_path.write_text(
+            yaml.safe_dump(doc, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+        print(
+            f"OK: wrote {args.baseline_path} "
+            f"({doc['count']} accepted attributes)",
+            file=sys.stderr,
+        )
+        return 0
+
     report = render_markdown(result, idml_paths)
 
     if args.output:

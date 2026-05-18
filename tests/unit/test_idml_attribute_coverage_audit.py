@@ -342,5 +342,169 @@ def test_audit_records_failed_converter_runs(
     assert "UnhandledElement: boom" in report
 
 
+# ---------------------------------------------------------------------------
+# Scaffold/import gate -- baseline + run_attribute_coverage_gate
+# ---------------------------------------------------------------------------
+
+def test_baseline_roundtrip(monkeypatch, tmp_path: Path) -> None:
+    """build_baseline_doc -> write -> load_baseline returns the same sets."""
+    idml = _make_idml(tmp_path)
+    monkeypatch.setattr(
+        audit,
+        "run_converter_instrumented",
+        lambda p: audit.ConverterRun(
+            consumed={("ParagraphStyle", "PointSize")}, ok=True, note=""
+        ),
+    )
+    result = audit.audit([idml])
+    doc = audit.build_baseline_doc(result)
+    assert doc["_schema_version"] == 2
+    assert "accepted" in doc and "batch_consumed" in doc
+    # SpaceBefore/SpaceAfter are significant unconsumed -> in accepted.
+    assert "ParagraphStyle/SpaceBefore" in doc["accepted"]
+    assert "ParagraphStyle/SpaceAfter" in doc["accepted"]
+    # PointSize was consumed -> in batch_consumed.
+    assert "ParagraphStyle/PointSize" in doc["batch_consumed"]
+
+    baseline_path = tmp_path / "baseline.yml"
+    baseline_path.write_text(
+        __import__("yaml").safe_dump(doc), encoding="utf-8"
+    )
+    accepted, batch_consumed = audit.load_baseline(baseline_path)
+    assert accepted == set(doc["accepted"])
+    assert batch_consumed == set(doc["batch_consumed"])
+
+
+def test_load_baseline_missing_returns_empty_sets(tmp_path: Path) -> None:
+    accepted, batch_consumed = audit.load_baseline(tmp_path / "absent.yml")
+    assert accepted == set()
+    assert batch_consumed == set()
+
+
+def _write_baseline(tmp_path: Path, accepted, batch_consumed=()) -> Path:
+    import yaml as _yaml
+    p = tmp_path / "baseline.yml"
+    p.write_text(
+        _yaml.safe_dump({
+            "accepted": sorted(accepted),
+            "batch_consumed": sorted(batch_consumed),
+        }),
+        encoding="utf-8",
+    )
+    return p
+
+
+def test_gate_passes_when_all_significant_in_baseline(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Every significant unconsumed attribute is dispositioned -> gate OK."""
+    idml = _make_idml(tmp_path)
+    monkeypatch.setattr(
+        audit,
+        "run_converter_instrumented",
+        lambda p: audit.ConverterRun(consumed=set(), ok=True, note=""),
+    )
+    # Build the baseline FROM this IDML's own significant set.
+    result = audit.audit([idml])
+    baseline = _write_baseline(
+        tmp_path,
+        {audit._baseline_key(c.tag, c.attr) for c in result.significant},
+    )
+    gate = audit.run_attribute_coverage_gate(idml, baseline)
+    assert gate.ok is True
+    assert gate.issues == 0
+    assert gate.new_attributes == []
+
+
+def test_gate_flags_new_significant_attribute(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """A significant attribute NOT in the baseline fails the gate."""
+    idml = _make_idml(tmp_path)
+    monkeypatch.setattr(
+        audit,
+        "run_converter_instrumented",
+        lambda p: audit.ConverterRun(consumed=set(), ok=True, note=""),
+    )
+    result = audit.audit([idml])
+    sig_keys = {audit._baseline_key(c.tag, c.attr) for c in result.significant}
+    # Baseline is missing exactly one known significant attribute.
+    assert "ParagraphStyle/SpaceAfter" in sig_keys
+    baseline = _write_baseline(
+        tmp_path, sig_keys - {"ParagraphStyle/SpaceAfter"}
+    )
+    gate = audit.run_attribute_coverage_gate(idml, baseline)
+    assert gate.ok is False
+    assert gate.issues == 1
+    assert gate.new_attributes == ["ParagraphStyle/SpaceAfter"]
+    assert "ParagraphStyle/SpaceAfter" in gate.detail
+
+
+def test_gate_batch_consumed_absorbs_coverage_gap(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """An attr the converter handles batch-wide is not a new drop.
+
+    A single-IDML gate run exercises fewer converter code paths than the
+    9-IDML batch. An attribute consumed only via another IDML's path would
+    show as unconsumed here; batch_consumed must absorb it.
+    """
+    idml = _make_idml(tmp_path)
+    monkeypatch.setattr(
+        audit,
+        "run_converter_instrumented",
+        lambda p: audit.ConverterRun(consumed=set(), ok=True, note=""),
+    )
+    result = audit.audit([idml])
+    sig_keys = {audit._baseline_key(c.tag, c.attr) for c in result.significant}
+    # Pretend SpaceAfter is NOT in `accepted` but IS in `batch_consumed`.
+    baseline = _write_baseline(
+        tmp_path,
+        accepted=sig_keys - {"ParagraphStyle/SpaceAfter"},
+        batch_consumed={"ParagraphStyle/SpaceAfter"},
+    )
+    gate = audit.run_attribute_coverage_gate(idml, baseline)
+    assert gate.ok is True
+    assert gate.issues == 0
+
+
+def test_gate_fails_loud_on_missing_baseline(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """No baseline file -> gate fails (never silently passes)."""
+    idml = _make_idml(tmp_path)
+    monkeypatch.setattr(
+        audit,
+        "run_converter_instrumented",
+        lambda p: audit.ConverterRun(consumed=set(), ok=True, note=""),
+    )
+    gate = audit.run_attribute_coverage_gate(idml, tmp_path / "absent.yml")
+    assert gate.ok is False
+    assert "missing/empty" in gate.detail
+
+
+def test_gate_report_has_preflight_contract(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """to_report() carries the canonical ok/issues/detail keys."""
+    idml = _make_idml(tmp_path)
+    monkeypatch.setattr(
+        audit,
+        "run_converter_instrumented",
+        lambda p: audit.ConverterRun(consumed=set(), ok=True, note=""),
+    )
+    result = audit.audit([idml])
+    baseline = _write_baseline(
+        tmp_path,
+        {audit._baseline_key(c.tag, c.attr) for c in result.significant},
+    )
+    report = audit.run_attribute_coverage_gate(idml, baseline).to_report()
+    for key in ("ok", "issues", "detail"):
+        assert key in report
+    assert isinstance(report["ok"], bool)
+    assert isinstance(report["issues"], int)
+    assert isinstance(report["detail"], str)
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

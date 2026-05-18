@@ -1239,6 +1239,79 @@ def write_md(
 
 
 # ---------------------------------------------------------------------------
+# IDML source resolution
+
+
+def _resolve_idml_source(
+    slug: str, templates_dir: Path, originals_dir: Path
+) -> Optional[Path]:
+    """Resolve the source IDML for ``slug``.
+
+    Priority:
+      1. ``templates/<slug>/meta.yml::idml_source``. The value is a relative
+         path authored by idml_import_driver, but the relative base depends
+         on which worktree the import ran in (the Flyer slugs carry
+         ``../../../../originals/...``, the leporello ``../../originals/...``).
+         So we try several bases AND, if none resolve, fall back to looking
+         up the IDML *basename* directly under ``originals_dir``.
+      2. Strict slug-keyed glob of ``<originals_dir>/*/*.idml``: the IDML
+         basename (hyphen/underscore-normalised, lowercased) must match the
+         slug on its first three tokens.
+
+    Returns the resolved Path, or ``None`` when nothing matches. The earlier
+    implementation resolved (1) against ``originals_dir`` (wrong base) and
+    hardcoded (2) to the leporello-zweigeteilt IDML, so every Flyer template
+    silently audited against the wrong source.
+    """
+    def _norm(s: str) -> str:
+        return s.lower().replace("-", " ").replace("_", " ")
+
+    meta_path = templates_dir / slug / "meta.yml"
+    if meta_path.exists():
+        try:
+            data = yaml.safe_load(meta_path.read_text(encoding="utf-8")) or {}
+            src = data.get("idml_source")
+        except yaml.YAMLError:
+            src = None
+        if src:
+            cand = Path(src)
+            if cand.is_absolute() and cand.exists():
+                return cand
+            # Try resolving the relative path against several plausible
+            # bases — the meta.yml value's base is worktree-dependent.
+            tdir = (templates_dir / slug).resolve()
+            bases = [
+                tdir,
+                templates_dir.resolve(),
+                templates_dir.resolve().parent,
+                tdir.parent.parent,
+            ]
+            for base in bases:
+                resolved = (base / cand).resolve()
+                if resolved.exists():
+                    return resolved
+            # Last resort for (1): the relative path is stale, but its
+            # basename still names the real IDML — locate it by filename
+            # under originals_dir (a unique basename per template).
+            wanted = cand.name.lower()
+            matches = [
+                c for c in sorted(originals_dir.glob("*/*.idml"))
+                if c.name.lower() == wanted
+            ]
+            if len(matches) == 1:
+                return matches[0]
+
+    # Fallback: strict slug-keyed glob. Match the IDML basename against the
+    # first three slug tokens so a Flyer slug cannot resolve to a leporello.
+    slug_words = _norm(slug).split()
+    min_prefix = " ".join(slug_words[:3]) if len(slug_words) >= 3 else _norm(slug)
+    for candidate in sorted(originals_dir.glob("*/*.idml")):
+        if _norm(candidate.stem).startswith(min_prefix):
+            return candidate
+    return None
+
+
+# ---------------------------------------------------------------------------
 # CLI
 
 
@@ -1268,27 +1341,15 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not template_dir.exists():
         ap.error(f"template dir not found: {template_dir}")
 
-    # Resolve IDML
-    meta_yml = template_dir / "meta.yml"
-    idml_source: Optional[Path] = None
-    if meta_yml.exists():
-        try:
-            data = yaml.safe_load(meta_yml.read_text(encoding="utf-8"))
-            src = (data or {}).get("idml_source")
-            if src:
-                idml_source = Path(src)
-                if not idml_source.is_absolute():
-                    idml_source = (Path(args.originals_dir) / idml_source).resolve()
-        except yaml.YAMLError:
-            pass
-    if idml_source is None or not idml_source.exists():
-        # Fallback: glob originals
-        slug_token = args.slug.split("-")[2:5]  # e.g. ["leporello", "z", "falz"]
-        for candidate in Path(args.originals_dir).glob("*/*.idml"):
-            name = candidate.name.lower()
-            if all(tok.lower() in name for tok in ("leporello", "zweigeteilt")):
-                idml_source = candidate
-                break
+    # Resolve IDML — meta.yml::idml_source is relative to the TEMPLATE dir,
+    # then a strict slug-keyed glob fallback. The previous implementation
+    # resolved idml_source against --originals-dir (wrong base; e.g. the
+    # flyer's '../../../../originals/...' became '/originals/...') AND its
+    # glob fallback was hardcoded to ('leporello', 'zweigeteilt'), so every
+    # Flyer template silently loaded the leporello IDML.
+    idml_source = _resolve_idml_source(
+        args.slug, templates_dir, Path(args.originals_dir)
+    )
     if idml_source is None or not idml_source.exists():
         ap.error("could not resolve IDML source")
     print(f"IDML: {idml_source}", file=sys.stderr)

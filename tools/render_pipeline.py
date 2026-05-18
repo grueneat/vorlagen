@@ -885,9 +885,21 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             if candidate.exists():
                 idml_source = candidate
                 break
-    # Also try a common originals path pattern
+    # The meta.yml::idml_source relative path is worktree-dependent and can
+    # be stale (the Flyer slugs carry '../../../../originals/...', the
+    # leporello '../../originals/...'); when it does not resolve, use the
+    # slug-keyed resolver so the inventory + attribute-coverage gate audit
+    # the RIGHT IDML instead of the first .idml in originals/.
     if idml_source is None:
-        # Search originals/ for an .idml matching the template's source dir
+        try:
+            from line_spacing_full_audit import _resolve_idml_source
+            idml_source = _resolve_idml_source(
+                tid, ROOT / "templates", ROOT / "originals"
+            )
+        except Exception:
+            idml_source = None
+    # Last resort: first IDML under originals/ (legacy behaviour).
+    if idml_source is None:
         for candidate in sorted((ROOT / "originals").rglob("*.idml")):
             idml_source = candidate
             break
@@ -1579,6 +1591,47 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             "E5e (squiggle_alignment_audit)", exc, tid,
         )
 
+    # Phase E5f: idml_attribute_coverage gate — diffs the attributes PRESENT
+    # in this template's source IDML against the converter's CONSUMED set,
+    # and fails when a SIGNIFICANT unconsumed attribute is NOT in the
+    # checked-in baseline (ATTRIBUTE_COVERAGE_BASELINE.yml). Catches the
+    # silent-attribute-drop class of bug (the ParagraphStyle/SpaceBefore
+    # regression) at import time instead of by eyeball — a future template
+    # using a converter-dropped attribute is flagged here.
+    attribute_coverage_path = out_dir / "attribute_coverage_audit.yml"
+    if idml_source is not None:
+        try:
+            from idml_attribute_coverage_audit import (
+                run_attribute_coverage_gate as _acg_run,
+            )
+            acg = _acg_run(idml_source)
+            attribute_coverage_path.write_text(
+                yaml.dump(acg.to_report(), sort_keys=False,
+                          allow_unicode=True, default_flow_style=False),
+                encoding="utf-8",
+            )
+            if not acg.ok:
+                issue_parts.append(
+                    f"{acg.issues} new unconsumed IDML attribute(s)"
+                )
+                print(
+                    f"[{tid}] idml_attribute_coverage: {acg.detail}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] idml_attribute_coverage: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "idml_attribute_coverage",
+                "E5f (idml_attribute_coverage)", exc, tid,
+            )
+    else:
+        print(
+            f"[{tid}] audit E5f (idml_attribute_coverage): "
+            f"skipped (no IDML source)",
+            file=sys.stderr,
+        )
+
     # Phase E6: per_region_regression_check — compares the just-emitted
     # E4 + E5 per-frame measurements against the previous render's
     # measurements (persisted in build/<slug>/per_region_history.jsonl).
@@ -2111,6 +2164,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         image_content_path=image_content_path,
         external_asset_substitution_path=eas_path,
         squiggle_alignment_path=squiggle_alignment_path,
+        attribute_coverage_path=attribute_coverage_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -2159,6 +2213,7 @@ def _build_preflight(
     image_content_path: Path | None = None,
     external_asset_substitution_path: Path | None = None,
     squiggle_alignment_path: Path | None = None,
+    attribute_coverage_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -2404,6 +2459,21 @@ def _build_preflight(
                 bool(saa.get("ok", True)),
                 n_saa,
                 saa.get("detail", "") or "",
+            )
+
+    # Phase E5f: idml_attribute_coverage — new converter-dropped IDML
+    # attributes not in the accepted baseline. A new significant drop
+    # fails preflight so a future template's silently-dropped attribute
+    # is caught at import, not by eyeball.
+    if attribute_coverage_path is not None:
+        acg = _load_yml(attribute_coverage_path)
+        if acg is not None:
+            n_acg = int(acg.get("issues", 0) or 0)
+            _record(
+                "idml_attribute_coverage",
+                bool(acg.get("ok", True)),
+                n_acg,
+                acg.get("detail", "") or "",
             )
 
     # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the

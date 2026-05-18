@@ -284,3 +284,51 @@ def test_multiple_phase_errors_recorded(tmp_path):
         "line_spacing_pixel_audit",
         "per_region_regression",
     }
+
+
+# ---------------------------------------------------------------------------
+# Phase E5f: idml_attribute_coverage gate wired into preflight
+# ---------------------------------------------------------------------------
+
+def test_attribute_coverage_ok_passes_preflight(tmp_path):
+    """A clean attribute-coverage gate yml leaves preflight green."""
+    _all_ok_payloads(tmp_path)
+    acg = tmp_path / "attribute_coverage_audit.yml"
+    _write(acg, {"ok": True, "issues": 0,
+                 "detail": "all significant unconsumed attributes accounted for"})
+    result = _build_preflight(
+        tmp_path, "tpl", **_paths(tmp_path), attribute_coverage_path=acg,
+    )
+    assert result["ok"] is True
+    assert result["audits"]["idml_attribute_coverage"]["ok"] is True
+    assert result["audits"]["idml_attribute_coverage"]["issues"] == 0
+
+
+def test_attribute_coverage_new_drop_fails_preflight(tmp_path):
+    """A new unconsumed attribute fails the gate and the preflight."""
+    _all_ok_payloads(tmp_path)
+    acg = tmp_path / "attribute_coverage_audit.yml"
+    _write(acg, {
+        "ok": False, "issues": 2,
+        "detail": "2 NEW significant unconsumed attribute(s) not in baseline: "
+                  "Rectangle/GlowEffect, TextFrame/NewAttr",
+    })
+    result = _build_preflight(
+        tmp_path, "tpl", **_paths(tmp_path), attribute_coverage_path=acg,
+    )
+    assert result["ok"] is False
+    row = result["audits"]["idml_attribute_coverage"]
+    assert row["ok"] is False
+    assert row["issues"] == 2
+    hot = {h["audit"] for h in result["hot_issues"]}
+    assert "idml_attribute_coverage" in hot
+
+
+def test_attribute_coverage_missing_yml_omitted(tmp_path):
+    """No attribute-coverage yml -> audit silently omitted from preflight."""
+    _all_ok_payloads(tmp_path)
+    result = _build_preflight(
+        tmp_path, "tpl", **_paths(tmp_path),
+        attribute_coverage_path=tmp_path / "absent.yml",
+    )
+    assert "idml_attribute_coverage" not in result["audits"]
