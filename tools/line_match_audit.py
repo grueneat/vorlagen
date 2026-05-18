@@ -116,6 +116,17 @@ _DEFAULT_POS_TOL_PT = 1.0
 _DEFAULT_SPACE_TOL_PT = 2.0
 # Words whose tops are within this many points belong to the same line.
 _LINE_CLUSTER_PT = 4.0
+# Frame-level vertical-position tolerance: a whole text block (headline,
+# citation, body frame) rendered too high or too low shifts its entire
+# word cloud uniformly. The per-line baseline_y check can MISS this when
+# line pairing degrades — a wrap/first-word difference makes `_check_line`
+# return before it reaches the baseline_y branch, and word suppression or
+# split-frame bbox de-sync can land lines in an `unmatched`/`wrap` bucket
+# so the per-line vertical delta is never measured. This frame-level check
+# compares the block's vertical centroid + top + bottom independently of
+# line pairing, so a mispositioned frame is caught regardless. The bar is
+# the same strict ~1pt as the per-line checks plus a small raster epsilon.
+_FRAME_VPOS_TOL_PT = 2.0
 
 
 def _assign_words_to_frames(
@@ -391,6 +402,73 @@ def _check_line(
     return None
 
 
+def _block_vextent(words: list[dict[str, Any]]) -> tuple[float, float, float] | None:
+    """Return ``(top, centroid, bottom)`` of a word cloud's vertical extent.
+
+    ``top`` is the smallest word-top, ``bottom`` the largest word-bottom,
+    ``centroid`` the mean of every word's vertical mid-point. Returns
+    ``None`` for an empty cloud.
+    """
+    if not words:
+        return None
+    top = min(w["y0_pt"] for w in words)
+    bottom = max(w["y1_pt"] for w in words)
+    centroid = sum((w["y0_pt"] + w["y1_pt"]) / 2.0 for w in words) / len(words)
+    return top, centroid, bottom
+
+
+def _check_frame_vposition(
+    base_words: list[dict[str, Any]],
+    prev_words: list[dict[str, Any]],
+    frame: str,
+    page: int,
+    tol: float,
+) -> dict[str, Any] | None:
+    """Catch a whole text block rendered at the wrong vertical position.
+
+    Independent of line pairing: the per-line ``baseline_y`` check only
+    runs after the ``wrap`` / ``first_word_x`` branches pass and only on
+    lines the LCS paired — a mispositioned headline whose words also
+    wrapped or were suppressed slips past it. This compares the block's
+    vertical centroid (and, as corroboration, its top and bottom) between
+    the two renders. When the centroid AND at least one edge drift the
+    same way beyond ``tol``, the whole frame moved — a real vertical
+    mispositioning bug. Returns a finding dict, else ``None``.
+
+    A bare difference in word count does NOT trip this on its own: the
+    centroid of a partial word cloud is stable enough that a genuine
+    block shift still registers, while a few suppressed words do not.
+    """
+    bv = _block_vextent(base_words)
+    pv = _block_vextent(prev_words)
+    if bv is None or pv is None:
+        return None  # one-sided: the per-line `unmatched` finding covers it
+    b_top, b_cen, b_bot = bv
+    p_top, p_cen, p_bot = pv
+    d_top = p_top - b_top
+    d_cen = p_cen - b_cen
+    d_bot = p_bot - b_bot
+    # The block moved when the centroid drifts AND an edge confirms the
+    # same-signed shift — guards against a lone outlier word skewing the
+    # centroid without the block actually moving.
+    edge = d_top if abs(d_top) >= abs(d_bot) else d_bot
+    if abs(d_cen) > tol and abs(edge) > tol and (d_cen > 0) == (edge > 0):
+        return {
+            "page": page,
+            "baseline_text": _line_text(sorted(base_words, key=lambda w: (w["y0_pt"], w["x0_pt"])))[:80],
+            "preview_text": _line_text(sorted(prev_words, key=lambda w: (w["y0_pt"], w["x0_pt"])))[:80],
+            "first_word": "",
+            "kind": "frame_vertical_position",
+            "detail": (
+                f"text block shifted vertically: centroid Δ{round(d_cen, 2)}pt, "
+                f"top Δ{round(d_top, 2)}pt, bottom Δ{round(d_bot, 2)}pt "
+                f"(tol {tol}pt)"
+            ),
+            "frame": frame,
+        }
+    return None
+
+
 def run_audit(
     preview: Path,
     baseline: Path,
@@ -449,6 +527,7 @@ def run_audit(
                 base_lines = _cluster_lines(gb)
                 prev_lines = _cluster_lines(gp)
                 lines_total += max(len(base_lines), len(prev_lines))
+                line_finding_count = 0
                 for b, p in _pair_lines(base_lines, prev_lines):
                     finding = _check_line(b, p, pg, pos_tol, space_tol)
                     if finding is None:
@@ -456,6 +535,20 @@ def run_audit(
                     else:
                         finding["frame"] = key
                         findings.append(finding)
+                        line_finding_count += 1
+                # Frame-level vertical-position guard. Runs on every framed
+                # bucket; for the unframed page bucket only when the
+                # per-line checks found NOTHING — there the lack of a
+                # build.py frame means a block shift would otherwise be
+                # invisible, but if line checks already flagged the page we
+                # avoid a duplicate page-wide finding.
+                run_vpos = key != "__unframed__" or line_finding_count == 0
+                if run_vpos:
+                    vpos = _check_frame_vposition(
+                        gb, gp, key, pg, _FRAME_VPOS_TOL_PT,
+                    )
+                    if vpos is not None:
+                        findings.append(vpos)
     else:
         # No build.py — fall back to per-page clustering.
         pages = sorted({w["page"] for w in base_words}

@@ -20,8 +20,11 @@ from line_match_audit import (  # noqa: E402
     _cluster_lines,
     _pair_lines,
     _check_line,
+    _check_frame_vposition,
+    _block_vextent,
     _drop_offpage,
     _rotate_words_to_frame_space,
+    _FRAME_VPOS_TOL_PT,
 )
 
 
@@ -230,3 +233,151 @@ def test_rotate_words_plus_90_round_trips_box_extent():
     rh = out["y1_pt"] - out["y0_pt"]
     # 90° rotation swaps the box dimensions.
     assert abs(rw - 11.0) < 0.01 and abs(rh - 20.0) < 0.01
+
+
+# ---------------------------------------------------------------------------
+# _check_frame_vposition — frame-level vertical mispositioning guard
+# ---------------------------------------------------------------------------
+def _block(texts: list[str], top: float, leading: float = 14.0) -> list[dict]:
+    """A vertically-stacked block of single-word lines starting at `top`."""
+    return [_w(t, 40, top + i * leading) for i, t in enumerate(texts)]
+
+
+def test_block_vextent_top_centroid_bottom():
+    words = _block(["A", "B", "C"], top=100, leading=14)
+    top, centroid, bottom = _block_vextent(words)
+    assert top == 100.0
+    assert bottom == 100.0 + 2 * 14.0 + 11.0  # last word's bottom
+    # centroid is the mean of the three word mid-points (top + 5.5 each).
+    expected_centroid = ((105.5) + (119.5) + (133.5)) / 3
+    assert abs(centroid - expected_centroid) < 0.01
+
+
+def test_check_frame_vposition_aligned_block_passes():
+    """A block at the same vertical position in both renders → no finding."""
+    base = _block(["Ich", "bin", "Zitat"], top=200)
+    prev = _block(["Ich", "bin", "Zitat"], top=200)
+    assert _check_frame_vposition(base, prev, "ud04", 5, _FRAME_VPOS_TOL_PT) is None
+
+
+def test_check_frame_vposition_block_shifted_down_fails():
+    """A whole citation block rendered 8pt too low must be flagged even
+    though every line's text is identical."""
+    base = _block(["Ich", "bin", "Zitat"], top=200)
+    prev = _block(["Ich", "bin", "Zitat"], top=208)  # 8pt too low
+    f = _check_frame_vposition(base, prev, "ud04", 5, _FRAME_VPOS_TOL_PT)
+    assert f is not None
+    assert f["kind"] == "frame_vertical_position"
+    assert f["frame"] == "ud04"
+
+
+def test_check_frame_vposition_headline_shifted_up_fails():
+    """A headline frame rendered too HIGH is caught the same way."""
+    base = _block(["Headline", "zweite", "Zeile"], top=120)
+    prev = _block(["Headline", "zweite", "Zeile"], top=110)  # 10pt too high
+    f = _check_frame_vposition(base, prev, "u12fb", 3, _FRAME_VPOS_TOL_PT)
+    assert f is not None and f["kind"] == "frame_vertical_position"
+
+
+def test_check_frame_vposition_survives_word_suppression():
+    """The blind-spot mechanism: word suppression / wrap differences
+    degrade per-line pairing, but a block shifted vertically is still
+    caught because the centroid of the SURVIVING words moves with it."""
+    base = _block(["Ich", "bin", "ein", "praegnantes", "Zitat"], top=200)
+    # Preview: same block shifted 9pt down AND two words suppressed —
+    # the per-line LCS would mis-pair, but the centroid still shifts.
+    prev = _block(["Ich", "praegnantes", "Zitat"], top=209)
+    f = _check_frame_vposition(base, prev, "ud04", 5, _FRAME_VPOS_TOL_PT)
+    assert f is not None and f["kind"] == "frame_vertical_position"
+
+
+def test_check_frame_vposition_sub_tolerance_jitter_passes():
+    """A sub-tolerance vertical jitter (< tol) must not trip the guard."""
+    base = _block(["Ich", "bin", "Zitat"], top=200)
+    prev = _block(["Ich", "bin", "Zitat"], top=201)  # 1pt < 2pt tol
+    assert _check_frame_vposition(base, prev, "ud04", 5, _FRAME_VPOS_TOL_PT) is None
+
+
+def test_check_frame_vposition_one_sided_block_no_finding():
+    """When one render has no words for the frame the per-line `unmatched`
+    finding covers it — the vpos guard stays silent (no centroid to compare)."""
+    base = _block(["Ich", "bin", "Zitat"], top=200)
+    assert _check_frame_vposition(base, [], "ud04", 5, _FRAME_VPOS_TOL_PT) is None
+
+
+# ---------------------------------------------------------------------------
+# run_audit — end-to-end: a mispositioned frame must FAIL preflight.
+# ---------------------------------------------------------------------------
+def test_run_audit_mispositioned_frame_fails(monkeypatch, tmp_path):
+    """Deliberately-broken case: a citation frame whose text block renders
+    too low. The per-line text is identical so a naive line walk could
+    miss it; the audit must report ``ok=False`` with a
+    ``frame_vertical_position`` finding."""
+    import line_match_audit as lma
+
+    class _FI:
+        def __init__(self, page, bbox):
+            self.page = page
+            self.bbox_mm = bbox
+            self.rotation_deg = 0.0
+
+    # One frame covering the block's authored region.
+    frames = {"ud04": _FI(0, (10.0, 60.0, 60.0, 30.0))}
+
+    def _base_words():
+        # block at the authored vertical position
+        return _block(["Ich", "bin", "Zitat"], top=180)
+
+    def _prev_words():
+        # SAME text, block rendered 12pt too low
+        return _block(["Ich", "bin", "Zitat"], top=192)
+
+    def fake_extract(path):
+        return _prev_words() if "preview" in str(path) else _base_words()
+
+    monkeypatch.setattr(lma, "extract_words_with_positions", fake_extract)
+    monkeypatch.setattr(lma, "parse_textframes_from_build_py",
+                        lambda _p: frames)
+    monkeypatch.setattr(lma, "_page_sizes", lambda _p: {0: (300.0, 600.0)})
+    monkeypatch.setattr(lma, "_drop_offpage", lambda w, _s: w)
+
+    build_py = tmp_path / "build.py"
+    build_py.write_text("# stub\n", encoding="utf-8")
+    report = lma.run_audit(
+        tmp_path / "preview.pdf", tmp_path / "baseline.pdf",
+        "broken-template", build_py=build_py,
+    )
+    assert report["ok"] is False
+    kinds = {f["kind"] for f in report["findings"]}
+    assert "frame_vertical_position" in kinds
+
+
+def test_run_audit_aligned_frame_passes(monkeypatch, tmp_path):
+    """Control: the same frame at the SAME vertical position passes."""
+    import line_match_audit as lma
+
+    class _FI:
+        def __init__(self, page, bbox):
+            self.page = page
+            self.bbox_mm = bbox
+            self.rotation_deg = 0.0
+
+    frames = {"ud04": _FI(0, (10.0, 60.0, 60.0, 30.0))}
+    words = _block(["Ich", "bin", "Zitat"], top=180)
+
+    monkeypatch.setattr(lma, "extract_words_with_positions",
+                        lambda _p: _block(["Ich", "bin", "Zitat"], top=180))
+    monkeypatch.setattr(lma, "parse_textframes_from_build_py",
+                        lambda _p: frames)
+    monkeypatch.setattr(lma, "_page_sizes", lambda _p: {0: (300.0, 600.0)})
+    monkeypatch.setattr(lma, "_drop_offpage", lambda w, _s: w)
+
+    build_py = tmp_path / "build.py"
+    build_py.write_text("# stub\n", encoding="utf-8")
+    report = lma.run_audit(
+        tmp_path / "preview.pdf", tmp_path / "baseline.pdf",
+        "ok-template", build_py=build_py,
+    )
+    assert report["ok"] is True
+    assert report["findings"] == []
+    assert words  # silence unused-var lint
