@@ -1648,8 +1648,7 @@ assets:
   byte_length: null
 words:
   baseline_pdf_count: 343
-  preview_pdf_count: 341
-  missing_from_preview:
-  - maioriat
+  preview_pdf_count: 343
+  missing_from_preview: []
   extra_in_preview: []
 parse_warnings: []

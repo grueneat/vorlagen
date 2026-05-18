@@ -32,16 +32,51 @@ emits one). Unit test `test_trailing_br_does_not_double_paragraph_separator`
 added. Effect: `text_render_audit` 11 -> 2 missing words; preview word count
 328 -> 341 (baseline 343); `text_position_audit_structural` 254 -> 230.
 
-### Tune outcome — RESIDUAL (preflight not green)
+### Tune outcome — RESIDUAL (preflight not green; line_match 37 -> 2)
 
-The `y_mm_shift` playbook cleared `text_position_audit_jitter` (34 -> 23, under
-its cap 30) and reduced `text_position_audit_structural` 254 -> 230, then hit
-the documented 2-cycle limit cycle (253<->255) at max-iter. The sole un-
-tolerated failing audit is `text_position_audit_structural` (230) — the
-documented cross-renderer line-wrap residual, `scribus-engine-bug`, within the
-260 cap; `severity: structural` keeps preflight red by design. Accepted per the
-re-render gate policy. **No tolerance cap grew this pass** — every audit is
-within its existing cap and the structural count improved.
+The final pass added the strict `line_match_audit` (Phase D8b) gate. Per-frame
+tuning drove it **37 -> 2 findings (69/71 lines match)**:
+
+- **`SameParaStyleSpacing` fix** — the IDML `Fließtext auf grünem Hintergrund`
+  / `Aufzählungen auf grünem Hintergrund` styles carry `SameParaStyleSpacing`
+  5.669pt (space InDesign inserts between consecutive same-style paragraphs).
+  The converter consumes `SpaceAfter` but not `SameParaStyleSpacing`; every
+  paragraph in `u1242`/`u11e6` is same-style so the two are equivalent here.
+  Added `space_after_pt=5.6693` to both styles — closed the body-text
+  per-paragraph cumulative-drift findings (was the bulk: ~19 lines).
+- **`u1175` + `u1214` mixed-font headline split** — split each into single-
+  line TextFrames at calibrated y_mm (Gotham Ultra / Vollkorn Black Italic
+  transitions; Scribus's per-line font-metric leading inflates the gap). New
+  annames `u1175_l2`, `u1175_l3`, `u1214_l2` — inventory drift, accepted
+  (matches the leporello `u16c` precedent; the inventory tracks IDML elements).
+- **`ud04` quote leading** — `LINESPMode=0 LINESP=20.48` (IDML AkiBelow
+  effective leading) replaces auto-leading + a y_mm recentre.
+- **`u11fd`/`u126f` rotated Impressum** — the SLA emitter hardwires `VAlign=0`
+  (no typed channel for IDML `VerticalJustification=CenterAlign` without
+  touching forbidden `sla_lib`); compensated by translating the frame so the
+  top-aligned line lands where the centered line should (+10mm along-column,
+  +0.656mm cross).
+- **`u118c`** — `separator='para'` -> `breakline` (the IDML uses `<Br/>`)
+  + explicit `LINESP=18.96`.
+- **`u12fb`/`ud04`** — small frame-position recentres.
+- **`u129e` glyph-shrink sweep** — `fliesstext-auf-weissem-hintergrund`
+  `min_glyph_shrink` 0.98 -> 0.96, collapsing a 6-line wrap cascade to 1.
+
+**2 residual `line_match` findings — genuine Adobe-Composer-vs-Scribus-greedy-
+breaker differences, NOT closeable:**
+
+- `u1242` "et"/"molo" — Scribus's Gotham Narrow metrics are intrinsically more
+  compact, fitting one extra word ("et") on a justified line where InDesign
+  wraps it. Glyph-shrink only narrows text, never widens it.
+- `u129e` "no"/"nonsed" — the "ilmolo" line needs shrink <=0.96 to fit
+  (mandatory, closes a cascade) but that same shrink also fits "no" on a later
+  line where InDesign wraps it. Mutually exclusive; no single value satisfies
+  both.
+
+`text_position_audit_structural` improved 159 -> 18 (the dx-only justification
+manifestation of the same wrap class; `severity: structural`, documented-only).
+`preflight` stays RED on `line_match_audit` (2) — expected and correct per the
+strict no-cap gate; not fudged. **No tolerance cap grew this pass.**
 
 ### GOAL audits — full fix-set verification
 

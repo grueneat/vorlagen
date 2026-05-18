@@ -18,17 +18,20 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 260
-  reason: 'Up to ~254 large (>5pt) word-position drifts (measured 230 after the
-    2026-05-18 combined fidelity pass — the R5 trailing-Br converter fix removed
-    the phantom blank lines and reduced the count). Verified page-by-page that
-    rendered content and frame geometry are correct; the drift is dominated
-    by cross-renderer line-wrap differences — Scribus and InDesign break the
-    justified body / bullet paragraphs at slightly different words because their
-    font-metric and hyphenation models differ. One wrap-point difference cascades
-    into dozens of downstream words counted as drifted. Not a converter bug and
-    not a routing bug — the facing-pages multi-page routing was verified correct
-    (PDF page 3 green background, PDF page 4 green Kasten + text both render).
-    Documented known issue for the IDML import batch.'
+  reason: '18 large (>5pt) word-position drifts measured after the
+    2026-05-18 final combined fidelity pass (down from 159 on re-import:
+    the SameParaStyleSpacing fix on the green body styles and the u129e
+    glyph-shrink sweep closed the bulk). The residual is dx-only (dy~=0)
+    on the justified body frames u1242/u129e — Scribus and InDesign break
+    the justified paragraphs at slightly different words and justify the
+    inter-word spacing differently, so words land at different X within a
+    line. This is the same Adobe-Paragraph-Composer vs Scribus-greedy-
+    line-breaker class as the 2 residual line_match_audit wrap findings;
+    one wrap-point difference shifts every following word on the line.
+    Not a converter bug — page content and frame geometry verified
+    correct page-by-page. severity:structural so it is documented-only
+    and does not gate; line_match_audit is the gating text-fidelity
+    signal and carries the 2 honest wrap residuals.'
   follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
 - id: tol:text-render-body-overflow-last-line-clip
   audit: text_render_audit
