@@ -6,13 +6,28 @@ each linked asset to a Scribus-friendly representation under
 ``shared/assets/<idml-slug>/`` and writes a deterministic ``links_export.yml``
 manifest that the IDML→DSL converter consumes via ``--asset-map``.
 
-Dispatch table (locked decision in the issue prompt — no alternatives):
+Dispatch table:
 
   ``.ai``           → ``pdftocairo -png -transp -r 600 -singlefile <in> <stem>``
-  ``.psd``          → ``convert <in> -flatten <out.png>``
-  ``.jpg/.jpeg``    → passthrough copy (rename to slug)
+  ``.psd``          → ICC-aware CMYK→sRGB PNG (RGB PSDs pass through to PNG)
+  ``.jpg/.jpeg``    → passthrough copy IF the source is already RGB; CMYK
+                      JPEGs are converted to an ICC-aware sRGB PNG instead
   ``.png``          → passthrough copy (rename to slug)
   anything else     → log + skip (post-processor philosophy)
+
+CMYK colour handling — both PSD and JPEG sources arrive from print
+workflows in CMYK with an embedded ICC profile (e.g. Coated FOGRA39).
+Scribus 1.6.x cannot render a CMYK JPEG at all (it shows fully blank), and a
+naive (non-ICC) CMYK→RGB inversion posterises the colours.  Every CMYK
+raster is therefore passed through ImageMagick's ICC-aware transform
+(``convert <in> -profile <sRGB.icc> -strip <out.png>``) which uses the
+embedded source profile for a perceptually correct sRGB render — matching
+how InDesign and Acrobat display the image.  ImageMagick (not Pillow) is
+used because Pillow's PSD plugin reads the individual CMYK layer tiles
+instead of the merged composite, producing channel-ghosted output on
+multi-layer print PSDs.  ``-strip`` drops the ICC chunk from the PNG since
+Scribus 1.6.x silently skips PNGs that carry an embedded ``iCCP`` block.
+The PSD cutout alpha channel is preserved (no ``-flatten``).
 
 The output filename is ``<slug-of-original-stem>.<output-ext>``. Slug rules
 follow ``_slugify`` below; in particular the German umlaut transliterations
@@ -164,7 +179,7 @@ _DISPATCH: dict[str, _Recipe] = {
     ".psd": _Recipe(
         kind="raster_psd",
         out_ext=".png",
-        description="convert -flatten",
+        description="convert -profile sRGB -strip (ICC-aware)",
     ),
     ".jpg": _Recipe(
         kind="raster_jpg",
@@ -182,6 +197,26 @@ _DISPATCH: dict[str, _Recipe] = {
         description="passthrough",
     ),
 }
+
+
+# sRGB ICC profile used as the destination for every CMYK→sRGB conversion.
+# The repo's Scribus install ships this profile and its description string
+# ("sRGB display profile (ICC v2.2)") is the per-frame PRFILE the SLA emitter
+# writes by default, so the converted assets and the SLA agree on colour
+# space. The candidate list is tried in order; the first existing path wins.
+_SRGB_ICC_CANDIDATES: tuple[str, ...] = (
+    "/usr/share/scribus/profiles/sRGB_icc22.icm",
+    "/usr/share/color/icc/ghostscript/srgb.icc",
+    "/usr/share/color/icc/sRGB.icc",
+)
+
+
+def _srgb_icc_path() -> Optional[str]:
+    """Return the first available sRGB ICC profile path, or ``None``."""
+    for candidate in _SRGB_ICC_CANDIDATES:
+        if Path(candidate).is_file():
+            return candidate
+    return None
 
 
 def kind_for_extension(ext: str) -> Optional[str]:
@@ -239,77 +274,130 @@ def _convert_ai(src: Path, out_path: Path) -> Path | None:
         return None
 
 
-def _convert_psd(src: Path, out_path: Path) -> None:
-    """``.psd`` → ICC-profile-aware flattened PNG via Pillow.
+def _is_cmyk_raster(src: Path) -> bool:
+    """Return True when ``src`` is a CMYK (colour-separated) raster.
 
-    CMYK PSD files from print workflows embed ICC profiles (e.g. Coated
-    FOGRA39).  ImageMagick's ``convert -flatten`` ignores these profiles,
-    producing near-white pixels where the CMYK values are close to zero ink
-    (i.e. a white paper assumption).  Pillow's ``ImageCms`` transforms the
-    CMYK data using the embedded source ICC profile to sRGB, matching how
-    InDesign and Acrobat render the image.
+    Used to decide whether a JPEG needs the ICC-aware CMYK→sRGB transform or
+    can be passed through verbatim. Reads only the header via Pillow.
+    """
+    try:
+        from PIL import Image  # type: ignore[import-untyped]
+    except ImportError:  # pragma: no cover
+        return False
+    try:
+        with Image.open(str(src)) as img:
+            return img.mode == "CMYK"
+    except Exception:  # pragma: no cover — defensive; corrupt source
+        return False
 
-    For non-CMYK PSDs (RGB, RGBA, Grayscale) the ICC correction path is
-    skipped and the image is saved directly as sRGB PNG.
 
-    Determinism: Pillow's PNG encoder does not embed filesystem timestamps,
-    so byte-equal output is expected for identical inputs.
+def _convert_cmyk_to_srgb_png(src: Path, out_path: Path) -> None:
+    """Convert a CMYK raster (PSD or JPEG) to an ICC-aware sRGB PNG.
+
+    Uses ImageMagick: ``convert <src> -profile <sRGB.icc> -strip <out.png>``.
+    ImageMagick reads the embedded source ICC profile, transforms the CMYK
+    pixels into the target sRGB space, and ``-strip`` removes every metadata
+    chunk (including ``iCCP``) so Scribus 1.6.x — which silently drops PNGs
+    carrying an ICC profile — can load the file.
+
+    ImageMagick is used in preference to Pillow because Pillow's PSD plugin
+    reads the per-channel layer tiles of a multi-layer print PSD rather than
+    the merged composite, which produces channel-ghosted output. ImageMagick
+    composites the PSD correctly. A multi-layer PSD's first frame ``[0]`` is
+    the flattened composite.
+
+    The PSD cutout alpha channel (transparent background of a knocked-out
+    subject) is preserved — no ``-flatten`` is applied.
+
+    Determinism: ImageMagick's PNG encoder writes no filesystem timestamps,
+    so byte-equal output is expected for identical inputs + profile.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    srgb = _srgb_icc_path()
+    if srgb is None:
+        raise RuntimeError(
+            "No sRGB ICC profile found for CMYK→sRGB conversion; looked in "
+            f"{_SRGB_ICC_CANDIDATES}. Install a colour profile package "
+            "(extend tools/links_export.py:_SRGB_ICC_CANDIDATES)."
+        )
+    # ``[0]`` selects the merged composite frame of a multi-layer PSD; for a
+    # single-frame JPEG it is a harmless no-op.
+    _run([
+        "convert",
+        f"{src}[0]",
+        "-profile", srgb,
+        "-strip",
+        str(out_path),
+    ])
+    if not out_path.exists():  # pragma: no cover — defensive
+        raise RuntimeError(
+            f"convert did not produce {out_path} from {src}"
+        )
+
+
+def _convert_psd(src: Path, out_path: Path) -> None:
+    """``.psd`` → sRGB PNG.
+
+    CMYK PSDs go through the ICC-aware ImageMagick transform
+    (:func:`_convert_cmyk_to_srgb_png`). RGB / RGBA / Grayscale PSDs are
+    converted to a plain sRGB PNG with Pillow — they need no colour
+    transform, only a Scribus-readable container.
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if _is_cmyk_raster(src):
+        _convert_cmyk_to_srgb_png(src, out_path)
+        return
     try:
-        from PIL import Image, ImageCms  # type: ignore[import-untyped]
+        from PIL import Image  # type: ignore[import-untyped]
     except ImportError as e:  # pragma: no cover
         raise RuntimeError(
             "Pillow is required to convert PSD files: "
             "pip install Pillow  (extend tools/links_export.py:_convert_psd)"
         ) from e
-
     img = Image.open(str(src))
-    # Flatten all layers by converting to the base mode (Pillow flattens
-    # on open for PSDs — the mode reflects the composite).
-    if img.mode == "CMYK":
-        # Apply the embedded ICC profile for a perceptually correct sRGB render.
-        # Fall back to a naïve inversion (1 - C/255) if no profile is embedded.
-        icc_bytes = img.info.get("icc_profile")
-        if icc_bytes:
-            src_profile = ImageCms.ImageCmsProfile(
-                __import__("io").BytesIO(icc_bytes)
-            )
-            dst_profile = ImageCms.createProfile("sRGB")
-            transform = ImageCms.buildTransformFromOpenProfiles(
-                src_profile, dst_profile,
-                img.mode, "RGB",
-            )
-            img = ImageCms.applyTransform(img, transform)
-        else:
-            # No embedded profile — naïve CMYK→RGB inversion.
-            import numpy as np  # type: ignore[import-untyped]
-            arr = np.array(img, dtype=float) / 255.0
-            c, m, y, k = arr[..., 0], arr[..., 1], arr[..., 2], arr[..., 3]
-            r = (1 - c) * (1 - k)
-            g = (1 - m) * (1 - k)
-            b = (1 - y) * (1 - k)
-            rgb = (np.stack([r, g, b], axis=-1) * 255).clip(0, 255).astype("uint8")
-            img = Image.fromarray(rgb, mode="RGB")
-    elif img.mode not in ("RGB", "RGBA", "L", "LA"):
+    if img.mode not in ("RGB", "RGBA", "L", "LA"):
         img = img.convert("RGB")
-
-    # Scribus 1.6.x silently skips PNG images that carry an embedded iCCP chunk
-    # (the ICC profile block).  The profile is only needed during the ICC
-    # colour transform above; once the pixel data is in sRGB space the chunk
-    # must be dropped so Scribus can load the file.  Passing ``icc_profile=None``
-    # in the save kwargs suppresses Pillow's automatic re-embedding.
+    # icc_profile=None suppresses Pillow re-embedding an ICC chunk; Scribus
+    # 1.6.x silently skips PNGs that carry one.
     img.save(str(out_path), format="PNG", icc_profile=None)
+
+
+def _convert_jpg(src: Path, out_path: Path) -> None:
+    """``.jpg`` / ``.jpeg`` → Scribus-friendly raster.
+
+    RGB JPEGs are passed through verbatim (``out_path`` keeps the ``.jpg``
+    extension). CMYK JPEGs cannot be rendered by Scribus 1.6.x at all — they
+    show fully blank — so they are converted to an ICC-aware sRGB PNG; the
+    caller is responsible for having resolved ``out_path`` to a ``.png``
+    extension for the CMYK case (see :func:`out_ext_for`).
+    """
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if _is_cmyk_raster(src):
+        _convert_cmyk_to_srgb_png(src, out_path)
+        return
+    shutil.copyfile(src, out_path)
+
+
+def out_ext_for(src: Path) -> str:
+    """Return the output extension the dispatcher should use for ``src``.
+
+    Static for every kind except JPEG: a CMYK JPEG is converted to a PNG
+    (Scribus cannot render CMYK JPEGs) so its output extension is ``.png``,
+    while an RGB JPEG passes through as ``.jpg``.
+    """
+    ext = src.suffix.lower()
+    recipe = _DISPATCH.get(ext)
+    if recipe is None:
+        raise ValueError(f"no recipe for extension {ext!r}")
+    if ext in (".jpg", ".jpeg") and _is_cmyk_raster(src):
+        return ".png"
+    return recipe.out_ext
 
 
 def _passthrough_copy(src: Path, out_path: Path) -> None:
     """Copy a raster source to its slugified output path (no transform).
 
-    CMYK JPGs are NOT pre-converted to sRGB — Scribus's CMYK render with
-    HCMS=1 + ISO Coated profile produces a closer match to the InDesign
-    baseline than ICC-correct sRGB conversion at export time. (Tested
-    on ziesel.jpg: pre-converted sRGB rendered ~2× darker than raw
-    CMYK through Scribus.)
+    Used for ``.png`` sources, which Scribus reads directly.
     """
     out_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, out_path)
@@ -418,10 +506,14 @@ def export(
             continue
 
         out_stem = _slugify(src.stem)
-        out_name = f"{out_stem}{recipe.out_ext}"
+        # CMYK JPEGs are converted to PNG (Scribus cannot render CMYK JPEGs),
+        # so the output extension is resolved per-file rather than statically.
+        out_ext = out_ext_for(src)
+        out_name = f"{out_stem}{out_ext}"
         out_path = out_dir / out_name
 
         vector_output_rel: str | None = None
+        recipe_description = recipe.description
         if ext == ".ai":
             pdf_path = _convert_ai(src, out_path)
             if pdf_path is not None and pdf_path.exists():
@@ -433,7 +525,13 @@ def export(
                     vector_output_rel = str(pdf_path.resolve())
         elif ext == ".psd":
             _convert_psd(src, out_path)
-        else:  # passthrough raster (jpg/jpeg/png)
+        elif ext in (".jpg", ".jpeg"):
+            _convert_jpg(src, out_path)
+            # A CMYK JPEG was converted (its output ext is .png); surface that
+            # in the manifest recipe so downstream tooling sees the transform.
+            if out_ext == ".png":
+                recipe_description = "convert -profile sRGB -strip (ICC-aware)"
+        else:  # passthrough raster (png)
             _passthrough_copy(src, out_path)
 
         try:
@@ -445,7 +543,7 @@ def export(
             original_basename=basename_nfc,
             output_rel=output_rel,
             kind=recipe.kind,
-            recipe=recipe.description,
+            recipe=recipe_description,
             vector_output_rel=vector_output_rel,
         ))
         if not quiet:

@@ -61,3 +61,47 @@ class TestPackInlineImage(unittest.TestCase):
         decoded = base64.b64decode(b64_actual)
         self.assertEqual(struct.unpack(">I", decoded[:4])[0], len(png_bytes))
         self.assertEqual(zlib.decompress(decoded[4:]), png_bytes)
+
+
+from sla_lib.builder import Document, TextFrame  # noqa: E402
+from lxml import etree as _etree  # noqa: E402
+
+
+class TestRotatedTextFrameSwap(unittest.TestCase):
+    """The ±90° TextFrame WIDTH/HEIGHT swap is a TEXT-FLOW compensation. An
+    empty TextFrame (a coloured background rectangle) has nothing to flow, so
+    the swap must be skipped — applying it mis-places the rectangle because
+    the swap is not perfectly placement-invariant when WIDTH != HEIGHT."""
+
+    def _pageobject(self, frame: TextFrame):
+        doc = Document(title="t", template_id="t")
+        page = doc.add_page(size="A6")
+        page.add(frame)
+        root = doc._build_xml()
+        for po in root.iter("PAGEOBJECT"):
+            if po.get("ANNAME") == frame.anname:
+                return po
+        raise AssertionError("PAGEOBJECT not found")
+
+    def test_empty_rotated_textframe_keeps_unrotated_dims(self):
+        # An empty -90° TextFrame must NOT get the W/H swap: WIDTH/HEIGHT stay
+        # the un-rotated values the converter emitted.
+        f = TextFrame(
+            x_mm=10, y_mm=20, w_mm=40, h_mm=80,
+            rotation_deg=-90, anname="bg_empty", text="",
+        )
+        po = self._pageobject(f)
+        self.assertAlmostEqual(float(po.get("WIDTH")), 40 * 72 / 25.4, places=2)
+        self.assertAlmostEqual(float(po.get("HEIGHT")), 80 * 72 / 25.4, places=2)
+
+    def test_text_bearing_rotated_textframe_still_swaps(self):
+        # A -90° TextFrame WITH text keeps the text-flow swap: WIDTH/HEIGHT
+        # are exchanged so Scribus wraps along the visible long edge.
+        f = TextFrame(
+            x_mm=10, y_mm=20, w_mm=40, h_mm=80,
+            rotation_deg=-90, anname="bg_text", text="Impressum",
+        )
+        po = self._pageobject(f)
+        # Swap: WIDTH becomes the un-rotated HEIGHT and vice-versa.
+        self.assertAlmostEqual(float(po.get("WIDTH")), 80 * 72 / 25.4, places=2)
+        self.assertAlmostEqual(float(po.get("HEIGHT")), 40 * 72 / 25.4, places=2)

@@ -630,9 +630,19 @@ class TextFrame(_Frame):
         # unrotated top-left:
         #   -90°: visible TL = (XPOS,     YPOS - W);  new YPOS = YPOS - W + H
         #   +90°: visible TL = (XPOS - H, YPOS);      new XPOS = XPOS + W - H
+        #
+        # The swap is a TEXT-FLOW compensation only. An empty TextFrame (no
+        # text, no runs) — used as a coloured background-fill rectangle — has
+        # nothing to flow, so the swap serves no purpose; applying it merely
+        # mis-places the rectangle (the swap is not perfectly placement-
+        # invariant when WIDTH != HEIGHT). Skip it for empty frames so a
+        # rotated full-bleed background lands exactly where the converter's
+        # geometry model (un-rotated WIDTH/HEIGHT + pivot) intends.
+        _is_empty = not self.text and not self.runs
         if (
             abs(abs(self.rotation_deg) - 90.0) < 0.5
             and self.custom_path is None
+            and not _is_empty
         ):
             if self.rotation_deg < 0:
                 y = y - w_pt + h_pt

@@ -1849,6 +1849,11 @@ def _emit_pageitem(
     raw_xs = [p[0] for p in anchors]
     raw_ys = [p[1] for p in anchors]
     frame_tl_anchor: tuple[float, float] = (min(raw_xs), min(raw_ys))
+    # Full anchor bbox (min-x, min-y, max-x, max-y) — the frame window the
+    # placed image is cropped against (see _aspect_crop_image).
+    frame_anchors_bbox: tuple[float, float, float, float] = (
+        min(raw_xs), min(raw_ys), max(raw_xs), max(raw_ys),
+    )
 
     # Detect nested vector logos (<PDF>) — defer per locked decision #2.
     pdf_children = item.findall(".//PDF")
@@ -1916,7 +1921,8 @@ def _emit_pageitem(
         img = image_children[0]
         _emit_image_content(out, item, img, x_mm, y_mm, w_mm, h_mm, rot,
                             self_id, layer_idx, ctx,
-                            frame_tl_anchor=frame_tl_anchor)
+                            frame_tl_anchor=frame_tl_anchor,
+                            frame_anchors_bbox=frame_anchors_bbox)
         return
 
     if tag == "TextFrame":
@@ -2596,6 +2602,281 @@ def _emit_image_or_inline(
 _SCRIBUS_FRIENDLY_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
 
 
+def _image_graphic_bounds_pt(img: Any) -> Optional[tuple[float, float]]:
+    """Return the placed image's natural ``(width_pt, height_pt)``.
+
+    InDesign stores the placed image's natural size as a
+    ``Properties/GraphicBounds`` child of the ``<Image>`` element, in points.
+    Returns ``None`` when the element is absent or unparseable.
+    """
+    gb = img.find("Properties/GraphicBounds")
+    if gb is None:
+        gb = img.find(".//GraphicBounds")
+    if gb is None:
+        return None
+    try:
+        left = float(gb.get("Left", "0"))
+        top = float(gb.get("Top", "0"))
+        right = float(gb.get("Right", "0"))
+        bottom = float(gb.get("Bottom", "0"))
+    except (TypeError, ValueError):
+        return None
+    w = right - left
+    h = bottom - top
+    if w <= 0 or h <= 0:
+        return None
+    return (w, h)
+
+
+@dataclass
+class _AspectCropResult:
+    """Outcome of :func:`_aspect_crop_image`.
+
+    Attributes:
+        cropped: True when a derived asset was written to the destination.
+        offset_pt: ``(dx, dy)`` — the cropped image's top-left, measured from
+            the IDML frame's top-left, in points (rect-local). Non-zero only
+            when the placed image is smaller than the frame (the "contain"
+            case): the ImageFrame must shrink to the image's rendered rect so
+            no transparent padding is needed.
+        size_pt: ``(w, h)`` — the cropped image's rendered size in points.
+    """
+
+    cropped: bool
+    offset_pt: tuple[float, float] = (0.0, 0.0)
+    size_pt: tuple[float, float] = (0.0, 0.0)
+
+
+def _aspect_crop_image(
+    *,
+    src_path: Path,
+    dst_path: Path,
+    image_transform_str: str,
+    graphic_bounds_pt: tuple[float, float],
+    frame_anchors_bbox: tuple[float, float, float, float],
+) -> _AspectCropResult:
+    """Pre-crop a placed image to exactly the part the frame exposes.
+
+    InDesign places photos with "Fill Proportionally": the image is scaled
+    and positioned, then the frame acts as a window onto it. Scribus 1.6.x
+    has no aspect-fill mode, so the converter reproduces the InDesign crop in
+    Python BEFORE Scribus sees the asset.
+
+    The method intersects the placed image's rendered rectangle with the
+    frame rectangle (both in the frame's rect-local coordinate space), crops
+    the source image to that intersection in pixel space, and reports the
+    intersection's offset + size so the caller can place an ImageFrame of
+    exactly that rect with ``scale_type=0`` (aspect-preserving fit). The
+    cropped asset then fills its (possibly shrunk) ImageFrame pixel-for-pixel
+    — no transparent padding is ever produced, because Scribus 1.6.x silently
+    trims transparent borders of a ``scale_type=0`` image.
+
+    Two cases fall out of the same intersection:
+
+    - **cover** — the frame lies inside the image; the intersection is the
+      frame; the crop is a sub-rectangle of the image; the ImageFrame keeps
+      the IDML frame rect (offset 0).
+    - **contain** — the image lies inside the frame; the intersection is the
+      whole image; no pixels are cropped away; the ImageFrame shrinks to the
+      image's rendered rect (non-zero offset).
+
+    All geometry comes from the ``<Image>`` ItemTransform and the frame
+    anchors — nothing is guessed.
+
+    Returns an :class:`_AspectCropResult`. ``cropped`` is ``False`` when the
+    placement is identity (the source already matches the frame), the image
+    does not intersect the frame, or the geometry is unsupported (rotation /
+    shear on the image transform) — in which case the caller uses the source
+    asset unchanged.
+    """
+    try:
+        from PIL import Image as _PILImage
+    except ImportError:  # pragma: no cover — Pillow is a hard dependency
+        return _AspectCropResult(cropped=False)
+
+    a, b, c, d, tx, ty = _parse_matrix(image_transform_str)
+    # Only axis-aligned placements are croppable in pixel space. A rotated or
+    # sheared image transform (b/c non-zero, or negative scale) is rare in the
+    # corpus; fall back to the caller's existing path rather than guess.
+    if abs(b) > 1e-6 or abs(c) > 1e-6 or a <= 0 or d <= 0:
+        return _AspectCropResult(cropped=False)
+
+    nat_w_pt, nat_h_pt = graphic_bounds_pt
+    fx0, fy0, fx1, fy1 = frame_anchors_bbox
+
+    # The placed image's rendered rectangle in rect-local points: the Image
+    # ItemTransform maps image-content (0,0)→(nat_w,nat_h) to (tx,ty)→(...).
+    img_x0, img_y0 = tx, ty
+    img_x1, img_y1 = a * nat_w_pt + tx, d * nat_h_pt + ty
+
+    # Intersection of the image rect with the frame rect.
+    ix0 = max(fx0, img_x0)
+    iy0 = max(fy0, img_y0)
+    ix1 = min(fx1, img_x1)
+    iy1 = min(fy1, img_y1)
+    if ix1 - ix0 <= 0 or iy1 - iy0 <= 0:
+        # Image does not overlap the frame — nothing visible to crop.
+        return _AspectCropResult(cropped=False)
+
+    with _PILImage.open(str(src_path)) as _src:
+        img_w_px, img_h_px = _src.size
+        src_img = _src.convert("RGBA")
+
+    # Intersection corners → image pixels (invert x=a*u+tx, y=d*v+ty).
+    px_per_pt_x = img_w_px / nat_w_pt
+    px_per_pt_y = img_h_px / nat_h_pt
+    cu0 = (ix0 - tx) / a * px_per_pt_x
+    cu1 = (ix1 - tx) / a * px_per_pt_x
+    cv0 = (iy0 - ty) / d * px_per_pt_y
+    cv1 = (iy1 - ty) / d * px_per_pt_y
+
+    left = max(0, int(round(cu0)))
+    top = max(0, int(round(cv0)))
+    right = min(img_w_px, int(round(cu1)))
+    bottom = min(img_h_px, int(round(cv1)))
+    if right - left <= 0 or bottom - top <= 0:
+        return _AspectCropResult(cropped=False)
+
+    offset_pt = (ix0 - fx0, iy0 - fy0)
+    size_pt = (ix1 - ix0, iy1 - iy0)
+
+    # No-op: the whole source image is shown at the IDML frame rect.
+    is_identity = (
+        left == 0
+        and top == 0
+        and right == img_w_px
+        and bottom == img_h_px
+        and abs(offset_pt[0]) < 1e-3
+        and abs(offset_pt[1]) < 1e-3
+    )
+    if is_identity:
+        return _AspectCropResult(cropped=False)
+
+    cropped = src_img.crop((left, top, right, bottom))
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+    # PNG with no metadata so Scribus 1.6.x (which drops ICC-bearing PNGs)
+    # loads it, and output stays byte-deterministic for identical inputs.
+    cropped.save(str(dst_path), format="PNG", optimize=False)
+    return _AspectCropResult(
+        cropped=True, offset_pt=offset_pt, size_pt=size_pt,
+    )
+
+
+def _crop_output_path(ctx: _Ctx, source_asset: Path, self_id: str) -> Path:
+    """Deterministic path for a frame's pre-cropped derived asset.
+
+    The crop lives in a ``crops/`` subdirectory of the source asset's
+    directory so the flat ``asset_policy`` / ``asset_extraction`` audits
+    (which only walk the top level of ``shared/assets/<slug>/``) do not
+    treat it as an unclassified primary asset. The filename keys on the
+    frame's IDML Self ID so two frames cropping the same source never
+    collide.
+    """
+    return source_asset.parent / "crops" / f"{source_asset.stem}-{self_id}.png"
+
+
+@dataclass
+class _CropPlacement:
+    """A cropped asset plus the ImageFrame rect (page mm) it should occupy."""
+
+    path: Path
+    x_mm: float
+    y_mm: float
+    w_mm: float
+    h_mm: float
+
+
+def _maybe_aspect_crop(
+    *,
+    ctx: _Ctx,
+    img: Any,
+    rect: Any,
+    self_id: str,
+    source_asset: Path,
+    frame_anchors_bbox: Optional[tuple[float, float, float, float]],
+    frame_x_mm: float,
+    frame_y_mm: float,
+    frame_w_mm: float,
+    frame_h_mm: float,
+) -> Optional[_CropPlacement]:
+    """Produce a frame-window crop of ``source_asset`` if the geometry warrants.
+
+    Returns a :class:`_CropPlacement` (the derived asset path + the page rect
+    the ImageFrame should occupy) when a crop was written, or ``None`` when
+    the placement is identity, the image misses the frame, or the geometry is
+    unsupported. The crop is derived purely from the IDML ``<Image>``
+    ItemTransform + the frame's PathPointArray anchors — see
+    :func:`_aspect_crop_image`.
+
+    For the "contain" case (the placed image is smaller than the frame) the
+    ImageFrame is shrunk to the image's rendered rect; the rect-local
+    intersection offset maps to a page offset only when the parent Rectangle
+    is axis-aligned. A rotated Rectangle with a non-zero offset is rejected
+    (the crop is skipped) rather than mis-placed.
+    """
+    img_transform_str = img.get("ItemTransform", "")
+    if not img_transform_str or frame_anchors_bbox is None:
+        return None
+    if not source_asset.exists():
+        return None
+    graphic_bounds = _image_graphic_bounds_pt(img)
+    if graphic_bounds is None:
+        return None
+    # The Image ItemTransform and the frame anchors are both expressed in the
+    # parent Rectangle's local space, so they compose directly — no extra
+    # rect-transform correction is needed (unlike the LOCALSCX/LOCALY path).
+    dst = _crop_output_path(ctx, source_asset, self_id)
+    result = _aspect_crop_image(
+        src_path=source_asset,
+        dst_path=dst,
+        image_transform_str=img_transform_str,
+        graphic_bounds_pt=graphic_bounds,
+        frame_anchors_bbox=frame_anchors_bbox,
+    )
+    if not result.cropped:
+        return None
+
+    # The intersection offset is in the Rectangle's local space. It maps
+    # straight to a page-space offset only when the Rectangle is axis-aligned
+    # (no rotation). When the Rectangle is rotated, a non-zero offset cannot
+    # be applied without rotating it — reject the crop in that case (it would
+    # mis-place the frame). A zero offset (the cover case) is always safe.
+    off_x_pt, off_y_pt = result.offset_pt
+    has_offset = abs(off_x_pt) > 1e-3 or abs(off_y_pt) > 1e-3
+    rect_t = rect.get("ItemTransform", "1 0 0 1 0 0")
+    ra, rb, rc, rd, _, _ = _parse_matrix(rect_t)
+    rect_axis_aligned = (
+        abs(rb) < 1e-6 and abs(rc) < 1e-6
+        and abs(ra - 1.0) < 1e-6 and abs(rd - 1.0) < 1e-6
+    )
+    if has_offset and not rect_axis_aligned:
+        return None
+
+    if has_offset:
+        # Shrink the ImageFrame to the placed image's rendered rect.
+        x_mm = frame_x_mm + off_x_pt * PT_TO_MM
+        y_mm = frame_y_mm + off_y_pt * PT_TO_MM
+        w_mm = result.size_pt[0] * PT_TO_MM
+        h_mm = result.size_pt[1] * PT_TO_MM
+    else:
+        # Cover case — the crop fills the IDML frame rect unchanged.
+        x_mm, y_mm = frame_x_mm, frame_y_mm
+        w_mm, h_mm = frame_w_mm, frame_h_mm
+
+    # The crop carries a new basename absent from meta.yml::asset_policy.
+    # Mirror the source asset's classification so _emit_image_or_inline routes
+    # the derived asset the same way (inlined for embedded, SLA-relative path
+    # for external) — otherwise an embedded source's crop would leak to a
+    # path reference.
+    if source_asset.name in ctx.embedded_set:
+        ctx.embedded_set.add(dst.name)
+    elif source_asset.name in ctx.external_set:
+        ctx.external_set.add(dst.name)
+    return _CropPlacement(
+        path=dst, x_mm=x_mm, y_mm=y_mm, w_mm=w_mm, h_mm=h_mm,
+    )
+
+
 def _emit_image_content(
     out: PythonRepr,
     rect: Any,
@@ -2609,6 +2890,7 @@ def _emit_image_content(
     layer_idx: int,
     ctx: _Ctx,
     frame_tl_anchor: Optional[tuple[float, float]] = None,
+    frame_anchors_bbox: Optional[tuple[float, float, float, float]] = None,
 ) -> None:
     """Emit a raster Image as an ImageFrame, resolving the file: URI.
 
@@ -2624,12 +2906,24 @@ def _emit_image_content(
          cannot render (``.psd``, ``.ai``, etc.) so the failure is loud
          instead of a blank preview.
 
+    Aspect-fill crop: InDesign places photos with "Fill Proportionally" —
+    the image is scaled to cover the frame and cropped to the frame aspect.
+    Scribus 1.6.x has no aspect-fill mode, so when the IDML geometry shows a
+    non-identity placement the converter pre-crops the resolved asset to the
+    exact frame window (:func:`_aspect_crop_image`) and emits the derived
+    asset with ``scale_type=0`` (auto-fit) and no ``local_scale`` /
+    ``local_offset`` — Scribus then fills the frame pixel-for-pixel. The crop
+    is computed from the ``<Image>`` ItemTransform + frame anchors, never
+    guessed empirically.
+
     Args:
         frame_tl_anchor: the ``(min_x, min_y)`` of the Rectangle frame's
             PathPointArray anchors in item-local coordinates. Used with the
             Image's ``ItemTransform`` to derive the correct Scribus
             ``LOCALX / LOCALY`` content placement (see
             ``_extract_content_local_params``).
+        frame_anchors_bbox: the full ``(min_x, min_y, max_x, max_y)`` anchor
+            bbox — the frame window the placed image is cropped against.
     """
     link = img.find(".//Link")
     uri = link.get("LinkResourceURI", "") if link is not None else ""
@@ -2673,6 +2967,24 @@ def _emit_image_content(
             abs_mapped = (
                 mapped_path if mapped_path.is_absolute() else ROOT / mapped_path
             )
+            # Aspect-fill crop: when the IDML geometry shows a non-identity
+            # placement, pre-crop the asset to the frame window and emit the
+            # derived asset at scale_type=0 (no local_scale/offset). For the
+            # contain case the ImageFrame is shrunk to the image's rendered
+            # rect (see _maybe_aspect_crop).
+            crop = _maybe_aspect_crop(
+                ctx=ctx, img=img, rect=rect, self_id=self_id,
+                source_asset=abs_mapped,
+                frame_anchors_bbox=frame_anchors_bbox,
+                frame_x_mm=x_mm, frame_y_mm=y_mm,
+                frame_w_mm=w_mm, frame_h_mm=h_mm,
+            )
+            if crop is not None:
+                _emit_image_or_inline(
+                    ctx.out, crop.x_mm, crop.y_mm, crop.w_mm, crop.h_mm, rot,
+                    self_id, layer_idx, abs_path=crop.path, ctx=ctx,
+                )
+                return
             # Issue #39 Phase A + C: inline-vs-relative routing.
             _emit_image_or_inline(
                 ctx.out, x_mm, y_mm, w_mm, h_mm, rot,

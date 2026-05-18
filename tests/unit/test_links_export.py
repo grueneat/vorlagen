@@ -24,11 +24,14 @@ from links_export import (  # noqa: E402
     AssetEntry,
     _DISPATCH,
     _emit_manifest,
+    _is_cmyk_raster,
     _passthrough_copy,
     _slugify,
+    _srgb_icc_path,
     derive_out_dir,
     export,
     kind_for_extension,
+    out_ext_for,
 )
 
 
@@ -323,3 +326,58 @@ class TestErrorPaths:
         fake.write_text("hi")
         with pytest.raises(NotADirectoryError):
             export(fake, tmp_path / "out", quiet=True)
+
+
+# ---------------------------------------------------------------------------
+# CMYK detection + ICC-aware conversion routing
+# ---------------------------------------------------------------------------
+class TestCmykHandling:
+    """The CMYK→sRGB path. Scribus 1.6.x cannot render a CMYK JPEG (blank)
+    and a non-ICC CMYK→RGB inversion posterises colours, so every CMYK raster
+    is routed through an ICC-aware conversion (out extension becomes .png for
+    JPEG sources)."""
+
+    def test_rgb_jpeg_is_not_cmyk(self, tmp_path: Path):
+        from PIL import Image
+
+        src = tmp_path / "rgb.jpg"
+        Image.new("RGB", (8, 8), (10, 120, 60)).save(src)
+        assert _is_cmyk_raster(src) is False
+
+    def test_cmyk_jpeg_detected(self, tmp_path: Path):
+        from PIL import Image
+
+        src = tmp_path / "cmyk.jpg"
+        Image.new("CMYK", (8, 8), (10, 20, 30, 40)).save(src)
+        assert _is_cmyk_raster(src) is True
+
+    def test_out_ext_rgb_jpeg_passthrough(self, tmp_path: Path):
+        from PIL import Image
+
+        src = tmp_path / "rgb.jpg"
+        Image.new("RGB", (8, 8), (10, 120, 60)).save(src)
+        # An RGB JPEG passes through verbatim — extension stays .jpg.
+        assert out_ext_for(src) == ".jpg"
+
+    def test_out_ext_cmyk_jpeg_becomes_png(self, tmp_path: Path):
+        from PIL import Image
+
+        src = tmp_path / "cmyk.jpg"
+        Image.new("CMYK", (8, 8), (10, 20, 30, 40)).save(src)
+        # A CMYK JPEG is converted to PNG (Scribus cannot render CMYK JPEGs).
+        assert out_ext_for(src) == ".png"
+
+    def test_out_ext_psd_and_png_static(self, tmp_path: Path):
+        # Non-JPEG kinds keep their static dispatch extension.
+        assert out_ext_for(tmp_path / "x.psd") == ".png"
+        assert out_ext_for(tmp_path / "x.png") == ".png"
+
+    def test_psd_recipe_marks_icc_aware(self):
+        # The dispatch description must signal the ICC-aware conversion so
+        # downstream tooling no longer sees the bare "convert -flatten".
+        assert "ICC" in _DISPATCH[".psd"].description
+
+    def test_srgb_icc_profile_available(self):
+        # The conversion needs an sRGB ICC profile; the dev container ships
+        # one. If this fails the environment is missing a colour-profile pkg.
+        assert _srgb_icc_path() is not None
