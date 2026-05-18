@@ -18,8 +18,10 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 260
-  reason: 'Up to ~254 large (>5pt) word-position drifts. Verified page-by-page
-    that rendered content and frame geometry are correct; the drift is dominated
+  reason: 'Up to ~254 large (>5pt) word-position drifts (measured 230 after the
+    2026-05-18 combined fidelity pass — the R5 trailing-Br converter fix removed
+    the phantom blank lines and reduced the count). Verified page-by-page that
+    rendered content and frame geometry are correct; the drift is dominated
     by cross-renderer line-wrap differences — Scribus and InDesign break the
     justified body / bullet paragraphs at slightly different words because their
     font-metric and hyphenation models differ. One wrap-point difference cascades
@@ -28,30 +30,34 @@ tolerances:
     (PDF page 3 green background, PDF page 4 green Kasten + text both render).
     Documented known issue for the IDML import batch.'
   follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
-- id: tol:text-render-impressum-rotated-frame-wrap
+- id: tol:text-render-body-overflow-last-line-clip
   audit: text_render_audit
   classification: scribus-engine-bug
   severity: cosmetic
   max_issues: 4
-  reason: 'The three rotated -90deg 6pt "Impressum: xxxxxx" edge frames (u11fd,
-    u126f, u12fb) wrap to two lines ("Impressu" + "m: xxxxxx"). NO text is lost
-    — every character renders. Root cause: the converter emits the geometrically
-    correct un-rotated frame extent (53.4x10mm) and the rotated non-empty
-    TextFrame W/H swap in tools/sla_lib/builder/primitives.py (commit de96b7c)
-    then yields a 10mm text-flow width, forcing the wrap. primitives.py is a
-    forbidden path for the tune stage. Cosmetic 2-line wrap of tiny edge
-    furniture.'
-  follow_up_issue: converter/primitives; rotated non-empty TextFrame W/H swap vs
-    un-rotated extent emission needs reconciliation
+  reason: '2 words missing in render after the 2026-05-18 combined fidelity pass:
+    "fuga." and "maioriat" — the final line ("maioriat fuga.") of frame u12b5''s
+    closing "Licatissi…fuga." paragraph. The R5 trailing-Br converter fix removed
+    the phantom blank lines and recovered 9 of the 11 previously-missing body
+    words; the remaining 2 are the very last line, which still clips by ~one line
+    because Scribus''s justified-paragraph line-wrap stacks one line more than
+    InDesign for this 11-line frame (cross-renderer wrap divergence — same class
+    as text_position_audit_structural). Sub-line-of-tiny-text loss; cap 4 leaves
+    headroom over the measured 2. The earlier rotated -90deg "Impressum: xxxxxx"
+    edge frames (u11fd/u126f/u12fb) wrap to 2 lines but lose NO characters, so
+    they no longer contribute to this audit.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+    (last-line clip on tall justified body frames)
 - id: tol:systematic-text-jitter-suppressed
   audit: systematic_text_audit
   classification: scribus-engine-bug
   severity: cosmetic
   max_issues: 12
-  reason: '9 frames sim-actionable. Residual sub-perceptible per-word position
-    jitter. The y_mm_shift playbook entered a 2-cycle limit cycle (shift +X;
-    next render the measured drift flips sign; shift -X) and could not converge;
-    the line_spacing simulator returned no actionable rows. Needs a playbook
+  reason: '8 frames sim-actionable (measured 2026-05-18). Residual sub-perceptible
+    per-word position jitter. The y_mm_shift playbook entered a 2-cycle limit
+    cycle (shift +X; next render the measured drift flips sign; shift -X) and
+    could not converge; the line_spacing simulator returned no actionable rows.
+    Needs a playbook
     oscillation guard.'
   follow_up_issue: playbook-extension; y_mm_shift needs an oscillation guard
 - id: tol:image-content-ubc2-icc-tone-shift

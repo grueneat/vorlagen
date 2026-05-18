@@ -803,7 +803,7 @@ frames:
     - 15.0
     - 39.2915
     - 75.0
-    - 69.1444
+    - 57.8556
     sla_pageobject_present: true
     sla_storytext_runs: 6
     source: idml
@@ -818,7 +818,7 @@ frames:
     - 15.0
     - 65.3333
     - 75.0
-    - 74.7889
+    - 63.5
     sla_pageobject_present: true
     sla_storytext_runs: 6
     source: idml
@@ -1648,7 +1648,8 @@ assets:
   byte_length: null
 words:
   baseline_pdf_count: 343
-  preview_pdf_count: 343
-  missing_from_preview: []
+  preview_pdf_count: 341
+  missing_from_preview:
+  - maioriat
   extra_in_preview: []
 parse_warnings: []

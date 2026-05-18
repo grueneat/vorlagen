@@ -9,7 +9,63 @@ with 2 pages each (6 pages total). Page 1 cover (three-line headline + Störer
 badge + Gewessler portrait photo), pages 2-5 inner content, page 6 a quote
 page on a dark crumpled-paper background.
 
-## Latest pass — combined image + squiggle re-render (2026-05-18)
+## Latest pass — combined fidelity re-render (2026-05-18)
+
+This template was re-imported a third time for the **final combined fidelity
+pass**: the converter and tooling now carry the full fix set (CMYK->sRGB,
+deterministic aspect-fill crop, squiggle colour + re-anchoring, 5 newly-
+consumed attributes, ground-truth squiggle audit, Phase E5f attribute-coverage
+gate). `bin/idml-import --reimport --scaffold-only` regenerated `build.py` from
+the fully-fixed converter; the `bin/tune-render` -> `bin/tune-fix` loop re-ran.
+
+### Re-import outcome — GREEN (Stage-1 gate passes)
+
+Reaching GREEN required one converter fix in Stage 1 (where converter edits are
+permitted): **R5 — trailing-Br paragraph-separator dedup** (`TOLERANCE_LOG.md`
+R5). The converter doubled the paragraph break at every PSR-ending `<Br/>`:
+the Br emitted a `Run(separator="para")` AND the inter-PSR loop emitted a
+second one. With the converter now consuming `SpaceAfter`, each phantom break
+rendered ~20pt of empty paragraph InDesign never shows; the body-text frames
+`u129e` / `u12b5` overflowed and clipped their closing paragraphs — 11 missing
+words. R5 drops the redundant trailing-Br para-run (a mid-PSR `<Br/>` still
+emits one). Unit test `test_trailing_br_does_not_double_paragraph_separator`
+added. Effect: `text_render_audit` 11 -> 2 missing words; preview word count
+328 -> 341 (baseline 343); `text_position_audit_structural` 254 -> 230.
+
+### Tune outcome — RESIDUAL (preflight not green)
+
+The `y_mm_shift` playbook cleared `text_position_audit_jitter` (34 -> 23, under
+its cap 30) and reduced `text_position_audit_structural` 254 -> 230, then hit
+the documented 2-cycle limit cycle (253<->255) at max-iter. The sole un-
+tolerated failing audit is `text_position_audit_structural` (230) — the
+documented cross-renderer line-wrap residual, `scribus-engine-bug`, within the
+260 cap; `severity: structural` keeps preflight red by design. Accepted per the
+re-render gate policy. **No tolerance cap grew this pass** — every audit is
+within its existing cap and the structural count improved.
+
+### GOAL audits — full fix-set verification
+
+| Audit | Result |
+|-------|--------|
+| `image_content_audit` | 4 ok, 1 "broken" (`ubc2` — ICC tone shift, content present, NOT blank). No CMYK frame blank or discoloured. |
+| `image_frame_visibility_audit` | 0 invisible, 1 faint (`u116b` — pre-existing logo SCALETYPE bug). No image frame broken. |
+| `squiggle_alignment_audit` (ground-truth) | **`ok: true`, 0 issues** — all 8 squiggles `status: ok`, vgap <= 1.34mm, render yellow on their word. |
+| `attribute_coverage_audit` (Phase E5f) | **`ok: true`, 0 issues** — no new significant unconsumed attribute (920-entry baseline). |
+
+### The 5 newly-consumed attributes — visible in this template
+
+- **`SpaceAfter`** -> `space_after_pt=5.6693` on the `fliesstext-auf-weissem-
+  hintergrund` ParaStyle. Visible as the paragraph spacing between body-text
+  sections on pages 4-5 (the gap between "...nectur?" and "Tinvend igenis").
+- **`BlendingSetting/Opacity`** -> `fill_opacity=0.7` on 2 frames (the rotated
+  -90deg "Impressum:" edge frames `u11fd` + sibling) — 70% semi-transparent
+  fill behind the tiny edge text.
+- **`VerticalJustification`** -> `vertical_text_align=1` on the same 2 rotated
+  Impressum edge frames — text vertically centred in the frame.
+- **`TextColumnCount` / `TextColumnGutter`** — NOT used by this template; every
+  text frame is single-column. No multi-column body text exists in the IDML.
+
+## Earlier pass — combined image + squiggle re-render (2026-05-18)
 
 This template was re-imported again to pick up the shared squiggle fixes that
 landed after the first image re-render: yellow-filled squiggle polygons
@@ -131,10 +187,10 @@ CMYK or photo frame is blank or broken-content anymore.
 
 | Audit | Issues | Status |
 |-------|--------|--------|
-| `text_position_audit_structural` | 232 large drifts (>5pt) | accepted — cross-renderer line-wrap divergence (cap 260; `severity: structural` keeps preflight red by design) |
-| `text_position_audit_jitter` | 23 sub-perceptible drifts (≤5pt) | tolerated this pass — cosmetic, cap 30, same wrap class (TOLERANCES T1) |
-| `text_render_audit` | 0 | green — all baseline text renders |
-| `systematic_text_audit` | 9 frames | tolerated — y_mm_shift oscillation (cap 12) |
+| `text_position_audit_structural` | 230 large drifts (>5pt) | accepted — cross-renderer line-wrap divergence (cap 260; `severity: structural` keeps preflight red by design) |
+| `text_position_audit_jitter` | 23 sub-perceptible drifts (≤5pt) | tolerated — cosmetic, cap 30, same wrap class (TOLERANCES T1) |
+| `text_render_audit` | 2 (`fuga.`, `maioriat`) | tolerated — last line of u12b5 clips by one line, cross-renderer wrap (cap 4) |
+| `systematic_text_audit` | 8 frames | tolerated — y_mm_shift oscillation (cap 12) |
 | `squiggle_alignment_audit` | 0 | **green** — all 8 squiggles on their word, yellow |
 | `image_content_audit` | 1 broken (ubc2) | tolerated — ICC tone shift, content present (cap 2) |
 | `image_frame_visibility_audit` | 1 faint (u116b) | accepted — pre-existing logo SCALETYPE bug |
@@ -145,27 +201,27 @@ CMYK or photo frame is blank or broken-content anymore.
 | green | asset_extraction, asset_policy, external_asset_substitution, font_audit, run_style_audit, region_color | — |
 
 **Final preflight: `ok: false`** — the single un-tolerated failing audit is
-`text_position_audit_structural` (232 issues). Its tolerance is deliberately
+`text_position_audit_structural` (230 issues). Its tolerance is deliberately
 `severity: structural`: it documents the residual but does NOT flip preflight
 green, because >5pt drift is visible. This is the documented accepted residual
 for the batch — cross-renderer line-wrap divergence, not a converter bug.
 
-### Impressum 2-line wrap (text_render_audit residual)
+### text_render_audit residual — 2 words (`fuga.`, `maioriat`)
 
-The three rotated -90deg 6pt "Impressum: xxxxxx" edge frames (u11fd, u126f,
-u12fb) wrap to two lines — "Impressu" + "m: xxxxxx". **No text is lost** —
-every character renders, the string is split across two lines. Root cause:
-the converter now emits the geometrically-correct un-rotated frame extent
-(53.4 x 10 mm) and the rotated non-empty-TextFrame W/H swap in
-`tools/sla_lib/builder/primitives.py` (de96b7c) then yields a 10mm text-flow
-width, forcing the wrap. `primitives.py` is a forbidden path for Stage 2.
-Logged as a follow-up for the converter/primitives swap reconciliation.
+The closing line of frame `u12b5`'s "Licatissi…fuga." paragraph — "maioriat
+fuga." — still clips by ~one line. The R5 trailing-Br fix recovered 9 of the
+11 previously-missing body words; the last line clips because Scribus stacks
+one line more than InDesign in this 11-line justified frame (same cross-
+renderer wrap divergence as `text_position_audit_structural`). Within the cap-4
+tolerance. The rotated -90deg "Impressum: xxxxxx" edge frames (u11fd/u126f/
+u12fb) wrap to 2 lines but lose NO characters, so they no longer contribute.
 
 ## Known issues — NOT regressions
 
-- **Cross-renderer line-wrap text drift** (232 `text_position_audit_
-  structural` + 23 `text_position_audit_jitter` drifts) — Scribus vs InDesign
-  font-metric / hyphenation engine difference. Documented batch-wide.
+- **Cross-renderer line-wrap text drift** (230 `text_position_audit_
+  structural` + 23 `text_position_audit_jitter` drifts, plus the 2-word
+  `text_render_audit` last-line clip) — Scribus vs InDesign font-metric /
+  hyphenation engine difference. Documented batch-wide.
 - **DIE GRUENEN inline logo (u116b)** — white-on-transparent RGBA SCALETYPE,
   pre-existing Scribus 1.6.x bug.
 - **`ubc2` ICC tone shift** — the dark "Plakat dunkel" PSD renders the correct

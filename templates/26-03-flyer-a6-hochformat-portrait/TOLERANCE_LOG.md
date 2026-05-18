@@ -3,6 +3,44 @@
 Every tolerance, override, frame-geometry clamp, and accepted residual for
 this template, with measured drift and classification. Newest first.
 
+## Combined fidelity re-render pass (2026-05-18)
+
+This template was re-imported a third time for the final combined fidelity
+pass (full converter fix set: CMYK->sRGB, deterministic aspect-fill crop,
+squiggle colour + re-anchoring, 5 newly-consumed attributes, ground-truth
+squiggle audit, Phase E5f attribute-coverage gate). The `bin/tune-render` ->
+`bin/tune-fix` loop ran.
+
+### Converter fix applied in Stage 1 (converter edits permitted)
+
+| # | What | Why | Classification |
+|---|------|-----|----------------|
+| R5 | `tools/idml_to_dsl.py::_walk_story` — a `<Br/>` that is the LAST child of the LAST CSR of a PSR no longer emits its own `Run(separator="para")`; the trailing Br para-run is dropped. The inter-PSR separator (or end-of-story) already terminates that paragraph. | An IDML `<Br/>` at a PSR end is the paragraph terminator. The converter emitted a para-run for it AND the `_walk_story` inter-PSR loop emitted a second para-run at the PSR boundary — doubling the break. Each phantom break rendered one full leading + SpaceAfter of empty paragraph that InDesign never shows. With the converter now consuming `SpaceAfter` (`space_after_pt`), every doubled break inflated the body-text frames by ~20pt; the closing `Licatissi…quatur./fuga.` paragraphs of frames `u129e` and `u12b5` overflowed the frame bottom and were clipped — 11 missing words in `text_render_audit`. A mid-PSR `<Br/>` (e.g. `Content + Br + Content`) is NOT last in `para_runs` and still emits its para-run. Unit test `test_trailing_br_does_not_double_paragraph_separator` added. | converter-bug (trailing-Br paragraph-separator doubling, surfaced by the new SpaceAfter consumption) — fixed in Stage 1 |
+
+After R5: `text_render_audit` missing words dropped 11 -> 2 (`fuga.`, `maioriat`,
+both within the cap-4 tolerance); preview word count 328 -> 341 (baseline 343);
+`text_position_audit_structural` improved 254 -> 230.
+
+### Audit results — this pass
+
+| Audit | Result |
+|-------|--------|
+| `image_content_audit` | 4 ok, 1 "broken" (`ubc2`) — `ubc2` renders the correct green crumpled-paper texture (visibility_ratio 1.02), NOT blank; flag is `hist_divergence` 0.227 / `mean_delta_rgb` 12.6 residual CMYK->sRGB tone shift. Pine (u1260), Gewessler (u115d), radial (u1164) all `ok`, low divergence (0.018-0.047). No CMYK frame blank or discoloured. |
+| `image_frame_visibility_audit` | 0 invisible, 1 faint (`u116b` — DIE GRUENEN white-on-transparent RGBA SCALETYPE=1 Scribus 1.6.x bug). |
+| `squiggle_alignment_audit` (ground-truth) | `ok: true`, 0 issues — all 8 squiggles `status: ok`, vgap <= 1.34mm, render yellow on their anchor word. |
+| `attribute_coverage_audit` (Phase E5f) | `ok: true`, 0 issues — no new significant unconsumed attribute (920-entry baseline). |
+
+### Tolerance grown this pass
+
+NONE. Every audit is within its existing TOLERANCES.yml cap: structural 230
+<= 260, jitter 23 <= 30, text_render 2 <= 4, systematic 8 <= 12, image_content
+1 <= 2, image_audit 39 <= 45, visual_diff_regions 60 <= 70, inventory 1 <= 1.
+The structural count improved (254 -> 230) thanks to the R5 converter fix. No
+`brand_overrides` / `non_ci_*` growth. The per-frame `paragraph_attrs`
+LINESPMode/LINESP overrides explored mid-pass on `u129e`/`u12b5` were
+superseded by the R5 converter fix and are NOT in the final build.py (the
+final re-import regenerated build.py from the fixed converter).
+
 ## Combined image + squiggle re-render pass (2026-05-18)
 
 This template was re-imported a second time to pick up the shared squiggle

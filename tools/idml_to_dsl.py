@@ -3503,6 +3503,24 @@ def _walk_story(
                 f"(extend tools/idml_to_dsl.py:_walk_story)"
             )
 
+        # Drop a trailing <Br/>-generated paragraph separator. An IDML <Br/>
+        # that is the LAST child of the LAST CSR of a PSR is the paragraph
+        # terminator — the PSR boundary (inter-PSR separator below) or the
+        # end-of-story already terminates the paragraph. Keeping the Br's
+        # Run(separator="para") here doubles the break, injecting a spurious
+        # blank line between sections (the converter then renders one full
+        # leading + SpaceAfter of empty paragraph that InDesign never shows).
+        # A mid-PSR <Br/> (e.g. Content + Br + Content) is a real intra-
+        # paragraph break and is NOT last in para_runs, so it survives.
+        if para_runs:
+            _last = para_runs[-1]
+            if (
+                _last.separator == "para"
+                and not _last.text
+                and _last.has_itext is False
+            ):
+                para_runs.pop()
+
         # Attach paragraph_attrs to the FIRST text-content run of the PSR so
         # Scribus applies the PSR's alignment/leading to the paragraph that
         # CONTAINS this run (rather than only to the next paragraph via the

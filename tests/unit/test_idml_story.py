@@ -101,6 +101,30 @@ def test_br_emits_para_between_content():
     assert ("B", None) in texts
 
 
+def test_trailing_br_does_not_double_paragraph_separator():
+    """A <Br/> that is the LAST child of the LAST CSR of a PSR is the
+    paragraph terminator. The inter-PSR separator (or end-of-story) already
+    terminates the paragraph, so the trailing Br must NOT also emit a
+    Run(separator='para') — doubling it injects a spurious blank line that
+    InDesign never renders.
+    """
+    xml = _story_xml(
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Fließtext auf grünem Hintergrund">'
+        '<CharacterStyleRange><Content>A</Content><Br/></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+        '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Fließtext auf grünem Hintergrund">'
+        '<CharacterStyleRange><Content>B</Content><Br/></CharacterStyleRange>'
+        '</ParagraphStyleRange>'
+    )
+    root = etree.fromstring(xml)
+    runs = _walk_story(root, **_styles_dict())
+    # Exactly ONE paragraph separator between A and B — not two.
+    para_seps = [r for r in runs if r.separator == "para"]
+    assert len(para_seps) == 1, [(r.text, r.separator) for r in runs]
+    assert any(r.text == "A" for r in runs)
+    assert any(r.text == "B" for r in runs)
+
+
 def test_multi_paragraph_emits_para_separator():
     xml = _story_xml(
         '<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Fließtext auf grünem Hintergrund">'
