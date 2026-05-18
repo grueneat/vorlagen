@@ -667,10 +667,10 @@ frames:
     build_py_position_mm:
     - 6.3
     - 90.1174
-    - 71.6562
-    - 81.8444
+    - 83.6562
+    - 24.2006
     sla_pageobject_present: true
-    sla_storytext_runs: 3
+    sla_storytext_runs: 1
     source: idml
   - anname: u11a5
     idml_self: u11a5
@@ -727,10 +727,10 @@ frames:
     build_py_position_mm:
     - 15.0
     - 15.0
-    - 75.0
-    - 33.1611
+    - 87.0
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u122b
     idml_self: u122b
@@ -897,6 +897,39 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: u1175_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 6.3
+    - 100.1484
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1175_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 6.3
+    - 114.201
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1214_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 15.0
+    - 22.9375
+    - 87.0
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   image_frames:
   - anname: u115d
     idml_self: u115d

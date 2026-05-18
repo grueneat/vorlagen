@@ -26,7 +26,7 @@ of **audit-coordinate bugs** that the new color-managed baseline.pdf
 
 | Frame(s) | Fix | Measured |
 |----------|-----|----------|
-| `idml/fliesstext-auf-gruenem-hintergrund` ParaStyle | Added `space_after_pt=5.6693` (the green body style carries no SpaceAfter in the IDML, but the .indd-exported baseline renders ~5.2pt inter-paragraph space; the white sibling style carries the same 5.669pt — the IDML lost it on the green variant). `aufzaehlungen-auf-gruenem-hintergrund` inherits it. | Closed the `u1242` frame_vertical_position (bottom drift -11.6pt -> 0) and dropped line_match 54 -> 32. |
+| `idml/fliesstext-auf-gruenem-hintergrund` ParaStyle | Added `space_after_pt=5.6693`. Root cause: the green body style carries no `SpaceAfter` attribute in the IDML — it carries `<SameParaStyleSpacing>5.669291338582678</SameParaStyleSpacing>` (InDesign same-style inter-paragraph spacing). The converter consumes `SpaceAfter` but not `SameParaStyleSpacing`, so a clean re-import emits the green style with no inter-paragraph space; baseline.pdf renders a 20pt gap between body paragraphs vs 14pt within (= +5.67pt). The white sibling style has an explicit `SpaceAfter` and keeps it; `aufzaehlungen-auf-gruenem-hintergrund` is `BasedOn` green and inherits. Re-applied this pass — the converter drops it on every clean re-import (durable fix is a converter-side `SameParaStyleSpacing`->`space_after_pt` map, Stage-1 scope). | `u1242`/`u11e6` paragraph-gap pixel-audit drift (cum -11.04pt / max 22.56pt) -> 0; `text_position_audit_structural` 152 -> 47; `systematic_text_audit` 5 -> 3 sim-actionable; `line_match_audit` 54 -> 13. |
 
 ### Audit results — this pass
 

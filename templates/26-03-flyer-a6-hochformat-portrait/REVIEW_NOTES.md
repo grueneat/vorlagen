@@ -36,14 +36,31 @@ display fonts, fix overlapping split-frame word attribution, exclude
 InDesign slug-furniture fonts, and exclude crop-mark vectors. line_match
 fell 123 -> 13; `frame_vertical_position` 12 -> 0.
 
-### One build.py tune fix
+### One build.py tune fix (re-applied — converter drops it on re-import)
 
 `idml/fliesstext-auf-gruenem-hintergrund` ParaStyle gained
-`space_after_pt=5.6693`: the green body style carries no SpaceAfter in
-the IDML, but the .indd-exported baseline renders ~5.2pt inter-paragraph
-space. The white sibling style carries exactly 5.669pt — the IDML lost it
-on the green variant. This closed the `u1242` `frame_vertical_position`
-(bottom drift -11.6pt -> 0).
+`space_after_pt=5.6693`. Root cause confirmed this pass: the green body
+style carries no `SpaceAfter` attribute in the IDML — it carries
+`<SameParaStyleSpacing>5.669291338582678</SameParaStyleSpacing>`
+(InDesign "space between paragraphs using the same style"). The converter
+consumes `SpaceAfter` but not `SameParaStyleSpacing`, so a clean re-import
+emits the green style with no inter-paragraph space. The baseline.pdf
+renders a 20pt gap between consecutive body paragraphs vs 14pt within a
+paragraph — exactly +5.67pt. The white sibling style
+`fliesstext-auf-weissem-hintergrund` does carry an explicit `SpaceAfter`
+and the converter keeps it; `aufzaehlungen-auf-gruenem-hintergrund` is
+`BasedOn` the green style and inherits the override. Since every
+paragraph in the affected frames (`u1242`, `u11e6`, `u129e`) is the same
+style, Scribus's per-paragraph `space_after` is exactly equivalent to
+InDesign's same-style spacing here. This closed the `u1242`/`u11e6`
+paragraph-gap drift (pixel-audit cumulative drift -11.04pt / max 22.56pt
+-> 0) and dropped `text_position_audit_structural` 152 -> 47 and
+`systematic_text_audit` 5 -> 3 sim-actionable.
+
+Because the converter does not emit `SameParaStyleSpacing`, this fix is
+lost on every clean re-import and must be re-applied per template (it was
+re-applied this pass). Durable fix is a converter-side
+`SameParaStyleSpacing` -> `space_after_pt` mapping — Stage-1 scope.
 
 ### Residual (all documented in TOLERANCE_LOG.md, NOT regressions)
 

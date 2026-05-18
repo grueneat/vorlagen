@@ -174,6 +174,10 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp_mode=0,
         tab_stops=((15, 0),),
         min_glyph_shrink=0.98,
+        # IDML style carries <SameParaStyleSpacing>5.6693</SameParaStyleSpacing>
+        # (space between consecutive same-style paragraphs). Baseline.pdf shows
+        # 20pt gap vs 14pt within-para => +5.67pt after each body paragraph.
+        space_after_pt=5.6693,
     ))
     doc.add_para_style(ParaStyle(
         name='idml/headline-in-gruenem-kasten',
