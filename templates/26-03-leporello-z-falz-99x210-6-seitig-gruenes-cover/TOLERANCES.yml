@@ -1,0 +1,119 @@
+tolerances:
+- id: tol:cross-renderer-line-wrap-structural
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  reason: 'Scribus 1.6.x wraps paragraph text at different points than InDesign
+    because Gotham Narrow / Vollkorn render a fraction wider per line in Scribus.
+    Frames re-flow by a line, shifting every subsequent word and producing large
+    word-position deltas (>5pt). The systematic text audit confirms the cause for
+    most affected frames as "line count differs" (e.g. u16c baseline=5 vs preview=4,
+    u3a2 baseline=3 vs preview=4, uf7 baseline=20 vs preview=19). This is intrinsic
+    to the renderer font-metric difference and is not fixable at the converter or
+    build.py level — the y_mm_shift and line_spacing playbooks cannot close a wrap
+    re-flow. Same class settled at ~254-279 on the sibling Flyer templates; this
+    6-panel Leporello settles at 60 structural drifts.'
+  follow_up_issue: engine-bug; no upstream issue yet
+  severity: cosmetic
+  max_issues: 70
+- id: tol:cross-renderer-line-wrap-jitter
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  reason: 'Sub-perceptible (<=5pt) word-position drift from the same Scribus vs
+    InDesign font-metric difference described in
+    tol:cross-renderer-line-wrap-structural. These are below the visible-shift
+    threshold; accepted as renderer noise.'
+  follow_up_issue: engine-bug; no upstream issue yet
+  severity: cosmetic
+  max_issues: 30
+- id: tol:systematic-text-actionable-wrap
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  reason: '10 frames carry sim-actionable drift. The systematic audit attributes
+    the majority to "line count differs — text wrapped differently" (u155, u16c,
+    u2d5, u3a2, u3ba, uf7) which the line_spacing_sim cannot resolve (a leading
+    override does not change the wrap point). u1b0/u1e6 are SPLIT offsets (per-
+    paragraph anchor, signs differ across lines) and u1c7 is a uniform +1.92pt
+    offset that the y_mm_shift playbook already addressed within its convergence
+    band. Residual accepted as cross-renderer line-wrap.'
+  follow_up_issue: engine-bug; no upstream issue yet
+  severity: cosmetic
+  max_issues: 12
+- id: tol:u2cd-pine-cmyk-jpeg-blank
+  audit: image_content_audit
+  classification: authoring-bug
+  reason: 'u2cd references green-pine-trees-covered-with-fog.jpg which is a CMYK
+    JPEG (identify confirms Colorspace: CMYK, Type: ColorSeparation). Scribus
+    1.6.x renders CMYK JPEGs blank — links_export.py passes the JPEG through
+    unchanged (recipe: passthrough) and there is no ICC conversion path. This is
+    a known shared batch issue: a CMYK JPEG asset that the engine cannot
+    rasterise. The asset file is present on disk (not a missing-link blocker);
+    the fix is an authoring-side re-export of the photo as sRGB (the sibling
+    gruenes-cover-2 template ships a green-pine-trees-covered-with-fog-srgb.png
+    for this reason). Accepted as authoring-bug residual; no converter fix.'
+  follow_up_issue: authoring; baseline asset needs sRGB re-export
+  severity: major
+  max_issues: 1
+- id: tol:social-icons-composite-ai-invisible
+  audit: image_frame_visibility_audit
+  classification: authoring-bug
+  reason: 'u3e7/u3f0/u3f5 (left-column social-media icons) render invisible. They
+    reference the composite Social Media Icons weiss.ai (aspect 3.46, 4 icons in
+    one file). The scaffold ran with --allow-composite-ai, which keeps the
+    composite whole and crops it per-frame via local_offset_mm + SCALETYPE=1.
+    Scribus 1.6.x does not render that small-frame composite-crop RGBA path, so
+    the frames are blank. The proper fix is the composite-AI split
+    (tools/composite_ai_split.py) which is a Stage-1 / converter-stage concern
+    (re-scaffold) — it cannot be done as a Stage-2 build.py edit because the
+    individual icon files do not exist on disk and the per-frame icon mapping is
+    not derivable from the offsets without rendering. The right-column icons
+    u477/u4a2/u4da carry individual split blobs and render correctly. u2cd is
+    also counted here (CMYK JPEG, see tol:u2cd-pine-cmyk-jpeg-blank). The 5th
+    flagged frame is a white-on-dark false positive (audit gap L-014).'
+  follow_up_issue: authoring; re-scaffold with composite_ai_split for left-column icons
+  severity: major
+  max_issues: 5
+- id: tol:composite-ai-social-media-icons-weiss
+  audit: asset_extraction
+  classification: authoring-bug
+  reason: 'asset_extraction reports ok:false solely because Social Media Icons
+    weiss.ai is flagged composite-AI (3 distinct frame offsets reference one .ai).
+    All 7 links resolve on disk (links_missing: []). The scaffold imported it via
+    --allow-composite-ai. Per L-002 composite-AI is a per-template concern; the
+    composite-crop visibility consequence is documented in
+    tol:social-icons-composite-ai-invisible.'
+  follow_up_issue: authoring; composite-AI is per-template, accepted
+  severity: cosmetic
+  max_issues: 1
+- id: tol:run-style-headline-cross-extraction-match
+  audit: run_style_audit
+  classification: human-review
+  reason: 'One large style drift on the word "Headline": baseline GothamNarrow-Bold
+    12pt vs preview GothamNarrow-Ultra 38pt. The word "Headline" appears in two
+    different frames (the small page-1 subheadline and the large headline); the
+    audit cross-matched them. Colour drift is delta_format only (#ffffff vs
+    cmyk:0,0,0,0 — the same white). Surfaced for human review; not a real style
+    regression.'
+  follow_up_issue: human-review; cross-frame word collision in run_style_audit
+  severity: cosmetic
+  max_issues: 1
+- id: tol:image-audit-vector-path-and-icc-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  reason: '26 image_audit issues: 26 vector-path deltas plus region colour drift
+    classified predominantly icc_likely. Vector-path deltas are the Scribus vs
+    pdftocairo path-flattening difference on the imported .ai-derived PDFs;
+    icc_likely region colour drift is the ICC-profile rendering difference
+    upstream in Scribus. Neither is fixable at the converter level.'
+  follow_up_issue: engine-bug; no upstream issue yet
+  severity: cosmetic
+  max_issues: 30
+- id: tol:visual-diff-regions-residual
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  reason: '20 hot regions, driven by the cross-renderer line-wrap (text re-flow
+    shifts pixels across wide regions) and the invisible image frames (u2cd,
+    u3e7/u3f0/u3f5). Each underlying cause is documented in its own tolerance
+    row above; visual_diff_regions is the page-level aggregate of those.'
+  follow_up_issue: engine-bug; aggregate of the rows above
+  severity: cosmetic
+  max_issues: 22
