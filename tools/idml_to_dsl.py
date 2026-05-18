@@ -1953,6 +1953,28 @@ def _emit_pageitem(
             # PSR's alignment goes here so TextFrame.trail_attrs emits it correctly.
             trail_attrs = _psr_trail_attrs_for_story(story_root)
 
+        # Rotated-TextFrame W/H convention. _compute_page_local_bbox_pt emits
+        # the *un-rotated* frame extent (WIDTH/HEIGHT of the frame before ROT
+        # is applied) plus the rotation pivot. That is the correct model for
+        # ImageFrames and for empty (background-fill) frames, both of which
+        # the TextFrame primitive places verbatim. But the primitive applies
+        # a TEXT-FLOW W/H swap to any ±90° frame that carries text (it must,
+        # so Scribus computes wrap width from the visible long edge — see
+        # sla_lib/builder/primitives.py to_pageobject). Feeding the primitive
+        # the un-rotated model AND letting it swap is a double-correction:
+        # the visible frame collapses to the short axis and text clips.
+        #
+        # For a ±90° non-empty TextFrame, emit the axis-aligned bbox of the
+        # ROTATED rectangle instead — the convention the primitive's swap is
+        # built around. Derivation (pivot at the un-rotated top-left):
+        #   -90°: rotated-bbox = (x,         y - w_unrot, h_unrot, w_unrot)
+        #   +90°: rotated-bbox = (x - h_unrot, y,         h_unrot, w_unrot)
+        if runs and abs(abs(rot) - 90.0) < 0.5:
+            if rot < 0:
+                x_mm, y_mm, w_mm, h_mm = x_mm, y_mm - w_mm, h_mm, w_mm
+            else:
+                x_mm, y_mm, w_mm, h_mm = x_mm - h_mm, y_mm, h_mm, w_mm
+
         # Pattern 9 — auto-widen h_mm when Scribus would clip lines.
         # Scribus clips text when frame_h < effective line height; InDesign
         # overflows silently. Widen to the required minimum so every line renders.
