@@ -808,6 +808,14 @@ class _Ctx:
     template_id: str
     assets_dir: Path
     out: PythonRepr = field(default_factory=PythonRepr)
+    # The source IDML path. Used to locate the sibling baseline <stem>.pdf
+    # for render-page-mode detection (per-page vs spread-merged export).
+    source: Optional[Path] = None
+    # Render-page model: "spread" (a facing-pages spread → one wide SLA page,
+    # the default for leporello / fold templates) or "page" (each IDML page →
+    # its own SLA page, used when the baseline PDF was exported page-by-page).
+    # Resolved once by _resolve_render_page_mode().
+    render_page_mode: str = "spread"
     # Filled by Phase A
     doc_prefs: dict[str, Any] = field(default_factory=dict)
     # Filled by Phase B
@@ -3313,14 +3321,87 @@ def _route_item_to_page(
     return best_idx
 
 
-def _collect_spread_pages(ctx: _Ctx) -> list[dict[str, Any]]:
-    """Return one entry per IDML spread describing its rendered SLA page.
+def _count_idml_pages(ctx: _Ctx) -> int:
+    """Total number of <Page> elements across every Spreads/*.xml file."""
+    total = 0
+    for sp_path in ctx.pkg.spreads:
+        xml = ctx.pkg.open(sp_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        spread_node = root.find(".//Spread")
+        if spread_node is not None:
+            total += len(spread_node.findall("Page"))
+    return total
 
-    InDesign's default PDF export is **spread-based**: a single-page spread
-    exports as one PDF page, and a multi-page (facing) spread exports as ONE
-    wider PDF page whose width is the sum of its constituent pages' widths.
-    To keep the rendered SLA comparable to the baseline.pdf page-for-page,
-    the converter emits ONE SLA page per spread (not per IDML page).
+
+def _resolve_render_page_mode(ctx: _Ctx) -> None:
+    """Decide whether the SLA renders one page per spread or one per page.
+
+    The default ("spread") merges a facing-pages spread into a single wide
+    SLA page — correct for leporello / fold templates whose InDesign PDF
+    export is spread-based. But some templates (the A6 flyer family) author
+    their pages in 2-up facing spreads purely for editing convenience and
+    export the PDF **page-by-page**: the baseline then has one PDF page per
+    IDML page, not per spread.
+
+    Detection compares the sibling ``<stem>.pdf`` page count against the
+    IDML's page and spread counts:
+
+    * baseline pages == IDML page count  AND  != spread count → ``"page"``
+    * otherwise (including no baseline found)                → ``"spread"``
+
+    The asymmetric test is deliberately conservative: a template only flips
+    to per-page mode when the baseline unambiguously matches the page count
+    and the two counts genuinely differ (i.e. at least one facing spread
+    exists). Templates with no facing spreads keep the default and behave
+    identically either way.
+    """
+    n_pages = _count_idml_pages(ctx)
+    n_spreads = len(list(ctx.pkg.spreads))
+    if n_pages == n_spreads:
+        # No facing spreads — the two models are identical. Keep default.
+        ctx.render_page_mode = "spread"
+        return
+    baseline = None
+    if ctx.source is not None:
+        cand = ctx.source.with_suffix(".pdf")
+        if cand.exists():
+            baseline = cand
+    if baseline is None:
+        ctx.render_page_mode = "spread"
+        return
+    try:
+        import pdfplumber  # type: ignore
+
+        with pdfplumber.open(str(baseline)) as pdf:
+            n_baseline = len(pdf.pages)
+    except Exception:
+        ctx.render_page_mode = "spread"
+        return
+    if n_baseline == n_pages and n_baseline != n_spreads:
+        ctx.render_page_mode = "page"
+        print(
+            f"OK: baseline {baseline.name} has {n_baseline} pages == IDML "
+            f"page count ({n_pages}), spread count {n_spreads} — emitting "
+            f"one SLA page per IDML page (page-based export).",
+            file=sys.stderr,
+        )
+    else:
+        ctx.render_page_mode = "spread"
+
+
+def _collect_spread_pages(ctx: _Ctx) -> list[dict[str, Any]]:
+    """Return one entry per rendered SLA page.
+
+    In the default ``"spread"`` mode this is one entry per IDML spread: a
+    single-page spread exports as one PDF page, and a multi-page (facing)
+    spread exports as ONE wider PDF page whose width is the sum of its
+    constituent pages' widths.
+
+    In ``"page"`` mode (see ``_resolve_render_page_mode``) this is one entry
+    per IDML page: a facing-pages spread yields TWO render-page entries, each
+    sized to one page, each carrying a ``page_local_idx`` so ``_emit_pages``
+    can route the spread's items to the correct page via
+    ``_route_item_to_page``.
 
     Each returned dict carries:
 
@@ -3366,11 +3447,28 @@ def _collect_spread_pages(ctx: _Ctx) -> list[dict[str, Any]]:
             _, _, _, _, ptx, _ = _parse_matrix(pg["page_t"])
             _, gx1, _, _ = pg["page_gb"]
             return ptx + gx1
+        if ctx.render_page_mode == "page":
+            # One render-page entry per IDML page. Items in a multi-page
+            # spread are routed by _route_item_to_page using page_local_idx.
+            ordered = sorted(spread_pages, key=_page_left_x)
+            for local_idx, pg in enumerate(ordered):
+                out.append({
+                    "sp_path": sp_path,
+                    "spread_t": spread_t,
+                    "pages": spread_pages,
+                    "page_local_idx": local_idx,
+                    "origin_t": pg["page_t"],
+                    "origin_gb": pg["page_gb"],
+                    "page_w_pt": pg["page_w_pt"],
+                    "page_h_pt": pg["page_h_pt"],
+                })
+            continue
         leftmost = min(spread_pages, key=_page_left_x)
         out.append({
             "sp_path": sp_path,
             "spread_t": spread_t,
             "pages": spread_pages,
+            "page_local_idx": None,
             "origin_t": leftmost["page_t"],
             "origin_gb": leftmost["page_gb"],
             "page_w_pt": sum(p["page_w_pt"] for p in spread_pages),
@@ -3401,15 +3499,20 @@ def _emit_pages(ctx: _Ctx) -> None:
         i = spread_idx
         sp_path = sp_info["sp_path"]
         spread_t = sp_info["spread_t"]
-        # All items in this spread are placed relative to the leftmost page's
-        # top-left origin, so a facing-pages spread becomes ONE wide SLA page.
+        # In "spread" mode all items share one merged SLA page placed
+        # relative to the leftmost page's top-left origin. In "page" mode
+        # each render-page entry is one IDML page; items in a multi-page
+        # spread are routed by _route_item_to_page using page_local_idx.
         page_t = sp_info["origin_t"]
         page_gb = sp_info["origin_gb"]
         page_w_pt = sp_info["page_w_pt"]
         page_h_pt = sp_info["page_h_pt"]
+        page_local_idx = sp_info.get("page_local_idx")
+        spread_page_dicts = sp_info["pages"]
 
-        # Collect every emittable top-level item in this spread (no per-page
-        # routing — they all share one merged SLA page).
+        # Collect every emittable top-level item for this render page. In
+        # "page" mode, _route_item_to_page filters items to the single
+        # IDML page this entry represents.
         spread_items: list[Any] = []
         xml = ctx.pkg.open(sp_path).read()
         root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
@@ -3450,6 +3553,19 @@ def _emit_pages(ctx: _Ctx) -> None:
                     f"layer {item_layer!r} not handled "
                     f"(extend tools/idml_to_dsl.py:_emit_pages)"
                 )
+            # Page-based mode: a facing spread becomes N render-page entries.
+            # Route each top-level item to the IDML page it sits on so it is
+            # emitted exactly once, on the correct page. When routing cannot
+            # resolve (anchor extraction failed) the item lands on page 0 so
+            # it is never dropped and never duplicated.
+            if page_local_idx is not None and len(spread_page_dicts) > 1:
+                routed = _route_item_to_page(
+                    child, spread_t, spread_page_dicts, _guard_pt
+                )
+                if routed is None:
+                    routed = 0
+                if routed != page_local_idx:
+                    continue
             spread_items.append(child)
 
         # Emit one _add_page_<i> per SPREAD.
@@ -3877,17 +3993,18 @@ def _emit_styles_stub(out: PythonRepr, ctx: _Ctx) -> None:
 
 
 def _emit_page_stubs(out: PythonRepr, ctx: _Ctx) -> None:
-    """Task 3 stub: emit empty _add_page_<i> functions, one per SPREAD.
+    """Task 3 stub: emit empty _add_page_<i> functions, one per render page.
 
-    The converter emits one SLA page per IDML spread (a facing-pages spread
-    becomes one wide page — see _emit_pages), so the stub count matches the
-    spread count, not the IDML page count.
+    In "spread" mode a facing-pages spread becomes one wide page, so the stub
+    count matches the spread count. In "page" mode each IDML page is its own
+    render page (see _resolve_render_page_mode), so the count matches the
+    total IDML page count. _collect_spread_pages reflects the active mode.
     """
-    page_count = len(list(ctx.pkg.spreads))
+    page_count = len(_collect_spread_pages(ctx))
     for i in range(page_count):
         out.w(f"def _add_page_{i}(doc: Document, page) -> None:")
         out.indent += 1
-        out.w(f'"""Spread {i + 1} page items — populated by tools/idml_to_dsl.py Phase H."""')
+        out.w(f'"""Render page {i + 1} items — populated by tools/idml_to_dsl.py Phase H."""')
         out.w("# (no page items in this task-3 skeleton)")
         out.w("return None")
         out.indent -= 1
@@ -4066,6 +4183,7 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
 
     with IDMLPackage(str(source)) as pkg:
         ctx = _Ctx(pkg=pkg, template_id=template_id, assets_dir=assets_dir)
+        ctx.source = source
         ctx.logo_map = logo_map
         ctx.asset_map = asset_map
 
@@ -4107,6 +4225,10 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         }
         # Phase C
         _check_masters_empty(pkg)
+        # Resolve the render-page model (per-page vs spread-merged) by
+        # comparing the sibling baseline.pdf page count against the IDML's
+        # page/spread counts. Must run before _emit_page_stubs / _emit_pages.
+        _resolve_render_page_mode(ctx)
         # Phase F — colors (run early so styles/items can translate FillColor refs)
         _emit_colors(ctx)
 

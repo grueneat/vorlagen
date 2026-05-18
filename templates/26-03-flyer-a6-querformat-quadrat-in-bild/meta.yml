@@ -1,0 +1,19 @@
+asset_policy:
+  embedded:
+  - gruene-logo-bund-weiss-cmyk.png
+  external:
+  - green-pine-trees-covered-with-fog.jpg
+  - leonore-sitzend-kopie.jpg
+  - schwarzer-verlauf-radial.png
+  shipped: []
+build:
+  output: template.sla
+  script: build.py
+format: A4
+id: 26-03-flyer-a6-querformat-quadrat-in-bild
+idml_source: ../../../../originals/26-03-Flyer A6 Querformat Quadrat in Bild Ordner/26-03-Flyer
+  A6 Querformat Quadrat in Bild.idml
+previews_for_sla: 9fa983f688d976c4ab0f60a869665016e39fe7e4974d2cbae028572b2bf37f29
+title: 26-03-flyer-a6-querformat-quadrat-in-bild
+version: 0.1.0
+build_py_sha256: 1d86ad02f10c5ef682f094019fa7639cdbd43a6e1d0801a2a6d5da1a5e0c5f47

@@ -1,0 +1,135 @@
+tolerances:
+- id: tol:inventory-offpage-registration-marks
+  audit: inventory
+  classification: human-review
+  severity: cosmetic
+  max_issues: 4
+  reason: '4 dropped elements. The converter deliberately skips four 6.3x6.3mm
+    (17.9x17.9pt) Rectangle elements (u6f0, u6f2, u77f, u964) that the IDML
+    places far outside the page (x=-504pt or x=+508..510pt — well beyond the
+    419pt page width). They are inline vector paths with no <Image>/<PDF> child
+    (registration / colour-control furniture on the pasteboard). The converter
+    logs each as "[skip] Rectangle ... entirely outside page bounds ... InDesign
+    design artifact, not emitted"; InDesign also omits them from the trimmed PDF
+    export. A deliberate, documented non-emit — not a silent drop (the scaffold
+    completeness assertion passes: every element is either emitted or explicitly
+    recorded as skipped).'
+  follow_up_issue: none; correct converter behaviour, audit is conservative
+- id: tol:image-audit-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 48
+  reason: '45 vector-path / image deltas, derivative of the Scribus raster/ICC
+    rendering differences on full-bleed Dunkelgruen page backgrounds and photo
+    content, plus the IDML inline decorative vector paths (Wahlkreis ellipse /
+    underline ornaments, curly quotes) the converter extracts as inline images
+    rather than re-emitting as Scribus Polygon items, plus the CMYK-JPEG /
+    CMYK-PSD render gaps catalogued in image_content_audit. Same gap class as
+    the sibling flyer templates (26-03-flyer-a6-querformat-portrait,
+    26-03-flyer-a6-hochformat-*).'
+  follow_up_issue: engine-bug; intrinsic raster + ICC differences
+- id: tol:image-content-cmyk-render
+  audit: image_content_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 4
+  reason: '4 image frames classified broken. u9be and u906
+    (green-pine-trees-covered-with-fog.jpg, CMYK JPEG, links_export recipe
+    "passthrough") render fully blank / faint — Scribus 1.6.x fails to
+    rasterise CMYK JPEGs (passed through unchanged by tools/links_export.py).
+    ua88 (leonore-sitzend-kopie.jpg, CMYK JPEG) renders with a mean-RGB shift
+    — same CMYK-JPEG class. ua8f (schwarzer-verlauf-radial.png, converted from
+    a CMYK PSD via the ImageMagick "convert -flatten" recipe) renders
+    discoloured — that recipe produces non-ICC CMYK->RGB output that
+    posterizes/discolours CMYK PSDs. All four are Stage-1 asset-pipeline
+    limitations, not converter or build.py bugs; each ImageFrame carries a
+    "# noinject:" annotation in build.py. The passthrough recipe for CMYK
+    JPEGs is a documented, tested decision; forcing RGB pre-conversion was not
+    pursued (it contradicts that decision and risks colour shifts).'
+  follow_up_issue: authoring/asset-pipeline; links_export.py CMYK handling
+- id: tol:image-frame-visibility-cmyk-jpeg
+  audit: image_frame_visibility_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 2
+  reason: '1 invisible + 1 faint. u906 (CMYK JPEG green-pine-trees) is invisible
+    (preview ink density 0.0) and u9be (same asset, different frame) is faint
+    (visibility ratio 0.37) — the Scribus 1.6.x CMYK-JPEG rasterisation failure.
+    The third originally-flagged frame ua5a (white Gruenen logo, inline PNG)
+    was FIXED in tuning: switched from inline_image_data + scale_type=1 to a
+    direct image= reference + scale_type=0, which restored it to visibility
+    ratio 0.88 (class ok).'
+  follow_up_issue: authoring/asset-pipeline; Scribus CMYK-JPEG render
+- id: tol:systematic-text-line-wrap-no-sim-rows
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 12
+  reason: '11 frames flagged sim-actionable. The line_spacing playbook simulator
+    (tools/line_spacing_sim.py) returned NO ROWS for every frame across two
+    tune-fix iterations — the drift is line-WRAP-count divergence, not a leading
+    value. line_spacing_pixel_audit confirms line-count mismatches (ua62 5->4,
+    u6d8 10->11, u6c1 1->2, u90b 1->0). No single (LINESPMode, LINESP)
+    reconciles a wrap-count difference; the mixed-font headline frame ua62
+    (Gotham Ultra + Vollkorn Black Italic) is the documented mixed-font edge
+    case where Scribus per-line font metrics dominate. The y_mm_shift playbook
+    calibration was inconclusive (delta too small to determine sign).'
+  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)
+- id: tol:text-position-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 24
+  reason: '21 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+    InDesign per-character kerning jitter intrinsic to the two rasterisers. The
+    line_spacing sim returned no rows for any frame; the y_mm_shift playbook
+    applied what uniform shifts it could derive. Sub-perceptible jitter, below
+    the visible threshold. The structural bucket
+    (text_position_audit_structural) catches the larger >5pt shifts.'
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:text-position-structural-cross-renderer-wrap
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 280
+  reason: '254 large (>5pt) word-position drifts. The drift is dominated by
+    cross-renderer line-wrap differences — Scribus and InDesign break the
+    justified body / Fliesstext paragraphs at slightly different words because
+    their font-metric and hyphenation models differ. The known shared band for
+    Querformat flyer templates is ~279; this template settles at 254. Not a
+    converter bug and not a routing bug. NOT FIXED, NOT TOLERATED-AS-PASSING —
+    preflight stays red until a Scribus justification/hyphenation alignment
+    lands or the baseline is re-flowed.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+- id: tol:text-render-cross-renderer-wrap-overflow
+  audit: text_render_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 12
+  reason: '12 issue(s): 12 unique words (24 occurrences) of baseline body text
+    missing from the render, plus "impressu" appearing as the truncated form of
+    "impressum". The missing words (consent., nam, quatur., quaturem., et,
+    eaque, eosenihicto, volor, ...) are the TAIL words of justified
+    Fliesstext paragraphs in the u6d8 / u92e body frames. Scribus wraps the
+    justified paragraphs to more lines than InDesign, so the last line(s)
+    overflow the frame height and Scribus clips them; each affected word
+    appears twice because the body text repeats on the two facing-spread page
+    pairs. The converter already widened the ua62 headline frame (see
+    "# h_mm widened" comment in build.py); the residual overflow is driven by
+    the cross-renderer wrap-count divergence, not by a converter geometry
+    error. Same root cause as text_position_audit_structural.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap overflow
+- id: tol:visual-diff-regions-rasterise-size-rounding
+  audit: visual_diff_regions
+  classification: human-review
+  severity: cosmetic
+  max_issues: 1
+  reason: 'visual_diff_regions errors out with "image size mismatch:
+    baseline=(874, 620), preview=(875, 621)" — a 1-pixel difference at 150 dpi.
+    Root cause: the SLA page is sized in mm and converts back to 419.528 x
+    297.638 pt vs the baseline PDF MediaBox 419.500 x 297.600 pt — a 0.028pt /
+    0.038pt (~0.01mm) difference that rounds to 1px on rasterisation. This is
+    sub-perceptible mm<->pt rounding noise, not a geometry defect; the 6-page
+    page-based render model and per-page dimensions are correct.'
+  follow_up_issue: human-review; sub-pixel rasterise rounding, harmless
