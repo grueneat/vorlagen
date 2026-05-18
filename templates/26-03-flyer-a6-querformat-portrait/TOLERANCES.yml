@@ -27,66 +27,51 @@ tolerances:
     images rather than re-emitting as Scribus Polygon items. Same gap class as
     the sibling flyer templates (26-03-flyer-a6-hochformat-*).'
   follow_up_issue: engine-bug; intrinsic raster + ICC differences
-- id: tol:image-content-cmyk-render
-  audit: image_content_audit
-  classification: authoring-bug
-  severity: structural
-  max_issues: 2
-  reason: '2 image frames classified broken. u9cc (2026-03-leonore-fuer-flyer,
-    CMYK PSD) renders with a mean-RGB shift — the known CMYK-PSD conversion
-    issue: tools/links_export.py''s ImageMagick "convert -flatten" recipe
-    produces non-ICC CMYK->RGB output that discolours CMYK PSDs. u906
-    (green-pine-trees-covered-with-fog.jpg, CMYK JPEG, links_export recipe
-    "passthrough") renders fully blank — Scribus 1.6.x fails to rasterise this
-    CMYK JPEG. Both are Stage-1 asset-pipeline limitations, not converter or
-    build.py bugs. The passthrough recipe for CMYK JPEGs is a documented,
-    tested decision (sRGB pre-conversion rendered ziesel.jpg 2x too dark);
-    forcing RGB here was not pursued to avoid contradicting that decision.'
-  follow_up_issue: authoring/asset-pipeline; links_export.py CMYK handling
-- id: tol:image-frame-visibility-cmyk-and-faint-icon
-  audit: image_frame_visibility_audit
-  classification: authoring-bug
-  severity: structural
-  max_issues: 2
-  reason: '1 invisible + 1 faint. u906 (CMYK JPEG green-pine-trees) is invisible
-    (preview ink density 0.0) — same Scribus CMYK-JPEG rasterisation failure as
-    in image_content_audit above. u46c is a small inline icon rendering faint
-    (visibility ratio 0.39) — a known Scribus 1.6.x weakness for small
-    white-on-transparent inline PNGs. u906 sits in the top strip of the merged
-    facing spread where the baseline shows mostly green background, so the
-    visible impact is limited.'
-  follow_up_issue: authoring/asset-pipeline; Scribus CMYK-JPEG + small-icon render
+# NOTE (2026-05-18 re-import): the former tol:image-content-cmyk-render and
+# tol:image-frame-visibility-cmyk-and-faint-icon entries were REMOVED. The
+# converter/audit-chain CMYK->sRGB + aspect-fill fix set resolved both audits:
+# image_content_audit now reports 0 broken (was 2: u9cc, u906) and
+# image_frame_visibility_audit reports 0 invisible/faint (was 1+1). All four
+# image frames render with asset_render_ratio 0.94-1.00 (DIE GRÜNEN logo u46c
+# 0.94, well above the 0.35 floor). No tolerance needed.
 - id: tol:systematic-text-line-wrap-no-sim-rows
   audit: systematic_text_audit
   classification: scribus-engine-bug
   severity: structural
   max_issues: 12
-  reason: '12 frames flagged sim-actionable. The line_spacing playbook simulator
-    (tools/line_spacing_sim.py) returned NO ROWS for every frame across 5
-    tune-fix iterations — the drift is line-WRAP-count divergence, not a leading
-    value. line_spacing_pixel_audit confirms line-count mismatches (u621 5->1,
-    u872 3->2, u6d8 10->11). No single (LINESPMode, LINESP) reconciles a
-    wrap-count difference. The y_mm_shift playbook applied tentative uniform
-    shifts where it could; the rest are non-uniform per-paragraph wrap drift.'
+  reason: '6 frames flagged sim-actionable (down from 12 after the 2026-05-18
+    re-import: the body ParaStyle leading was corrected 16.0->15.0pt to match the
+    baseline-grid-aligned InDesign render, which closed half the frames). The
+    line_spacing playbook simulator (tools/line_spacing_sim.py) returned NO ROWS
+    for every remaining frame — the residual drift is line-WRAP-count divergence,
+    not a leading value. The systematic audit reason for each is verbatim
+    "line count differs ... text wrapped differently": u6d8 10->12, u92e 10->12,
+    u94a 8->11, u6aa/u6aa_l2/u6c1 single-line headline-split count quirks. No
+    single (LINESPMode, LINESP) reconciles a wrap-count difference. Cap kept at
+    12 (head-room over the 6 measured).'
   follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)
 - id: tol:text-position-jitter-freetype-kerning
   audit: text_position_audit_jitter
   classification: scribus-engine-bug
   severity: cosmetic
-  max_issues: 36
-  reason: '32 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+  max_issues: 38
+  reason: '37 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
     InDesign per-character kerning jitter intrinsic to the two rasterisers. The
-    line_spacing sim returned no rows for any frame; the y_mm_shift playbook
-    applied what uniform shifts it could derive. Sub-perceptible jitter, below
-    the visible threshold. The structural bucket
-    (text_position_audit_structural) catches the larger >5pt shifts.'
+    2026-05-18 re-import corrected the body leading 16.0->15.0pt, which shifted
+    word baselines and moved a few words across the 5pt jitter/structural
+    boundary (32 -> 37 sub-perceptible). Cap raised 36 -> 38 to track the fresh-
+    render count (TOLERANCE_LOG row 6). The line_spacing sim returned no rows for
+    any frame; the y_mm_shift playbook applied what uniform shifts it could
+    derive. Sub-perceptible jitter, below the visible threshold. The structural
+    bucket (text_position_audit_structural) catches the larger >5pt shifts.'
   follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
 - id: tol:text-position-structural-cross-renderer-wrap
   audit: text_position_audit_structural
   classification: scribus-engine-bug
   severity: structural
   max_issues: 290
-  reason: '279 large (>5pt) word-position drifts. The drift is dominated by
+  reason: '206 large (>5pt) word-position drifts (down from 279 after the
+    2026-05-18 re-import body-leading correction). The drift is dominated by
     cross-renderer line-wrap differences — Scribus and InDesign break the
     justified body / bullet-list paragraphs at slightly different words because
     their font-metric and hyphenation models differ. On the merged facing
@@ -102,15 +87,17 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 12
-  reason: '10 unique words (31 occurrences) of baseline body text missing from
-    the render. The missing words (consent., nam, quatur., quaturem., et,
-    eaque, ...) are the TAIL words of justified body-text paragraphs. Scribus
-    wraps the justified paragraphs to more lines than InDesign, so the last
-    line(s) overflow the frame height and Scribus clips them. The converter
-    already widened several frames (see "# h_mm widened" comments in build.py);
-    the residual overflow is driven by the cross-renderer wrap-count divergence,
-    not by a converter geometry error. Same root cause as
-    text_position_audit_structural.'
+  reason: '5 unique words missing from the render (down from 10 after the
+    2026-05-18 re-import). The missing words (dis, quab, quam, quis,
+    voloriaspita) are tail/boundary words of the justified body-text paragraphs.
+    Verified NOT clipped: pdfplumber line-top scans of u6d8 (last line 97.3mm <
+    frame bottom 103.1mm) and u94a (last line 103.8mm < bottom 109.1mm) show all
+    text fits inside the frame. The mismatch is a cross-renderer text-extraction
+    artifact: build.py joins wrapped fragments with U+2028 line separators
+    (e.g. "volorias pita") which InDesign extracts as one token but Scribus
+    breaks into two, and the differing justified wrap re-tokenises boundary
+    words. Same root cause as text_position_audit_structural; consistent with
+    the preflight "text extraction engines disagree" note. Cap kept at 12.'
   follow_up_issue: engine-bug; cross-renderer line-wrap overflow
 - id: tol:visual-diff-regions-cross-renderer
   audit: visual_diff_regions
@@ -118,8 +105,32 @@ tolerances:
   severity: structural
   max_issues: 44
   reason: '38 hot grid regions. Derivative of the same cross-renderer text wrap
-    + CMYK image rendering differences catalogued above — a hot region fires
-    wherever wrapped text shifts or a CMYK image renders blank/discoloured. Not
-    an independent defect; it is the page-grid view of the text_position and
-    image_content residuals.'
-  follow_up_issue: engine-bug; aggregate view of text-wrap + CMYK residuals
+    differences catalogued above — a hot region fires wherever wrapped text
+    shifts. The CMYK images that previously contributed (u9cc, u906) now render
+    correctly after the 2026-05-18 CMYK->sRGB fix set, so the residual is purely
+    the page-grid view of the text-wrap drift. Not an independent defect.'
+  follow_up_issue: engine-bug; aggregate view of text-wrap residuals
+- id: tol:line-match-cross-renderer-wrap
+  audit: line_match_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 27
+  reason: '27 mismatched lines (40/67 matched). Documentation-only (severity
+    structural — preflight stays red, not fudged green). Breakdown of the 27:
+    (a) 22 wrap/unmatched findings in the justified 2-column body frames u6d8
+    (8), u92e (8), u94a (5), u67c (1) — cross-renderer line-wrap divergence,
+    the same root cause as text_position_audit_structural. Gotham Narrow Book
+    renders ~0.75% wider in Scribus than InDesign so each justified line holds
+    one word fewer (measured: baseline col-1 line-1 "Usapiene mporia quisin
+    consequid" = 4 words across 56mm, preview "Usapiene mporia quisin" = 3 words
+    across the same 56mm). Fitting the lost word would need ~16% horizontal
+    compression — far beyond a non-distorting glyph shrink (min_glyph_shrink is
+    already 0.98). Unclosable without a Scribus justification/hyphenation
+    alignment. (b) 2 first_word_x findings of +-28pt on the rotated -90deg
+    Impressum frames u693/u85a — rotated-frame vertical-centring (Scribus engine
+    limit; vertical_text_align on a rotated frame does not match InDesign). (c)
+    3 first_word_x findings of 1.7-2.4pt on u60a (subheadline) and u980 (Vollkorn
+    citation) — minor x-drift from the ~0.75% Vollkorn/Gotham glyph-width
+    difference. The frame_vertical_position / baseline_y findings that appeared
+    pre-tune on u94a were CLOSED by the body-leading correction.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap + rotated-frame centring

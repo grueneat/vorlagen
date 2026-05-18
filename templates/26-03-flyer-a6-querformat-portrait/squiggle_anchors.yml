@@ -1,0 +1,150 @@
+template: 26-03-flyer-a6-querformat-portrait
+_schema_version: 1
+_doc: Squiggle re-anchoring map. Each entry binds a yellow squiggle Polygon (anname)
+  to the word it underlines in baseline.pdf. tools/playbooks/squiggle_realign.py consumes
+  this to keep the squiggle tracking its word when Scribus wraps text differently.
+anchors:
+- anname: u677
+  page: 1
+  target_frame: u67c
+  word: tectotmusaqui
+  word_index: 32
+  baseline_word_box_pt:
+    x0: 475.049
+    top: 187.539
+    x1: 543.205
+    bottom: 198.539
+  baseline_squiggle_box_mm:
+    x_mm: 191.002
+    y_mm: 69.5001
+    w_mm: 25.0055
+    h_mm: 1.1564
+  offset_from_word_mm:
+    dx_mm: 23.4153
+    dy_mm: 3.3405
+- anname: u678
+  page: 1
+  target_frame: u6d8
+  word: et
+  word_index: 10
+  baseline_word_box_pt:
+    x0: 74.893
+    top: 127.523
+    x1: 84.32
+    bottom: 138.523
+  baseline_squiggle_box_mm:
+    x_mm: 26.9005
+    y_mm: 48.3013
+    w_mm: 19.1982
+    h_mm: 0.9961
+  offset_from_word_mm:
+    dx_mm: 0.4799
+    dy_mm: 3.314
+- anname: u679
+  page: 1
+  target_frame: u6d8
+  word: modi
+  word_index: 7
+  baseline_word_box_pt:
+    x0: 352.928
+    top: 112.552
+    x1: 377.007
+    bottom: 123.552
+  baseline_squiggle_box_mm:
+    x_mm: 122.819
+    y_mm: 39.5
+    w_mm: 11.749
+    h_mm: 3.8145
+  offset_from_word_mm:
+    dx_mm: -1.6862
+    dy_mm: -0.2058
+- anname: u67b
+  page: 1
+  target_frame: u6c1
+  word: auch
+  word_index: 2
+  baseline_word_box_pt:
+    x0: 557.74
+    top: 44.958
+    x1: 623.11
+    bottom: 74.958
+  baseline_squiggle_box_mm:
+    x_mm: 195.5693
+    y_mm: 23.3405
+    w_mm: 25.399
+    h_mm: 1.8007
+  offset_from_word_mm:
+    dx_mm: -1.189
+    dy_mm: 7.4803
+- anname: u96c
+  page: 2
+  target_frame: u94a
+  word: eaque
+  word_index: 75
+  baseline_word_box_pt:
+    x0: 653.823
+    top: 237.644
+    x1: 682.808
+    bottom: 248.644
+  baseline_squiggle_box_mm:
+    x_mm: 239.9094
+    y_mm: 87.625
+    w_mm: 21.211
+    h_mm: 5.1895
+  offset_from_word_mm:
+    dx_mm: 9.2552
+    dy_mm: 3.7895
+- anname: u966
+  page: 2
+  target_frame: u94a
+  word: volor
+  word_index: 11
+  baseline_word_box_pt:
+    x0: 506.896
+    top: 147.587
+    x1: 530.832
+    bottom: 158.587
+  baseline_squiggle_box_mm:
+    x_mm: 178.1037
+    y_mm: 54.8013
+    w_mm: 32.1963
+    h_mm: 1.5069
+  offset_from_word_mm:
+    dx_mm: -0.7179
+    dy_mm: 2.7359
+- anname: u967
+  page: 2
+  target_frame: u94a
+  word: volor
+  word_index: 11
+  baseline_word_box_pt:
+    x0: 506.896
+    top: 147.587
+    x1: 530.832
+    bottom: 158.587
+  baseline_squiggle_box_mm:
+    x_mm: 178.1037
+    y_mm: 54.8013
+    w_mm: 32.1963
+    h_mm: 1.5069
+  offset_from_word_mm:
+    dx_mm: -0.7179
+    dy_mm: 2.7359
+- anname: u948
+  page: 2
+  target_frame: u92e
+  word: voloriaspita
+  word_index: 35
+  baseline_word_box_pt:
+    x0: 301.834
+    top: 157.564
+    x1: 356.746
+    bottom: 168.564
+  baseline_squiggle_box_mm:
+    x_mm: 106.2005
+    y_mm: 58.7013
+    w_mm: 19.1982
+    h_mm: 0.9961
+  offset_from_word_mm:
+    dx_mm: -0.2798
+    dy_mm: 3.1162

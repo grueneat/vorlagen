@@ -4,35 +4,70 @@ Every tolerance / override granted on this template, with the measured
 drift it resolves and why it is conservative. Reviewed by a human; the
 matching machine-readable entries live in `TOLERANCES.yml`.
 
-This template carried NO `meta.yml::brand_overrides`, `non_ci_*`, or
-brand-rule growth — all 49 brand-rule errors are left un-suppressed
-(they are the inherited `brand:font_family` Minion-Pro-on-abstract-
-ParaStyle false positive plus `brand:line_spacing_0.9` /
-`brand:inside_page` informational rows, identical to the sibling flyer
-templates). Only `TOLERANCES.yml` audit-scoped entries were added.
+This template carries NO `meta.yml::brand_overrides`, `non_ci_*`, or
+brand-rule growth — all brand-rule errors are left un-suppressed (they
+are the inherited `brand:font_family` Minion-Pro-on-abstract-ParaStyle
+false positive plus `brand:line_spacing` / `brand:inside_page`
+informational rows, identical to the sibling flyer templates). Only
+`TOLERANCES.yml` audit-scoped entries were added.
+
+## 2026-05-18 re-import — changes since the prior pass
+
+The template was re-imported and re-tuned against the full converter +
+audit-chain fix set. Net effect:
+
+- **CMYK images fixed.** The CMYK->sRGB + aspect-fill fix set resolved
+  both former CMYK image tolerances. `image_content_audit` now reports
+  0 broken (was 2: u9cc Leonore PSD, u906 pine-tree JPEG);
+  `image_frame_visibility_audit` reports 0 invisible/faint (was 1+1).
+  The former `tol:image-content-cmyk-render` and
+  `tol:image-frame-visibility-cmyk-and-faint-icon` entries were
+  **removed** — no tolerance needed. All four image frames render with
+  `asset_render_ratio` 0.94-1.00 (DIE GRÜNEN logo u46c at 0.94, well
+  above the 0.35 floor).
+- **Body leading corrected.** The body ParaStyles
+  (`fliesstext-auf-gruenem-hintergrund`,
+  `fliesstext-auf-weissem-hintergrund`,
+  `aufzaehlungen-auf-gruenem-hintergrund`) had `linesp=16.0` while the
+  InDesign baseline renders the body at a 15.00pt baseline-grid pitch.
+  Set to `linesp=15.0` (build.py `# P5/tune`). This closed the
+  per-line +1pt drift that caused 11-line frames to overflow, and
+  closed the pre-tune `frame_vertical_position` / `baseline_y`
+  findings on u94a.
+- **SpaceAfter dropped from the white body style.** The IDML declares
+  `SpaceAfter=5.6693` on "Fließtext auf weißem Hintergrund", but the
+  InDesign baseline snaps that text to a 5.30mm baseline grid which
+  absorbs the sub-pitch SpaceAfter (baseline u92e/u94a show uniform
+  5.30mm line gaps with NO inter-paragraph jump). Scribus has no grid
+  model, so emitting SpaceAfter added a real per-paragraph gap and
+  structural drift; removed (build.py `# P5/tune`).
+- Residual counts improved: `text_position_audit_structural`
+  279 -> 206, `systematic_text_audit` 12 -> 6, `text_render_audit`
+  10 words -> 5.
+
+## Active tolerances
 
 | # | TOLERANCES.yml id | Audit | max_issues | Measured | Classification | Why conservative |
 |---|---|---|---|---|---|---|
 | 1 | tol:inventory-offpage-registration-marks | inventory | 6 | 6 dropped | human-review | Cap == exact dropped count. All 6 are 17.9x17.9pt Rectangles placed 100s of pt off-page (registration furniture); converter explicitly records each as skipped, completeness assertion still passes. InDesign also omits them. |
 | 2 | tol:image-audit-vector-path-delta | image_audit | 28 | 24 deltas | scribus-engine-bug | Cap 28 vs 24 measured (small headroom). Raster/ICC + inline-vector-path extraction differences; same class as sibling flyer templates. |
-| 3 | tol:image-content-cmyk-render | image_content_audit | 2 | 2 broken (u9cc, u906) | authoring-bug | Cap == exact broken count. u9cc CMYK-PSD colour shift (known links_export convert-flatten issue); u906 CMYK-JPEG blank (Scribus 1.6.x). Stage-1 asset-pipeline limits, not converter/build.py bugs. |
-| 4 | tol:image-frame-visibility-cmyk-and-faint-icon | image_frame_visibility_audit | 2 | 1 invisible + 1 faint | authoring-bug | Cap == exact count. u906 invisible (same CMYK-JPEG failure); u46c faint (small inline-PNG Scribus weakness). |
-| 5 | tol:systematic-text-line-wrap-no-sim-rows | systematic_text_audit | 12 | 12 actionable | scribus-engine-bug | Cap == exact count. line_spacing_sim returned NO ROWS for all 12 frames across 5 tune-fix iterations — drift is line-WRAP-count divergence, not a leading value. No (LINESPMode, LINESP) reconciles a wrap-count change. |
-| 6 | tol:text-position-jitter-freetype-kerning | text_position_audit_jitter | 36 | 32 drifts | scribus-engine-bug | Cap 36 vs 32 measured. Sub-perceptible (<=5pt) FreeType-vs-InDesign kerning jitter. |
-| 7 | tol:text-position-structural-cross-renderer-wrap | text_position_audit_structural | 290 | 279 drifts | scribus-engine-bug | Cap 290 vs 279 measured. Cross-renderer line-wrap divergence; amplified on the 839pt merged facing spreads where word-matching pairs a left-page word with its right-page lorem-ipsum twin. NOT tolerated-as-passing — preflight stays red. |
-| 8 | tol:text-render-cross-renderer-wrap-overflow | text_render_audit | 12 | 10 words / 31 occ. | scribus-engine-bug | Cap 12 vs 10 measured. Tail words of justified paragraphs clipped because Scribus wraps to more lines than the frame holds. Converter already widened several frames; residual is wrap-count driven. |
-| 9 | tol:visual-diff-regions-cross-renderer | visual_diff_regions | 44 | 38 hot regions | scribus-engine-bug | Cap 44 vs 38 measured. Page-grid view of the text-wrap + CMYK image residuals above; not an independent defect. |
+| 3 | tol:systematic-text-line-wrap-no-sim-rows | systematic_text_audit | 12 | 6 actionable | scribus-engine-bug | Cap 12 vs 6 measured (was 12 pre-re-import; the body-leading fix closed half). line_spacing_sim returned NO ROWS for all remaining frames — drift is line-WRAP-count divergence, not a leading value. |
+| 4 | tol:text-position-jitter-freetype-kerning | text_position_audit_jitter | 38 | 37 drifts | scribus-engine-bug | Cap raised 36 -> 38. The body-leading correction shifted word baselines, moving a few words across the 5pt jitter/structural boundary (32 -> 37 sub-perceptible <=5pt drifts). Cosmetic FreeType-vs-InDesign kerning jitter, below the visible threshold. |
+| 5 | tol:text-position-structural-cross-renderer-wrap | text_position_audit_structural | 290 | 206 drifts | scribus-engine-bug | Cap 290 vs 206 measured (was 279 pre-re-import). Cross-renderer line-wrap divergence; amplified on the 839pt merged facing spreads where word-matching pairs a left-page word with its right-page lorem-ipsum twin. NOT tolerated-as-passing — preflight stays red. |
+| 6 | tol:text-render-cross-renderer-wrap-overflow | text_render_audit | 12 | 5 words | scribus-engine-bug | Cap 12 vs 5 measured (was 10). Boundary words of justified paragraphs; verified NOT clipped (pdfplumber line-top scans show all text inside the frame) — a cross-renderer text-extraction artifact at U+2028 line separators. |
+| 7 | tol:visual-diff-regions-cross-renderer | visual_diff_regions | 44 | 38 hot regions | scribus-engine-bug | Cap 44 vs 38 measured. Page-grid view of the text-wrap residual; the CMYK-image contribution is gone after the CMYK->sRGB fix. Not an independent defect. |
+| 8 | tol:line-match-cross-renderer-wrap | line_match_audit | 27 | 27 lines | scribus-engine-bug | Documentation-only (severity structural — preflight stays red). 22 wrap/unmatched in the justified 2-column body frames (u6d8/u92e/u94a/u67c); 2 first_word_x +-28pt on the rotated Impressum frames u693/u85a (rotated-frame centring engine limit); 3 first_word_x 1.7-2.4pt on u60a/u980 (Vollkorn glyph-width). Frame width measured: fitting the lost word would need ~16% horizontal compression, far beyond a non-distorting glyph shrink. |
 
 ## Notes
 
-- Entries 1, 2, 6 flipped their audits to `ok: true (tolerated)` and
-  removed them from the failing-audit set (9 -> 6 red audits).
-- Entries 3, 4, 5, 7, 8, 9 remain RED in preflight: those audits are
-  not tolerance-aware in `_build_preflight`, so `preflight.yml::ok`
-  stays false. This matches how the sibling flyer/leporello templates
-  in this batch were committed — a red preflight with fully documented,
-  classified residuals is the accepted terminal state for cross-renderer
-  line-wrap and CMYK-image gaps.
-- No `--accept-residual` flag exists on `bin/tune-render` / `bin/tune-fix`;
-  the documented residual-acceptance path is this `TOLERANCE_LOG.md` +
-  `TOLERANCES.yml` + `REVIEW_NOTES.md` trio.
+- Entries 1, 2, 4 (severity `cosmetic`) flip their audits to
+  `ok: true (tolerated)` and remove them from the failing-audit set.
+- Entries 3, 5, 6, 7, 8 (severity `structural`) are DOCUMENTED ONLY —
+  `_build_preflight` does not flip structural-severity tolerances, so
+  `preflight.yml::ok` stays false. This is deliberate, not a fudge: a
+  red preflight with fully documented, classified cross-renderer
+  line-wrap residuals is the accepted terminal state for this batch,
+  matching how the sibling flyer/leporello templates were committed.
+- No `--accept-residual` flag exists on `bin/tune-render` /
+  `bin/tune-fix`; the documented residual-acceptance path is this
+  `TOLERANCE_LOG.md` + `TOLERANCES.yml` + `REVIEW_NOTES.md` trio.

@@ -13,7 +13,7 @@ format: A4
 id: 26-03-flyer-a6-querformat-portrait
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Portrait Ordner/26-03-Flyer
   A6 Querformat Portrait.idml
-previews_for_sla: e3f077093d9aa96a33f41064056173ef9aa6971504e3a8c810935f182137fba5
+previews_for_sla: f09ec095c30708dc4cb3933df4b39e430442dde9ab3b8c8af35a1ccf433b180a
 title: 26-03-flyer-a6-querformat-portrait
 version: 0.1.0
-build_py_sha256: 4371a9450049264eed988c7da8b15159fa2781f9cd611b41ec3ea7b3912a9bac
+build_py_sha256: b82bce103c4e683f9cdeb2bb78ddc4ec70bce6afb0bb550b2ad370d4a3494c77

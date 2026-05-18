@@ -646,10 +646,10 @@ frames:
     build_py_position_mm:
     - 6.125
     - 46.8902
-    - 71.6562
-    - 81.8444
+    - 83.6562
+    - 24.2006
     sla_pageobject_present: true
-    sla_storytext_runs: 3
+    sla_storytext_runs: 1
     source: idml
   - anname: u63a
     idml_self: u63a
@@ -675,7 +675,7 @@ frames:
     - 53.755
     build_py_position_mm:
     - 163.0
-    - 39.1359
+    - 39.61
     - 118.0
     - 53.7551
     sla_pageobject_present: true
@@ -690,9 +690,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.0
-    - 53.4
+    - 39.6
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -706,10 +706,10 @@ frames:
     build_py_position_mm:
     - 15.0
     - 14.8444
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u6c1
     idml_self: u6c1
@@ -735,7 +735,7 @@ frames:
     - 53.755
     build_py_position_mm:
     - 15.0
-    - 39.1359
+    - 39.61
     - 118.0
     - 63.5
     sla_pageobject_present: true
@@ -780,7 +780,7 @@ frames:
     - 53.755
     build_py_position_mm:
     - 15.0
-    - 39.1359
+    - 39.6063
     - 118.0
     - 63.5
     sla_pageobject_present: true
@@ -795,7 +795,7 @@ frames:
     - 47.45
     build_py_position_mm:
     - 163.0
-    - 45.55
+    - 46.566
     - 118.0
     - 63.5
     sla_pageobject_present: true
@@ -810,9 +810,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.15
-    - 53.4
+    - 39.75
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -846,6 +846,39 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: u621_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 6.125
+    - 54.3071
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u621_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 6.125
+    - 70.9738
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u6aa_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 15.0
+    - 20.7182
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   image_frames:
   - anname: u9cc
     idml_self: u9cc
@@ -855,12 +888,12 @@ frames:
     - -42.511
     - 82.851
     - 98.011
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/2026-03-leonore-fuer-flyer.png
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/crops/2026-03-leonore-fuer-flyer-u9cc.png
     build_py_position_mm:
-    - 63.75
+    - 76.3872
     - 9.9892
-    - 82.8509
-    - 98.0108
+    - 57.5764
+    - 97.9795
     sla_pageobject_present: true
     sla_pfile_present: true
     pdf_image_present: true
@@ -891,7 +924,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 148.0
     - -3.0
@@ -909,7 +942,7 @@ frames:
     - 305.5
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/plakat-dunkel-fuer-flyer.png
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/crops/plakat-dunkel-fuer-flyer-u978.png
     build_py_position_mm:
     - -3.0
     - 108.0
@@ -1220,8 +1253,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 191.002
-    - 69.5001
+    - 191.0014
+    - 69.4088
     - 25.0055
     - 1.1564
     sla_pageobject_present: false
@@ -1230,8 +1263,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 26.9005
-    - 48.3013
+    - 50.5968
+    - 47.7416
     - 19.1982
     - 0.9961
     sla_pageobject_present: false
@@ -1240,8 +1273,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 122.819
-    - 39.5
+    - 122.3751
+    - 54.8051
     - 11.749
     - 3.8145
     sla_pageobject_present: false
@@ -1250,8 +1283,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 195.5693
-    - 23.3405
+    - 195.5013
+    - 22.3247
     - 25.399
     - 1.8007
     sla_pageobject_present: false
@@ -1270,8 +1303,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 239.9094
-    - 87.625
+    - 234.2552
+    - 70.5062
     - 21.211
     - 5.1895
     sla_pageobject_present: false
@@ -1280,8 +1313,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 178.1037
-    - 54.8013
+    - 203.6249
+    - 53.5776
     - 32.1963
     - 1.5069
     sla_pageobject_present: false
@@ -1290,8 +1323,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 178.1037
-    - 54.8013
+    - 203.6249
+    - 53.5776
     - 32.1963
     - 1.5069
     sla_pageobject_present: false
@@ -1310,8 +1343,8 @@ frames:
     idml_self: null
     idml_position_mm: null
     build_py_position_mm:
-    - 106.2005
-    - 58.7013
+    - 100.4625
+    - 53.3058
     - 19.1982
     - 0.9961
     sla_pageobject_present: false
@@ -1483,11 +1516,10 @@ assets:
 - basename: 2026-03-leonore-fuer-flyer.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u9cc
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 03dd2b64987c30730c1a01026f26501f46eda120b7913406b5d8700f3e90428e
-  byte_length: 5112548
+  sha256: 79485f82cdd9f9f02e82befcb6f97b916445283d5efe3f3f8a2f5baa2c1bfe3e
+  byte_length: 3737420
 - basename: gruene-logo-bund-weiss-cmyk.png
   on_disk: true
   classified: embedded
@@ -1507,29 +1539,45 @@ assets:
 - basename: plakat-dunkel-fuer-flyer.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u978
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 7322fb3409a5d5eb2dc223bface1552a9622bfb47f11cc37c9d145c00290aa1c
-  byte_length: 8558653
-- basename: green-pine-trees-covered-with-fog.jpg
+  sha256: fe934fcae32f83c4683b33d2bb1eba5ce0cb2656f076aa0a316d9ff6aa3f7158
+  byte_length: 8514698
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
+- basename: 2026-03-leonore-fuer-flyer-u9cc.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u9cc
+  parent_composite: null
+  sha256: null
+  byte_length: null
+- basename: green-pine-trees-covered-with-fog-u906.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u906
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
+- basename: plakat-dunkel-fuer-flyer-u978.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u978
+  parent_composite: null
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 373
-  preview_pdf_count: 344
+  preview_pdf_count: 368
   missing_from_preview:
-  - consent.
-  - eosenihicto
-  - impressum
-  - nam
-  - quatur.
-  extra_in_preview:
-  - impressu
-  - m
+  - quab
+  extra_in_preview: []
 parse_warnings: []
