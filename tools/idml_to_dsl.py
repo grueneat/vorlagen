@@ -148,6 +148,31 @@ _FONT_ASCENT_RATIO = 1.15   # covers Vollkorn Black Italic usWinAscent/em=1.115
 _FONT_DESCENT_RATIO = 0.55  # covers Vollkorn Black Italic usWinDescent/em=0.489
 _FRAME_HEIGHT_SAFETY_PT = 4.0  # absolute cushion for lineGap + Scribus rounding
 
+# Per-font Scribus FLOP=1 first-baseline ratio (fraction of fontsize), used by
+# the mixed-font headline splitter. When a forced-line-break headline mixes
+# fonts (the corpus pattern: Gotham Narrow Ultra + a Vollkorn Black Italic
+# accent word), each line is emitted as its own single-line TextFrame; Scribus
+# places each line's first baseline FLOP=1 ("Font Ascent") below the frame
+# top, and the ascent of Vollkorn Black Italic differs from Gotham. Without a
+# correction the Vollkorn line renders ~0.345×fontsize too low (an InDesign↔
+# Scribus font-metric mismatch). The 0.345 value was measured directly:
+# Gotham→Vollkorn line on the A6 flyer headline at 38pt needs the frame
+# shifted up 13.12pt (13.12/37.93=0.346) and at 30pt up 10.36pt (10.36/30=
+# 0.345) — two independent confirmations. A font absent from this map is
+# treated as the 0.0 reference (Gotham, and any sans-serif headline face).
+_FONT_FLOP_ASCENT_RATIO: dict[str, float] = {
+    "vollkorn": 0.345,
+}
+
+
+def _font_flop_ratio(font: Optional[str]) -> float:
+    """Scribus FLOP=1 first-baseline ratio for ``font`` (see the constant)."""
+    fn = (font or "").lower()
+    for key, ratio in _FONT_FLOP_ASCENT_RATIO.items():
+        if key in fn:
+            return ratio
+    return 0.0
+
 
 # Exact CMYK match (0..100 ints) -> brand-palette name, per locked decision #1.
 # Source: shared/ci.yml palette cross-referenced against IDML Resources/Graphic.xml.
@@ -1553,6 +1578,11 @@ def _emit_paragraph_styles_to_function(
                     ):
                         lp *= _AKI_BELOW_FACTOR
                     kwargs["linesp"] = lp
+                    # A resolved numeric LINESP is a FIXED leading — pair it
+                    # with Scribus LINESPMode=0 ("Fixed"). Without the mode the
+                    # STYLE inherits the parent's mode (often 1=Automatic),
+                    # which ignores LINESP and renders the font-metric gap.
+                    kwargs["linesp_mode"] = 0
                 except ValueError:
                     pass
             elif ld == "Auto" or ld is None:
@@ -1564,6 +1594,7 @@ def _emit_paragraph_styles_to_function(
                 if pt is not None:
                     multiplier = 1.45 if model == "LeadingModelAkiBelow" else 1.2
                     kwargs["linesp"] = float(pt) * multiplier
+                    kwargs["linesp_mode"] = 0
             # Paragraph spacing (IDML SpaceBefore/SpaceAfter, in points) →
             # SLA STYLE VOR/NACH. Emit a non-zero resolved value (e.g. the
             # corpus body style's SpaceAfter=5.669pt). ALSO emit an explicit
@@ -1970,6 +2001,157 @@ def _extract_idml_sla_path(
     return " ".join(path_parts)
 
 
+@dataclass
+class _HeadlineLine:
+    """One visible line of a forced-break headline (see _split_mixed_font_lines)."""
+
+    runs: list  # the Run objects that make up this line (no separator runs)
+    font: Optional[str]  # the dominant font family of the line's first text run
+    fontsize: Optional[float]  # the line's max fontsize
+
+
+def _split_mixed_font_lines(runs: list) -> Optional[list[_HeadlineLine]]:
+    """Split a forced-break headline's runs into per-line groups, IF mixed-font.
+
+    A headline like ``u1175`` is ONE IDML paragraph whose CharacterStyleRanges
+    are separated by ``<Br/>`` forced line breaks and use different fonts
+    (Gotham Narrow Ultra → Vollkorn Black Italic → Gotham Narrow Ultra). The
+    converter emits the Br as a ``separator='para'`` Run, so the run list is::
+
+        [Run("Das ist die ", Gotham), Run(separator='para'),
+         Run("dreizeilige", Vollkorn), Run(separator='para'),
+         Run("Headline", Gotham)]
+
+    Scribus's per-line font-metric leading places the Vollkorn line at the
+    wrong baseline relative to the Gotham lines, so the headline must be
+    emitted as N single-line TextFrames at calibrated y (the caller does
+    that). This helper returns the per-line groups when ALL of:
+
+      * there are >= 2 lines (at least one ``para``/``breakline`` separator),
+      * every line carries exactly one text run (a single CSR — true for
+        every headline in the corpus; multi-run lines are body text, not a
+        headline, and are left as a single frame),
+      * the lines do NOT all share the same font family.
+
+    Returns ``None`` when the frame is not a mixed-font forced-break headline
+    (single-font headlines render fine as one frame once LINESPMode=0 is set).
+    """
+    lines: list[list] = [[]]
+    for r in runs:
+        if r.separator in ("para", "breakline"):
+            lines.append([])
+        elif r.separator is not None:
+            # tab / breakcol / breakframe — not a plain headline; bail out.
+            return None
+        elif r.text or r.has_itext:
+            lines[-1].append(r)
+    # Drop trailing empty line groups (a trailing Br leaves an empty bucket).
+    while lines and not lines[-1]:
+        lines.pop()
+    if len(lines) < 2:
+        return None
+    headline_lines: list[_HeadlineLine] = []
+    for grp in lines:
+        if len(grp) != 1:
+            return None  # multi-run line — body text, not a headline
+        run = grp[0]
+        if not (run.text or "").strip():
+            return None  # blank line — not a headline
+        fontsizes = [r.fontsize for r in grp if r.fontsize is not None]
+        headline_lines.append(
+            _HeadlineLine(
+                runs=grp,
+                font=run.font,
+                fontsize=max(fontsizes) if fontsizes else None,
+            )
+        )
+    fonts = {(hl.font or "").lower() for hl in headline_lines}
+    if len(fonts) < 2:
+        return None  # single-font forced-break frame — one frame is fine
+    return headline_lines
+
+
+def _emit_mixed_font_headline(
+    ctx: "_Ctx",
+    headline_lines: list[_HeadlineLine],
+    *,
+    x_mm: float,
+    y_mm: float,
+    w_mm: float,
+    leading_pt: float,
+    style_slug: str,
+    self_id: str,
+    layer_idx: int,
+    page_var: str,
+) -> None:
+    """Emit one single-line TextFrame per line of a mixed-font headline.
+
+    Each line keeps the original frame's x and the IDML <Leading> as its
+    stacking interval. Line N's frame y is::
+
+        y_N = y_1 + (N-1)*Leading  -  correction_N
+
+    where ``correction_N`` is the per-font FLOP=1 baseline correction relative
+    to line 1's font (see ``_FONT_FLOP_ASCENT_RATIO``): 0 for a line in the
+    same family as line 1, ``0.345*fontsize`` upward for a Vollkorn line under
+    a Gotham line 1. This makes every line's baseline land on the IDML leading
+    grid regardless of font, matching the InDesign baseline.
+
+    The frame width is widened by a margin so a Vollkorn accent word (which
+    Scribus renders wider than InDesign) does not clip; the frames are
+    left-aligned so widening the right edge is safe. Frame height is one
+    line's worth. LINESPMode=0 + LINESP pins the (single) line's spacing.
+    """
+    line_h_mm = leading_pt * PT_TO_MM
+    ref_ratio = _font_flop_ratio(headline_lines[0].font)
+    for idx, hl in enumerate(headline_lines):
+        fontsize_pt = hl.fontsize or (leading_pt / 1.2)
+        correction_mm = (
+            (_font_flop_ratio(hl.font) - ref_ratio) * fontsize_pt * PT_TO_MM
+        )
+        line_y = y_mm + idx * line_h_mm - correction_mm
+        # One line needs ascent+descent+safety; budget generously so neither
+        # a tall Vollkorn cap nor a descender clips.
+        line_frame_h = max(
+            line_h_mm,
+            (_FONT_ASCENT_RATIO + _FONT_DESCENT_RATIO) * fontsize_pt * PT_TO_MM
+            + _FRAME_HEIGHT_SAFETY_PT * PT_TO_MM,
+        )
+        # Widen the frame so a Vollkorn accent word does not clip; left-
+        # aligned, so the right edge moves out harmlessly.
+        line_w = w_mm + 12.0
+        line_anname = self_id if idx == 0 else f"{self_id}_l{idx + 1}"
+        kwargs: dict[str, Any] = {
+            "x_mm": _round_mm(x_mm),
+            "y_mm": _round_mm(line_y),
+            "w_mm": _round_mm(line_w),
+            "h_mm": _round_mm(line_frame_h),
+            "anname": line_anname,
+            "layer": layer_idx,
+        }
+        if style_slug:
+            kwargs["style"] = style_slug
+        kwargs["runs"] = list(hl.runs)
+        kwargs["trail_attrs"] = {
+            "LINESPMode": "0",
+            "LINESP": str(leading_pt),
+        }
+        if idx == 0:
+            ctx.out.w(
+                f"# Mixed-font headline {self_id!r} split into "
+                f"{len(headline_lines)} single-line frames: the IDML joins "
+                f"the lines with <Br/> but mixes fonts (e.g. Gotham + "
+                f"Vollkorn), and Scribus's per-line font-metric leading "
+                f"places them at the wrong baseline as one frame. Each line "
+                f"is stacked at the IDML Leading ({leading_pt:.2f}pt) with a "
+                f"per-font FLOP=1 baseline correction."
+            )
+        _emit_call(
+            ctx.out, "TextFrame", kwargs,
+            receiver=page_var, multiline=True,
+        )
+
+
 def _emit_pageitem(
     out: PythonRepr,
     item: Any,
@@ -2083,32 +2265,23 @@ def _emit_pageitem(
                 abs_mapped = (
                     mapped_path if mapped_path.is_absolute() else ROOT / mapped_path
                 )
-                # Extract per-PDF placement params from the PDF child's
-                # ItemTransform, then COMPOSE with the parent Rectangle's
-                # outer scale. Scribus's LOCALSCX is applied in rendered
-                # (post-Rectangle-transform) coordinates; the PDF child's
-                # ItemTransform is in frame-LOCAL coordinates. Composing
-                # gives the correct rendered-space scale.
-                pdf_transform_str = pdf.get("ItemTransform", "")
-                pdf_local_scale: Optional[tuple[float, float]] = None
-                pdf_local_offset: Optional[tuple[float, float]] = None
-                if pdf_transform_str:
-                    pdf_local_scale, pdf_local_offset = _extract_content_local_params(
-                        pdf_transform_str, frame_tl_anchor,
-                    )
-                    rect_a, _rb, _rc, rect_d, _, _ = _parse_matrix(item_t)
-                    if pdf_local_scale is not None:
-                        sx, sy = pdf_local_scale
-                        pdf_local_scale = (sx * rect_a, sy * rect_d)
-                    if pdf_local_offset is not None:
-                        ox, oy = pdf_local_offset
-                        pdf_local_offset = (ox * rect_a, oy * rect_d)
-                # Issue #39 Phase A + C: route through the inline-vs-
-                # relative helper. Never emit absolute paths.
+                # Vector logos (<PDF> children) are placed in InDesign with
+                # FrameFittingOption "ContentToFrame" — the artwork is fit to
+                # the frame, not free-scaled. Emit the rasterised logo with
+                # NO local_scale / local_offset so _emit_image_frame_call
+                # leaves SCALETYPE at its default 0 (Scribus ScaleAuto: fit
+                # the image proportionally into the frame).
+                #
+                # The previous code derived a literal LOCALSCX/SCY from the
+                # PDF child's ItemTransform and emitted SCALETYPE=1 (free
+                # scaling). Scribus 1.6.x has a known bug rendering a
+                # white-on-transparent RGBA image under SCALETYPE=1 — it
+                # comes out blank (the DIE GRÜNEN white logo vanished on
+                # every flyer/leporello). SCALETYPE=0 is the reliable path
+                # and is geometrically correct for a fit-to-frame logo.
                 _emit_image_or_inline(
                     out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
                     abs_path=abs_mapped, ctx=ctx,
-                    local_scale=pdf_local_scale, local_offset_pt=pdf_local_offset,
                 )
                 return
             ctx.unmapped_logos.append((pdf.get("Self", "?"), basename or uri))
@@ -2131,8 +2304,10 @@ def _emit_pageitem(
         runs: list[Run] = []
         trail_attrs: Optional[dict] = None
         _first_psr_style_self: Optional[str] = None  # for Pattern-9 leading lookup
+        _story_psr_count = 0  # ParagraphStyleRange count — gates the headline split
         if parent_story:
             story_root = _resolve_story_xml(ctx.pkg, parent_story)
+            _story_psr_count = len(story_root.findall(".//ParagraphStyleRange"))
             first_psr = story_root.find(".//ParagraphStyleRange")
             if first_psr is not None:
                 ap = first_psr.get("AppliedParagraphStyle")
@@ -2266,6 +2441,48 @@ def _emit_pageitem(
         if _widen_comment:
             ctx.out.w(f"# {_widen_comment}")
             emitted_h_mm = _round_mm(_widened_h_mm)
+
+        # Mixed-font forced-break headline: emit N single-line TextFrames.
+        # A headline whose <Br/>-separated lines use different font families
+        # (Gotham + a Vollkorn accent word) cannot render correctly as one
+        # frame — Scribus's per-line font-metric leading places the Vollkorn
+        # line at the wrong baseline. Splitting into one frame per line, each
+        # stacked at the IDML <Leading> interval with a per-font FLOP=1
+        # baseline correction, makes the lines stack evenly.
+        #
+        # Gated to: a SINGLE-PSR story (one IDML paragraph whose lines are
+        # joined by <Br/> forced breaks — a multi-PSR story is body text with
+        # real paragraph breaks and must NOT be split), a non-rotated frame,
+        # an explicit numeric Leading, and headline-sized text (>=20pt — body
+        # paragraphs with mixed Book/Bold runs are ~11pt and stay one frame).
+        _headline_lines = (
+            _split_mixed_font_lines(runs)
+            if (
+                runs
+                and abs(rot) < 1e-3
+                and _leading_pt is not None
+                and _story_psr_count == 1
+                and _max_fontsize_pt is not None
+                and _max_fontsize_pt >= 20.0
+            )
+            else None
+        )
+        if _headline_lines is not None:
+            _emit_mixed_font_headline(
+                ctx, _headline_lines,
+                x_mm=x_mm, y_mm=y_mm, w_mm=w_mm,
+                leading_pt=_leading_pt, style_slug=style_slug,
+                self_id=self_id, layer_idx=layer_idx, page_var=page_var,
+            )
+            ctx.textframe_records.append({
+                "anname": self_id,
+                "page": _page_index_from_var(page_var),
+                "x_mm": _round_mm(x_mm),
+                "y_mm": _round_mm(y_mm),
+                "w_mm": _round_mm(w_mm),
+                "h_mm": _round_mm(h_mm),
+            })
+            return
 
         kwargs: dict[str, Any] = {
             "x_mm": _round_mm(x_mm),
@@ -3508,12 +3725,18 @@ def _walk_story(
         # Per-para LINESPMode + LINESP from the CSR's Properties/Leading.
         # InDesign renders with the explicit Leading value from the first CSR in
         # the paragraph; Scribus falls back to ~15pt without an explicit LINESP.
-        # Scribus SLA LINESPMode semantics (from reference.sla corpus):
-        #   0 = auto (proportional to font size; LINESP is a default, not enforced)
-        #   1 = auto-from-font-metrics (no explicit LINESP needed)
-        #   2 = explicit fixed LINESP value ("Fixed" in Scribus UI)
-        # We emit LINESPMode="2" + LINESP=<value> for numeric IDML Leading, or
-        # LINESPMode="1" for Auto-leading (font-metrics-based).
+        # Scribus SLA LINESPMode semantics (verified against the brand team's
+        # hand-built original .sla files — gruene-zeitung / plakat-a1 /
+        # postkarte — every one of which pins explicit leading this way):
+        #   0 = Fixed line spacing — uses the LINESP value verbatim.
+        #   1 = Automatic — font-metric line spacing (LINESP ignored).
+        #   2 = Align to baseline grid (NOT a fixed-leading mode).
+        # An explicit numeric IDML <Leading> is a FIXED leading → LINESPMode=0
+        # + LINESP=<value>. The old code emitted LINESPMode=2 (baseline grid)
+        # and fell back to LINESPMode=1 for sub-1.45×fontsize leadings; both
+        # were wrong — mode 2 renders WIDER than the LINESP value and mode 1
+        # ignores LINESP entirely, so every Vollkorn headline lost its
+        # authored leading. ``Auto`` leading stays on mode 1 (font metrics).
         psr_ld = _psr_effective_leading(psr)
         if psr_ld is not None:
             if psr_ld == "Auto":
@@ -3524,17 +3747,8 @@ def _walk_story(
                     csr_pt_attr = _first_csr_pointsize(psr)
                     if csr_pt_attr is not None and lp < csr_pt_attr * 0.5:
                         lp = csr_pt_attr * 1.2
-                    # Use LINESPMode=1 when Leading is below the font's
-                    # intrinsic minimum (~1.45×fontsize): Scribus enforces
-                    # the intrinsic anyway, but LINESPMode=2 with a small
-                    # LINESP value produces unexpected over-spacing on
-                    # some Vollkorn frames. LINESPMode=1 (auto) keeps the
-                    # rendered baseline gap predictable.
-                    if csr_pt_attr is not None and lp < csr_pt_attr * 1.45:
-                        psr_para_attrs["LINESPMode"] = "1"
-                    else:
-                        psr_para_attrs["LINESPMode"] = "2"
-                        psr_para_attrs["LINESP"] = str(lp)
+                    psr_para_attrs["LINESPMode"] = "0"
+                    psr_para_attrs["LINESP"] = str(lp)
                 except ValueError:
                     pass
 
@@ -3698,22 +3912,15 @@ def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
                 csr_pt_attr = _first_csr_pointsize(last_psr)
                 if csr_pt_attr is not None and lp < csr_pt_attr * 0.5:
                     lp = csr_pt_attr * 1.2
-                # Mirror the <para> separator rule in _walk_story so that
-                # multi-paragraph frames have a CONSISTENT LINESPMode on
-                # every <para>/<trail> element. Direct measurement (issue
-                # #40 follow-up) shows that LINESPMode=2 + sub-metric
-                # LINESP renders WIDER than LINESPMode=1 (font-metric) in
-                # Scribus for every font tested (Gotham Narrow Ultra at
-                # 30pt: LINESP=27→46pt rendered vs auto→38pt; Vollkorn
-                # Black Italic at 23pt: LINESP=20.48→39pt vs auto→26pt).
-                # Stay on LINESPMode=1 (auto) when leading is sub-metric;
-                # template authors handle per-frame residual drift via
-                # inject.yml.
-                if csr_pt_attr is not None and lp < csr_pt_attr * 1.45:
-                    trail["LINESPMode"] = "1"
-                else:
-                    trail["LINESPMode"] = "2"
-                    trail["LINESP"] = str(lp)
+                # Mirror the <para> separator rule in _walk_story: an explicit
+                # numeric IDML <Leading> is a FIXED leading, so emit Scribus
+                # LINESPMode=0 (Fixed) + LINESP=<value>. The brand team's
+                # original .sla files pin leading exactly this way (e.g.
+                # plakat-a1 "Headlineweiß" LINESPMode=0 LINESP=150 on a 160pt
+                # font). LINESPMode=2 is baseline-grid (renders wider) and
+                # mode 1 ignores LINESP — neither honours the authored value.
+                trail["LINESPMode"] = "0"
+                trail["LINESP"] = str(lp)
             except ValueError:
                 pass
     return trail if trail else None

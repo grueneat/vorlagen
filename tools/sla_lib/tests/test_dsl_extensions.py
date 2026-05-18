@@ -418,13 +418,15 @@ class LongTailFrameAttrsTests(unittest.TestCase):
                      "SOFTSHADOWOBJTRANS"):
             self.assertIn(attr, po.attrib)
 
-    def test_text_align_emits_ALIGN_on_pageobject(self):
+    def test_text_align_emits_VAlign_on_pageobject(self):
+        # Vertical text justification lives in PAGEOBJECT VAlign (0/1/2),
+        # NOT ALIGN. The deprecated text_align= alias still routes there.
         d = _make_simple_doc()
         d.pages[0].add(TextFrame(x_mm=10, y_mm=10, w_mm=30, h_mm=20,
-                                   text="hi", text_align=3))
+                                   text="hi", text_align=2))
         root = _build_to_tree(d)
         po = root.find("DOCUMENT").find("PAGEOBJECT")
-        self.assertEqual(po.attrib["ALIGN"], "3")
+        self.assertEqual(po.attrib["VAlign"], "2")
 
     def test_fill_shade_polygon_omits_when_default(self):
         d = _make_simple_doc()
@@ -653,7 +655,7 @@ class AdditiveStylesTests(unittest.TestCase):
                          "CI style must NOT appear when palette_replaces_ci=True")
 
     def test_vertical_text_align_canonical_form(self):
-        """TextFrame vertical_text_align= is the canonical form; emits ALIGN correctly."""
+        """vertical_text_align= is canonical; emits PAGEOBJECT VAlign (not ALIGN)."""
         import warnings
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -664,7 +666,10 @@ class AdditiveStylesTests(unittest.TestCase):
             self.assertEqual(depr, [], "No DeprecationWarning for vertical_text_align=")
         root = _build_to_tree(d)
         po = root.find("DOCUMENT").find("PAGEOBJECT")
-        self.assertEqual(po.attrib["ALIGN"], "2")
+        # VAlign is Scribus's vertical-justification channel; ALIGN must NOT
+        # carry the value (ALIGN has no vertical-centring effect).
+        self.assertEqual(po.attrib["VAlign"], "2")
+        self.assertNotIn("ALIGN", po.attrib)
 
     def test_text_align_deprecated_alias_still_works(self):
         """TextFrame text_align= still works but emits DeprecationWarning."""
@@ -679,7 +684,7 @@ class AdditiveStylesTests(unittest.TestCase):
                             "DeprecationWarning expected for text_align=")
         root = _build_to_tree(d)
         po = root.find("DOCUMENT").find("PAGEOBJECT")
-        self.assertEqual(po.attrib["ALIGN"], "1")
+        self.assertEqual(po.attrib["VAlign"], "1")
 
 
 if __name__ == "__main__":

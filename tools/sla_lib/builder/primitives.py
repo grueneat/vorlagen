@@ -579,9 +579,12 @@ class TextFrame(_Frame):
     runs: Optional[list] = None  # list of Run, or legacy (text, dict, sep) tuples
     columns: int = 1
     col_gap_mm: float = 4
-    # ALIGN attribute: vertical text alignment within the frame (0=top, 1=center, 2=bottom).
-    # ``vertical_text_align`` is the canonical name.  ``text_align`` is kept as a
-    # backward-compat alias — both map to the same PAGEOBJECT ALIGN attribute.
+    # VAlign attribute: vertical text alignment within the frame (0=top,
+    # 1=center, 2=bottom). Scribus stores vertical text justification in the
+    # PAGEOBJECT ``VAlign`` attribute — NOT ``ALIGN`` (which is the paragraph
+    # horizontal-alignment default and has no vertical-centring effect).
+    # ``vertical_text_align`` is the canonical name.  ``text_align`` is kept as
+    # a backward-compat alias — both map to the PAGEOBJECT ``VAlign`` attribute.
     vertical_text_align: Optional[int] = None
     text_align: Optional[int] = None  # deprecated alias for vertical_text_align
     default_linesp_mode: Optional[int] = None  # DefaultStyle LINESPMode attribute
@@ -739,10 +742,12 @@ class TextFrame(_Frame):
             attrs["PCOLOR2"] = self.line_color
         # vertical_text_align= is canonical; text_align= is the deprecated alias.
         # Both were validated and merged in __post_init__ (text_align migrated to
-        # vertical_text_align).  Use vertical_text_align as the authoritative source.
+        # vertical_text_align).  Use vertical_text_align as the authoritative
+        # source.  Scribus stores vertical justification in PAGEOBJECT VAlign
+        # (0=top / 1=center / 2=bottom); the default written above is "0".
         _eff_valign = self.vertical_text_align
         if _eff_valign is not None:
-            attrs["ALIGN"] = str(_eff_valign)
+            attrs["VAlign"] = str(_eff_valign)
         if self.anname:
             attrs["ANNAME"] = self.anname
         po = etree.Element("PAGEOBJECT", attrib=attrs)
