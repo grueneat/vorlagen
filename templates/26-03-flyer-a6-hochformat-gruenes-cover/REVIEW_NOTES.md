@@ -3,12 +3,14 @@
 Prose summary for a human reviewer. Read alongside `TOLERANCE_LOG.md`
 (every edit + accepted residual) and `TOLERANCES.yml` (structured).
 
-This is the **combined-fidelity re-render pass** (template 3 of 8). The
-template was re-imported (`/idml-scaffold --reimport`) to pick up the
-full converter/audit fix set at HEAD `7144731`: CMYK→sRGB + aspect-fill
+This is the **FINAL re-render pass** (template 3 of 8). The template
+was re-imported (`/idml-scaffold --reimport`) to pick up the full
+converter/audit fix set at HEAD `5e2cbbf`: CMYK→sRGB + aspect-fill
 crop, squiggle colour + re-anchoring, the five consumed Tier-A
 attributes, `SpaceAfter`/`FLOP=1`/`min_glyph_shrink`, the four layout
-fixes, colour-managed comparison, and the full audit chain.
+fixes, the mixed-font headline split with corrected Vollkorn
+calibration, colour-managed comparison, and the full audit chain incl.
+the `split_headline_spacing` hard gate.
 
 It is the A6-Hochformat sibling of `26-03-flyer-a6-hochformat-portrait`
 and `26-03-flyer-a6-hochformat-quadrat-in-bild`; the residual handling
@@ -60,10 +62,11 @@ style `idml/fliesstext-auf-gruenem-hintergrund`. The IDML's green
 `Fließtext` variant carries no `SpaceAfter` (verified in
 `Resources/Styles.xml`), while the white sibling `Fließtext auf weißem`
 carries `5.669…` explicitly. But `baseline.pdf` shows the same ~5.67pt
-inter-paragraph spacing on the green body. `space_after_pt=5.6693` was
-added to the green style (the bullet style inherits it). This single
-fix collapsed `text_position_audit_structural` 155 → **46** and
-`systematic_text_audit` 10 → 8. Same fix as siblings 1 and 2.
+inter-paragraph spacing on the green body — measured on page 1 as a
+20.0pt paragraph gap vs a 14.3pt line gap = +5.7pt. `space_after_pt=
+5.6693` was added to the green style (the bullet style inherits it).
+This single fix collapsed `text_position_audit_structural` 152 → **47**
+and `systematic_text_audit` 6 → 4. Same fix as siblings 1 and 2.
 
 ### Edits applied (build.py)
 
@@ -80,28 +83,33 @@ fix collapsed `text_position_audit_structural` 155 → **46** and
    the converter over-widened it, shifting the centred text right.
    Together these closed the two worst `line_match` findings
    (u13cd Δ-24.18pt, u13cd_l2 Δ-33.08pt → matched); line_match 17 → 15.
-3. **u13ca squiggle geometry** — the re-import converter mis-emits this
-   yellow encircling-ellipse Polygon on the IDML `[0 -1 -1 0]`
-   ItemTransform: swapped w/h, anchored on the wrong corner, and added
+3. **u13ca squiggle geometry + path** — the re-import converter
+   mis-emits this yellow encircling-ellipse Polygon on the IDML
+   `[0 -1 -1 0]` ItemTransform: swapped w/h, anchored on the wrong
+   corner, kept the raw IDML-local negative-coordinate path, and added
    a redundant `rotation_deg=-90` that the HEAD PolyLine builder
-   applies, turning the wide ellipse vertical and dropping it off to
-   the right of the headline. Restored to an un-rotated wide ellipse
-   at the IDML-transform-verified page-local bbox (x 60.097mm,
-   y 43.2715mm, w 35.0628 × h 12.4143mm, w/h from the path's own
-   bbox), `fill='Gelb'`. The squiggle now encircles "eine", matching
-   the baseline (verified visually). **Escalation note:** the rotated-
-   PolyLine geometry mis-emit is a converter regression — Stage 1
-   should fix `tools/idml_to_dsl.py`'s `[0 -1 -1 0]` ItemTransform
-   handling for Polygon paths so the re-import emits u13ca correctly
-   without a build.py hand-fix.
+   applies, turning the wide ellipse vertical and dropping it above
+   the headline. Restored to an un-rotated wide ellipse at the
+   IDML-transform-verified page-local bbox (x 60.097mm, y 43.2715mm,
+   w 35.0628 × h 12.4143mm, w/h from the path's own bbox) with the
+   path normalised to positive coordinates, `fill='Gelb'`. (Removing
+   only the rotation while keeping the raw negative-coord path renders
+   the ellipse above the word — both the geometry and the normalised
+   path are needed.) The squiggle now encircles "eine", matching the
+   baseline (verified visually, `squiggle_alignment_audit` OK).
+   **Escalation note:** the rotated-Polygon geometry + raw-path
+   mis-emit is a converter regression — Stage 1 should fix
+   `tools/idml_to_dsl.py`'s `[0 -1 -1 0]` ItemTransform handling for
+   Polygon paths so the re-import emits u13ca correctly without a
+   build.py hand-fix.
 
 ### Accepted residuals — what stays red
 
-- `text_position_audit_structural`: 46 large (>5pt) word drifts
-  (prior run: 254 — the SpaceAfter fix collapsed it). Within cap 260.
-  Cross-renderer line-wrap divergence — Scribus and InDesign break the
-  justified body/bullet paragraphs at different words; one wrap point
-  cascades into dozens of word drifts. `severity: structural`.
+- `text_position_audit_structural`: 47 large (>5pt) word drifts
+  (re-import run: 152 — the SpaceAfter fix collapsed it). Within cap
+  260. Cross-renderer line-wrap divergence — Scribus and InDesign break
+  the justified body/bullet paragraphs at different words; one wrap
+  point cascades into dozens of word drifts. `severity: structural`.
 - `line_match_audit`: 15 of 71 lines mismatched (was 17 — the
   split-headline ALIGN fix closed the 2 closeable findings). NOT
   tolerance-able per the gate policy; documented as honest residual.
@@ -115,19 +123,20 @@ fix collapsed `text_position_audit_structural` 155 → **46** and
   line's start by ~half the width delta). No single per-frame fix
   closes any of these — all genuinely-unclosable cross-renderer
   residual. See TOLERANCE_LOG.md for the full per-finding breakdown.
-- `systematic_text_audit`: 8 frames (prior run: 12). 5 are the
-  single-line mixed-font headline-split frames whose split bbox the
+- `systematic_text_audit`: 4 frames (re-import run: 6). `u1287` is a
+  single-line mixed-font headline-split frame whose split bbox the
   audit cannot match against the multi-line baseline region (measured
-  0pt drift — a matching artifact); the rest are body-text wrap. Same
-  root cause as the structural bucket. `line_spacing_sim` returned no
-  rows for any frame — no leading value reconciles a wrap-count
-  difference. `severity: structural`.
+  0pt drift — a matching artifact); `u13eb` (+0.96pt), `u129e`
+  (+3.36pt) and `u12b5` (+1.92pt) are body-text wrap. Same root cause
+  as the structural bucket. `line_spacing_sim` returned no rows for
+  any frame — no leading value reconciles a wrap-count difference.
+  `severity: structural`.
 - `visual_diff_regions`: phase error — `image size mismatch
   baseline=(620,874) preview=(621,875)`, a 1-pixel pdftocairo
   rasterisation rounding. A phase error is a hard red regardless of
   tolerances; documentation only.
 
-`text_position_audit_jitter` (36 ≤ cap 40), `image_audit` (41 ≤ 45)
+`text_position_audit_jitter` (35 ≤ cap 40), `image_audit` (41 ≤ 45)
 and `inventory` (2 ≤ 2) are within their tolerance caps — green.
 
 ## IMAGE AUDIT — verified

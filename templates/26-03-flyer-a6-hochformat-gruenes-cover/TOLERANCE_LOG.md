@@ -273,3 +273,53 @@ The 2026-05-18 re-import picked up the ICC-aware CMYK→sRGB asset recipe
 ok`, `mean_delta_rgb` 9.1 (was 78.0), no flags. The tolerance is
 obsolete — the audit passes outright — and has been removed from
 `TOLERANCES.yml`.
+
+---
+
+## Re-render pass — 2026-05-19 (template 3 of 8, FINAL re-import)
+
+Re-imported `--reimport --scaffold-only` on the HEAD `5e2cbbf` converter
+/ audit fix set. Inventory gate exit 0 (perfect match against the
+committed `SCAFFOLD_INVENTORY.yml`; no anname lost, no count decreased,
+no word dropped). The bare re-import re-emitted build.py from the
+converter and dropped the three prior per-frame fixes (the converter
+does not consume `SpaceAfter`, the split-headline ALIGN, or the
+normalised squiggle path); all three were re-applied on top of the
+fresh converter output. No numeric tolerance grew — the two
+`severity:structural` caps (260, 12) are unchanged; their `reason`
+text was refreshed to the current counts.
+
+- **Green-body `SpaceAfter`** — re-applied `space_after_pt=5.6693` on
+  `idml/fliesstext-auf-gruenem-hintergrund`. The `baseline.pdf` page-1
+  green body measures a 20.0pt paragraph gap vs a 14.3pt line gap =
+  +5.7pt inter-paragraph spacing; the converter does not consume it
+  (IDML green `Fließtext` carries it as line-break-separated runs the
+  converter splits into paragraphs without spacing). This collapsed
+  `text_position_audit_structural` 152 → 47 and `systematic_text_audit`
+  6 → 4 and `text_position_audit` word drift 183 → 82.
+- **u13cd / u13cd_l2 split-headline ALIGN + width** — re-applied
+  `ALIGN: '1'` to the `trail_attrs` of both single-run frames and to
+  the `paragraph_attrs` of u13cd_l2's Run (IDML `Story_u13d0` is
+  `Justification=CenterAlign`; the split-headline emitter drops ALIGN
+  from the trail paragraph). Re-applied frame width 102mm → 90mm
+  (IDML `TextColumnFixedWidth=255.118pt`). Closed the two worst
+  `line_match` findings: u13cd Δ24pt and u13cd_l2 Δ33pt → matched;
+  `line_match_audit` 17 → 15.
+- **u13ca squiggle geometry + path** — re-applied the un-rotated wide
+  ellipse at the IDML-transform-verified page-local bbox (x 60.097mm,
+  y 43.2715mm, w 35.0628 × h 12.4143mm) with the path normalised to
+  positive coordinates. The converter's bare re-emit keeps the raw
+  IDML-local negative-coordinate path plus a `rotation_deg=-90`; with
+  the rotation removed but the raw path kept, the ellipse renders
+  above the headline. The normalised path restores it onto the word
+  "eine" — `squiggle_alignment_audit` OK, verified visually (page 1).
+
+`split_headline_spacing` GREEN, `image_frame_visibility_audit` GREEN
+(logo u141f / icons all render), `squiggle_alignment_audit` GREEN,
+`attribute_coverage_audit` GREEN (no new unconsumed attribute). The
+4 residual-RED audits (`line_match_audit` 15, `systematic_text_audit`
+4, `text_position_audit_structural` 47, `visual_diff_regions` 55) are
+the documented cross-renderer line-wrap / rasterisation residual —
+all within their existing caps, classification `scribus-engine-bug`,
+no playbook can advance them (`line_spacing_sim` returns no rows for
+any flagged frame — the divergence is wrap-point, not leading).

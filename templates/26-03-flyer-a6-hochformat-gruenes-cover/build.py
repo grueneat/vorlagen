@@ -176,8 +176,11 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp_mode=0,
         tab_stops=((15, 0),),
         min_glyph_shrink=0.98,
-        # IDML drops SpaceAfter on the green Fließtext variant; the baseline
-        # renders inter-paragraph spacing matching the white variant (5.6693pt).
+        # P5/inject: baseline.pdf shows ~5.67pt inter-paragraph spacing on the
+        # green body (measured: 20.0pt para gap vs 14.3pt line gap = +5.7pt).
+        # The IDML converter doesn't consume the spacing, so a re-import drops
+        # it; restored here. The bullet style aufzaehlungen-auf-gruenem-
+        # hintergrund inherits it.
         space_after_pt=5.6693,
     ))
     doc.add_para_style(ParaStyle(
@@ -251,13 +254,15 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         fill='Dunkelgrün',
     ))
-    # Squiggle u13ca (yellow ellipse encircling "eine"): the re-import converter
+    # P5/inject: u13ca yellow encircling ellipse. The re-import converter
     # mis-emits this Polygon on the IDML [0 -1 -1 0] ItemTransform — it swaps
     # w/h, anchors on the wrong corner, and adds a redundant rotation_deg that
     # the HEAD PolyLine builder now actually applies, turning the wide ellipse
     # vertical and dropping it above the headline. Fix: un-rotated wide ellipse
     # placed at the IDML-transform-verified page-local bbox so it sits on its
-    # word. w/h taken from the path's own bbox (99.4×35.2pt).
+    # word, with the path normalised to positive coords (the converter's raw
+    # path keeps IDML-local negative coords). w/h from the path's own bbox
+    # (99.4×35.2pt).
     page0.add(PolyLine(
         x_mm=60.097,
         y_mm=43.2715,
@@ -281,17 +286,23 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         style='idml/normalparagraphstyle',
         runs=[Run(text='Ich bin eine', font='Gotham Narrow Ultra', fontsize=40, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '36.40992504148696'})],
+        # P5/inject: IDML Story_u13d0 paragraph is Justification=CenterAlign; the
+        # split-headline emitter dropped ALIGN from the trail paragraph so the
+        # single-run frame rendered left-aligned (line_match u13cd Δ24pt).
+        # w_mm 102→90: IDML TextColumnFixedWidth=255.118pt; the converter
+        # over-widened it, shifting the centred text right.
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '36.40992504148696'},
     ))
     page0.add(TextFrame(
         x_mm=7.5,
-        y_mm=50.0876,
+        y_mm=52.8392,
         w_mm=90,
         h_mm=25.4,
         anname='u13cd_l2',
         layer=0,
         style='idml/normalparagraphstyle',
         runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=40, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1'})],
+        # P5/inject: same CenterAlign paragraph as u13cd (line_match u13cd_l2 Δ33pt).
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '36.40992504148696'},
     ))
     page0.add(ImageFrame(
@@ -406,7 +417,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=15,
-        y_mm=20.8737,
+        y_mm=22.9375,
         w_mm=87,
         h_mm=19.4028,
         anname='u1214_l2',

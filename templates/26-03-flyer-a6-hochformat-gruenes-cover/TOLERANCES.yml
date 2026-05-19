@@ -41,9 +41,9 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 260
-  reason: '46 large (>5pt) word-position drifts (prior pass: 254 — the green-body
-    SpaceAfter fix in the 2026-05-18 re-render collapsed it), concentrated on
-    pages 2-4. Verified page-by-page (rendered pages 3 and 4 at 150dpi vs
+  reason: '47 large (>5pt) word-position drifts (re-import pass: 152 — the
+    green-body SpaceAfter fix in the 2026-05-19 re-render collapsed it 152→47),
+    concentrated on pages 2-4. Verified page-by-page (rendered pages 3 and 4 at 150dpi vs
     baseline) that rendered content and frame geometry are correct; the drift
     is dominated by cross-renderer line-wrap differences — Scribus and InDesign
     break the justified body / bullet-list paragraphs at slightly different
@@ -61,10 +61,10 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 12
-  reason: '8 frames flagged "line count differs" (prior pass: 12; 5 are the
-    single-line mixed-font headline-split frames u13cd/u13cd_l2/u1214/u1214_l2/
-    u1287 whose split bbox the audit cannot match against the multi-line
-    baseline region — measured 0pt drift; the rest are body-text wrap). Per-
+  reason: '4 frames flagged "line count differs" (re-import pass: 6; u1287 is a
+    single-line mixed-font headline-split frame whose split bbox the audit cannot
+    match against the multi-line baseline region — measured 0pt drift; u13eb
+    +0.96pt, u129e +3.36pt, u12b5 +1.92pt are body-text wrap). Per-
     frame view of the same cross-renderer wrap divergence as
     text_position_audit_structural: when a paragraph wraps to a different
     number of lines, the systematic audit reports it as un-addressed sim-
