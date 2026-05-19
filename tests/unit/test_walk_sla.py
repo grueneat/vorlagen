@@ -20,7 +20,7 @@ WORKTREE = HERE.parents[2]
 if str(WORKTREE) not in sys.path:
     sys.path.insert(0, str(WORKTREE))
 
-ANCHOR_SLUG = "26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover"
+ANCHOR_SLUG = "falzflyer-z-falz-6-seitig-zweigeteiltes-cover"
 LEPORELLO_SLA = Path(
     os.environ.get(
         "LEPORELLO_DIR",

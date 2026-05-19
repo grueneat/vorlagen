@@ -62,14 +62,14 @@ DEFAULT_IMPRESSUM = (
 
 # ---------------------------------------------------------------------------
 # Block 1: PageNumber
-# Corpus: templates/zeitung-a4-grun/build.py lines 547, 750, 874, 1105,
+# Corpus: templates/zeitung-a4/build.py lines 547, 750, 874, 1105,
 #         1239, 1597, 1786, 1964, 2165, 2545, 2790, 2979 (12 occurrences)
 # ---------------------------------------------------------------------------
 @dataclass
 class PageNumber:
     """Page-number TextFrame using <var name='pgno'/>.
 
-    Corpus: templates/zeitung-a4-grun/build.py:547 (and 11 more occurrences).
+    Corpus: templates/zeitung-a4/build.py:547 (and 11 more occurrences).
     Each occurrence is a TextFrame with one Run(var='pgno', separator='para',
     paragraph_style='Seitenzahl').
 
@@ -137,7 +137,7 @@ class PageNumber:
 #   1-Run default: baseline shape (documented baseline; no corpus site today)
 #   2-Run prefix:  templates/postkarte-a6-kampagne/build.py:223-236 (page1)
 #                  templates/plakat-a1-hochformat/build.py:91-105 (page0)
-#   3-Run heading: templates/zeitung-a4-grun/build.py:2445-2459 (page13)
+#   3-Run heading: templates/zeitung-a4/build.py:2445-2459 (page13)
 # ---------------------------------------------------------------------------
 @dataclass
 class Impressum:
@@ -274,7 +274,7 @@ class Impressum:
 # Block 3: PageBackground
 # Corpus: templates/postkarte-a6-kampagne/build.py:89-100 (page0 Dunkelgrün),
 #         templates/postkarte-a6-kampagne/build.py:216-227 (page1 Dunkelgrün),
-#         templates/zeitung-a4-grun/build.py (Titelseite Dunkelgrün background).
+#         templates/zeitung-a4/build.py (Titelseite Dunkelgrün background).
 # ---------------------------------------------------------------------------
 @dataclass
 class PageBackground:
@@ -284,7 +284,7 @@ class PageBackground:
     - templates/postkarte-a6-kampagne/build.py:89-100 — Polygon at layer 0
       covering full A6 page + bleed, fill=Dunkelgrün
     - templates/postkarte-a6-kampagne/build.py:216-227 — same on page1
-    - templates/zeitung-a4-grun/build.py — Titelseite Polygon fill=Dunkelgrün
+    - templates/zeitung-a4/build.py — Titelseite Polygon fill=Dunkelgrün
 
     The polygon is positioned at (-bleed_mm, -bleed_mm) relative to page origin
     and sized to (page_width + 2*bleed_mm, page_height + 2*bleed_mm) in mm, so
@@ -438,7 +438,7 @@ class ContactBlock:
 
 # ---------------------------------------------------------------------------
 # Block 5: ColumnTextStory
-# Corpus: templates/zeitung-a4-grun/build.py:3214-3223 — 84 linked
+# Corpus: templates/zeitung-a4/build.py:3214-3223 — 84 linked
 #         TextFrame chains with link_to() calls, carrying Fließtext runs.
 # ---------------------------------------------------------------------------
 @dataclass
@@ -446,7 +446,7 @@ class ColumnTextStory:
     """Linked-frame text-flow story.
 
     Corpus:
-    - templates/zeitung-a4-grun/build.py:3214-3223 — 84 TextFrame chains
+    - templates/zeitung-a4/build.py:3214-3223 — 84 TextFrame chains
       linked via link_to(); each chain carries Fließtext article runs.
 
     Adds all frames to the page and links them in order via TextFrame.link_to.
@@ -794,7 +794,7 @@ class DoorHangerCutout:
 
 # ---------------------------------------------------------------------------
 # Block 11: TableTentFold
-# Spec: templates/_specs/infostand-tent-card-a5-quer.md
+# Spec: templates/_specs/tischschild-a5-quer.md
 # ---------------------------------------------------------------------------
 @dataclass
 class TableTentFold:

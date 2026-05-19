@@ -200,15 +200,36 @@ _EMBEDDED_PATTERNS = (
     re.compile(r"-cmyk\.(png|pdf)$", re.IGNORECASE),
 )
 
+# Known brand-locked assets whose filename does NOT match a brand pattern.
+# These are decorative brand textures / panels that define a template panel
+# and must NEVER be user-replaceable content (asset_policy.md "embedded:"
+# bucket — "Decorative background polygons / textures that define a panel").
+# Keyed by file STEM (case-insensitive, extension-agnostic) so the rule
+# survives re-export to a different raster format. The misleading
+# "plakat-dunkel-fuer-flyer" filename suggests a placeholder photo, but the
+# asset is the green crumpled-paper brand texture — brand-team locked.
+_EMBEDDED_BRAND_STEMS = frozenset({
+    "plakat-dunkel-fuer-flyer",
+})
+
+
+def _is_embedded_brand_asset(name: str) -> bool:
+    """True when ``name`` is a brand-locked asset (pattern OR known-stem rule)."""
+    if any(pat.search(name) for pat in _EMBEDDED_PATTERNS):
+        return True
+    return Path(name).stem.lower() in _EMBEDDED_BRAND_STEMS
+
 
 def _classify_assets(assets_dir: Path) -> dict[str, list[str]]:
     """Auto-classify disk assets into embedded/external per the SOP heuristic.
 
     Files matching brand patterns (logos, social-media icons, *-weiss.{png,pdf},
-    *-cmyk.{png,pdf}) → embedded. Anything else → external (the safe default per
-    asset_policy.md: content must never silently ship as brand). The skill's
-    SOP allows "STOP, ask" for unknowns; the driver defaults to external so the
-    scaffold can proceed, and the human reviewer can re-bucket on commit.
+    *-cmyk.{png,pdf}) or listed in ``_EMBEDDED_BRAND_STEMS`` (known brand-locked
+    textures whose filename doesn't match a pattern) → embedded. Anything else →
+    external (the safe default per asset_policy.md: content must never silently
+    ship as brand). The skill's SOP allows "STOP, ask" for unknowns; the driver
+    defaults to external so the scaffold can proceed, and the human reviewer can
+    re-bucket on commit.
 
     Mirrors asset_policy_audit._list_disk_assets: a .pdf sibling of a raster
     (same stem with .png/.jpg) is a forward-compat vector passthrough emitted
@@ -229,7 +250,7 @@ def _classify_assets(assets_dir: Path) -> dict[str, list[str]]:
         if p.suffix.lower() == ".pdf" and p.stem in raster_stems:
             continue
         name = p.name
-        if any(pat.search(name) for pat in _EMBEDDED_PATTERNS):
+        if _is_embedded_brand_asset(name):
             embedded.append(name)
         else:
             external.append(name)

@@ -16,7 +16,7 @@ templates/
 │   ├── template.sla          # build artifact, in Scribus zu öffnen
 │   ├── meta.yml
 │   └── README.md
-└── zeitung-a4-grun/          # 9 Beispielseiten in einer Multi-Page-SLA
+└── zeitung-a4/          # 9 Beispielseiten in einer Multi-Page-SLA
     ├── build.py
     ├── template.sla          # 9 Pages × 6 Master-Pages
     ├── meta.yml

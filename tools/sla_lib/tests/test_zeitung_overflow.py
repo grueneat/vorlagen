@@ -1,6 +1,6 @@
 """Smoke test for the zeitung visual-adjacency-drift rule.
 
-zeitung-a4-grun's build.py geometry is pinned to a faithful reproduction
+zeitung-a4's build.py geometry is pinned to a faithful reproduction
 of the original InDesign SLA. The earlier inside_page / spine_safety
 regression tests asserted the #16/#22 "alignment fix" geometry, which was
 reverted — those frame moves wrongly pulled the full-bleed / cross-page
@@ -27,8 +27,8 @@ from sla_lib.builder.brand_constraints import (  # noqa: E402
 
 
 def _load_zeitung_module():
-    """Load templates/zeitung-a4-grun/build.py module."""
-    build_py = ROOT / "templates" / "zeitung-a4-grun" / "build.py"
+    """Load templates/zeitung-a4/build.py module."""
+    build_py = ROOT / "templates" / "zeitung-a4" / "build.py"
     spec = importlib.util.spec_from_file_location("zeitung_build", build_py)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)

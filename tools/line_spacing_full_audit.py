@@ -14,7 +14,7 @@ classification.
 Usage:
 
     python3 tools/line_spacing_full_audit.py \\
-        --slug 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover \\
+        --slug falzflyer-z-falz-6-seitig-zweigeteiltes-cover \\
         --templates-dir /workspace/templates \\
         --originals-dir /workspace/originals \\
         --out-yaml build/validation/<slug>/line_spacing_full_audit.yml \\

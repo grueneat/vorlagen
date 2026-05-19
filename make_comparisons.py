@@ -29,15 +29,15 @@ from pdf_color import (  # noqa: E402
 
 # Only the templates produced by this overnight batch (not pre-existing ones).
 BATCH_SLUGS = [
-    "26-03-flyer-a6-hochformat-portrait",
-    "26-03-flyer-a6-hochformat-quadrat-in-bild",
-    "26-03-flyer-a6-hochformat-gruenes-cover",
-    "26-03-flyer-a6-hochformat-zweigeteilt",  # blocked — no preview, auto-skipped
-    "26-03-flyer-a6-querformat-portrait",
-    "26-03-flyer-a6-querformat-quadrat-in-bild",
-    "26-03-flyer-a6-gruenes-cover",
-    "26-03-flyer-a6-querformat-zweigeteilt",
-    "26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover",
+    "flyer-a6-hochformat-portraet",
+    "flyer-a6-hochformat-quadrat-im-bild",
+    "flyer-a6-hochformat-gruenes-cover",
+    "flyer-a6-hochformat-zweigeteilt",  # blocked — no preview, auto-skipped
+    "flyer-a6-querformat-portraet",
+    "flyer-a6-querformat-quadrat-im-bild",
+    "flyer-a6-querformat-gruenes-cover",
+    "flyer-a6-querformat-zweigeteilt",
+    "falzflyer-z-falz-6-seitig-gruenes-cover",
 ]
 
 
@@ -104,7 +104,7 @@ def main() -> None:
 
     index += [
         "",
-        "Template `26-03-flyer-a6-hochformat-zweigeteilt` is omitted — it is "
+        "Template `flyer-a6-hochformat-zweigeteilt` is omitted — it is "
         "blocked on a missing source image, so no preview was rendered.",
     ]
     (OUT / "README.md").write_text("\n".join(index) + "\n")

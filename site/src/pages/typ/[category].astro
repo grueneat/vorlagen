@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
@@ -27,7 +28,10 @@ items.sort((a: any, b: any) =>
 );
 ---
 <Base title={`${categoryLabel} — Vorlagen-Galerie`}>
-  <p><a href={url('/')}>← Zurück zur Galerie</a></p>
+  <Breadcrumb items={[
+    { label: 'Galerie', href: url('/') },
+    { label: categoryLabel },
+  ]} />
   <h1>{categoryLabel}</h1>
   <p style="color: #666;">{items.length} {items.length === 1 ? 'Variante' : 'Varianten'}</p>
 

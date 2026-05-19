@@ -1,0 +1,1647 @@
+schema_version: 1
+template: flyer-a6-hochformat-quadrat-im-bild
+text_runs:
+  total_idml: 45
+  by_paragraph_style:
+  - style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    idml_count: 15
+    build_py_count: 17
+    sla_itext_count: 28
+    pdf_word_count: 0
+  - style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    idml_count: 4
+    build_py_count: 4
+    sla_itext_count: 4
+    pdf_word_count: 0
+  - style: ParagraphStyle/Fließtext auf weißem Hintergrund
+    idml_count: 6
+    build_py_count: 6
+    sla_itext_count: 8
+    pdf_word_count: 0
+  - style: ParagraphStyle/Headline in grünem Kasten
+    idml_count: 1
+    build_py_count: 1
+    sla_itext_count: 1
+    pdf_word_count: 0
+  - style: ParagraphStyle/$ID/NormalParagraphStyle
+    idml_count: 17
+    build_py_count: 17
+    sla_itext_count: 17
+    pdf_word_count: 0
+  - style: ParagraphStyle/Zwischenüberschrift auf weißem Hintergrund
+    idml_count: 2
+    build_py_count: 2
+    sla_itext_count: 4
+    pdf_word_count: 0
+  every_idml_run_present_in_build_py: true
+  build_py_runs:
+  - text: Das ist eine
+    font: Gotham Narrow Ultra
+    fontsize: 31.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: dreizeilige
+    font: Vollkorn Black Italic
+    fontsize: 31.0
+    fcolor: Gelb
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Headline
+    font: Gotham Narrow Ultra
+    fontsize: 31.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Störer
+    font: Gotham Narrow Ultra
+    fontsize: 15.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: 'Impressum: xxxxxx'
+    font: Gotham Narrow Book
+    fontsize: 6.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: 'Ich bin eine '
+    font: Gotham Narrow Ultra
+    fontsize: 30.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Headline.
+    font: Vollkorn Black Italic
+    fontsize: 30.0
+    fcolor: Gelb
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: Tinvend igenis ute voloria qui cus et ut optate vendam ilis voloriaspita
+      dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas
+      senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: Lia vellam, conemporro moditatque nimil maxim voluptur, quidessi re none
+      tem issi iuntem ressiti orerovi tectotmusa qui tota nis quam quis et ilis voloriaspita
+      dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib
+      eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis
+      eosenihicto consent. Nam quatur.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: •
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Scim rem '
+    font: Gotham Narrow Black
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'utas si vellaccum eatus       nullquae cum et arum vendellab iditatequi aut qui beat audit re.'
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: •
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Tissi iuntem ressiti '
+    font: Gotham Narrow Black
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: orerovi tectotmusaqui tota nis quam.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: •
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Uaerum ium '
+    font: Gotham Narrow Black
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'verior alicide liquuntio. '
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: •
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Ur, omniet '
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'vello modi '
+    font: Gotham Narrow Black
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: aceprate pem ssi iuntem ilis
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: •
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Lia vellam, conemporro '
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: moditatque
+    font: Gotham Narrow Black
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: ' nimil maxim voluptur.'
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/aufzaehlungen-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Ich bin auch '
+    font: Gotham Narrow Ultra
+    fontsize: 30.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: eine Headline.
+    font: Gotham Narrow Ultra
+    fontsize: 30.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: 'Impressum: xxxxxx'
+    font: Gotham Narrow Book
+    fontsize: 6.0
+    fcolor: Dunkelgrün
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: 'Ich bin eine '
+    font: Gotham Narrow Ultra
+    fontsize: 30.0
+    fcolor: Dunkelgrün
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Headline.
+    font: Gotham Narrow Ultra
+    fontsize: 30.0
+    fcolor: Dunkelgrün
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-weissem-hintergrund
+    text_source: build_py
+  - text: 'Tinvend igenis '
+    font: Gotham Narrow Bold
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/zwischenueberschrift-auf-weissem-hintergrund
+    text_source: build_py
+  - text: Ute voloria qui cus et ut optate vendam ilmolo ipsum fuga. volorro qui optate
+      nis eaquamus.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-weissem-hintergrund
+    text_source: build_py
+  - text: Licatissi iuntem ressiti orerovi tectouuntur eriatur. Oditibust, quis et
+      qui iminum fugiae no nonsed quae non et quaturem. ctouuntur eriatur, sit, quattatib.
+      Nam quatur.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-weissem-hintergrund
+    text_source: build_py
+  - text: Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et
+      ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-gruenem-hintergrund
+    text_source: build_py
+  - text: 'Headline in einem grünen Kasten '
+    font: Gotham Narrow Bold
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/headline-in-gruenem-kasten
+    text_source: build_py
+  - text: 'Ea doluptatas suntota consequi acero dollani storae sitatus maximi, sita
+      sam qui iminum fugiae no nonsed quae non porum fugiat harum que nihil ipsam
+      is id quis eri om:'
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-weissem-hintergrund
+    text_source: build_py
+  - text: Ed ex explabo reicia debis volorrum et aut exerrovit que nonseque rerupt
+      etur, volesteae non porum fugiat harum que.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-weissem-hintergrund
+    text_source: build_py
+  - text: Nam quatur
+    font: Gotham Narrow Bold
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/zwischenueberschrift-auf-weissem-hintergrund
+    text_source: build_py
+  - text: Licatissi iuntem ressiti orerovi tectouuntur eriatur, sit, quat eriatur,
+      sit, quateri imi, sed maioriat fuga.
+    font: Gotham Narrow Book
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: idml/fliesstext-auf-weissem-hintergrund
+    text_source: build_py
+  - text: 'Ich bin auch '
+    font: Gotham Narrow Ultra
+    fontsize: 30.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: eine Headline.
+    font: Gotham Narrow Ultra
+    fontsize: 30.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Ich bin ein Zitat. Ich bin ein prägnantes
+    font: Vollkorn Black Italic
+    fontsize: 23.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Zitat.
+    font: Vollkorn Black Italic
+    fontsize: 23.0
+    fcolor: White
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  - text: Leonore Gewessler
+    font: Gotham Narrow Book
+    fontsize: 11.0
+    fcolor: Gelb
+    paragraph_style: idml/normalparagraphstyle
+    text_source: build_py
+  idml_runs:
+  - text: Leonore Gewessler
+    font: Gotham Narrow
+    fontsize: 11.0
+    fcolor: Color/C=0 M=0 Y=100 K=0
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Ich bin ein Zitat. Ich bin ein prägnantes
+    font: Vollkorn
+    fontsize: 22.756203150929352
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Zitat.
+    font: Vollkorn
+    fontsize: 22.756203150929352
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Störer
+    font: Gotham Narrow
+    fontsize: 14.630895115843087
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Das ist eine
+    font: Gotham Narrow
+    fontsize: 30.59076063605759
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: dreizeilige
+    font: Vollkorn
+    fontsize: 30.59076063605759
+    fcolor: Color/C=0 M=0 Y=100 K=0
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Headline
+    font: Gotham Narrow
+    fontsize: 30.59076063605759
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Headline in einem grünen Kasten '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Headline in grünem Kasten
+    text_source: build_py
+  - text: Nequia volupti omnienthicipsa dem eossece atiati dollit odit ipientus et
+      ut labora quis ducipiciis ex et hille ntiandi non re ped exceptatur? Sed quia.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Ich bin auch '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: eine Headline.
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Ea doluptatas suntota consequi acero dollani storae sitatus maximi, sita
+      sam qui iminum fugiae no nonsed quae non porum fugiat harum que nihil ipsam
+      is id quis eri om:'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf weißem Hintergrund
+    text_source: build_py
+  - text: Ed ex explabo reicia debis volorrum et aut exerrovit que nonseque rerupt
+      etur, volesteae non porum fugiat harum que.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf weißem Hintergrund
+    text_source: build_py
+  - text: Nam quatur
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Zwischenüberschrift auf weißem Hintergrund
+    text_source: build_py
+  - text: Licatissi iuntem ressiti orerovi tectouuntur eriatur, sit, quat eriatur,
+      sit, quateri imi, sed maioriat fuga.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf weißem Hintergrund
+    text_source: build_py
+  - text: Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf weißem Hintergrund
+    text_source: build_py
+  - text: 'Tinvend igenis '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Zwischenüberschrift auf weißem Hintergrund
+    text_source: build_py
+  - text: Ute voloria qui cus et ut optate vendam ilmolo ipsum fuga. volorro qui optate
+      nis eaquamus.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf weißem Hintergrund
+    text_source: build_py
+  - text: Licatissi iuntem ressiti orerovi tectouuntur eriatur. Oditibust, quis et
+      qui iminum fugiae no nonsed quae non et quaturem. ctouuntur eriatur, sit, quattatib.
+      Nam quatur.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf weißem Hintergrund
+    text_source: build_py
+  - text: 'Ich bin eine '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Headline.
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Impressum: xxxxxx'
+    font: Gotham Narrow
+    fontsize: 6.0
+    fcolor: Color/C=85 M=35 Y=95 K=10
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: Tinvend igenis ute voloria qui cus et ut optate vendam ilis voloriaspita
+      dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas
+      senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: Lia vellam, conemporro moditatque nimil maxim voluptur, quidessi re none
+      tem issi iuntem ressiti orerovi tectotmusa qui tota nis quam quis et ilis voloriaspita
+      dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib
+      eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis
+      eosenihicto consent. Nam quatur.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Fließtext auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Ich bin auch '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: eine Headline.
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Ich bin eine '
+    font: Gotham Narrow
+    fontsize: 30.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: Headline.
+    font: Vollkorn
+    fontsize: 30.0
+    fcolor: Color/C=0 M=0 Y=100 K=0
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: 'Impressum: xxxxxx'
+    font: Gotham Narrow
+    fontsize: 6.0
+    fcolor: Color/Paper
+    paragraph_style: ParagraphStyle/$ID/NormalParagraphStyle
+    text_source: build_py
+  - text: "\t•\t"
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Scim rem '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'utas si vellaccum eatus       nullquae cum et arum vendellab iditatequi aut qui beat audit re.'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\t"
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Tissi iuntem ressiti '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: orerovi tectotmusaqui tota nis quam.
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\t"
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'Uaerum ium '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'verior alicide liquuntio. '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\tUr, omniet "
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: 'vello modi '
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: aceprate pem ssi iuntem ilis
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: "\t•\tLia vellam, conemporro "
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: moditatque
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+  - text: ' nimil maxim voluptur.'
+    font: ''
+    fontsize: 0.0
+    fcolor: ''
+    paragraph_style: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+    text_source: build_py
+frames:
+  text_frames:
+  - anname: u133f
+    idml_self: u133f
+    idml_position_mm:
+    - 23.273
+    - -23.943
+    - 58.454
+    - 31.296
+    build_py_position_mm:
+    - 23.2731
+    - 50.222
+    - 70.4538
+    - 20.0025
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u1358
+    idml_self: u1358
+    idml_position_mm:
+    - 98.72
+    - -60.068
+    - 27.845
+    - 4.129
+    build_py_position_mm:
+    - 73.5
+    - 35.2318
+    - 27.8451
+    - 10.4069
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u11e6
+    idml_self: u11e6
+    idml_position_mm:
+    - 15.0
+    - -32.0
+    - 75.0
+    - 66.151
+    build_py_position_mm:
+    - 15.0
+    - 42.0
+    - 75.0
+    - 66.1513
+    sla_pageobject_present: true
+    sla_storytext_runs: 28
+    source: idml
+  - anname: u11fd
+    idml_self: u11fd
+    idml_position_mm:
+    - -29.34
+    - 33.691
+    - 53.4
+    - 10.0
+    build_py_position_mm:
+    - 95.0
+    - 82.6
+    - 10.0
+    - 53.4
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u1214
+    idml_self: u1214
+    idml_position_mm:
+    - -90.0
+    - -59.0
+    - 75.0
+    - 17.992
+    build_py_position_mm:
+    - 15.0
+    - 15.0
+    - 87.0
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u122b
+    idml_self: u122b
+    idml_position_mm:
+    - 15.0
+    - -59.0
+    - 75.0
+    - 17.992
+    build_py_position_mm:
+    - 15.0
+    - 15.0
+    - 75.0
+    - 24.6944
+    sla_pageobject_present: true
+    sla_storytext_runs: 2
+    source: idml
+  - anname: u1242
+    idml_self: u1242
+    idml_position_mm:
+    - -90.0
+    - -32.0
+    - 75.0
+    - 93.909
+    build_py_position_mm:
+    - 15.0
+    - 42.0
+    - 75.0
+    - 97.3667
+    sla_pageobject_present: true
+    sla_storytext_runs: 3
+    source: idml
+  - anname: u126f
+    idml_self: u126f
+    idml_position_mm:
+    - -29.34
+    - 33.691
+    - 53.4
+    - 10.0
+    build_py_position_mm:
+    - 95.0
+    - 82.6
+    - 10.0
+    - 53.4
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u1287
+    idml_self: u1287
+    idml_position_mm:
+    - -90.0
+    - -59.0
+    - 75.0
+    - 17.992
+    build_py_position_mm:
+    - 15.0
+    - 15.0
+    - 75.0
+    - 24.6944
+    sla_pageobject_present: true
+    sla_storytext_runs: 2
+    source: idml
+  - anname: u129e
+    idml_self: u129e
+    idml_position_mm:
+    - -90.0
+    - -34.708
+    - 75.0
+    - 47.462
+    build_py_position_mm:
+    - 15.0
+    - 39.2915
+    - 75.0
+    - 57.8556
+    sla_pageobject_present: true
+    sla_storytext_runs: 6
+    source: idml
+  - anname: u12b5
+    idml_self: u12b5
+    idml_position_mm:
+    - 15.0
+    - -8.667
+    - 75.0
+    - 57.551
+    build_py_position_mm:
+    - 15.0
+    - 65.3333
+    - 75.0
+    - 63.5
+    sla_pageobject_present: true
+    sla_storytext_runs: 6
+    source: idml
+  - anname: u12cc
+    idml_self: u12cc
+    idml_position_mm:
+    - 15.0
+    - -39.258
+    - 75.0
+    - 17.992
+    build_py_position_mm:
+    - 15.0
+    - 34.7418
+    - 75.0
+    - 24.6944
+    sla_pageobject_present: true
+    sla_storytext_runs: 2
+    source: idml
+  - anname: u12e4
+    idml_self: u12e4
+    idml_position_mm:
+    - -85.03
+    - 38.6
+    - 65.0
+    - 18.239
+    build_py_position_mm:
+    - 19.97
+    - 111.4614
+    - 65.0
+    - 29.6333
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u12fb
+    idml_self: u12fb
+    idml_position_mm:
+    - -85.25
+    - 31.575
+    - 65.0
+    - 3.387
+    build_py_position_mm:
+    - 19.75
+    - 104.4368
+    - 65.0
+    - 8.6078
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u1390
+    idml_self: u1390
+    idml_position_mm:
+    - -96.12
+    - 23.763
+    - 87.24
+    - 22.093
+    build_py_position_mm:
+    - 8.88
+    - 97.7631
+    - 87.24
+    - 37.9236
+    sla_pageobject_present: true
+    sla_storytext_runs: 2
+    source: idml
+  - anname: u13a7
+    idml_self: u13a7
+    idml_position_mm:
+    - -73.332
+    - 49.446
+    - 41.663
+    - 3.104
+    build_py_position_mm:
+    - 31.6686
+    - 123.4456
+    - 41.6629
+    - 8.0081
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: idml
+  - anname: u133f_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 23.2731
+    - 57.7804
+    - 70.4538
+    - 20.0025
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u133f_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 23.2731
+    - 72.8847
+    - 70.4538
+    - 20.0025
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1214_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 15.0
+    - 20.8737
+    - 87.0
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  image_frames:
+  - anname: u132c
+    idml_self: u132c
+    idml_link: green-pine-trees-covered-with-fog.jpg
+    idml_position_mm:
+    - -2.48
+    - -77.0
+    - 111.0
+    - 154.0
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u132c.png
+    build_py_position_mm:
+    - -2.48
+    - -3.0
+    - 111.0
+    - 154.0
+    sla_pageobject_present: true
+    sla_pfile_present: true
+    pdf_image_present: true
+    source: idml
+  - anname: u1336
+    idml_self: u1336
+    idml_link: Gru%CC%88ne%20Logo%20Bund%20weiss%20CMYK.ai
+    idml_position_mm:
+    - 48.267
+    - 17.502
+    - 24.166
+    - 21.233
+    build_py_image_ref: null
+    build_py_position_mm:
+    - 46.83
+    - 87.8146
+    - 11.34
+    - 9.9634
+    sla_pageobject_present: true
+    sla_pfile_present: false
+    pdf_image_present: true
+    source: idml
+  - anname: u1260
+    idml_self: u1260
+    idml_link: green-pine-trees-covered-with-fog.jpg
+    idml_position_mm:
+    - 0.0
+    - -77.0
+    - 108.0
+    - 62.034
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u1260.png
+    build_py_position_mm:
+    - 0.0
+    - -3.0
+    - 108.0
+    - 62.0333
+    sla_pageobject_present: true
+    sla_pfile_present: true
+    pdf_image_present: true
+    source: idml
+  - anname: u137f
+    idml_self: u137f
+    idml_link: Leonore%20sitzend%20Kopie.jpg
+    idml_position_mm:
+    - -108.0
+    - -77.0
+    - 111.0
+    - 154.0
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/leonore-sitzend-kopie-u137f.png
+    build_py_position_mm:
+    - -3.0
+    - -3.0
+    - 111.0
+    - 154.0
+    sla_pageobject_present: true
+    sla_pfile_present: true
+    pdf_image_present: true
+    source: idml
+  - anname: u1386
+    idml_self: u1386
+    idml_link: Schwarzer%20Verlauf%20radial.psd
+    idml_position_mm:
+    - -108.0
+    - -7.25
+    - 111.0
+    - 84.25
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/schwarzer-verlauf-radial.png
+    build_py_position_mm:
+    - -3.0
+    - 66.75
+    - 111.0
+    - 84.25
+    sla_pageobject_present: true
+    sla_pfile_present: true
+    pdf_image_present: true
+    source: idml
+  polygon_frames:
+  - anname: u1334
+    idml_self: u1334
+    idml_position_mm:
+    - 21.0
+    - -31.5
+    - 63.0
+    - 63.0
+    build_py_position_mm:
+    - 21.0
+    - 42.5
+    - 63.0
+    - 63.0
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1357
+    idml_self: u1357
+    idml_position_mm:
+    - -2531.359
+    - 426.588
+    - 27.845
+    - 27.845
+    build_py_position_mm:
+    - 70.0307
+    - 26.1542
+    - 27.8451
+    - 27.8451
+    sla_pageobject_present: true
+    source: idml
+  - anname: u136f
+    idml_self: u136f
+    idml_position_mm:
+    - -20.0
+    - 7.35
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - -20.0
+    - 81.35
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u11e1
+    idml_self: u11e1
+    idml_position_mm:
+    - -108.0
+    - -77.0
+    - 216.0
+    - 154.0
+    build_py_position_mm:
+    - -3.0
+    - -3.0
+    - 216.0
+    - 154.0
+    sla_pageobject_present: true
+    source: idml
+  - anname: u11e2
+    idml_self: u11e2
+    idml_position_mm:
+    - 48.798
+    - -28.615
+    - 25.006
+    - 1.156
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u11e3
+    idml_self: u11e3
+    idml_position_mm:
+    - -90.199
+    - 15.834
+    - 19.198
+    - 0.996
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u11e4
+    idml_self: u11e4
+    idml_position_mm:
+    - -24.131
+    - -32.2
+    - 11.749
+    - 3.815
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u11e5
+    idml_self: u11e5
+    idml_position_mm:
+    - 48.601
+    - -50.906
+    - 25.399
+    - 1.801
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1259
+    idml_self: u1259
+    idml_position_mm:
+    - 51.256
+    - 42.975
+    - 4.264
+    - 4.322
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u125a
+    idml_self: u125a
+    idml_position_mm:
+    - -131.0
+    - -39.0
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - -26.0
+    - 35.0
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u125b
+    idml_self: u125b
+    idml_position_mm:
+    - 118.7
+    - -39.0
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - 118.7
+    - 35.0
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1268
+    idml_self: u1268
+    idml_position_mm:
+    - -90.0
+    - 24.137
+    - 75.0
+    - 37.863
+    build_py_position_mm:
+    - 15.0
+    - 98.1368
+    - 75.0
+    - 37.8632
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1269
+    idml_self: u1269
+    idml_position_mm:
+    - 23.802
+    - 13.583
+    - 17.252
+    - 3.713
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u126c
+    idml_self: u126c
+    idml_position_mm:
+    - 31.087
+    - -37.303
+    - 51.532
+    - 2.175
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u126e
+    idml_self: u126e
+    idml_position_mm:
+    - 31.087
+    - -37.303
+    - 51.532
+    - 2.175
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1286
+    idml_self: u1286
+    idml_position_mm:
+    - -54.908
+    - 8.6
+    - 21.211
+    - 5.189
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1312
+    idml_self: u1312
+    idml_position_mm:
+    - -124.45
+    - 33.75
+    - 3.6
+    - 3.6
+    build_py_position_mm:
+    - -19.45
+    - 107.75
+    - 3.6
+    - 3.6
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1313
+    idml_self: u1313
+    idml_position_mm:
+    - -125.8
+    - -41.008
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - -20.8
+    - 32.9915
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1314
+    idml_self: u1314
+    idml_position_mm:
+    - -125.8
+    - 24.137
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - -20.8
+    - 98.1368
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1315
+    idml_self: u1315
+    idml_position_mm:
+    - -125.8
+    - 55.7
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - -20.8
+    - 129.7
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1316
+    idml_self: u1316
+    idml_position_mm:
+    - 119.8
+    - -21.3
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - 119.8
+    - 52.7
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u1317
+    idml_self: u1317
+    idml_position_mm:
+    - 115.3
+    - -15.0
+    - 6.3
+    - 6.3
+    build_py_position_mm:
+    - 115.3
+    - 59.0
+    - 6.3
+    - 6.3
+    sla_pageobject_present: true
+    source: idml
+  - anname: u138e
+    idml_self: u138e
+    idml_position_mm:
+    - -120.9
+    - 45.846
+    - 3.6
+    - 3.6
+    build_py_position_mm:
+    - -15.9
+    - 119.8456
+    - 3.6
+    - 3.6
+    sla_pageobject_present: true
+    source: idml
+  - anname: u138f
+    idml_self: u138f
+    idml_position_mm:
+    - -120.9
+    - 20.163
+    - 3.6
+    - 3.6
+    build_py_position_mm:
+    - -15.9
+    - 94.1631
+    - 3.6
+    - 3.6
+    sla_pageobject_present: true
+    source: idml
+  - anname: u13be
+    idml_self: u13be
+    idml_position_mm:
+    - -52.05
+    - 10.136
+    - 5.794
+    - 9.922
+    build_py_position_mm: null
+    sla_pageobject_present: true
+    source: idml
+  - anname: u11e1_p1
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - -108.0
+    - -3.0
+    - 216.0
+    - 154.0
+    sla_pageobject_present: true
+    source: build_py
+  - anname: u11e3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 14.8006
+    - 89.8339
+    - 19.1982
+    - 0.9961
+    sla_pageobject_present: false
+    source: manual
+  - anname: u11e4
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 80.869
+    - 41.8
+    - 11.749
+    - 3.8145
+    sla_pageobject_present: false
+    source: manual
+  - anname: u11e2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 48.7981
+    - 45.3856
+    - 25.0055
+    - 1.1564
+    sla_pageobject_present: false
+    source: manual
+  - anname: u11e5
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 48.6007
+    - 23.0943
+    - 25.399
+    - 1.8007
+    sla_pageobject_present: false
+    source: manual
+  - anname: u1259
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 39.8935
+    - 105.0041
+    - 25.2129
+    - 30.6143
+    sla_pageobject_present: false
+    source: manual
+  - anname: u126c
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 14.506
+    - 47.3934
+    - 51.5317
+    - 2.1749
+    sla_pageobject_present: false
+    source: manual
+  - anname: u126e
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 14.506
+    - 47.3934
+    - 51.5317
+    - 2.1749
+    sla_pageobject_present: false
+    source: manual
+  - anname: u1286
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 50.0921
+    - 82.6
+    - 21.211
+    - 5.1895
+    sla_pageobject_present: false
+    source: manual
+  - anname: u1269
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 23.8023
+    - 87.5834
+    - 17.252
+    - 3.7129
+    sla_pageobject_present: false
+    source: manual
+  - anname: u13be
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 46.2825
+    - 84.1365
+    - 12.4619
+    - 9.9219
+    sla_pageobject_present: false
+    source: manual
+  group_frames:
+  - anname: u1335
+    idml_self: u1335
+    idml_position_mm:
+    - 2.708
+    - 7.423
+    - 24.166
+    - 21.233
+    member_count: 0
+    source: idml
+  - anname: u1356
+    idml_self: u1356
+    idml_position_mm:
+    - 197.035
+    - 8449.48
+    - 27.845
+    - 27.845
+    member_count: 0
+    source: idml
+  - anname: u126b
+    idml_self: u126b
+    idml_position_mm:
+    - -90.494
+    - -26.606
+    - 51.532
+    - 2.175
+    member_count: 0
+    source: idml
+  - anname: u12e3
+    idml_self: u12e3
+    idml_position_mm:
+    - 6.469
+    - 13.978
+    - 65.0
+    - 18.239
+    member_count: 0
+    source: idml
+paragraph_styles:
+- idml: ParagraphStyle/$ID/[No paragraph style]
+  build_py: idml/no-paragraph-style
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
+- idml: ParagraphStyle/$ID/NormalParagraphStyle
+  build_py: idml/normalparagraphstyle
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
+- idml: ParagraphStyle/Fließtext auf grünem Hintergrund
+  build_py: idml/fliesstext-auf-gruenem-hintergrund
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
+- idml: ParagraphStyle/Fließtext auf weißem Hintergrund
+  build_py: idml/fliesstext-auf-weissem-hintergrund
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
+- idml: ParagraphStyle/Aufzählungen auf grünem Hintergrund
+  build_py: idml/aufzaehlungen-auf-gruenem-hintergrund
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
+- idml: ParagraphStyle/Fließtext in grünem Kasten
+  build_py: null
+  sla_pstyle_present: false
+  build_py_extra_pstyle: false
+- idml: ParagraphStyle/Headline in grünem Kasten
+  build_py: idml/headline-in-gruenem-kasten
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
+- idml: ParagraphStyle/Zwischenüberschrift auf weißem Hintergrund
+  build_py: idml/zwischenueberschrift-auf-weissem-hintergrund
+  sla_pstyle_present: true
+  build_py_extra_pstyle: true
+colors:
+- idml: Color/Black
+  cmyk:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 100.0
+  build_py_extra_color: false
+  sla_color_present: true
+- idml: Color/C=0 M=0 Y=100 K=0
+  cmyk:
+  - 0.0
+  - 0.0
+  - 100.0
+  - 0.0
+  build_py_extra_color: false
+  sla_color_present: false
+- idml: Color/C=0 M=100 Y=0 K=0
+  cmyk:
+  - 0.0
+  - 100.0
+  - 0.0
+  - 0.0
+  build_py_extra_color: false
+  sla_color_present: false
+- idml: Color/C=85 M=35 Y=95 K=10
+  cmyk:
+  - 85.0
+  - 35.0
+  - 95.0
+  - 10.0
+  build_py_extra_color: false
+  sla_color_present: false
+- idml: Color/Cyan
+  cmyk:
+  - 100.0
+  - 0.0
+  - 0.0
+  - 0.0
+  build_py_extra_color: false
+  sla_color_present: false
+- idml: Color/Magenta
+  cmyk:
+  - 0.0
+  - 100.0
+  - 0.0
+  - 0.0
+  build_py_extra_color: false
+  sla_color_present: true
+- idml: Color/Paper
+  cmyk:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  build_py_extra_color: false
+  sla_color_present: false
+- idml: Color/Registration
+  cmyk:
+  - 100.0
+  - 100.0
+  - 100.0
+  - 100.0
+  build_py_extra_color: false
+  sla_color_present: true
+- idml: Color/Yellow
+  cmyk:
+  - 0.0
+  - 0.0
+  - 100.0
+  - 0.0
+  build_py_extra_color: false
+  sla_color_present: false
+- idml: Color/u95
+  cmyk:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 100.0
+  build_py_extra_color: false
+  sla_color_present: false
+- idml: Color/u97
+  cmyk:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  build_py_extra_color: false
+  sla_color_present: false
+assets:
+- basename: gruene-logo-bund-weiss-cmyk.png
+  on_disk: true
+  classified: embedded
+  referenced_from_frames:
+  - u1336
+  parent_composite: null
+  sha256: 71c5da46d36e308b4afa53e06b929fbda9d19fff648458f48075f49a42048eee
+  byte_length: 49604
+- basename: gruene-logo-bund-weiss-cmyk.pdf
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u1336
+  parent_composite: null
+  sha256: 152dcdea289ffc33102d5e169894486a61fce3a717cf9d41d7ce13d7d80a660c
+  byte_length: 101374
+- basename: leonore-sitzend-kopie.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: 1fb8f66ce77990bd9d5e40435c6791fdafc58e9f06cd0ca6f134c6b78c9f133a
+  byte_length: 11922082
+- basename: schwarzer-verlauf-radial.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u1386
+  parent_composite: null
+  sha256: cfc1dea2de639280f7577a9ae37f01a9294754358e69216bc11c1428bfd73d12
+  byte_length: 92212
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
+- basename: green-pine-trees-covered-with-fog.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
+  byte_length: 6896771
+- basename: leonore-sitzend-kopie.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: d0cb966ea69bdb6a970929f2e0895ebba4c822651050230d3413aef158e8df8d
+  byte_length: 11054839
+- basename: green-pine-trees-covered-with-fog-u132c.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u132c
+  parent_composite: null
+  sha256: null
+  byte_length: null
+- basename: green-pine-trees-covered-with-fog-u1260.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u1260
+  parent_composite: null
+  sha256: null
+  byte_length: null
+- basename: leonore-sitzend-kopie-u137f.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u137f
+  parent_composite: null
+  sha256: null
+  byte_length: null
+words:
+  baseline_pdf_count: 337
+  preview_pdf_count: 337
+  missing_from_preview: []
+  extra_in_preview: []
+parse_warnings: []

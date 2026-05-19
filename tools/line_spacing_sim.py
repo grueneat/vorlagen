@@ -12,7 +12,7 @@ values for sub-metric leadings (issue #40 follow-up).
 
 Usage:
     python3 tools/line_spacing_sim.py \\
-        --slug 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover \\
+        --slug falzflyer-z-falz-6-seitig-zweigeteiltes-cover \\
         --anname u1b0 \\
         --candidates '0:20,1:,2:20,2:24,2:27,2:30'
 

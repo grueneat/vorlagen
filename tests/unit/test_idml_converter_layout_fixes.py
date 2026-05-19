@@ -1,6 +1,6 @@
 """Unit tests for the four IDML converter layout fixes.
 
-Covers the converter-level fixes proven on 26-03-flyer-a6-hochformat-portrait:
+Covers the converter-level fixes proven on flyer-a6-hochformat-portraet:
 
 1. Vector logo (<PDF>) — emitted with SCALETYPE=0 (auto-fit), never
    SCALETYPE=1 + literal local_scale (the Scribus white-on-transparent bug).
@@ -172,7 +172,7 @@ def test_font_flop_ratio_vollkorn_vs_gotham():
     pdfplumber text-matrix coordinates, not rendered ink) to 0.15: the old
     value over-shifted a Vollkorn headline line ~5-8pt upward in the
     rasterised output. 0.15 leaves a sub-0.3pt rendered-ink residual on the
-    26-03-flyer-a6-hochformat-portrait page-1 (38pt) and page-2 (30pt)
+    flyer-a6-hochformat-portraet page-1 (38pt) and page-2 (30pt)
     headlines — verified by ink-top measurement of preview.pdf vs baseline.
     """
     assert _font_flop_ratio("Vollkorn Black Italic") == 0.15

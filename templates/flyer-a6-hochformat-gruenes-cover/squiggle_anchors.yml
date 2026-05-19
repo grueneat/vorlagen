@@ -1,0 +1,132 @@
+template: flyer-a6-hochformat-gruenes-cover
+_schema_version: 1
+_doc: Squiggle re-anchoring map. Each entry binds a yellow squiggle Polygon (anname)
+  to the word it underlines in baseline.pdf. tools/playbooks/squiggle_realign.py consumes
+  this to keep the squiggle tracking its word when Scribus wraps text differently.
+anchors:
+- anname: u11e3
+  page: 1
+  target_frame: u1242
+  word: iuntem
+  word_index: 43
+  baseline_word_box_pt:
+    x0: 72.024
+    top: 235.173
+    x1: 104.815
+    bottom: 246.173
+  baseline_squiggle_box_mm:
+    x_mm: 14.8006
+    y_mm: 89.8339
+    w_mm: 19.1982
+    h_mm: 0.9961
+  offset_from_word_mm:
+    dx_mm: -10.6079
+    dy_mm: 6.8701
+- anname: u11e4
+  page: 1
+  target_frame: u1242
+  word: cus
+  word_index: 5
+  baseline_word_box_pt:
+    x0: 235.077
+    top: 115.108
+    x1: 250.939
+    bottom: 126.108
+  baseline_squiggle_box_mm:
+    x_mm: 80.869
+    y_mm: 41.8
+    w_mm: 11.749
+    h_mm: 3.8145
+  offset_from_word_mm:
+    dx_mm: -2.0609
+    dy_mm: 1.1925
+- anname: u11e2
+  page: 2
+  target_frame: u11e6
+  word: iuntem
+  word_index: 2
+  baseline_word_box_pt:
+    x0: 109.633
+    top: 130.024
+    x1: 144.217
+    bottom: 141.024
+  baseline_squiggle_box_mm:
+    x_mm: 48.7981
+    y_mm: 45.3856
+    w_mm: 25.0055
+    h_mm: 1.1564
+  offset_from_word_mm:
+    dx_mm: 10.122
+    dy_mm: -0.484
+- anname: u11e5
+  page: 2
+  target_frame: u122b
+  word: Headline.
+  word_index: 8
+  baseline_word_box_pt:
+    x0: 135.594
+    top: 33.868
+    x1: 263.061
+    bottom: 63.868
+  baseline_squiggle_box_mm:
+    x_mm: 48.6007
+    y_mm: 23.0943
+    w_mm: 25.399
+    h_mm: 1.8007
+  offset_from_word_mm:
+    dx_mm: 0.7662
+    dy_mm: 11.1464
+- anname: u126c
+  page: 3
+  target_frame: u129e
+  word: Ute
+  word_index: 2
+  baseline_word_box_pt:
+    x0: 72.024
+    top: 121.73
+    x1: 88.524
+    bottom: 132.73
+  baseline_squiggle_box_mm:
+    x_mm: 14.506
+    y_mm: 47.3934
+    w_mm: 51.5317
+    h_mm: 2.1749
+  offset_from_word_mm:
+    dx_mm: -10.9025
+    dy_mm: 4.4498
+- anname: u126e
+  page: 3
+  target_frame: u129e
+  word: Ute
+  word_index: 2
+  baseline_word_box_pt:
+    x0: 72.024
+    top: 121.73
+    x1: 88.524
+    bottom: 132.73
+  baseline_squiggle_box_mm:
+    x_mm: 14.506
+    y_mm: 47.3934
+    w_mm: 51.5317
+    h_mm: 2.1749
+  offset_from_word_mm:
+    dx_mm: -10.9025
+    dy_mm: 4.4498
+- anname: u1269
+  page: 4
+  target_frame: u12b5
+  word: non
+  word_index: 20
+  baseline_word_box_pt:
+    x0: 72.024
+    top: 238.449
+    x1: 89.943
+    bottom: 249.449
+  baseline_squiggle_box_mm:
+    x_mm: 23.8023
+    y_mm: 87.5834
+    w_mm: 17.252
+    h_mm: 3.7129
+  offset_from_word_mm:
+    dx_mm: -1.6062
+    dy_mm: 3.4639

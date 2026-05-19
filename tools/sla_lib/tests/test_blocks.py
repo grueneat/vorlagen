@@ -41,7 +41,7 @@ def _save_to_str(doc: Document) -> str:
 # PageNumber
 # ---------------------------------------------------------------------------
 class PageNumberTests(unittest.TestCase):
-    """PageNumber block — 12× in templates/zeitung-a4-grun/build.py."""
+    """PageNumber block — 12× in templates/zeitung-a4/build.py."""
 
     def _doc_with_block(self, **kwargs):
         doc = Document(title="x", template_id="x")
@@ -140,7 +140,7 @@ class PageNumberTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 class ImpressumTests(unittest.TestCase):
     """Impressum block — corpus in templates/postkarte-a6-kampagne/build.py:294
-    and templates/zeitung-a4-grun/build.py:3205."""
+    and templates/zeitung-a4/build.py:3205."""
 
     def _doc_with_block(self, **kwargs):
         doc = Document(title="x", template_id="x")
@@ -277,7 +277,7 @@ class ImpressumTests(unittest.TestCase):
 class PageBackgroundTests(unittest.TestCase):
     """PageBackground — corpus: templates/postkarte-a6-kampagne/build.py:89-100
     (page0), templates/postkarte-a6-kampagne/build.py:216-227 (page1),
-    templates/zeitung-a4-grun/build.py (Titelseite)."""
+    templates/zeitung-a4/build.py (Titelseite)."""
 
     def _doc_with_block(self, **kwargs):
         doc = Document(title="x", template_id="x")
@@ -385,7 +385,7 @@ class ContactBlockTests(unittest.TestCase):
 # ColumnTextStory
 # ---------------------------------------------------------------------------
 class ColumnTextStoryTests(unittest.TestCase):
-    """ColumnTextStory — corpus: templates/zeitung-a4-grun/build.py, 84 linked
+    """ColumnTextStory — corpus: templates/zeitung-a4/build.py, 84 linked
     text-frame chains with link_to() connections (lines 3214-3223+)."""
 
     def _make_frames(self, n: int = 2) -> list:

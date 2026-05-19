@@ -24,7 +24,7 @@ Algorithm:
 Usage:
 
     python3 tools/image_frame_visibility_audit.py \\
-        --slug 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover \\
+        --slug falzflyer-z-falz-6-seitig-zweigeteiltes-cover \\
         --templates-dir /workspace/templates \\
         --out-yaml build/validation/<slug>/image_frame_visibility_audit.yml \\
         --out-md  build/validation/<slug>/image_frame_visibility_audit.md

@@ -93,7 +93,7 @@ python3 -m unittest discover tools/sla_lib/tests
 step "Validate reproductions (sla_diff + stale-previews)"
 mkdir -p build/validation
 python3 bin/check-stale-previews
-for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4-grun; do
+for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4; do
     tid=$(basename "$tdir")
     read -r original strict <<<"$(python3 -c "
 import os, sys, yaml

@@ -17,7 +17,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve()
 WORKTREE = HERE.parents[2]
-ANCHOR = WORKTREE / "templates" / "26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover"
+ANCHOR = WORKTREE / "templates" / "falzflyer-z-falz-6-seitig-zweigeteiltes-cover"
 SLA = ANCHOR / "template.sla"
 
 

@@ -159,7 +159,7 @@ def test_text_audit_unmatched_line(tmp_path):
     """When build.py has no text frames, all baseline text is unmatched."""
     root = Path(__file__).resolve().parents[2]
     baseline = (
-        root / "templates" / "26-03-leporello-z-falz-99x210-6-seitig-portrait"
+        root / "templates" / "falzflyer-z-falz-6-seitig-portraet"
         / "baseline.pdf"
     )
     if not baseline.exists():

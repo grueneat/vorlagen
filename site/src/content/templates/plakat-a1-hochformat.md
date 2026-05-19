@@ -8,17 +8,13 @@ audience:
 - bezirksgruppe
 - landesgruppe
 - ortsgruppe
-description: 'Veranstaltungs-Plakat für Events, Mahnwachen, Stammtische, Kundgebungen.
-  A1 Hochformat (594×841 mm). Für andere Druckgrößen direkt im Druckdialog skalieren
-  — die Vektor-Inhalte bleiben dabei verlustfrei.
-
-  '
+description: A1-Veranstaltungsplakat im Hochformat für Termine, Aktionen und Kundgebungen.
 build:
   script: build.py
   output: template.sla
 original_sla: ../../plakat-a1-hochformat-original.sla
 sla_diff_strict: false
-previews_for_sla: 9f19c7d283dc416e73c33287545a4e71dd5bc10b57582e702bd4fd88e5a9b1ac
+previews_for_sla: 3acb6f5b13d6ff6731d23c91b2dedc5cfd83380ae4fbc759e407581526eb668f
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from plakat-a1-hochformat-original.sla;
@@ -83,7 +79,7 @@ preflight:
   cmyk_only: true
 category: plakat
 category_label: Plakat
-variant_label: Event A1 hoch
+variant_label: A1 Hochformat
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/plakat-a1-hochformat/template.sla
