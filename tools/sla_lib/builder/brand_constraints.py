@@ -136,35 +136,101 @@ class _ColorPaletteRule(BrandRule):
         return violations
 
 
+def _resolve_style_font(style_name: str, styles: dict) -> str | None:
+    """Return the first non-empty ``font`` walking a para style's parent chain.
+
+    Mirrors Scribus 1.6 PARENT inheritance: a style with no ``font`` of its
+    own inherits from its ``parent``. Returns ``None`` if no ancestor
+    declares a font (the caller then falls back to ``doc.deffont``).
+    """
+    seen: set[str] = set()
+    name = style_name
+    while name and name not in seen:
+        seen.add(name)
+        ps = styles.get(name)
+        if ps is None:
+            return None
+        font = getattr(ps, "font", None)
+        if font:
+            return font
+        name = getattr(ps, "parent", None)
+    return None
+
+
 @dataclass(frozen=True)
 class _FontFamilyRule(BrandRule):
+    """Every *rendered* glyph must use a font from ``shared/ci.yml::fonts``.
+
+    The effective font of a TextFrame is decided per ``Run``: a Run's own
+    ``font`` wins; only a text-bearing Run with ``font is None`` falls back
+    to the frame-level font / para-style chain / ``doc.deffont``. The rule
+    therefore evaluates each text-bearing Run's effective font — NOT the
+    abstract para-style font. IDML-imported templates routinely carry an
+    abstract parent ParaStyle (``idml/normalparagraphstyle``,
+    ``idml/no-paragraph-style``) whose ``FONT`` is ``Minion Pro`` /
+    ``Times Roman`` from the InDesign default; every actual ITEXT Run in
+    those frames overrides it with a brand font, so the parent-style font
+    is never rendered. Flagging it produced 111 false positives across the
+    26-03 batch (the parent-ParaStyle false-positive class).
+    """
+
     def check(self, primitives: list, doc, constraints=None) -> list:
         allowed = set(load_ci().fonts)
         violations: list[Violation] = []
         styles = _all_para_styles(doc)
+        deffont = getattr(doc, "deffont", "") or ""
         for p in primitives:
             if not isinstance(p, TextFrame):
                 continue
-            # Frame-level font override (TextFrame.font is rare but supported)
-            font = getattr(p, "font", None)
-            if font is None or font == "":
-                # Resolve through the para style if any
-                style_name = getattr(p, "style", "")
-                ps = styles.get(style_name) if style_name else None
-                font = getattr(ps, "font", None) if ps is not None else None
-            if font is None or font == "":
-                # Fall back to doc.deffont
-                font = getattr(doc, "deffont", "")
-            if font and font not in allowed:
-                violations.append(Violation(
-                    severity=self.severity,
-                    message=(
-                        f"text frame {getattr(p, 'anname', '?')!r} uses font "
-                        f"{font!r} not in {sorted(allowed)}"
-                    ),
-                    rule_id=self.id,
-                    targets=(getattr(p, "anname", ""),),
-                ))
+            anname = getattr(p, "anname", "") or "?"
+            # Frame-level fallback font: TextFrame.font, else the para
+            # style's parent chain, else doc.deffont.
+            frame_font = getattr(p, "font", None) or ""
+            if not frame_font:
+                style_name = getattr(p, "style", "") or ""
+                frame_font = _resolve_style_font(style_name, styles) or ""
+            if not frame_font:
+                frame_font = deffont
+            runs = getattr(p, "runs", None) or []
+            text_runs = [
+                r for r in runs
+                if getattr(r, "has_itext", True) and getattr(r, "text", "")
+            ]
+            if text_runs:
+                # Evaluate the font each Run actually renders with. A Run's
+                # own ``font`` wins; only a fontless Run uses the frame
+                # fallback. The abstract parent-style font is never
+                # rendered when every Run carries an explicit brand font.
+                seen: set[str] = set()
+                for r in text_runs:
+                    eff = getattr(r, "font", None) or frame_font
+                    if eff and eff not in allowed and eff not in seen:
+                        seen.add(eff)
+                        violations.append(Violation(
+                            severity=self.severity,
+                            message=(
+                                f"text frame {anname!r} renders font "
+                                f"{eff!r} not in {sorted(allowed)}"
+                            ),
+                            rule_id=self.id,
+                            targets=(getattr(p, "anname", ""),),
+                        ))
+            elif getattr(p, "text", ""):
+                # Frame carries flat ``text`` (legacy TextFrame.text path,
+                # no Run list): the rendered font is the frame fallback.
+                if frame_font and frame_font not in allowed:
+                    violations.append(Violation(
+                        severity=self.severity,
+                        message=(
+                            f"text frame {anname!r} uses font "
+                            f"{frame_font!r} not in {sorted(allowed)}"
+                        ),
+                        rule_id=self.id,
+                        targets=(getattr(p, "anname", ""),),
+                    ))
+            # else: empty TextFrame (no text, no Runs) renders zero glyphs —
+            # nothing to check. IDML imports keep such frames as abstract
+            # placeholders carrying only the parent ParaStyle reference.
         return violations
 
 

@@ -75,3 +75,19 @@ Only `TOLERANCES.yml` audit-scoped entries were added.
   `TOLERANCES.yml` + `REVIEW_NOTES.md` trio. The final render that
   produced the committed artifacts ran `bin/tune-render --no-transactional`
   so the documented-red render is promoted into `templates/`.
+
+---
+
+## brand_overrides — 2026-05-19 — IDML-import structural-check exceptions
+
+`meta.yml::brand_overrides` entries granted for this scaffold-imported
+26-03 template. Each silences one `structural_check` brand rule whose
+violation traces to the IDML import, not to a build.py defect. Identical
+gap class to the sibling 26-03 leporello templates (gruenes-cover-2,
+portrait, zweigeteiltes-cover) that already carry the same block.
+
+- **`brand:bleed_3mm`** — The IDML document was authored with bleed=0 and build.py deliberately emits bleed_mm=0 so the rendered PDF compares directly against the trim-only InDesign baseline.pdf. The Quickguide's 3mm print bleed postdates this asset. Resolution path: inject the brand 3mm bleed in tools/idml_to_dsl.py at scaffold time — deferred.
+- **`brand:font_family`** — Text frame 'ub3b' (page-5 Zitat) renders 'Vollkorn Bold Italic'; the InDesign source story authored that CharacterStyleRange with AppliedFont=Vollkorn FontStyle='Bold Italic' and the converter emits it verbatim. shared/ci.yml::fonts sanctions only the 'Vollkorn Black Italic' weight. GENUINE source-asset non-conformance (not a converter bug). FLAGGED FOR BRAND-TEAM DECISION: either re-author the IDML Zitat style upstream to Vollkorn Black Italic, or add Vollkorn Bold Italic to the sanctioned CI font list. Overridden meanwhile to keep build.py faithful to the baseline.pdf convergence target.
+- **`brand:image_text_overlap`** — The original InDesign layout deliberately overlays headline / Zitat text on full-bleed photo backdrops and on the magenta Stoerer decoration. The brand rule cannot distinguish intentional design overlay from accidental clipping. Resolution path: per-frame intent annotation in the rule — deferred.
+- **`brand:inside_page`** — The IDML spread coordinate system places multi-panel content on a single oversized canvas; frames belonging to later panels register outside the converter's declared trim-sized page. The converter preserves source geometry verbatim per issue #35 P1. Resolution path: emit a true multi-panel spread layout — deferred.
+- **`brand:line_spacing_0.9`** — The IDML-imported InDesign ParagraphStyles (idml/* and ci/* families) carry leading values that do not follow the Quickguide 0.9-factor convention. tools/idml_to_dsl.py emits the source leading verbatim; the InDesign-authored baseline.pdf is the convergence target (issue #35 P1). Identical handling to the sibling 26-03 leporello templates that already carry this override. Resolution path: a per-template tune pass — deferred.

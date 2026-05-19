@@ -171,3 +171,18 @@ FrameFittingOption LeftCrop/RightCrop values and verified against the
 baseline PDF. `image_frame_visibility_audit` now reports all three OK
 (asset_render_ratio ~0.85-0.99); only the u4a2 white-on-dark L-014
 false positive remains. The tolerance row is retired.
+
+---
+
+## brand_overrides — 2026-05-19 — IDML-import structural-check exceptions
+
+`meta.yml::brand_overrides` entries granted for this scaffold-imported
+26-03 template. Each silences one `structural_check` brand rule whose
+violation traces to the IDML import, not to a build.py defect. Identical
+gap class to the sibling 26-03 leporello templates (gruenes-cover-2,
+portrait, zweigeteiltes-cover) that already carry the same block.
+
+- **`brand:bleed_3mm`** — The IDML document was authored with bleed=0 and build.py deliberately emits bleed_mm=0 so the rendered PDF compares directly against the trim-only InDesign baseline.pdf. The Quickguide's 3mm print bleed postdates this asset. Resolution path: inject the brand 3mm bleed in tools/idml_to_dsl.py at scaffold time — deferred.
+- **`brand:image_text_overlap`** — The original InDesign layout deliberately overlays headline / Zitat text on full-bleed photo backdrops and on the magenta Stoerer decoration. The brand rule cannot distinguish intentional design overlay from accidental clipping. Resolution path: per-frame intent annotation in the rule — deferred.
+- **`brand:inside_page`** — The IDML spread coordinate system places multi-panel content on a single oversized canvas; frames belonging to later panels register outside the converter's declared trim-sized page. The converter preserves source geometry verbatim per issue #35 P1. Resolution path: emit a true multi-panel spread layout — deferred.
+- **`brand:line_spacing_0.9`** — The IDML-imported InDesign ParagraphStyles (idml/* and ci/* families) carry leading values that do not follow the Quickguide 0.9-factor convention. tools/idml_to_dsl.py emits the source leading verbatim; the InDesign-authored baseline.pdf is the convergence target (issue #35 P1). Identical handling to the sibling 26-03 leporello templates that already carry this override. Resolution path: a per-template tune pass — deferred.
