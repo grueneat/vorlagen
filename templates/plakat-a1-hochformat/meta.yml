@@ -23,7 +23,7 @@ original_sla: ../../plakat-a1-hochformat-original.sla
 # the controlled divergence from the original geometry — same rationale as
 # zeitung-a4-grun's documented sla_diff opt-out.
 sla_diff_strict: false
-previews_for_sla: 9f19c7d283dc416e73c33287545a4e71dd5bc10b57582e702bd4fd88e5a9b1ac
+previews_for_sla: 3acb6f5b13d6ff6731d23c91b2dedc5cfd83380ae4fbc759e407581526eb668f
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from plakat-a1-hochformat-original.sla;

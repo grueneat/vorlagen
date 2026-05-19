@@ -27,7 +27,7 @@ original_sla: ../../postkarte-vorlage-original.sla
 # Fixing the render-side text loss is worth the controlled divergence —
 # same rationale as plakat-a1-hochformat and zeitung-a4-grun.
 sla_diff_strict: false
-previews_for_sla: 86e1aa6e841b8e4e8cc71e04543a6c0cc3178170746f621c924d1f53cb589fd9
+previews_for_sla: 910957cdacccbf7fc56cfeead279f8225497f685ecf7e5dd110f6d5a35afe14d
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from postkarte-vorlage-original.sla;
