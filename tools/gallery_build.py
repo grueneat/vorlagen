@@ -100,6 +100,14 @@ def process_template(tdir: Path) -> dict | None:
         shutil.copy(pdf, public_dir / "preview.pdf")
         for p in page_pngs:
             shutil.copy(p, public_dir / p.name)
+        # Hi-res lightbox variants (issue #28): copy them too. They are kept
+        # out of page_pngs so _previews lists each page once, but the lightbox
+        # click-through needs the files served. render-gallery only mirrors
+        # hi-res for templates that pass preflight — gallery_build must carry
+        # them so a documented-tolerance template still has click-through
+        # previews on the deployed site.
+        for p in sorted(tdir.glob("page-*-hires.png")):
+            shutil.copy(p, public_dir / p.name)
         meta["_downloads"] = [{
             "label": "Vollständig (SLA + PDF)",
             "sla": f"/templates/{tid}/template.sla",
