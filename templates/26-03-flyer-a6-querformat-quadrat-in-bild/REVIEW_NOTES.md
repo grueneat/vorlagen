@@ -56,22 +56,70 @@ skips (logged + recorded; completeness assertion passes).
 
 ## Tune outcome — RESIDUAL (preflight RED, fully documented)
 
-The `bin/tune-render` -> `bin/tune-fix` loop ran two full iterations.
-The playbooks could not advance the text-drift residual because
-`line_spacing_sim` returned NO ROWS for every text frame — the drift
-is line-WRAP-count divergence (Scribus breaks justified paragraphs
-at different words than InDesign), and no leading value reconciles a
-wrap-count difference.
+### Re-render pass (fix-set verification)
 
-One tuning fix landed: **ua5a** (white Grünen logo) was switched from
-`inline_image_data` + `scale_type=1` to a direct `image=` reference
-+ `scale_type=0`, fixing a Scribus 1.6.x transparent-render bug
-(visibility 0.0 -> 0.88, class `ok`). Four external CMYK image
-frames got `# noinject:` annotations, clearing
-`external_asset_substitution_audit` entirely.
+This template was re-imported and re-tuned to verify the full
+converter + audit fix set. Five per-frame tune fixes landed in
+`build.py`:
 
-Failing sub-audits dropped from 8 to 5. Final preflight: `ok: false`
-with 5 RED sub-audits, all classified and tolerance-documented.
+1. **Body-text leading calibration.** The green `Fließtext auf
+   grünem Hintergrund` and `Aufzählungen auf grünem Hintergrund`
+   ParaStyles plus the inheriting white style emitted `linesp=16.0`.
+   The IDML CSR Leading is 14.3pt, but InDesign *renders* the body
+   at ~15.04pt (measured from baseline.pdf word tops via the pixel
+   audit). 16.0 rendered 16.22pt — ~1.2pt/line too wide, accumulating
+   to one clipped line per body frame. Set to `linesp=15.0` (renders
+   ~15.0pt, matches baseline). This closed `text_render_audit`
+   (12 clipped tail words → 0) and dropped `text_position_audit_
+   structural` 208 → 152.
+2. **u9df bullet-list leading.** The Aufzählungen frame's inter-bullet
+   `<para>` separators carried `LINESP=8.0` — the converter propagated
+   the trailing tab CSR's `Leading=8` to every paragraph break. The
+   IDML body CSRs have no explicit Leading (inherit → 14.3pt → ~15pt
+   rendered). Set the `<para>`/`<trail>` LINESP to 15.0; the bullet
+   list went from 6 crammed lines to 8 evenly-spaced lines matching
+   the baseline.
+3. **ua62 split-headline alignment.** The IDML headline PSR is
+   `CenterAlign`. The converter put `ALIGN=1` only on line 1's
+   paragraph_attrs (not its trail_attrs, not on the l2/l3 split
+   children). Added `ALIGN=1` to all three frames' `paragraph_attrs`
+   AND `trail_attrs` so each single-line frame centres.
+4. **ua62 headline position.** With centring fixed the block centred
+   on the frame centre (226.5pt) instead of the baseline's 209.8pt
+   (trim-relative; baseline.pdf has a 29.5pt MediaBox offset). Shifted
+   all three stacked frames `x_mm` 44.7731 → 38.7859 so `x+w/2` lands
+   on the baseline centre. Headline now matches to ~1pt.
+5. **u872 forced line break.** IDML `Story_u875` has "Ich bin eine "
+   `<Br/>` "Headline." inside ONE CharacterStyleRange — a soft line
+   break within a paragraph. The converter emitted `separator='para'`
+   (a paragraph end), inserting a phantom empty paragraph that pushed
+   the block ~27pt down. Corrected to `separator='breakline'`.
+
+The `y_mm_shift` playbook additionally applied two small uniform
+vertical nudges (u67c +0.47mm, u9df +1.10mm).
+
+### Residual
+
+`line_match_audit` dropped 48 → 31; `systematic_text_audit` 11 → 3;
+`text_render_audit` 12 → 0 (GREEN). The remaining residual is the
+cross-renderer 2-column line-wrap divergence on the justified body
+frames (u6d8 / u92e): Scribus's Gotham Narrow renders ~0.75% wider,
+so column 1 wraps an extra line and column 2 shifts down by one
+line-height. `line_spacing_sim` reports no measurable per-frame
+drift — the line spacing itself is correct (pixel audit: u6d8
+cumulative -0.48pt); the audits flag wrap-COUNT differences, which
+no leading value can reconcile. Plus 2 rotated-frame findings on the
+-90° Impressum frames u693/u85a (Scribus `vertical_text_align` on a
+rotated frame ≠ InDesign — same engine limit documented on the
+sibling 26-03-flyer-a6-querformat-portrait), and ~6 sub-perceptible
+~1-1.8pt glyph-width findings.
+
+`split_headline_spacing`, `image_frame_visibility_audit`,
+`squiggle_alignment_audit`, `idml_attribute_coverage` are all GREEN.
+Final preflight: `ok: false` with 5 RED sub-audits (line_match,
+systematic_text, text_position jitter + structural, visual_diff_
+regions) — all the same cross-renderer line-wrap class, classified
+and tolerance-documented.
 
 ## Tolerances granted (9 — see TOLERANCE_LOG.md / TOLERANCES.yml)
 
@@ -86,17 +134,18 @@ audit-scoped `TOLERANCES.yml` entries:
    ua8f CMYK-PSD render gaps. structural / authoring-bug. Stays RED.
 4. `image_frame_visibility_audit` (cap 2) — u906 invisible + u9be
    faint (CMYK JPEG). structural / authoring-bug. Stays RED.
-5. `systematic_text_audit` (cap 12, measured 11) — line-wrap-count
+5. `systematic_text_audit` (cap 12, measured 3) — line-wrap-count
    drift, no sim rows. structural / scribus-engine-bug. Stays RED.
-6. `text_position_audit_jitter` (cap 24, measured 21) — sub-5pt
-   FreeType kerning jitter. cosmetic / scribus-engine-bug.
-7. `text_position_audit_structural` (cap 280, measured 254) —
+6. `text_position_audit_jitter` (cap 24, measured 41) — sub-5pt
+   FreeType kerning jitter; count rose because the leading fix
+   un-clipped ~26 body words. cap NOT raised (P4). Stays RED.
+7. `text_position_audit_structural` (cap 280, measured 152) —
    cross-renderer line-wrap. structural / scribus-engine-bug. RED.
-8. `text_render_audit` (cap 12) — tail words of justified paragraphs
-   clipped by Scribus over-wrapping. structural / scribus-engine-bug.
-   Stays RED.
-9. `visual_diff_regions` (cap 1) — 1px rasterise size rounding
-   (0.01mm mm<->pt). cosmetic / human-review.
+8. `text_render_audit` (cap 0) — RESOLVED, now GREEN. The body-leading
+   calibration brought every body line back inside its frame; no word
+   is clipped. Row kept for the audit trail.
+9. `visual_diff_regions` (cap 1, measured 52) — pixel footprint of the
+   cross-renderer 2-column line-wrap. cap NOT raised (P4). Stays RED.
 
 ## human-review / authoring-bug items
 
@@ -114,18 +163,14 @@ audit-scoped `TOLERANCES.yml` entries:
 
 ## Inventory gate note
 
-`inventory_compare` exits 2 between the scaffold snapshot and the
-post-tune render, but ONLY on the `words.missing_from_preview` list —
-which words clip at justified-paragraph tails. All structural fields
-are provably identical: 14 text / 5 image / 27 polygon / 4 group
-frames (same annames), `total_idml` runs 55->55, `build_py_runs`
-identical, `every_idml_run_present_in_build_py` true, preview word
-count 306->306, `count_deltas: []`. None of the skill's hard blocking
-rules (count decrease / anname removal / preview word dropped) fired.
-The clipped-tail-word churn is the documented nondeterministic
-cross-renderer line-wrap (Scribus clips a slightly different tail set
-run-to-run) — not a structural regression. The committed
-`SCAFFOLD_INVENTORY.yml` is kept as the structural calibration record.
+After the re-render pass `inventory_compare` of the post-tune snapshot
+against the committed `SCAFFOLD_INVENTORY.yml` exits 0 (exact match):
+`missing: {}`, `count_deltas: []`, no anname dropped. The committed
+`SCAFFOLD_INVENTORY.yml` was promoted from the fresh re-import
+snapshot. Preview word count rose 306 → 332 — a POSITIVE delta: the
+body-leading calibration un-clipped tail words that previously
+overflowed the body frames. No structural field decreased; none of
+the skill's hard blocking rules fired.
 
 ## What to eyeball in preview.pdf vs baseline.pdf
 
@@ -148,5 +193,15 @@ run-to-run) — not a structural regression. The committed
    clipping is only at paragraph tails — this is the cross-renderer
    line-wrap residual, expected and accepted.
 5. **3-line headline (ua62, page 1).** Mixed Gotham Ultra + Vollkorn
-   Black Italic; line spacing drifts vs baseline (Scribus per-line
-   font metrics). Confirm all three words are present and legible.
+   Black Italic, split into 3 single-line frames. After the re-render
+   pass all three lines are centred (the IDML PSR is CenterAlign) and
+   the block is positioned to the baseline centre (±1pt). Confirm the
+   headline reads "Das ist eine / dreizeilige / Headline" centred in
+   the green box.
+6. **Body line spacing (pages 2, 4).** The green Fließtext and the
+   page-5 bullet list now render at the calibrated ~15pt leading
+   matching the baseline — confirm the 2-column body and the bullets
+   are evenly spaced with no crammed or clipped lines.
+7. **u872 headline (page 4).** "Ich bin eine / Headline." renders as
+   2 lines (a single-paragraph forced break), not 3, sitting at the
+   correct vertical position.

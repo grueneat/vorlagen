@@ -740,12 +740,12 @@ frames:
     - 58.454
     - 31.296
     build_py_position_mm:
-    - 44.7731
+    - 38.7859
     - 28.722
-    - 58.4538
-    - 67.0278
+    - 70.4538
+    - 20.0025
     sla_pageobject_present: true
-    sla_storytext_runs: 3
+    sla_storytext_runs: 1
     source: idml
   - anname: ua30
     idml_self: ua30
@@ -771,7 +771,7 @@ frames:
     - 53.755
     build_py_position_mm:
     - 15.0
-    - 39.1359
+    - 39.61
     - 118.0
     - 53.7551
     sla_pageobject_present: true
@@ -786,9 +786,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.0
-    - 53.4
+    - 39.6
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -802,10 +802,10 @@ frames:
     build_py_position_mm:
     - 15.0
     - 14.8444
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u6c1
     idml_self: u6c1
@@ -891,9 +891,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.15
-    - 53.4
+    - 39.75
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -906,7 +906,7 @@ frames:
     - 42.292
     build_py_position_mm:
     - 15.0
-    - 45.55
+    - 46.6507
     - 118.0
     - 42.2915
     sla_pageobject_present: true
@@ -942,6 +942,39 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: ua62_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 38.7859
+    - 38.4129
+    - 70.4538
+    - 20.0025
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: ua62_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 38.7859
+    - 51.3847
+    - 70.4538
+    - 20.0025
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u6aa_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 15.0
+    - 22.7819
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   image_frames:
   - anname: u9be
     idml_self: u9be
@@ -951,7 +984,7 @@ frames:
     - -55.5
     - 154.0
     - 111.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u9be.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -987,7 +1020,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -1005,7 +1038,7 @@ frames:
     - -55.5
     - 154.0
     - 111.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/leonore-sitzend-kopie.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/leonore-sitzend-kopie-ua88.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -1252,6 +1285,16 @@ frames:
     - 3.6
     sla_pageobject_present: true
     source: idml
+  - anname: u676_p1
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - -151.0
+    - -3.0
+    - 302.0
+    - 111.0
+    sla_pageobject_present: true
+    source: build_py
   - anname: u678
     idml_self: null
     idml_position_mm: null
@@ -1512,41 +1555,55 @@ assets:
   parent_composite: null
   sha256: 152dcdea289ffc33102d5e169894486a61fce3a717cf9d41d7ce13d7d80a660c
   byte_length: 101374
-- basename: leonore-sitzend-kopie.jpg
+- basename: leonore-sitzend-kopie.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - ua88
+  referenced_from_frames: []
   parent_composite: null
-  sha256: d0cb966ea69bdb6a970929f2e0895ebba4c822651050230d3413aef158e8df8d
-  byte_length: 11054839
+  sha256: 1fb8f66ce77990bd9d5e40435c6791fdafc58e9f06cd0ca6f134c6b78c9f133a
+  byte_length: 11922082
 - basename: schwarzer-verlauf-radial.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - ua8f
   parent_composite: null
-  sha256: 3224fbcf1253e28f10d05baa220c55e161708f3e5ddc21f334cf7fb5d32e77c0
-  byte_length: 932180
-- basename: green-pine-trees-covered-with-fog.jpg
+  sha256: cfc1dea2de639280f7577a9ae37f01a9294754358e69216bc11c1428bfd73d12
+  byte_length: 92212
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
+- basename: green-pine-trees-covered-with-fog-u9be.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u9be
+  parent_composite: null
+  sha256: null
+  byte_length: null
+- basename: green-pine-trees-covered-with-fog-u906.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
   - u906
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
+- basename: leonore-sitzend-kopie-ua88.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - ua88
+  parent_composite: null
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 332
-  preview_pdf_count: 306
-  missing_from_preview:
-  - consent.
-  - eosenihicto
-  - impressum
-  - nam
-  - quatur.
-  - xxxxxx
-  extra_in_preview:
-  - impressu
+  preview_pdf_count: 332
+  missing_from_preview: []
+  extra_in_preview: []
 parse_warnings: []
