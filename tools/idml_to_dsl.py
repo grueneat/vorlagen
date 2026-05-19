@@ -467,6 +467,58 @@ def _compute_page_local_bbox_pt(
     return (pivot_x, pivot_y, w, h, rotation_deg)
 
 
+def _compute_path_pagebbox_pt(
+    item_transform_str: str,
+    anchors: list[tuple[float, float]],
+    ancestor_transforms: list[str],
+    spread_item_transform_str: str,
+    page_item_transform_str: str,
+    page_geometric_bounds: Optional[tuple[float, float, float, float]] = None,
+) -> tuple[float, float, float, float]:
+    """Page-local axis-aligned bbox of fully-transformed path anchors.
+
+    Returns ``(x_pt, y_pt, w_pt, h_pt)`` — the bounding box of the anchors
+    AFTER the complete item→ancestors→page transform chain (rotation, flip
+    and uniform scale included).
+
+    This is the geometry a Scribus ``PolyLine`` (PTYPE=7) frame needs: the
+    ``sla_path`` emitted by :func:`_extract_idml_sla_path` is already in
+    page-aligned coordinates (the rotation/flip is baked into the path
+    points), so the frame must be the path's *upright* page-space bbox with
+    ``ROT=0``. Feeding such a frame the un-rotated-frame extent + pivot +
+    ``ROT`` (the model :func:`_compute_page_local_bbox_pt` returns for a
+    rotated frame) double-rotates the shape — see ``_emit_pageitem``'s
+    complex-Polygon branch. Unlike :func:`_compute_page_local_bbox_pt`, this
+    accepts a reflected transform (``det == -1``), because a baked-in path
+    needs no rotation decomposition — only the transformed extent.
+    """
+    item_M = _parse_matrix(item_transform_str)
+    acc: tuple[float, float, float, float, float, float] = (1.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+    for ancestor_str in ancestor_transforms:
+        acc = _matrix_compose(_parse_matrix(ancestor_str), acc)
+    item_to_spread = _matrix_compose(acc, item_M)
+
+    _, _, _, _, ptx, pty = _parse_matrix(page_item_transform_str)
+    if page_geometric_bounds is not None:
+        y1, x1, _y2, _x2 = page_geometric_bounds
+        page_tl = (ptx + x1, pty + y1)
+    else:
+        page_tl = (ptx, pty)
+
+    page_local = [
+        (
+            _apply_matrix(item_to_spread, x, y)[0] - page_tl[0],
+            _apply_matrix(item_to_spread, x, y)[1] - page_tl[1],
+        )
+        for (x, y) in anchors
+    ]
+    xs = [p[0] for p in page_local]
+    ys = [p[1] for p in page_local]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    return (min_x, min_y, max_x - min_x, max_y - min_y)
+
+
 def _pt_to_mm(value_pt: float) -> float:
     """Convert points to millimetres using PT_TO_MM."""
     return value_pt * PT_TO_MM
@@ -2610,16 +2662,38 @@ def _emit_pageitem(
                 sw_pt = 0.0
             else:
                 line_color = "Black"
+            # PolyLine (PTYPE=7) geometry model: the ``sla_path`` from
+            # _extract_idml_sla_path has the FULL item→ancestors→page
+            # transform — rotation, flip and scale — already baked into the
+            # path points. The Scribus frame must therefore be the path's
+            # UPRIGHT page-space bounding box with ROT=0; it carries no
+            # rotation of its own.
+            #
+            # _compute_page_local_bbox_pt returns the un-rotated-frame
+            # extent + rotation pivot + ROT for a rotated item — the right
+            # model for an ImageFrame whose content is NOT pre-rotated, but
+            # WRONG for a PolyLine: emitting that frame + ROT on top of an
+            # already-rotated path double-rotates the shape (a -90° cover
+            # ring landed tall-and-narrow beside the subheadline instead of
+            # flat around the headline word). It also mishandles a reflected
+            # ItemTransform (det == -1), which _compute_page_local_bbox_pt's
+            # atan2 rotation decomposition cannot represent at all.
+            #
+            # Use the page-aligned path bbox and DO NOT emit rotation_deg.
+            pb_x_pt, pb_y_pt, pb_w_pt, pb_h_pt = _compute_path_pagebbox_pt(
+                item_t, anchors, ancestor_transforms,
+                spread_t, page_t, page_gb,
+            )
             sla_path = _extract_idml_sla_path(
                 item, item_t, ancestor_transforms,
                 spread_t, page_t, page_gb,
-                x_pt, y_pt,
+                pb_x_pt, pb_y_pt,
             )
             pl_kwargs: dict[str, Any] = {
-                "x_mm": _round_mm(x_mm),
-                "y_mm": _round_mm(y_mm),
-                "w_mm": _round_mm(w_mm),
-                "h_mm": _round_mm(h_mm),
+                "x_mm": _round_mm(pb_x_pt * PT_TO_MM),
+                "y_mm": _round_mm(pb_y_pt * PT_TO_MM),
+                "w_mm": _round_mm(pb_w_pt * PT_TO_MM),
+                "h_mm": _round_mm(pb_h_pt * PT_TO_MM),
                 "sla_path": sla_path,
                 "line_color": line_color,
                 "line_width_pt": sw_pt,
@@ -2628,8 +2702,6 @@ def _emit_pageitem(
             }
             if fill_color:
                 pl_kwargs["fill"] = fill_color
-            if abs(rot) > 1e-3:
-                pl_kwargs["rotation_deg"] = _round_rot(rot)
             # IDML EndCap / EndJoin → Scribus PLINEEND / PLINEJOIN (Qt::PenCapStyle
             # and Qt::PenJoinStyle integer values). Omitted when IDML default
             # (Butt/Miter) — those map to Scribus default (0/0) which the
@@ -2666,13 +2738,17 @@ def _emit_pageitem(
                 item.get("FillColor") == "Color/Yellow"
                 and not _is_open_polygon(item)
             ):
+                # Record the SAME page-aligned bbox the PolyLine was emitted
+                # with, so squiggle_realign.py's baseline_squiggle_box_mm
+                # tracks the actual frame geometry (not the un-rotated-frame
+                # model, which diverges for a rotated squiggle).
                 ctx.squiggle_records.append({
                     "anname": self_id,
                     "page": _page_index_from_var(page_var),
-                    "x_mm": _round_mm(x_mm),
-                    "y_mm": _round_mm(y_mm),
-                    "w_mm": _round_mm(w_mm),
-                    "h_mm": _round_mm(h_mm),
+                    "x_mm": _round_mm(pb_x_pt * PT_TO_MM),
+                    "y_mm": _round_mm(pb_y_pt * PT_TO_MM),
+                    "w_mm": _round_mm(pb_w_pt * PT_TO_MM),
+                    "h_mm": _round_mm(pb_h_pt * PT_TO_MM),
                 })
             return
 
