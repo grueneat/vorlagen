@@ -130,6 +130,28 @@ make validate    # falls Makefile vorhanden
 
 Beides ruft `sla_diff` + `visual_diff` für alle drei Templates auf und gibt Exit 0 wenn alles innerhalb der Toleranzen.
 
+### CI-Parität — `bin/ci-local`
+
+`bin/validate` prüft nur die Round-trip-Validierung. `bin/ci-local` führt
+**die komplette Schrittfolge des `Build & Deploy Gallery`-Build-Jobs**
+(`.github/workflows/pages.yml`) lokal aus — in genau derselben Reihenfolge:
+Smoke-Templates bauen, Galerie-Content generieren, Astro-Site bauen, Unit-Tests
+(`tools/sla_lib/tests`), `sla_diff` + `check-stale-previews`, Brand-Validator,
+Structural-Check und Alignment-Audit.
+
+```bash
+bin/ci-local              # vollständige Build-Job-Sequenz
+bin/ci-local --no-site    # ohne Astro-npm-Build (schnellere Iteration)
+```
+
+Vor jedem Push einmal `bin/ci-local` laufen lassen: „grün lokal" sagt damit
+zuverlässig „grün in CI" voraus. Der Gate prüft am Ende zusätzlich, dass kein
+Build-Schritt eine committete `templates/<id>/template.sla` verändert hat — das
+ist genau die „lokal grün / CI rot"-Falle, die durch eine das Working-Tree
+mutierende Test-Helper-Funktion entstanden war. `bin/ci-local` setzt voraus,
+dass die Toolchain installiert ist (Python 3.12, Node 20, Scribus 1.6.5 — siehe
+`pages.yml`); fehlt etwas, bricht es mit einer klaren Meldung ab.
+
 ### Konverter `tools/sla_to_dsl.py` — One-Shot Bootstrap
 
 Erzeugt initial `templates/<id>/build.py` aus einer existierenden SLA. **Nicht** Teil der CI-Pipeline. Wird einmal manuell laufen gelassen, danach ist `build.py` die Source of Truth und wird von Hand editiert.
