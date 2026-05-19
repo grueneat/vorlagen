@@ -9,133 +9,119 @@ three-line headline and bullet-list body copy; the back carries the DIE
 GRUENEN logo, a candidate strip ("Leonore Gewessler"), social-media
 icons, an Impressum line, and a dark poster image (`plakat-dunkel-fuer-
 flyer.png`). It is the landscape sibling of `26-03-flyer-a6-hochformat-
-zweigeteilt` (which was blocked elsewhere in this batch on a missing
-source image) and shares an issue profile with `26-03-flyer-a6-
+zweigeteilt` and shares an issue profile with `26-03-flyer-a6-
 querformat-portrait`.
 
-## Scaffold outcome — GREEN (structural)
+## Re-import outcome — GREEN (structural)
 
-`bin/idml-import --scaffold-only` ran clean with the existing converter
-(the batch's facing-pages / spread-merge / page-based-export-detection
-fixes were already in the worktree; no new converter changes were
-needed). Derived slug: `26-03-flyer-a6-querformat-zweigeteilt`.
+`bin/idml-import --scaffold-only --reimport` ran clean with the current
+converter (the batch's full fix set — CMYK->sRGB + aspect-fill crop,
+squiggle re-anchoring, the consumed attributes, SpaceAfter/FLOP/
+min_glyph_shrink, the layout fixes, the mixed-font headline split — was
+already in the worktree; no new converter changes were needed).
 
 - `asset_audit.yml::ok == true` — all 4 `<Link>` files resolved and
-  converted (`Grüne Logo Bund weiss CMYK.ai`, `Plakat dunkel für
-  Flyer.psd`, `Ziesel.jpg`, `green-pine-trees-covered-with-fog.jpg`).
-  No missing assets — the HARD EXCEPTION does not apply.
+  converted. No missing assets — the HARD EXCEPTION does not apply.
 - `every_idml_run_present_in_build_py: true`; every applied
-  ParagraphStyle emitted; every frame `Self` has an `anname`. Two
-  ParagraphStyle definitions (`Zwischenüberschrift auf weißem
-  Hintergrund`, `Headline in grünem Kasten`) are in the IDML style
-  catalog but applied by no `<ParagraphStyleRange>` — correctly not
-  emitted.
+  ParagraphStyle emitted; every frame `Self` has an `anname`.
 - The converter deliberately skipped 4 off-page Rectangles (u6f0,
   u6f2, u77f, u964 — registration furniture on the pasteboard).
+- Inventory compare: exit 3 (drift only, additions — the split-headline
+  frames uaf8_l2/uaf8_l3/u6aa_l2; no `missing`, no regression). The
+  fresh inventory was promoted to `SCAFFOLD_INVENTORY.yml`.
+
+## What the new fix set resolved this pass
+
+- **CMYK images now render.** The previous pass tolerated `ziesel.jpg`
+  and `green-pine-trees-covered-with-fog.jpg` (both CMYK JPEGs)
+  rendering blank. The converter's CMYK->sRGB + aspect-fill crop fix
+  fully resolves this: `image_content_audit` 4 ok / 0 broken;
+  `image_frame_visibility_audit` 4 ok / 0 invisible. asset_render_ratio
+  — uace (ziesel) 0.998, u906 (green-pine) 0.996, uad7 (DIE GRUENEN
+  logo) 0.928 — all well above the 0.35 floor. ub34 (plakat) renders
+  all-black in baseline and preview (intentional dark poster artwork).
+  Two tolerance entries were removed as obsolete.
+- **`text_render_audit` is GREEN** (was 12 words clipped) — no baseline
+  body text is missing from the render.
+- **`split_headline_spacing` GREEN** — the mixed-font headline split
+  (uaf8 + uaf8_l2 + uaf8_l3) renders evenly spaced; pixel audit
+  max_drift 0.0pt on uaf8, 0.48pt on u6aa (both under the 2.0pt gate).
+- **`squiggle_alignment_audit` GREEN** — both squiggles (u678, u679)
+  sit on their word, yellow, 0 issues.
+- **`idml_attribute_coverage` GREEN** — no new unconsumed attribute.
+
+## Per-frame tune fixes applied (build.py — no tolerance)
+
+1. **u9df bullet list — LINESP 8.0 -> 15.999999999999998.** The
+   re-imported build.py carried `LINESP: '8.0'` on every body paragraph
+   of the u9df bullet frame. The converter propagated a stray
+   `<Leading>8</Leading>` from a CharacterStyleRange whose content is
+   only `'.\t'` (a period + tab, not body text). At 8pt leading all 5
+   bullets collapsed into column 1 so Scribus never flowed the 2nd
+   column — u9df rendered single-column where the baseline (and the
+   sibling 2-column frame u67c, which carries NO LINESP override)
+   render 2-column. Setting LINESP to the bullet ParaStyle's ~16pt
+   restored the 2-column flow. line_match 47 -> 40.
+2. **u9df — y_mm 45.55 -> 46.566 (+2.88pt).** After the LINESP fix the
+   pixel audit measured u9df's line-1 ink-top 2.88pt above the baseline
+   and line_match raised a `frame_vertical_position` finding. The
+   +2.88pt y_mm correction anchored the block onto the baseline first
+   line — `frame_vertical_position` cleared, line_match 40 -> 34.
+
+The `bin/tune-render` -> `bin/tune-fix` loop ran to the point where no
+playbook can advance (`line_spacing` sim returned no measurable drift
+for every frame; `y_mm_shift` found no uniform-offset frames). The
+final render that produced the committed artifacts ran
+`bin/tune-render --no-transactional` so the documented-red render is
+promoted into `templates/`.
 
 ## Tune outcome — RESIDUAL (red preflight, fully documented)
 
-The `bin/tune-render` -> `bin/tune-fix` loop ran to the point where no
-playbook can advance (`tune-fix` exits 3). The terminal state is a red
-preflight with every residual classified and documented — the same
-accepted terminal state as the sibling flyer/leporello templates in
-this batch.
+Three tolerances flip their audit green (`severity: cosmetic`):
+inventory (4 off-page registration marks), image_audit (43 raster/ICC
+deltas), text_position_audit_jitter (67 sub-perceptible FreeType
+kerning drifts).
 
-### Direct fixes applied (build.py — no tolerance needed)
+Four audits stay RED — documented, classified, NOT flipped green:
 
-1. **uad7 (DIE GRUENEN logo) — FIXED.** Switched from a 64 KB
-   `inline_image_data` base64 PNG blob + `scale_type=1` to a direct
-   `image=` reference + `scale_type=0`. Scribus 1.6.x renders
-   SCALETYPE=1 + small frame + RGBA white-on-transparent PNG fully
-   transparent. After the fix the logo renders —
-   `image_frame_visibility_audit` dropped from 3 invisible to 2.
-2. **uace / u906 / ub34 — `# noinject:` comments added.** This cleared
-   `external_asset_substitution_audit` (3 missing -> OK).
-3. **ub52 ("Leonore Gewessler") — y_mm reverted to scaffold 69.4096.**
-   The y_mm_shift playbook oscillated this single-line frame without
-   converging and triggered a per-region regression; reverting stopped
-   the churn (`per_region_regression` back to OK).
-
-### Tolerances granted (9 — see TOLERANCE_LOG.md for the full table)
-
-Three carry `severity: cosmetic` and flip their audit green:
-
-- `tol:inventory-offpage-registration-marks` (inventory, cap 4) — the
-  4 deliberately-skipped off-page Rectangles.
-- `tol:image-audit-vector-path-delta` (image_audit, cap 48) — 44
-  raster/ICC + inline-vector-path extraction deltas.
-- `tol:text-position-jitter-freetype-kerning` (text_position_audit_
-  jitter, cap 34) — 21 sub-perceptible FreeType kerning drifts.
-
-Six carry `severity: structural` — DOCUMENTED but preflight stays red:
-
-- `tol:image-content-cmyk-jpeg-blank` (image_content_audit, cap 1)
-- `tol:image-frame-visibility-cmyk-jpeg-blank` (image_frame_visibility_
-  audit, cap 2)
-- `tol:systematic-text-line-wrap-no-sim-rows` (systematic_text_audit,
-  cap 11)
-- `tol:text-position-structural-cross-renderer-wrap` (text_position_
-  audit_structural, cap 269)
-- `tol:text-render-cross-renderer-wrap-overflow` (text_render_audit,
-  cap 12)
-- `tol:visual-diff-regions-raster-size-mismatch` (visual_diff_regions,
-  cap 1 — phase error, cannot be tolerance-cleared)
-
-No `meta.yml::brand_overrides` / `non_ci_*` growth — the 46 brand-rule
-errors are the inherited Minion-Pro-on-abstract-ParaStyle false
-positive and informational rows, left un-suppressed.
-
-### Residual drift numbers (terminal state)
-
-| Audit | Issues | Classification | Status |
+| Audit | Issues | vs prev pass | Classification |
 |---|---|---|---|
-| inventory | 4 | human-review | tolerated green |
-| image_audit | 44 | scribus-engine-bug | tolerated green |
-| text_position_audit_jitter | 21 | scribus-engine-bug | tolerated green |
-| image_content_audit | 1 (u906) | authoring-bug | red, documented |
-| image_frame_visibility_audit | 2 (u906, uace) | authoring-bug | red, documented |
-| systematic_text_audit | 11 | scribus-engine-bug | red, documented |
-| text_position_audit_structural | 269 | scribus-engine-bug | red, documented |
-| text_render_audit | 12 words / 132 chars | scribus-engine-bug | red, documented |
-| visual_diff_regions | phase error (1px raster) | human-review | red, phase error |
+| line_match_audit | 34 (38/72 match) | 47 -> 34 | scribus-engine-bug |
+| systematic_text_audit | 6 | 11 -> 6 | scribus-engine-bug |
+| text_position_audit_structural | 205 | 269 -> 205 | scribus-engine-bug |
+| visual_diff_regions | 52 | (was phase error) | human-review |
 
-Worst per-frame line-spacing drift: u67c +62.4pt, ub3b +29.8pt, uaf8
-+27.8pt — all line-WRAP-count divergence (Scribus wraps the justified
-body paragraphs to a different number of lines than InDesign). No
-(LINESPMode, LINESP) override reconciles a wrap-count change, so the
-line_spacing simulator returned 0 rows for every frame.
+All four are the same root cause: **cross-renderer line-wrap
+divergence**. Scribus and InDesign break the justified body / bullet
+paragraphs — most of them inside the 2-column frames u67c / u92e /
+u9df / u6d8 — at slightly different words because their font-metric
+and hyphenation models differ. The `line_spacing` simulator returned
+NO measurable drift for any (LINESPMode, LINESP) candidate on any
+frame: no leading value reconciles a wrap-count change. Every
+remaining line_match finding is `wrap` / `unmatched` / `first_word_x`
+on a frame whose baseline and preview line counts differ (u6d8 10 vs
+11, u67c 7 vs 9, u92e 10 vs 9, u9df 8 vs 7, ub3b 4 vs 3). u693 / u85a
+`first_word_x` are -90deg rotated Impressum frames — pdfplumber's
+x-measurement on rotated text is unreliable.
 
-## Items classified human-review / authoring-bug
-
-- **authoring-bug — uace (ziesel.jpg) and u906 (green-pine-trees-
-  covered-with-fog.jpg)**: both are CMYK JPEGs. Scribus 1.6.x cannot
-  rasterise CMYK JPEGs (passed through unchanged by
-  `tools/links_export.py`). u906 renders fully blank; uace renders
-  near-blank (ink density 0.06 vs baseline 0.33). Accepted residual
-  per the overnight-batch known-issues policy — no converter fix.
-- **human-review — visual_diff_regions phase error**: baseline and
-  preview rasterise to pixel dimensions differing by 1px per axis
-  (sub-mm rounding at 150 dpi). Tooling artifact; same error on
-  sibling batch templates. No template edit changes it.
-- **human-review — inventory 4 dropped**: off-page registration
-  Rectangles; correct converter behaviour, audit is conservative.
+This is a known-acceptable residual (the overnight-batch known-issues
+policy lists cross-renderer body-text line-wrap drift). A red preflight
+with fully documented, classified residuals is the accepted terminal
+state for this template, matching the sibling flyer/leporello
+templates committed earlier in this batch.
 
 ## What to eyeball in preview.pdf vs baseline.pdf
 
 1. **Page 1 (front, ziesel/squirrel photo)** — the squirrel photo
-   `uace` will be near-blank/white in preview.pdf where baseline.pdf
-   shows the photo. This is the CMYK-JPEG render failure, expected.
-2. **Page 5 (back)** — the green-pine photo strip `u906` is blank in
-   preview where baseline shows a dark forest band. Same CMYK-JPEG
-   failure.
-3. **DIE GRUENEN logo (uad7, page 1 back area)** — should now render
-   correctly (white logo). This was the one image FIXED this pass;
-   confirm it is visible.
-4. **Body / bullet text on the dark-green panels** — lines wrap at
-   slightly different words than baseline and the tail words of the
-   longest lorem-ipsum paragraphs are clipped (12 words missing).
-   Cross-renderer line-wrap; cosmetically visible but not a defect to
-   fix at the template level.
-5. **plakat-dunkel back cover (ub34)** — renders as a dark/black panel
-   in both baseline and preview (the poster artwork is intentionally
-   very dark); no issue.
+   `uace` now renders correctly (CMYK->sRGB fix). Was blank last pass.
+2. **Page 5 (back)** — the green-pine photo strip `u906` now renders a
+   dark forest band. Was blank last pass.
+3. **DIE GRUENEN logo (uad7)** — renders correctly (white logo).
+4. **Page 4 bullet list (u9df)** — now renders as 2 columns matching
+   the baseline (was collapsed to a single column last pass).
+5. **Body / bullet text on the green panels** — lines wrap at slightly
+   different words than the baseline. Cross-renderer line-wrap;
+   cosmetically visible but not a template-level defect.
+6. **plakat-dunkel back cover (ub34)** — renders as a dark/black panel
+   in both baseline and preview (poster artwork is intentionally very
+   dark); no issue.

@@ -773,10 +773,10 @@ frames:
     build_py_position_mm:
     - 78.5
     - 58.6807
-    - 58.7292
-    - 49.0361
+    - 70.7292
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 3
+    sla_storytext_runs: 1
     source: idml
   - anname: ub0f
     idml_self: ub0f
@@ -817,9 +817,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.0
-    - 53.4
+    - 39.6
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -833,10 +833,10 @@ frames:
     build_py_position_mm:
     - 15.0
     - 14.8444
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u6c1
     idml_self: u6c1
@@ -922,9 +922,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.15
-    - 53.4
+    - 39.75
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -973,6 +973,39 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: uaf8_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 78.5
+    - 66.6182
+    - 70.7292
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: uaf8_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 78.5
+    - 77.7307
+    - 70.7292
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u6aa_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 15.0
+    - 22.7819
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   image_frames:
   - anname: uace
     idml_self: uace
@@ -982,7 +1015,7 @@ frames:
     - -55.5
     - 87.0
     - 111.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/ziesel.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/crops/ziesel-uace.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -1018,7 +1051,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -1036,7 +1069,7 @@ frames:
     - 305.5
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/plakat-dunkel-fuer-flyer.png
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/crops/plakat-dunkel-fuer-flyer-ub34.png
     build_py_position_mm:
     - -3.0
     - 108.0
@@ -1279,6 +1312,16 @@ frames:
     build_py_position_mm: null
     sla_pageobject_present: true
     source: idml
+  - anname: u676_p1
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - -151.0
+    - -3.0
+    - 302.0
+    - 111.0
+    sla_pageobject_present: true
+    source: build_py
   - anname: u678
     idml_self: null
     idml_position_mm: null
@@ -1524,37 +1567,65 @@ assets:
 - basename: plakat-dunkel-fuer-flyer.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - ub34
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 7322fb3409a5d5eb2dc223bface1552a9622bfb47f11cc37c9d145c00290aa1c
-  byte_length: 8558653
+  sha256: fe934fcae32f83c4683b33d2bb1eba5ce0cb2656f076aa0a316d9ff6aa3f7158
+  byte_length: 8514698
+- basename: ziesel.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: 9ecc4176e1155041fca1926ab46891b31bab116a88261a153583c17890ce33f4
+  byte_length: 16077622
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
+- basename: green-pine-trees-covered-with-fog.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
+  byte_length: 6896771
 - basename: ziesel.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: e73d2e5e1750ae0a832de7b3d534c3c3562f6824853bda3ef79f0818f579161c
+  byte_length: 11713327
+- basename: ziesel-uace.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - uace
   parent_composite: null
-  sha256: e73d2e5e1750ae0a832de7b3d534c3c3562f6824853bda3ef79f0818f579161c
-  byte_length: 11713327
-- basename: green-pine-trees-covered-with-fog.jpg
+  sha256: null
+  byte_length: null
+- basename: green-pine-trees-covered-with-fog-u906.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u906
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
+- basename: plakat-dunkel-fuer-flyer-ub34.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - ub34
+  parent_composite: null
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 353
-  preview_pdf_count: 327
-  missing_from_preview:
-  - consent.
-  - eosenihicto
-  - impressum
-  - nam
-  - quatur.
-  - xxxxxx
-  extra_in_preview:
-  - impressu
+  preview_pdf_count: 353
+  missing_from_preview: []
+  extra_in_preview: []
 parse_warnings: []

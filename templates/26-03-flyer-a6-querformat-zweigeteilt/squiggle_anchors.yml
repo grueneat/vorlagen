@@ -1,0 +1,96 @@
+template: 26-03-flyer-a6-querformat-zweigeteilt
+_schema_version: 1
+_doc: Squiggle re-anchoring map. Each entry binds a yellow squiggle Polygon (anname)
+  to the word it underlines in baseline.pdf. tools/playbooks/squiggle_realign.py consumes
+  this to keep the squiggle tracking its word when Scribus wraps text differently.
+anchors:
+- anname: u678
+  page: 1
+  target_frame: u6d8
+  word: Tinvend
+  word_index: 6
+  baseline_word_box_pt:
+    x0: 72.024
+    top: 127.989
+    x1: 109.171
+    bottom: 138.989
+  baseline_squiggle_box_mm:
+    x_mm: 26.9005
+    y_mm: 48.3013
+    w_mm: 19.1982
+    h_mm: 0.9961
+  offset_from_word_mm:
+    dx_mm: 1.492
+    dy_mm: 3.1496
+- anname: u679
+  page: 1
+  target_frame: u6d8
+  word: quae
+  word_index: 4
+  baseline_word_box_pt:
+    x0: 334.968
+    top: 113.018
+    x1: 358.321
+    bottom: 124.018
+  baseline_squiggle_box_mm:
+    x_mm: 122.819
+    y_mm: 39.5
+    w_mm: 11.749
+    h_mm: 3.8145
+  offset_from_word_mm:
+    dx_mm: 4.6497
+    dy_mm: -0.3702
+- anname: u677
+  page: 2
+  target_frame: u67c
+  word: liquuntio.
+  word_index: 22
+  baseline_word_box_pt:
+    x0: 85.026
+    top: 188.005
+    x1: 128.859
+    bottom: 199.005
+  baseline_squiggle_box_mm:
+    x_mm: 43.002
+    y_mm: 69.5001
+    w_mm: 25.0055
+    h_mm: 1.1564
+  offset_from_word_mm:
+    dx_mm: 13.0067
+    dy_mm: 3.1761
+- anname: u67b
+  page: 2
+  target_frame: u6c1
+  word: Headline.
+  word_index: 8
+  baseline_word_box_pt:
+    x0: 135.594
+    top: 42.417
+    x1: 263.061
+    bottom: 72.417
+  baseline_squiggle_box_mm:
+    x_mm: 47.5693
+    y_mm: 23.3405
+    w_mm: 25.399
+    h_mm: 1.8007
+  offset_from_word_mm:
+    dx_mm: -0.2652
+    dy_mm: 8.3767
+- anname: u948
+  page: 3
+  target_frame: u92e
+  word: pem
+  word_index: 34
+  baseline_word_box_pt:
+    x0: 291.408
+    top: 158.03
+    x1: 312.462
+    bottom: 169.03
+  baseline_squiggle_box_mm:
+    x_mm: 106.2005
+    y_mm: 58.7013
+    w_mm: 19.1982
+    h_mm: 0.9961
+  offset_from_word_mm:
+    dx_mm: 3.3982
+    dy_mm: 2.9518

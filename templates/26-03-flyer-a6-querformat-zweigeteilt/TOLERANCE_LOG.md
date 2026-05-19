@@ -4,57 +4,74 @@ Every tolerance / override granted on this template, with the measured
 drift it resolves and why it is conservative. Reviewed by a human; the
 matching machine-readable entries live in `TOLERANCES.yml`.
 
-This template carried NO `meta.yml::brand_overrides`, `non_ci_*`, or
-brand-rule growth — all 46 brand-rule errors are left un-suppressed
+This template carries NO `meta.yml::brand_overrides`, `non_ci_*`, or
+brand-rule growth — all 56 brand-rule errors are left un-suppressed
 (they are the inherited `brand:font_family` Minion-Pro-on-abstract-
 ParaStyle false positive plus `brand:line_spacing` / `brand:inside_page`
-informational rows, identical to the sibling flyer templates). Only
-`TOLERANCES.yml` audit-scoped entries were added.
+informational rows, identical to the sibling flyer templates). The
+`Minion Pro Regular` brand_constraint FAILs are read off the abstract
+parent ParaStyle `idml/normalparagraphstyle` via the `<trail>`/`<DefaultStyle>`
+PARENT reference; every actual ITEXT run carries a Gotham/Vollkorn FONT.
+Only `TOLERANCES.yml` audit-scoped entries were added.
 
 | # | TOLERANCES.yml id | Audit | max_issues | Measured | Classification | Why conservative |
 |---|---|---|---|---|---|---|
 | 1 | tol:inventory-offpage-registration-marks | inventory | 4 | 4 dropped (u6f0, u6f2, u77f, u964) | human-review | Cap == exact dropped count. All 4 are 17.9x17.9pt Rectangles placed off-page (x=-29.8mm / x=179..180mm); converter explicitly records each as skipped, completeness assertion still passes. InDesign also omits them from the trimmed export. |
-| 2 | tol:image-audit-vector-path-delta | image_audit | 48 | 44 deltas | scribus-engine-bug | Cap 48 vs 44 measured (small headroom for raster-count jitter). Raster/ICC + inline-vector-path extraction differences; same class as the sibling flyer templates. |
-| 3 | tol:image-content-cmyk-jpeg-blank | image_content_audit | 1 | 1 broken (u906) | authoring-bug | Cap == exact broken count. u906 (green-pine-trees CMYK JPEG) renders blank — preview mean-RGB [248,248,244] vs baseline [103,106,84], histogram divergence 0.47. Known Scribus 1.6.x CMYK-JPEG failure; no converter fix per batch policy. |
-| 4 | tol:image-frame-visibility-cmyk-jpeg-blank | image_frame_visibility_audit | 2 | 2 invisible (u906, uace) | authoring-bug | Cap == exact count. u906 ink density 0.0; uace (ziesel.jpg CMYK JPEG) ink density 0.06 vs baseline 0.33. Both confirmed CMYK JPEGs via identify. Logo frame uad7 was repaired this pass and is no longer flagged. |
-| 5 | tol:systematic-text-line-wrap-no-sim-rows | systematic_text_audit | 11 | 11 actionable | scribus-engine-bug | Cap == exact count. line_spacing_sim returned 0 changes for all frames across every tune-fix iteration — drift is line-WRAP-count divergence (uaf8 4->5, u9df 8->6, ub3b 4->6, u6d8 10->11), not a leading value. No (LINESPMode, LINESP) reconciles a wrap-count change. |
-| 6 | tol:text-position-jitter-freetype-kerning | text_position_audit_jitter | 34 | 21 drifts | scribus-engine-bug | Cap 34 vs 21 measured. Sub-perceptible (<=5pt) FreeType-vs-InDesign kerning jitter; the count fluctuated 21-31 across iterations, hence the headroom. |
-| 7 | tol:text-position-structural-cross-renderer-wrap | text_position_audit_structural | 269 | 269 drifts | scribus-engine-bug | Cap == exact count. Cross-renderer line-wrap divergence; 269 sits in the documented Querformat-flyer range (~257-279) and close to the sibling portrait flyer (279). NOT tolerated-as-passing — preflight stays red. |
-| 8 | tol:text-render-cross-renderer-wrap-overflow | text_render_audit | 12 | 12 words / 28 occ. / 132 chars | scribus-engine-bug | Cap == exact count. Tail words of justified lorem-ipsum paragraphs clipped because Scribus wraps to more lines than the frame holds. Converter already widened several frames; residual is wrap-count driven. |
-| 9 | tol:visual-diff-regions-raster-size-mismatch | visual_diff_regions | 1 | 1px raster-size mismatch (phase error) | human-review | Cap 1. baseline (874,620) vs preview (875,621) — sub-mm rounding at 150 dpi. Tooling artifact in the heatmap-overlay phase; no template edit changes it. Surfaces as a phase ERROR so it cannot be tolerance-cleared. Same error on sibling batch templates. |
+| 2 | tol:image-audit-vector-path-delta | image_audit | 48 | 43 deltas | scribus-engine-bug | Cap 48 vs 43 measured (small headroom for raster-count jitter). Raster/ICC + inline-vector-path extraction differences; same class as the sibling flyer templates. |
+| 3 | tol:systematic-text-line-wrap-no-sim-rows | systematic_text_audit | 6 | 6 actionable | scribus-engine-bug | Cap == exact count. line_spacing_sim returned no measurable drift for any candidate on any frame across every tune-fix iteration — drift is line-WRAP-count divergence (u6d8 10->11, u67c 7->9, u872 2->3, u92e 10->9, u9df 8->7, ub3b 4->3), not a leading value. No (LINESPMode, LINESP) reconciles a wrap-count change. Count dropped 11->6 after the u9df single-column fix. |
+| 4 | tol:text-position-jitter-freetype-kerning | text_position_audit_jitter | 67 | 67 drifts | scribus-engine-bug | Cap == exact measured count (smallest tolerance). Sub-perceptible (<=5pt) FreeType-vs-InDesign kerning jitter. Count rose 34->67 this pass because the u9df single-column fix re-positioned every word in that frame (2-column flow restored) and the +2.88pt y_mm anchor correction shifted u9df's lines — both add sub-perceptible word-position deltas. |
+| 5 | tol:text-position-structural-cross-renderer-wrap | text_position_audit_structural | 205 | 205 drifts | scribus-engine-bug | Cap == exact count. Cross-renderer line-wrap divergence, mostly inside the 2-column frames u67c/u92e/u9df/u6d8. Count dropped 269->205 this pass after the u9df single-column fix restored its 2-column flow. NOT tolerated-as-passing — severity structural, preflight stays red. |
+| 6 | tol:visual-diff-regions-raster-size-mismatch | visual_diff_regions | 52 | 52 hot regions | human-review | Cap == exact count. The raster-size 1px phase error resolved this pass — visual_diff_regions is now a real audit row. The 52 hot regions trace to the cross-renderer line-wrap divergence plus the small CMYK->sRGB tone residual on dark photo frames. Same class as the sibling batch templates. severity structural — documented, preflight stays red. |
 
 ## build.py edits made during tune (no tolerance — direct fixes)
 
-- **uad7 (DIE GRUENEN logo)** — switched from `inline_image_data` (64KB
-  base64 PNG blob) + `scale_type=1` to a direct `image=` reference to
-  `shared/assets/.../gruene-logo-bund-weiss-cmyk.png` + `scale_type=0`.
-  Scribus 1.6.x renders SCALETYPE=1 + small frame + RGBA white-on-
-  transparent PNG fully transparent. After the fix the logo renders
-  (image_frame_visibility_audit dropped 3 invisible -> 2). Mirrors the
-  worked example in the idml-tune SKILL (26-03 Leporello u141).
-- **uace / u906 / ub34** — added `# noinject:` justification comments
-  above each external-image ImageFrame so external_asset_substitution_
-  audit passes (it went from 3 missing -> OK). uace and u906 are CMYK
-  JPEGs accepted as authoring-bug residual; ub34 is the design's
-  intended back-cover poster artwork with no library substitute.
-- **ub52 ("Leonore Gewessler")** — y_mm reverted to the scaffold value
-  69.4096. The y_mm_shift playbook oscillated this single-line frame
-  (alternating +-2.4 / +-4.8pt) across many iterations without
-  converging and triggered a per-region regression; the audit's
-  "uniform offset" reading is a line-count-mismatch artifact, not a
-  real anchor offset. Reverting stopped the churn — per_region_
-  regression returned to OK.
+- **u9df (bullet list, page 4) — LINESP corrected 8.0 -> 15.999999999999998.**
+  The re-imported build.py carried `LINESP: '8.0'` on every body paragraph of
+  the u9df bullet frame. Root cause: the converter propagated a stray
+  `<Leading>8</Leading>` from a CharacterStyleRange whose content is just `'.\t'`
+  (a period + tab, not body text) onto the whole paragraph. At 8pt leading all 5
+  bullets collapsed into column 1, so Scribus never flowed the 2nd column —
+  u9df rendered single-column where the baseline (and the sibling 2-column frame
+  u67c, which carries NO LINESP override) render 2-column. The bullet ParaStyle's
+  leading is ~16pt; the baseline body-line gaps measure ~15pt. Setting LINESP to
+  the ParaStyle's 15.999999999999998 restored the 2-column flow (preview Scim
+  x=55.5 / Lia x=231.3, matching the baseline). line_match dropped 47->40,
+  text_position_structural 286->272 word drifts.
+- **u9df — y_mm shifted 45.55 -> 46.566 (+1.016mm = +2.88pt).** After the LINESP
+  fix the line_spacing_pixel_audit measured u9df's line-1 ink-top 2.88pt above
+  the baseline first line and line_match raised a `frame_vertical_position`
+  finding (centroid drift over the 2.0pt tol). The +2.88pt y_mm correction
+  anchors the block onto the baseline first line; the `frame_vertical_position`
+  finding cleared and line_match dropped 40->34. The residual below line 1 is
+  the 8-vs-7 column line-count divergence (cross-renderer wrap), not an anchor
+  error.
+
+## Removed since the previous pass (no longer needed)
+
+- **tol:image-content-cmyk-jpeg-blank** and **tol:image-frame-visibility-cmyk-
+  jpeg-blank** — REMOVED. The previous pass tolerated the green-pine-trees and
+  ziesel CMYK JPEGs rendering blank. The current converter's CMYK->sRGB +
+  aspect-fill crop fix resolves this entirely: `image_content_audit` is 4 ok /
+  0 broken and `image_frame_visibility_audit` is 4 ok / 0 invisible. uace
+  (ziesel) asset_render_ratio 0.998, u906 (green-pine) 0.996, uad7 (logo) 0.928,
+  ub34 (plakat) renders all-black in baseline and preview as intended. No
+  tolerance is needed any more.
+- **tol:text-render-cross-renderer-wrap-overflow** — REMOVED. The previous pass
+  tolerated 12 tail words of body text clipped by frame overflow. `text_render_
+  audit` is now OK (0 issues, "all baseline text rendered") — the CMYK fix plus
+  the u9df 2-column restoration removed the overflow.
 
 ## Notes
 
-- Entries 1, 2, 6 carry `severity: cosmetic` and flipped their audits to
+- Entries 1, 2 carry `severity: cosmetic` and flip their audits to
   `ok: true (tolerated)`, removing them from the failing-audit set.
-- Entries 3, 4, 5, 7, 8, 9 carry `severity: structural` and remain RED
-  in preflight: those audits are documented but not flipped green. This
+- Entries 3, 4, 5, 6 carry `severity: structural` and remain RED in
+  preflight: those audits are documented but not flipped green. This
   matches how the sibling flyer/leporello templates in this batch were
   committed — a red preflight with fully documented, classified
-  residuals is the accepted terminal state for cross-renderer line-wrap
-  and CMYK-image gaps.
+  residuals is the accepted terminal state for cross-renderer line-wrap.
 - No `--accept-residual` flag exists on `bin/tune-render` / `bin/tune-fix`;
   the documented residual-acceptance path is this `TOLERANCE_LOG.md` +
-  `TOLERANCES.yml` + `REVIEW_NOTES.md` trio.
+  `TOLERANCES.yml` + `REVIEW_NOTES.md` trio. The final render that
+  produced the committed artifacts ran `bin/tune-render --no-transactional`
+  so the documented-red render is promoted into `templates/`.

@@ -3,8 +3,10 @@ asset_policy:
   - gruene-logo-bund-weiss-cmyk.png
   external:
   - green-pine-trees-covered-with-fog.jpg
+  - green-pine-trees-covered-with-fog.png
   - plakat-dunkel-fuer-flyer.png
   - ziesel.jpg
+  - ziesel.png
   shipped: []
 build:
   output: template.sla
@@ -13,7 +15,7 @@ format: A4
 id: 26-03-flyer-a6-querformat-zweigeteilt
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat zweigeteilt Ordner/26-03-Flyer
   A6 Querformat zweigeteilt.idml
-previews_for_sla: 36d3b2400eb14aead71896845634a828231fb3c0ee0fe3d08e5d0091f2233135
+previews_for_sla: a434585ce82c722efca2b19b74a622018f3b8d6f02f4c28e7206ba01020dc866
 title: 26-03-flyer-a6-querformat-zweigeteilt
 version: 0.1.0
-build_py_sha256: 75f9caf6309b6fe29ad235c12251c96c6ca173fc3fade1f55178cce9bb038aa1
+build_py_sha256: d8f955a368d3ea9a86a7e08c1760f679ca1f7f90a416bc439fbfde41684d4bac
