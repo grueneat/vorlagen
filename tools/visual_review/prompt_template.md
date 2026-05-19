@@ -8,7 +8,7 @@ real noe.gruene.at URLs).
 The 5 templates this PR populates are:
 1. `kandidat-falzflyer-din-lang` — A4 quer 6-panel falzflyer with 1 portrait + 3 themen-photos + 2 QRs on the closer panel
 2. `themen-plakat-a3-quer` — A3 quer plakat with 1 themen-hero photo + 1 corner QR
-3. `infostand-tent-card-a5-quer` — A4 quer tent-card with 1 hintergrund photo + 1 QR (enlarged 14→17 mm)
+3. `tischschild-a5-quer` — A4 quer tent-card with 1 hintergrund photo + 1 QR (enlarged 14→17 mm)
 4. `wahlaufruf-postkarte-a6-quer` — A6 quer postkarte with 1 back-side QR
 5. `wahltag-tueranhaenger` — 105×250 mm türanhänger with 1 back-side QR
 

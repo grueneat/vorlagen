@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
+template: falzflyer-z-falz-6-seitig-zweigeteiltes-cover
 text_runs:
   total_idml: 55
   by_paragraph_style:
@@ -1131,7 +1131,7 @@ frames:
     - -106.8
     - 101.0
     - 106.8
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/crops/ziesel-u514.png
+    build_py_image_ref: ../../shared/assets/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/crops/ziesel-u514.png
     build_py_position_mm:
     - 198.0
     - -1.8
@@ -1167,7 +1167,7 @@ frames:
     - -105.0
     - 99.0
     - 41.692
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/crops/green-pine-trees-covered-with-fog-u2cd.png
+    build_py_image_ref: ../../shared/assets/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/crops/green-pine-trees-covered-with-fog-u2cd.png
     build_py_position_mm:
     - 99.1764
     - 0.0
@@ -2238,7 +2238,7 @@ assets:
   parent_composite: null
   sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
   byte_length: 6702484
-- basename: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
+- basename: falzflyer-z-falz-6-seitig-zweigeteiltes-cover--ai-Social
     Media Icons weiss--0.pdf
   on_disk: true
   classified: external
@@ -2247,7 +2247,7 @@ assets:
   parent_composite: Social Media Icons weiss.ai
   sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
   byte_length: 1774462
-- basename: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
+- basename: falzflyer-z-falz-6-seitig-zweigeteiltes-cover--ai-Social
     Media Icons weiss--1.pdf
   on_disk: true
   classified: external
@@ -2256,7 +2256,7 @@ assets:
   parent_composite: Social Media Icons weiss.ai
   sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
   byte_length: 1774462
-- basename: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
+- basename: falzflyer-z-falz-6-seitig-zweigeteiltes-cover--ai-Social
     Media Icons weiss--2.pdf
   on_disk: true
   classified: external

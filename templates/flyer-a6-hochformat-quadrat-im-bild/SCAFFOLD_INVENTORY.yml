@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-flyer-a6-hochformat-quadrat-in-bild
+template: flyer-a6-hochformat-quadrat-im-bild
 text_runs:
   total_idml: 45
   by_paragraph_style:
@@ -900,7 +900,7 @@ frames:
     - -77.0
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u132c.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u132c.png
     build_py_position_mm:
     - -2.48
     - -3.0
@@ -936,7 +936,7 @@ frames:
     - -77.0
     - 108.0
     - 62.034
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u1260.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u1260.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -954,7 +954,7 @@ frames:
     - -77.0
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/crops/leonore-sitzend-kopie-u137f.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/leonore-sitzend-kopie-u137f.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -972,7 +972,7 @@ frames:
     - -7.25
     - 111.0
     - 84.25
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/schwarzer-verlauf-radial.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/schwarzer-verlauf-radial.png
     build_py_position_mm:
     - -3.0
     - 66.75

@@ -32,8 +32,8 @@ REVIEWS_DIR = ROOT / "reviews"
 ALL_TEMPLATES = [
     "postkarte-a6-kampagne",
     "plakat-a1-hochformat",
-    "zeitung-a4-grun",
-    "infostand-tent-card-a5-quer",
+    "zeitung-a4",
+    "tischschild-a5-quer",
 ]
 
 PROMPT_PATH = ROOT / "tools" / "visual_review" / "prompt_template.md"
@@ -123,7 +123,7 @@ The 5 new templates this PR adds are:
 1. themen-plakat-a3-quer (A3 quer argument plakat)
 2. wahlaufruf-postkarte-a6-quer (A6 quer Wahlkreuz hero + 2x2 info-grid)
 3. wahltag-tueranhaenger (105×250 mm vertical with 35-mm Stanzkontur hole + Wahlkreuz)
-4. infostand-tent-card-a5-quer (A4 quer folded to A5 tent, bilingual)
+4. tischschild-a5-quer (A4 quer folded to A5 tent, bilingual)
 5. kandidat-falzflyer-din-lang (A4 quer 3-fach Zickzackfalz, 6 panels, Wahlkreuz closer)
 
 ## Question 1 — comparison_to_existing (priority 1)
@@ -276,7 +276,7 @@ def main(argv=None) -> int:
             "themen-plakat-a3-quer",
             "wahlaufruf-postkarte-a6-quer",
             "wahltag-tueranhaenger",
-            "infostand-tent-card-a5-quer",
+            "tischschild-a5-quer",
             "kandidat-falzflyer-din-lang",
         ]:
             try:

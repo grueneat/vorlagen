@@ -47,10 +47,14 @@ brand_overrides:
     the sibling 26-03 flyer templates. Resolution path: per-template tune pass to
     reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-flyer-a6-querformat-quadrat-in-bild
+id: flyer-a6-querformat-quadrat-im-bild
+description: 'A6-Flyer im Querformat mit quadratischem Bildausschnitt im Cover. Für bildbetonte Themenkommunikation.'
+variant_label: 'Querformat · Quadrat im Bild'
+category_label: 'Flyer'
+category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Quadrat in Bild Ordner/26-03-Flyer
   A6 Querformat Quadrat in Bild.idml
-previews_for_sla: a6647514aac71d484e8d37674064154e78e656ecb2747dc65c4f1ca35dd6e4cd
-title: 26-03-flyer-a6-querformat-quadrat-in-bild
+previews_for_sla: f0e11c1ac36665a189897a2bf2293406705fcb485f373c1181f3ec31433ae9da
+title: 'Flyer A6 Querformat – Quadrat im Bild'
 version: 0.1.0
-build_py_sha256: 2616ff8e43359d57fbf06b68689a64ba447d64d4a11299496455f53af4195ca9
+build_py_sha256: 2853e13c6594fc719c68d335f9046dbe4013a1066f154f842b9622568366de0f

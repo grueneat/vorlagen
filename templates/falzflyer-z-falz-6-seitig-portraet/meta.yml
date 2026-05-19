@@ -55,10 +55,14 @@ brand_overrides:
     which carries the identical brand_overrides block. Resolution path: per-template tune
     pass to reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-leporello-z-falz-99x210-6-seitig-portrait
+id: falzflyer-z-falz-6-seitig-portraet
+description: 'Sechsseitiger Z-Falz-Faltflyer mit Porträtfoto-Cover. Für die Vorstellung von Kandidat:innen.'
+variant_label: 'Z-Falz 6-seitig · Porträt-Cover'
+category_label: 'Falzflyer'
+category: 'falzflyer'
 idml_source: ../../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig Portrait Ordner/26-03-Leporello
   z-Falz 99x210 6-seitig Portrait.idml
-previews_for_sla: 65ffb3cdfd089454696a3c0af9b7c3830759ad29a2f3f34b873f5b49e7a8d9a6
-title: 26-03-leporello-z-falz-99x210-6-seitig-portrait
+previews_for_sla: d2404e48f483060feedf48a699232c0b1bb5da598905b7cc2a559a62e7cde137
+title: 'Falzflyer Z-Falz 6-seitig – Porträt-Cover'
 version: 0.1.0
-build_py_sha256: 11934239832d8414731d3d570f36e74818f5a3b624e5cc26d6f497e4f58009b7
+build_py_sha256: 42e086d5d1a710c789b875b961301ac470595e43c5001d12b2fbe5c11a7d1ecb

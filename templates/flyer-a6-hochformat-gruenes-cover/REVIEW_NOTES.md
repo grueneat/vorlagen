@@ -1,4 +1,4 @@
-# Review Notes — 26-03-flyer-a6-hochformat-gruenes-cover
+# Review Notes — flyer-a6-hochformat-gruenes-cover
 
 Prose summary for a human reviewer. Read alongside `TOLERANCE_LOG.md`
 (every edit + accepted residual) and `TOLERANCES.yml` (structured).

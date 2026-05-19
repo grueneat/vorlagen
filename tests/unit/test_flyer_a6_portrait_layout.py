@@ -12,7 +12,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve()
 WORKTREE = HERE.parents[2]
-ANCHOR = WORKTREE / "templates" / "26-03-flyer-a6-hochformat-portrait"
+ANCHOR = WORKTREE / "templates" / "flyer-a6-hochformat-portraet"
 SLA = ANCHOR / "template.sla"
 
 

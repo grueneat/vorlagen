@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-flyer-a6-querformat-zweigeteilt
+template: flyer-a6-querformat-zweigeteilt
 text_runs:
   total_idml: 56
   by_paragraph_style:
@@ -1015,7 +1015,7 @@ frames:
     - -55.5
     - 87.0
     - 111.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/crops/ziesel-uace.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-zweigeteilt/crops/ziesel-uace.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -1051,7 +1051,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/crops/green-pine-trees-covered-with-fog-u906.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-zweigeteilt/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -1069,7 +1069,7 @@ frames:
     - 305.5
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-zweigeteilt/crops/plakat-dunkel-fuer-flyer-ub34.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-zweigeteilt/crops/plakat-dunkel-fuer-flyer-ub34.png
     build_py_position_mm:
     - -3.0
     - 108.0

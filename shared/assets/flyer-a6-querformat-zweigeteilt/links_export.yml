@@ -4,18 +4,18 @@
 assets:
   Grüne Logo Bund weiss CMYK.ai:
     kind: vector_ai
-    output: shared/assets/26-03-flyer-a6-querformat-zweigeteilt/gruene-logo-bund-weiss-cmyk.png
+    output: shared/assets/flyer-a6-querformat-zweigeteilt/gruene-logo-bund-weiss-cmyk.png
     recipe: pdftocairo -png -transp -r 600 -singlefile
-    vector_output: shared/assets/26-03-flyer-a6-querformat-zweigeteilt/gruene-logo-bund-weiss-cmyk.pdf
+    vector_output: shared/assets/flyer-a6-querformat-zweigeteilt/gruene-logo-bund-weiss-cmyk.pdf
   Plakat dunkel für Flyer.psd:
     kind: raster_psd
-    output: shared/assets/26-03-flyer-a6-querformat-zweigeteilt/plakat-dunkel-fuer-flyer.png
+    output: shared/assets/flyer-a6-querformat-zweigeteilt/plakat-dunkel-fuer-flyer.png
     recipe: convert -profile sRGB -strip (ICC-aware)
   Ziesel.jpg:
     kind: raster_jpg
-    output: shared/assets/26-03-flyer-a6-querformat-zweigeteilt/ziesel.png
+    output: shared/assets/flyer-a6-querformat-zweigeteilt/ziesel.png
     recipe: convert -profile sRGB -strip (ICC-aware)
   green-pine-trees-covered-with-fog.jpg:
     kind: raster_jpg
-    output: shared/assets/26-03-flyer-a6-querformat-zweigeteilt/green-pine-trees-covered-with-fog.png
+    output: shared/assets/flyer-a6-querformat-zweigeteilt/green-pine-trees-covered-with-fog.png
     recipe: convert -profile sRGB -strip (ICC-aware)

@@ -1,4 +1,4 @@
-# Review notes — 26-03-flyer-a6-querformat-zweigeteilt
+# Review notes — flyer-a6-querformat-zweigeteilt
 
 ## What this template is
 

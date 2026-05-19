@@ -1,4 +1,4 @@
-"""Invariant tests for infostand-tent-card-a5-quer V1 (#20 "Hero Band").
+"""Invariant tests for tischschild-a5-quer V1 (#20 "Hero Band").
 
 Per #18 / #19 / #23 pattern: pin RELATIONSHIPS not absolute COORDINATES.
 SLA round-trip is float-imprecise; these tests survive any future legitimate
@@ -37,7 +37,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from lxml import etree  # noqa: E402
 
-TEMPLATE_DIR = ROOT / "templates" / "infostand-tent-card-a5-quer"
+TEMPLATE_DIR = ROOT / "templates" / "tischschild-a5-quer"
 TOL_MM = 0.6
 
 # V1 mirror axis (Mittelfalz)

@@ -47,10 +47,14 @@ brand_overrides:
     the sibling 26-03 flyer templates. Resolution path: per-template tune pass to
     reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-flyer-a6-querformat-portrait
+id: flyer-a6-querformat-portraet
+description: 'A6-Flyer im Querformat mit großem Porträtfoto auf dem Cover. Für die Vorstellung von Kandidat:innen.'
+variant_label: 'Querformat · Porträt-Cover'
+category_label: 'Flyer'
+category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Portrait Ordner/26-03-Flyer
   A6 Querformat Portrait.idml
-previews_for_sla: f74850f350ac6dda13aca183c6383ba97919168072bea88915f6e1246f2aa2e4
-title: 26-03-flyer-a6-querformat-portrait
+previews_for_sla: f2f8790bfacc08a9edfe4e370bd975eb395a48c7881576f0607bd1b7b6f0343e
+title: 'Flyer A6 Querformat – Porträt-Cover'
 version: 0.1.0
-build_py_sha256: 1b1f007734121b4a9c5a80d18ffe76dbdc67f8387490fe96ee8ef4196b0f7bc0
+build_py_sha256: cce46e2a64c0c09536d2d0f63dacd63a896e8ed8703639510711a3d8c64d6a33

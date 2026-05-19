@@ -1,4 +1,4 @@
-# Tolerance Log — 26-03-flyer-a6-gruenes-cover
+# Tolerance Log — flyer-a6-querformat-gruenes-cover
 
 Companion log for `TOLERANCES.yml`. Append-only. Every row records a
 tolerance/override granted during the Stage-2 tune, the measured drift

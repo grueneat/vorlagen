@@ -19,7 +19,7 @@ Selbsttragend, beidseitig sichtbar.
 | `Body Panel B` | 3 Bullets unter Headline Panel B |
 | `Impressum (Tent)` | Mediengesetz §24 |
 
-Spec: [`templates/_specs/infostand-tent-card-a5-quer.md`](../_specs/infostand-tent-card-a5-quer.md).
+Spec: [`templates/_specs/tischschild-a5-quer.md`](../_specs/tischschild-a5-quer.md).
 
 ## Falz-Mechanik
 
@@ -52,8 +52,8 @@ ersetzen** — siehe `samples/manifest.yml`.
 ## Build
 
 ```bash
-python3 templates/infostand-tent-card-a5-quer/build.py
-# → templates/infostand-tent-card-a5-quer/template.sla
+python3 templates/tischschild-a5-quer/build.py
+# → templates/tischschild-a5-quer/template.sla
 ```
 
 ## Druck-Empfehlung
@@ -133,8 +133,8 @@ Aspect-Optimierung getrackt in #13.
 ### Build & verify
 
 ```bash
-python3 templates/infostand-tent-card-a5-quer/build.py
-PYTHONPATH=tools python3 -m sla_lib.builder.structural_check infostand-tent-card-a5-quer
+python3 templates/tischschild-a5-quer/build.py
+PYTHONPATH=tools python3 -m sla_lib.builder.structural_check tischschild-a5-quer
 python3 -m unittest templates._smoke.test_infostand_tent_card_a5_quer
 python3 -m unittest tools.sla_lib.tests.test_infostand_tent_card_geometry
 ```

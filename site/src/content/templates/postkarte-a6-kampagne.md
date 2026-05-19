@@ -11,17 +11,13 @@ audience:
 - bezirksgruppe
 - landesgruppe
 - ortsgruppe
-description: 'Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Badge),
-  Call-to-Action, QR-Code-Rückseite mit Impressum. Skelett-Vorlage — in Scribus öffnen,
-  eigene Inhalte einsetzen.
-
-  '
+description: Zweiseitige A6-Kampagnen-Postkarte für Wahlaufrufe und Direktansprache.
 build:
   script: build.py
   output: template.sla
 original_sla: ../../postkarte-vorlage-original.sla
 sla_diff_strict: false
-previews_for_sla: 86e1aa6e841b8e4e8cc71e04543a6c0cc3178170746f621c924d1f53cb589fd9
+previews_for_sla: 910957cdacccbf7fc56cfeead279f8225497f685ecf7e5dd110f6d5a35afe14d
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from postkarte-vorlage-original.sla;
@@ -114,7 +110,7 @@ preflight:
   min_image_dpi: 300
 category: postkarte
 category_label: Postkarte
-variant_label: Kampagne A6
+variant_label: A6 Kampagne
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/postkarte-a6-kampagne/template.sla

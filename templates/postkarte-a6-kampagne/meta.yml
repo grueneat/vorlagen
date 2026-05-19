@@ -1,7 +1,7 @@
 id: postkarte-a6-kampagne
 version: 0.2.0
 build_py_sha256: eeb818c561b063a75e516a58d37cb12539cb2c3b015228421d493c6a9498acfb
-title: Kampagnen-Postkarte A6
+title: 'Kampagnen-Postkarte A6'
 format: A6
 orientation: portrait
 pages: 2
@@ -10,11 +10,7 @@ audience:
 - bezirksgruppe
 - landesgruppe
 - ortsgruppe
-description: 'Zweiseitige Kampagnen-Postkarte A6 mit Hauptbotschaft, Störer (Badge),
-  Call-to-Action, QR-Code-Rückseite mit Impressum. Skelett-Vorlage — in Scribus öffnen,
-  eigene Inhalte einsetzen.
-
-  '
+description: 'Zweiseitige A6-Kampagnen-Postkarte für Wahlaufrufe und Direktansprache.'
 build:
   script: build.py
   output: template.sla
@@ -25,7 +21,7 @@ original_sla: ../../postkarte-vorlage-original.sla
 # petition URL frame (4.43mm → 6mm — below the 13pt fixed leading).
 # InDesign rendered both fully at the original sizes; Scribus clips.
 # Fixing the render-side text loss is worth the controlled divergence —
-# same rationale as plakat-a1-hochformat and zeitung-a4-grun.
+# same rationale as plakat-a1-hochformat and zeitung-a4.
 sla_diff_strict: false
 previews_for_sla: 910957cdacccbf7fc56cfeead279f8225497f685ecf7e5dd110f6d5a35afe14d
 brand_overrides:
@@ -118,6 +114,6 @@ preflight:
   bleed_mm: 3
   cmyk_only: true
   min_image_dpi: 300
-category: postkarte
-category_label: Postkarte
-variant_label: Kampagne A6
+category: 'postkarte'
+category_label: 'Postkarte'
+variant_label: 'A6 Kampagne'

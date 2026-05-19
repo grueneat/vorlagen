@@ -1,4 +1,4 @@
-slug: infostand-tent-card-a5-quer
+slug: tischschild-a5-quer
 # Image bytes live in the central library at shared/sample-images/.
 # Library binding happens in build.py via library.load(<id>) (issue #13).
 uses_from_library:

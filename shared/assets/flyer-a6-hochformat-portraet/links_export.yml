@@ -4,22 +4,22 @@
 assets:
   26.05.25_gewessler_gruenen_odd_0452_2.jpg:
     kind: raster_jpg
-    output: shared/assets/26-03-flyer-a6-hochformat-portrait/26-05-25-gewessler-gruenen-odd-0452-2.png
+    output: shared/assets/flyer-a6-hochformat-portraet/26-05-25-gewessler-gruenen-odd-0452-2.png
     recipe: convert -profile sRGB -strip (ICC-aware)
   Grüne Logo Bund weiss CMYK.ai:
     kind: vector_ai
-    output: shared/assets/26-03-flyer-a6-hochformat-portrait/gruene-logo-bund-weiss-cmyk.png
+    output: shared/assets/flyer-a6-hochformat-portraet/gruene-logo-bund-weiss-cmyk.png
     recipe: pdftocairo -png -transp -r 600 -singlefile
-    vector_output: shared/assets/26-03-flyer-a6-hochformat-portrait/gruene-logo-bund-weiss-cmyk.pdf
+    vector_output: shared/assets/flyer-a6-hochformat-portraet/gruene-logo-bund-weiss-cmyk.pdf
   Plakat dunkel für Flyer.psd:
     kind: raster_psd
-    output: shared/assets/26-03-flyer-a6-hochformat-portrait/plakat-dunkel-fuer-flyer.png
+    output: shared/assets/flyer-a6-hochformat-portraet/plakat-dunkel-fuer-flyer.png
     recipe: convert -profile sRGB -strip (ICC-aware)
   Schwarzer Verlauf radial.psd:
     kind: raster_psd
-    output: shared/assets/26-03-flyer-a6-hochformat-portrait/schwarzer-verlauf-radial.png
+    output: shared/assets/flyer-a6-hochformat-portraet/schwarzer-verlauf-radial.png
     recipe: convert -profile sRGB -strip (ICC-aware)
   green-pine-trees-covered-with-fog.jpg:
     kind: raster_jpg
-    output: shared/assets/26-03-flyer-a6-hochformat-portrait/green-pine-trees-covered-with-fog.png
+    output: shared/assets/flyer-a6-hochformat-portraet/green-pine-trees-covered-with-fog.png
     recipe: convert -profile sRGB -strip (ICC-aware)

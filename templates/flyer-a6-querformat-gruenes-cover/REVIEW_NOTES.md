@@ -1,4 +1,4 @@
-# Review Notes — 26-03-flyer-a6-gruenes-cover
+# Review Notes — flyer-a6-querformat-gruenes-cover
 
 Prose summary for human review of the Stage-1 + Stage-2 IDML import of
 this template. Companion to `TOLERANCE_LOG.md` (per-tolerance detail)
@@ -13,7 +13,7 @@ It is the Querformat sibling of the already-landed
 portrait, impressum), rotated to landscape. Source IDML:
 `originals/26-03-Flyer A6 Querformat gruenes Cover Ordner/26-03-Flyer
 A6 gruenes Cover.idml` (the IDML filename omits "Querformat", which is
-why the derived slug is `26-03-flyer-a6-gruenes-cover` with no
+why the derived slug is `flyer-a6-querformat-gruenes-cover` with no
 `-querformat` segment — there is no collision with the Hochformat
 template).
 

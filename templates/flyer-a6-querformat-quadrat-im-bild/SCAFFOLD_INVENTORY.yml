@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-flyer-a6-querformat-quadrat-in-bild
+template: flyer-a6-querformat-quadrat-im-bild
 text_runs:
   total_idml: 55
   by_paragraph_style:
@@ -984,7 +984,7 @@ frames:
     - -55.5
     - 154.0
     - 111.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u9be.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u9be.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -1020,7 +1020,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u906.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -1038,7 +1038,7 @@ frames:
     - -55.5
     - 154.0
     - 111.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/leonore-sitzend-kopie-ua88.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-quadrat-im-bild/crops/leonore-sitzend-kopie-ua88.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -1056,7 +1056,7 @@ frames:
     - -49.5
     - 135.0
     - 99.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/schwarzer-verlauf-radial.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-quadrat-im-bild/schwarzer-verlauf-radial.png
     build_py_position_mm:
     - 22.0
     - 3.0

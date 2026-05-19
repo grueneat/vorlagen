@@ -55,10 +55,14 @@ brand_overrides:
     which already carry the identical brand_overrides block. Resolution path: per-template
     tune pass to reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover
+id: falzflyer-z-falz-6-seitig-gruenes-cover
+description: 'Sechsseitiger Z-Falz-Faltflyer mit grünem Marken-Cover. Für ausführliche Themen- und Wahlinformation.'
+variant_label: 'Z-Falz 6-seitig · Grünes Cover'
+category_label: 'Falzflyer'
+category: 'falzflyer'
 idml_source: ../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover.idml
-previews_for_sla: 3ae304fd7c0f5a9e852d951046a96320955bff114b551ab9cc6b609edcda443e
-title: 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover
+previews_for_sla: 3db0373c6d58a9db4ff72c0b29a74105fd4133232df20b4c1c2f7be72b8e2cc0
+title: 'Falzflyer Z-Falz 6-seitig – Grünes Cover'
 version: 0.1.0
-build_py_sha256: 700061231048003e977828fd513c541821689ffb96c826c984c446ffc8d647a2
+build_py_sha256: c8f9e7798c1fb1411187f311372b037d8dd3393905bb417d3ca4776d49ef3c90

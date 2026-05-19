@@ -47,10 +47,14 @@ brand_overrides:
     the sibling 26-03 flyer templates. Resolution path: per-template tune pass to
     reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-flyer-a6-hochformat-gruenes-cover
+id: flyer-a6-hochformat-gruenes-cover
+description: 'A6-Flyer im Hochformat mit durchgehend grünem Marken-Cover. Für textbetonte Botschaften.'
+variant_label: 'Hochformat · Grünes Cover'
+category_label: 'Flyer'
+category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat gruenes Cover Ordner/26-03-Flyer
   A6 Hochformat gruenes Cover.idml
-previews_for_sla: 203df0d757b15984548dfb49509f657389471fb5edb07a166a70d1f7099257cc
-title: 26-03-flyer-a6-hochformat-gruenes-cover
+previews_for_sla: 3cb628b60d911bf3f0477e18d3e114795e18002c86ce2bef18e81e56c21cadd7
+title: 'Flyer A6 Hochformat – Grünes Cover'
 version: 0.1.0
-build_py_sha256: c1ce5591d25ea3cfd4fc7914736cc7e340a2da02964257b6f1a04a755198c3eb
+build_py_sha256: 1c1ef2634d050a41a940a7716905abec1b038e21f1b2c8eecaf021d875673ccd

@@ -111,7 +111,7 @@ jobs:
           # Preflight: gallery previews must match committed template.sla bytes.
           # See docs/render-fidelity.md "Local-only rendering" — CI never renders templates.
           python3 bin/check-stale-previews
-          for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4-grun; do
+          for tdir in templates/postkarte-a6-kampagne templates/plakat-a1-hochformat templates/zeitung-a4; do
             tid=$(basename "$tdir")
             # Resolve original_sla relative to the template directory and read
             # the per-template `sla_diff_strict` opt-out flag (see issue #16:

@@ -1,6 +1,7 @@
-id: infostand-tent-card-a5-quer
+id: tischschild-a5-quer
 version: 0.1.0
-title: Infostand-Tent-Card A5 quer
+build_py_sha256: a6d25c0614771a339af2f78957d1b3246e29b622450e6ce24071f0d1e54aa3db
+title: 'Tischschild A5 Querformat'
 format: A4
 orientation: landscape
 pages: 1
@@ -9,11 +10,7 @@ audience:
 - bezirksgruppe
 - ortsgruppe
 - infostand-helfer
-description: 'A4 quer (297×210 mm) gefalzt zu A5-Tent. Steht selbsttragend auf Tisch
-  am Infostand, im Pfarrkaffee oder bei Veranstaltungen. Zwei Panele (DE oben, EN
-  unten) lesen je nach Tisch-Seite.
-
-  '
+description: 'Tischschild (Tent-Card) im A5-Querformat zum Aufstellen am Infostand.'
 build:
   script: build.py
   output: template.sla
@@ -159,6 +156,6 @@ preflight:
   - 105
   cmyk_only: true
   min_image_dpi: 300
-category: infostand
-category_label: Infostand
-variant_label: Tent-Card A5 quer
+category: 'tischschild'
+category_label: 'Tischschild'
+variant_label: 'A5 Querformat'

@@ -140,7 +140,7 @@ def _find_asset_dir(template_slug: str, root: Path) -> Path | None:
 
     # Try the IDML-stem-slug fallback. v2-falzflyer is the canonical case:
     # template slug "kandidat-falzflyer-din-lang-gruenes-cover-v2" but its
-    # assets live at shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/.
+    # assets live at shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/.
     meta_path = root / "templates" / template_slug / "meta.yml"
     if not meta_path.exists():
         return None

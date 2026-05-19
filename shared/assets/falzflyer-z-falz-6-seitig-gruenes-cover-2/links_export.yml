@@ -4,34 +4,34 @@
 assets:
   BlueSky weiss.ai:
     kind: vector_ai
-    output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.png
+    output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/bluesky-weiss.png
     recipe: pdftocairo -png -transp -r 600 -singlefile
-    vector_output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/bluesky-weiss.pdf
+    vector_output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/bluesky-weiss.pdf
   Grüne Logo Bund weiss CMYK.ai:
     kind: vector_ai
-    output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.png
+    output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.png
     recipe: pdftocairo -png -transp -r 600 -singlefile
-    vector_output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.pdf
+    vector_output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/gruene-logo-bund-weiss-cmyk.pdf
   Mail weiss.ai:
     kind: vector_ai
-    output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.png
+    output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/mail-weiss.png
     recipe: pdftocairo -png -transp -r 600 -singlefile
-    vector_output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/mail-weiss.pdf
+    vector_output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/mail-weiss.pdf
   Plakat dunkel für Flyer.psd:
     kind: raster_psd
-    output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png
+    output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/plakat-dunkel-fuer-flyer.png
     recipe: convert -profile sRGB -strip (ICC-aware)
   Social Media Icons weiss.ai:
     kind: vector_ai
-    output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.png
+    output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/social-media-icons-weiss.png
     recipe: pdftocairo -png -transp -r 600 -singlefile
-    vector_output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/social-media-icons-weiss.pdf
+    vector_output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/social-media-icons-weiss.pdf
   Website weiss.ai:
     kind: vector_ai
-    output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.png
+    output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/website-weiss.png
     recipe: pdftocairo -png -transp -r 600 -singlefile
-    vector_output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/website-weiss.pdf
+    vector_output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/website-weiss.pdf
   green-pine-trees-covered-with-fog.jpg:
     kind: raster_jpg
-    output: shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/green-pine-trees-covered-with-fog.png
+    output: shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/green-pine-trees-covered-with-fog.png
     recipe: convert -profile sRGB -strip (ICC-aware)

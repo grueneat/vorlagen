@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-flyer-a6-hochformat-portrait
+template: flyer-a6-hochformat-portraet
 text_runs:
   total_idml: 47
   by_paragraph_style:
@@ -939,7 +939,7 @@ frames:
     - -77.0
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/26-05-25-gewessler-gruenen-odd-0452-2-u115d.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-portraet/crops/26-05-25-gewessler-gruenen-odd-0452-2-u115d.png
     build_py_position_mm:
     - -3.0
     - -3.0
@@ -957,7 +957,7 @@ frames:
     - 6.5
     - 96.588
     - 70.5
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/schwarzer-verlauf-radial-u1164.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-portraet/crops/schwarzer-verlauf-radial-u1164.png
     build_py_position_mm:
     - -4.0
     - 80.5
@@ -993,7 +993,7 @@ frames:
     - -77.0
     - 108.0
     - 62.034
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/green-pine-trees-covered-with-fog-u1260.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-portraet/crops/green-pine-trees-covered-with-fog-u1260.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -1011,7 +1011,7 @@ frames:
     - -77.0
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-hochformat-portrait/crops/plakat-dunkel-fuer-flyer-ubc2.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-hochformat-portraet/crops/plakat-dunkel-fuer-flyer-ubc2.png
     build_py_position_mm:
     - -3.0
     - -3.0

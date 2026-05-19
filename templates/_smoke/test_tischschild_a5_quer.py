@@ -1,4 +1,4 @@
-"""Smoke test for templates/infostand-tent-card-a5-quer/.
+"""Smoke test for templates/tischschild-a5-quer/.
 
 Verifies:
 - 1 page, 297×210 trim
@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from lxml import etree  # noqa: E402
 
-TEMPLATE_DIR = ROOT / "templates" / "infostand-tent-card-a5-quer"
+TEMPLATE_DIR = ROOT / "templates" / "tischschild-a5-quer"
 
 
 def _load_build_module():

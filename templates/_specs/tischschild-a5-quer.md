@@ -1,7 +1,7 @@
 # Spec: Infostand-Tent-Card A5 quer (V1 "Hero Band")
 
 ```yaml
-id: infostand-tent-card-a5-quer
+id: tischschild-a5-quer
 title: Infostand-Tent-Card A5 quer
 format: A4 quer (297×210) gefalzt zu A5-Tent
 trim_mm: [297, 210]
@@ -136,7 +136,7 @@ Falz und bilden ein 20 mm breites Hellgrün-Band quer über den Apex.
 ## Constraints — V1 strukturelle Invarianten (Code: `build.py::CONSTRAINTS`)
 
 22 Einträge gruppiert nach Kategorie. Code lebt in
-`templates/infostand-tent-card-a5-quer/build.py::CONSTRAINTS`.
+`templates/tischschild-a5-quer/build.py::CONSTRAINTS`.
 
 ### Panel A intra-panel containment (rotation_deg=0; raw bbox math gilt)
 

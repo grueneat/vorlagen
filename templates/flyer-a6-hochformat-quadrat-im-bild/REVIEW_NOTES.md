@@ -1,4 +1,4 @@
-# Review Notes — 26-03-flyer-a6-hochformat-quadrat-in-bild
+# Review Notes — flyer-a6-hochformat-quadrat-im-bild
 
 Prose summary for a human reviewer. Read alongside `TOLERANCE_LOG.md`
 (every edit + accepted residual, newest first) and `TOLERANCES.yml`

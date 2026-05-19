@@ -1,4 +1,4 @@
-# TOLERANCE_LOG — 26-03-flyer-a6-querformat-portrait
+# TOLERANCE_LOG — flyer-a6-querformat-portraet
 
 Every tolerance / override granted on this template, with the measured
 drift it resolves and why it is conservative. Reviewed by a human; the

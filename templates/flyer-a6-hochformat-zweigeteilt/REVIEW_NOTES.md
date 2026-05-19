@@ -1,4 +1,4 @@
-# REVIEW_NOTES — 26-03-flyer-a6-hochformat-zweigeteilt
+# REVIEW_NOTES — flyer-a6-hochformat-zweigeteilt
 
 ## Status: BLOCKED at Stage 1 (scaffold) — missing source asset
 
@@ -16,7 +16,7 @@ PDF/X-4) is a 6-page document at 356.646 × 496.531 pt page size.
 
 ## The blocking issue — genuinely missing asset (HARD EXCEPTION)
 
-`build/validation/26-03-flyer-a6-hochformat-zweigeteilt/asset_audit.yml`
+`build/validation/flyer-a6-hochformat-zweigeteilt/asset_audit.yml`
 reports `ok: false`. The IDML references **4** linked assets; only **3**
 are present on disk in the source `Links/` folder:
 
@@ -54,9 +54,9 @@ included in the `Links/` folder, then re-run
 
 ## Partial state committed
 
-- `shared/assets/26-03-flyer-a6-hochformat-zweigeteilt/` — the 3
+- `shared/assets/flyer-a6-hochformat-zweigeteilt/` — the 3
   successfully extracted/converted assets plus `links_export.yml`.
-- `build/validation/26-03-flyer-a6-hochformat-zweigeteilt/asset_audit.yml`
+- `build/validation/flyer-a6-hochformat-zweigeteilt/asset_audit.yml`
   — the audit verdict (`ok: false`).
 - This `REVIEW_NOTES.md`.
 

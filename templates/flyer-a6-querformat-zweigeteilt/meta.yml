@@ -61,10 +61,14 @@ brand_overrides:
     the sibling 26-03 flyer templates. Resolution path: per-template tune pass to
     reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-flyer-a6-querformat-zweigeteilt
+id: flyer-a6-querformat-zweigeteilt
+description: 'A6-Flyer im Querformat mit zweigeteiltem Cover – Bildfläche und Farbfläche kombiniert.'
+variant_label: 'Querformat · Zweigeteilt'
+category_label: 'Flyer'
+category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat zweigeteilt Ordner/26-03-Flyer
   A6 Querformat zweigeteilt.idml
-previews_for_sla: c576859de7721e39fd39835b71937bb0fee9d8dc29bea511f86eff0c98d61b00
-title: 26-03-flyer-a6-querformat-zweigeteilt
+previews_for_sla: 00c4fcb9bc5be1cda631b581954decfb929d62bdd8c6a862eb5422687465d942
+title: 'Flyer A6 Querformat – Zweigeteilt'
 version: 0.1.0
-build_py_sha256: 956d78fc0eedf61c477f50111284d6f5a0e0cddacde2099a0927e410f263e6b4
+build_py_sha256: c7c3500ace4daea38aa8c85d09f8db7a57c2fb996c11c30ae7ede3116cb06b6f

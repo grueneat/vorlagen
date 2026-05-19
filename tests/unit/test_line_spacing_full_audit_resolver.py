@@ -57,7 +57,7 @@ def workspace(tmp_path: Path) -> tuple[Path, Path]:
 def test_resolves_flyer_via_meta_relative_path(workspace) -> None:
     """A meta.yml idml_source relative to the template dir resolves."""
     originals, templates = workspace
-    slug = "26-03-flyer-a6-hochformat-portrait"
+    slug = "flyer-a6-hochformat-portraet"
     # Relative path FROM templates/<slug>/ up to originals/.
     rel = ("../../originals/26-03-Flyer A6 Hochformat Portrait Ordner/"
            "26-03-Flyer A6 Hochformat Portrait.idml")
@@ -70,7 +70,7 @@ def test_resolves_flyer_via_meta_relative_path(workspace) -> None:
 def test_stale_relative_path_falls_back_to_basename_lookup(workspace) -> None:
     """A stale idml_source still resolves via its basename under originals."""
     originals, templates = workspace
-    slug = "26-03-flyer-a6-hochformat-portrait"
+    slug = "flyer-a6-hochformat-portraet"
     # An over-deep relative path that resolves to a nonexistent location;
     # the resolver must still find the IDML by its (unique) basename.
     rel = ("../../../../../../originals/26-03-Flyer A6 Hochformat "
@@ -84,7 +84,7 @@ def test_stale_relative_path_falls_back_to_basename_lookup(workspace) -> None:
 def test_flyer_slug_never_resolves_to_leporello(workspace) -> None:
     """The core regression: a Flyer slug must NOT load the leporello IDML."""
     originals, templates = workspace
-    slug = "26-03-flyer-a6-hochformat-portrait"
+    slug = "flyer-a6-hochformat-portraet"
     # No meta.yml at all -> pure glob fallback. Must still pick the flyer.
     (templates / slug).mkdir(parents=True)
     resolved = _resolve_idml_source(slug, templates, originals)
@@ -96,7 +96,7 @@ def test_flyer_slug_never_resolves_to_leporello(workspace) -> None:
 def test_leporello_slug_resolves_to_leporello(workspace) -> None:
     """A leporello slug resolves to the leporello IDML via glob fallback."""
     originals, templates = workspace
-    slug = "26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover"
+    slug = "falzflyer-z-falz-6-seitig-zweigeteiltes-cover"
     (templates / slug).mkdir(parents=True)
     resolved = _resolve_idml_source(slug, templates, originals)
     assert resolved is not None
@@ -106,7 +106,7 @@ def test_leporello_slug_resolves_to_leporello(workspace) -> None:
 def test_absolute_idml_source_honoured(workspace) -> None:
     """An absolute idml_source path is used as-is when it exists."""
     originals, templates = workspace
-    slug = "26-03-flyer-a6-hochformat-portrait"
+    slug = "flyer-a6-hochformat-portraet"
     abs_path = (originals / "26-03-Flyer A6 Hochformat Portrait Ordner" /
                 "26-03-Flyer A6 Hochformat Portrait.idml")
     _make_template(templates, slug, str(abs_path))

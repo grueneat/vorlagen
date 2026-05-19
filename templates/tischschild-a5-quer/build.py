@@ -1,6 +1,6 @@
 """Infostand-Tent-Card A5 quer — DSL build entry point.
 
-Spec: templates/_specs/infostand-tent-card-a5-quer.md.
+Spec: templates/_specs/tischschild-a5-quer.md.
 Format: A4 quer 297×210 mm, gefalzt zu A5-Tent (horizontale Falz bei y=105).
 
 Tent geometry (issue #32 + follow-up):
@@ -401,7 +401,7 @@ def build_template() -> Document:
     doc = Document(
         brand=Brand.gruene_noe(),
         title="Infostand-Tent-Card A5 quer",
-        template_id="infostand-tent-card-a5-quer",
+        template_id="tischschild-a5-quer",
         author="Die Grünen Niederösterreich",
         facing_pages=False,
         layers=[

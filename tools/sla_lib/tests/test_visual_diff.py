@@ -77,7 +77,7 @@ class CommittedConfigsTests(unittest.TestCase):
         self.assertGreater(tol.max_pixel_mismatch_pct, 0)
 
     def test_zeitung_diff_yml(self):
-        tol = vd.TemplateTolerance.load(ROOT / "templates" / "zeitung-a4-grun" / "diff.yml")
+        tol = vd.TemplateTolerance.load(ROOT / "templates" / "zeitung-a4" / "diff.yml")
         self.assertGreater(tol.max_pixel_mismatch_pct, 0)
 
 

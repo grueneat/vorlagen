@@ -1,4 +1,4 @@
-# REVIEW NOTES — 26-03-flyer-a6-querformat-portrait
+# REVIEW NOTES — flyer-a6-querformat-portraet
 
 Prose summary for the human reviewer. Read alongside `TOLERANCE_LOG.md`
 (per-tolerance detail) and `TOLERANCES.yml` (machine-readable).

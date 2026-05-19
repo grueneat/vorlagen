@@ -1,4 +1,4 @@
-template: 26-03-flyer-a6-querformat-quadrat-in-bild
+template: flyer-a6-querformat-quadrat-im-bild
 _schema_version: 1
 _doc: Squiggle re-anchoring map. Each entry binds a yellow squiggle Polygon (anname)
   to the word it underlines in baseline.pdf. tools/playbooks/squiggle_realign.py consumes

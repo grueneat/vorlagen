@@ -50,10 +50,14 @@ brand_overrides:
     the sibling 26-03 flyer templates. Resolution path: per-template tune pass to
     reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-flyer-a6-hochformat-portrait
+id: flyer-a6-hochformat-portraet
+description: 'A6-Flyer im Hochformat mit großem Porträtfoto auf dem Cover. Für die Vorstellung von Kandidat:innen.'
+variant_label: 'Hochformat · Porträt-Cover'
+category_label: 'Flyer'
+category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Portrait Ordner/26-03-Flyer
   A6 Hochformat Portrait.idml
-previews_for_sla: 2eb3b95571c3d1b5860bdaba7af66fd7461ad052a58c3baeda4fd5cb140d7d8c
-title: 26-03-flyer-a6-hochformat-portrait
+previews_for_sla: 38d759ac840b4cad9f7b84d5d33d741e3aa64977901e099d05b0c54f12bfe6ca
+title: 'Flyer A6 Hochformat – Porträt-Cover'
 version: 0.1.0
-build_py_sha256: ffc6823122cdb43c8ce2a19511ab8e04252e98d4b22d419aaaad18c6c58bcd53
+build_py_sha256: d99649e487413617017ffd8a3d12e85c55d85f8c5ac31dc12c48e1406cce3844

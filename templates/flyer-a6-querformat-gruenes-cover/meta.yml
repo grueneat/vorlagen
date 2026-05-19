@@ -47,10 +47,14 @@ brand_overrides:
     the sibling 26-03 flyer templates. Resolution path: per-template tune pass to
     reconcile leading against the brand convention (deferred).'
 format: A4
-id: 26-03-flyer-a6-gruenes-cover
+id: flyer-a6-querformat-gruenes-cover
+description: 'A6-Flyer im Querformat mit durchgehend grünem Marken-Cover. Für textbetonte Botschaften.'
+variant_label: 'Querformat · Grünes Cover'
+category_label: 'Flyer'
+category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat gruenes Cover Ordner/26-03-Flyer
   A6 gruenes Cover.idml
-previews_for_sla: d3954aabfd6a258b53cc70221206e1ce949f48a7b58b0c3e29c73689ae430177
-title: 26-03-flyer-a6-gruenes-cover
+previews_for_sla: 923c934a8fbd9786b5389d2acf462a7402519a4069d180d8e143ef81d6c086ff
+title: 'Flyer A6 Querformat – Grünes Cover'
 version: 0.1.0
-build_py_sha256: 2abc21e3f27f99752f5bacec28c80d68111ae8f6ffa4f4f0f6905d008d389702
+build_py_sha256: 226a01327654a224bee540231a41ce35c20fc3e825e8b5ef97201062120e176b

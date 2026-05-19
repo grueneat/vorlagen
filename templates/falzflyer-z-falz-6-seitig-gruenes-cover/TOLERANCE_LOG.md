@@ -1,4 +1,4 @@
-# Tolerance Log — 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover
+# Tolerance Log — falzflyer-z-falz-6-seitig-gruenes-cover
 
 Documents every entry in meta.yml::brand_overrides, non_ci_styles,
 non_ci_colors, non_ci_layers and every TOLERANCES.yml row, with the

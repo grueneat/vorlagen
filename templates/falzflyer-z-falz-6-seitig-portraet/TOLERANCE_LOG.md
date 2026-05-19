@@ -1,4 +1,4 @@
-# Tolerance Log — 26-03-leporello-z-falz-99x210-6-seitig-portrait
+# Tolerance Log — falzflyer-z-falz-6-seitig-portraet
 
 Companion log for `TOLERANCES.yml` and `meta.yml::brand_overrides`.
 The protocol in `.claude/skills/idml-tune/tolerance_protocol.md`

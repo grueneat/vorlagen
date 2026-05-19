@@ -1,4 +1,4 @@
-"""26-03-flyer-a6-gruenes-cover — DSL build entry point.
+"""flyer-a6-querformat-gruenes-cover — DSL build entry point.
 
 Auto-generated from 26-03-Flyer A6 gruenes Cover.idml by tools/idml_to_dsl.py.
 Hand-edit thereafter; this file is the source of truth.
@@ -78,8 +78,8 @@ def build_template() -> Document:
     """
     doc = Document(
         brand=Brand.gruene_noe(),
-        title='26-03-flyer-a6-gruenes-cover',
-        template_id='26-03-flyer-a6-gruenes-cover',
+        title='flyer-a6-querformat-gruenes-cover',
+        template_id='flyer-a6-querformat-gruenes-cover',
         author="Die Grünen Niederösterreich",
         facing_pages=False,
         layers=[
@@ -602,7 +602,7 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
         h_mm=42.2915,
         anname='u906',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-gruenes-cover/crops/green-pine-trees-covered-with-fog-u906.png',
+        image='../../shared/assets/flyer-a6-querformat-gruenes-cover/crops/green-pine-trees-covered-with-fog-u906.png',
     ))
     page4.add(Polygon(
         x_mm=160,
@@ -665,7 +665,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         h_mm=97.9795,
         anname='ube9',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-gruenes-cover/crops/2026-03-leonore-fuer-flyer-ube9.png',
+        image='../../shared/assets/flyer-a6-querformat-gruenes-cover/crops/2026-03-leonore-fuer-flyer-ube9.png',
     ))
     # h_mm widened 22.0927mm→37.9236mm: Scribus clips lines when frame_h < 3 explicit lines × line height (leading=20.48pt; IDML overflows silently)
     page5.add(TextFrame(

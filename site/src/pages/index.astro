@@ -22,7 +22,7 @@ for (const t of templates) {
   groups.get(id)!.items.push(t);
 }
 
-const PRIMARY_ORDER = ['falzflyer', 'plakat', 'postkarte', 'zeitung', 'infostand', 'tueranhaenger'];
+const PRIMARY_ORDER = ['flyer', 'falzflyer', 'plakat', 'postkarte', 'zeitung', 'tischschild', 'tueranhaenger'];
 const orderedCategories = [
   ...PRIMARY_ORDER.filter(c => groups.has(c)),
   ...[...groups.keys()].filter(c => !PRIMARY_ORDER.includes(c)).sort(),

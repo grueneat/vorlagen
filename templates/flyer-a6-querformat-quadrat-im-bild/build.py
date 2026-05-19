@@ -1,4 +1,4 @@
-"""26-03-flyer-a6-querformat-quadrat-in-bild — DSL build entry point.
+"""flyer-a6-querformat-quadrat-im-bild — DSL build entry point.
 
 Auto-generated from 26-03-Flyer A6 Querformat Quadrat in Bild.idml by tools/idml_to_dsl.py.
 Hand-edit thereafter; this file is the source of truth.
@@ -78,8 +78,8 @@ def build_template() -> Document:
     """
     doc = Document(
         brand=Brand.gruene_noe(),
-        title='26-03-flyer-a6-querformat-quadrat-in-bild',
-        template_id='26-03-flyer-a6-querformat-quadrat-in-bild',
+        title='flyer-a6-querformat-quadrat-im-bild',
+        template_id='flyer-a6-querformat-quadrat-im-bild',
         author="Die Grünen Niederösterreich",
         facing_pages=False,
         layers=[
@@ -222,7 +222,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=111,
         anname='u9be',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u9be.png',
+        image='../../shared/assets/flyer-a6-querformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u9be.png',
     ))
     page0.add(Polygon(
         x_mm=42.5,
@@ -565,7 +565,7 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
         h_mm=42.2915,
         anname='u906',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u906.png',
+        image='../../shared/assets/flyer-a6-querformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u906.png',
     ))
     page4.add(Polygon(
         x_mm=160,
@@ -617,7 +617,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         h_mm=111,
         anname='ua88',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/crops/leonore-sitzend-kopie-ua88.png',
+        image='../../shared/assets/flyer-a6-querformat-quadrat-im-bild/crops/leonore-sitzend-kopie-ua88.png',
     ))
     # noinject: schwarzer-verlauf-radial.png is a fixed decorative dark-vignette
     # overlay (radial gradient darkening the photo so the white citation text
@@ -631,7 +631,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         anname='ua8f',
         layer=0,
         fill_opacity=0.9,
-        image='../../shared/assets/26-03-flyer-a6-querformat-quadrat-in-bild/schwarzer-verlauf-radial.png',
+        image='../../shared/assets/flyer-a6-querformat-quadrat-im-bild/schwarzer-verlauf-radial.png',
         local_scale=(0.154305, 0.154305),
         scale_type=1,
     ))

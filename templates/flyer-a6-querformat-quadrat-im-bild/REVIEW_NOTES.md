@@ -1,4 +1,4 @@
-# REVIEW_NOTES — 26-03-flyer-a6-querformat-quadrat-in-bild
+# REVIEW_NOTES — flyer-a6-querformat-quadrat-im-bild
 
 Human-review summary for the overnight IDML-import batch (template 6 of 9).
 

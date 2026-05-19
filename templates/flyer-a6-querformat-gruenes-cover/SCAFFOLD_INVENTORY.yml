@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-flyer-a6-gruenes-cover
+template: flyer-a6-querformat-gruenes-cover
 text_runs:
   total_idml: 56
   by_paragraph_style:
@@ -1033,7 +1033,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-gruenes-cover/crops/green-pine-trees-covered-with-fog-u906.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-gruenes-cover/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -1051,7 +1051,7 @@ frames:
     - -42.511
     - 82.851
     - 98.011
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-gruenes-cover/crops/2026-03-leonore-fuer-flyer-ube9.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-gruenes-cover/crops/2026-03-leonore-fuer-flyer-ube9.png
     build_py_position_mm:
     - 3.7863
     - 9.9892

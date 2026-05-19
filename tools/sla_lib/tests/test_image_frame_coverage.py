@@ -93,7 +93,7 @@ class ImageFrameCoverageTests(unittest.TestCase):
         )
 
     def test_infostand_tent_card_a5_quer(self):
-        self._check("infostand-tent-card-a5-quer")
+        self._check("tischschild-a5-quer")
 
     def test_plakat_a1_hochformat(self):
         self._check("plakat-a1-hochformat")
@@ -102,7 +102,7 @@ class ImageFrameCoverageTests(unittest.TestCase):
         self._check("postkarte-a6-kampagne")
 
     def test_zeitung_a4_grun(self):
-        self._check("zeitung-a4-grun")
+        self._check("zeitung-a4")
 
 
 if __name__ == "__main__":  # pragma: no cover

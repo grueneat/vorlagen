@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-flyer-a6-querformat-portrait
+template: flyer-a6-querformat-portraet
 text_runs:
   total_idml: 45
   by_paragraph_style:
@@ -888,7 +888,7 @@ frames:
     - -42.511
     - 82.851
     - 98.011
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/crops/2026-03-leonore-fuer-flyer-u9cc.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-portraet/crops/2026-03-leonore-fuer-flyer-u9cc.png
     build_py_position_mm:
     - 76.3872
     - 9.9892
@@ -924,7 +924,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/crops/green-pine-trees-covered-with-fog-u906.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-portraet/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 148.0
     - -3.0
@@ -942,7 +942,7 @@ frames:
     - 305.5
     - 111.0
     - 154.0
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-querformat-portrait/crops/plakat-dunkel-fuer-flyer-u978.png
+    build_py_image_ref: ../../shared/assets/flyer-a6-querformat-portraet/crops/plakat-dunkel-fuer-flyer-u978.png
     build_py_position_mm:
     - -3.0
     - 108.0

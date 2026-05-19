@@ -1,4 +1,4 @@
-# Review Notes — 26-03-flyer-a6-hochformat-portrait
+# Review Notes — flyer-a6-hochformat-portraet
 
 ## What this template is
 

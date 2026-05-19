@@ -1,4 +1,4 @@
-"""26-03-flyer-a6-hochformat-quadrat-in-bild — DSL build entry point.
+"""flyer-a6-hochformat-quadrat-im-bild — DSL build entry point.
 
 Auto-generated from 26-03-Flyer A6 Hochformat Quadrat in Bild.idml by tools/idml_to_dsl.py.
 Hand-edit thereafter; this file is the source of truth.
@@ -78,8 +78,8 @@ def build_template() -> Document:
     """
     doc = Document(
         brand=Brand.gruene_noe(),
-        title='26-03-flyer-a6-hochformat-quadrat-in-bild',
-        template_id='26-03-flyer-a6-hochformat-quadrat-in-bild',
+        title='flyer-a6-hochformat-quadrat-im-bild',
+        template_id='flyer-a6-hochformat-quadrat-im-bild',
         author="Die Grünen Niederösterreich",
         facing_pages=False,
         layers=[
@@ -251,7 +251,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         h_mm=154,
         anname='u132c',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u132c.png',
+        image='../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u132c.png',
     ))
     page0.add(Polygon(
         x_mm=21,
@@ -671,7 +671,7 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
         h_mm=62.0333,
         anname='u1260',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/crops/green-pine-trees-covered-with-fog-u1260.png',
+        image='../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/green-pine-trees-covered-with-fog-u1260.png',
     ))
     page4.add(PolyLine(
         x_mm=23.8023,
@@ -737,7 +737,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         h_mm=154,
         anname='u137f',
         layer=0,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/crops/leonore-sitzend-kopie-u137f.png',
+        image='../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/crops/leonore-sitzend-kopie-u137f.png',
     ))
     # noinject: schwarzer-verlauf-radial.psd is a fixed decorative dark-vignette
     # overlay (radial gradient darkening the lower half of Leonore's photo so the
@@ -751,7 +751,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         anname='u1386',
         layer=0,
         fill_opacity=0.9,
-        image='../../shared/assets/26-03-flyer-a6-hochformat-quadrat-in-bild/schwarzer-verlauf-radial.png',
+        image='../../shared/assets/flyer-a6-hochformat-quadrat-im-bild/schwarzer-verlauf-radial.png',
         local_scale=(0.126873, 0.126873),
         scale_type=1,
     ))

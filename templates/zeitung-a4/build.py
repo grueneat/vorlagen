@@ -27,7 +27,7 @@ def build_template():
     doc = Document(
         brand=Brand.gruene_noe(),
         title='',
-        template_id='zeitung-a4-grun',
+        template_id='zeitung-a4',
         author='',
         facing_pages=True,
         column_gap_default_pt=12,

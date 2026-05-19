@@ -57,7 +57,7 @@ class SlaDiffStrictTests(unittest.TestCase):
         # original InDesign SLA, which carries full-bleed / cross-page
         # spread images — so brand:inside_page is legitimately overridden
         # again (the rule cannot model an intentional newspaper spread).
-        ids = load_brand_overrides("zeitung-a4-grun")
+        ids = load_brand_overrides("zeitung-a4")
         self.assertIn("brand:line_spacing_0.9", ids)
         self.assertIn("brand:inside_page", ids)
 

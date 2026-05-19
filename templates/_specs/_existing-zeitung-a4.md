@@ -1,11 +1,11 @@
 # Retro-Spec: Grüne Zeitung A4
 
-> **Hinweis:** Retro-Spec für `templates/zeitung-a4-grun/` — eine 14-seitige
+> **Hinweis:** Retro-Spec für `templates/zeitung-a4/` — eine 14-seitige
 > Master-Page-Komposition, das komplexeste der drei bestehenden Templates. Stresstet das
 > Spec-Format gegen Multi-Page + Multi-Master + linked-frame text-flow.
 
 ```yaml
-id: zeitung-a4-grun
+id: zeitung-a4
 title: Grüne Zeitung A4
 format: A4 hochformat 14-seitig
 trim_mm: [210, 297]
@@ -185,7 +185,7 @@ slots:
 > Detail; statt dessen nutzt es `masters:` und `example_pages:`. Dies ist ein
 > bewusster Verzicht: bei 14 Seiten × 30 Slots wäre eine flache Slot-Tabelle nicht
 > nützlich. Die Retro-Spec listet **Slot-Klassen** statt -Instanzen. Daher ist
-> `tools/spec_check.py` für zeitung-a4-grun **Drift-Check by Klasse** (Style-Existenz),
+> `tools/spec_check.py` für zeitung-a4 **Drift-Check by Klasse** (Style-Existenz),
 > nicht pro-Frame Pixel-Match.
 
 ## Brand-Hierarchy Observations (Baseline)
@@ -241,7 +241,7 @@ Diese Retro-Spec hat folgende Punkte als Schema-Lücken aufgedeckt:
 2. **Multi-Page-Templates mit identischen Layouts** (z.B. 5× linked-articles) brauchen
    keine 5 ASCII-Skizzen — eine repräsentative + Hinweis. Ist im SCHEMA bereits implizit
    (eine Skizze pro „sichtbarer Seite" — Doppelseiten-Wiederholung deklariert).
-3. **Linked-text-frame-Stories** (84 Chains in zeitung-a4-grun) sind im DSL ein
+3. **Linked-text-frame-Stories** (84 Chains in zeitung-a4) sind im DSL ein
    Block-Pattern (`ColumnTextStory`), nicht ein einzelner Slot. Sollten in der Slot-Tabelle
    als `Block:ColumnTextStory` markiert werden — heute ist das nur sporadisch dokumentiert.
    Future Schema-Refinement.

@@ -234,7 +234,7 @@ class ZeitungRoundTrip(unittest.TestCase):
     unmodified original.
     """
 
-    TEMPLATE_DIR = ROOT / "templates" / "zeitung-a4-grun"
+    TEMPLATE_DIR = ROOT / "templates" / "zeitung-a4"
     ORIGINAL = ROOT / "gruene-zeitung-vorlage-original.sla"
 
     # Issue #16: criticals + drift warnings on these OwnPages are intentional
@@ -363,7 +363,7 @@ class ZeitungConverterFreshRun(unittest.TestCase):
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
             mod.convert(self.ORIGINAL, tmp / "build.py",
-                         "zeitung-a4-grun", tmp / "assets")
+                         "zeitung-a4", tmp / "assets")
             sla = _run_build(tmp / "build.py")
             report = _diff_clean(self.ORIGINAL, sla)
             self.assertEqual(report.summary[sla_diff.SEVERITY_CRITICAL], 0,

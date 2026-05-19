@@ -1,17 +1,13 @@
 id: plakat-a1-hochformat
 version: 0.1.0
 build_py_sha256: 898d30245c5d0385aa9193ca228d45fe92a3ba57430d72635770e971d56f4a8e
-title: Event-Plakat A1
+title: 'Event-Plakat A1'
 type: single
 audience:
 - bezirksgruppe
 - landesgruppe
 - ortsgruppe
-description: 'Veranstaltungs-Plakat für Events, Mahnwachen, Stammtische, Kundgebungen.
-  A1 Hochformat (594×841 mm). Für andere Druckgrößen direkt im Druckdialog skalieren
-  — die Vektor-Inhalte bleiben dabei verlustfrei.
-
-  '
+description: 'A1-Veranstaltungsplakat im Hochformat für Termine, Aktionen und Kundgebungen.'
 build:
   script: build.py
   output: template.sla
@@ -21,7 +17,7 @@ original_sla: ../../plakat-a1-hochformat-original.sla
 # auto-leading is looser and clips the 2nd line ("18:00 - 21:00",
 # "Theaterplatz 9, 2500 Baden"). Fixing the render-side text loss is worth
 # the controlled divergence from the original geometry — same rationale as
-# zeitung-a4-grun's documented sla_diff opt-out.
+# zeitung-a4's documented sla_diff opt-out.
 sla_diff_strict: false
 previews_for_sla: 3acb6f5b13d6ff6731d23c91b2dedc5cfd83380ae4fbc759e407581526eb668f
 brand_overrides:
@@ -86,6 +82,6 @@ slots:
 preflight:
   bleed_mm: 3
   cmyk_only: true
-category: plakat
-category_label: Plakat
-variant_label: Event A1 hoch
+category: 'plakat'
+category_label: 'Plakat'
+variant_label: 'A1 Hochformat'

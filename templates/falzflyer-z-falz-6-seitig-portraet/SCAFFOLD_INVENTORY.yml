@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-leporello-z-falz-99x210-6-seitig-portrait
+template: falzflyer-z-falz-6-seitig-portraet
 text_runs:
   total_idml: 55
   by_paragraph_style:
@@ -1131,7 +1131,7 @@ frames:
     - -107.0
     - 101.176
     - 214.0
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/crops/leonore-stehend-lang-retuschiert-u139.png
+    build_py_image_ref: ../../shared/assets/falzflyer-z-falz-6-seitig-portraet/crops/leonore-stehend-lang-retuschiert-u139.png
     build_py_position_mm:
     - 197.8236
     - -2.0
@@ -1167,7 +1167,7 @@ frames:
     - -3.75
     - 110.802
     - 108.925
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/crops/schwarzer-verlauf-radial-u14a.png
+    build_py_image_ref: ../../shared/assets/falzflyer-z-falz-6-seitig-portraet/crops/schwarzer-verlauf-radial-u14a.png
     build_py_position_mm:
     - 188.6107
     - 114.3366
@@ -1185,7 +1185,7 @@ frames:
     - -105.0
     - 99.0
     - 41.692
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/crops/green-pine-trees-covered-with-fog-u2cd.png
+    build_py_image_ref: ../../shared/assets/falzflyer-z-falz-6-seitig-portraet/crops/green-pine-trees-covered-with-fog-u2cd.png
     build_py_position_mm:
     - 99.1764
     - 0.0

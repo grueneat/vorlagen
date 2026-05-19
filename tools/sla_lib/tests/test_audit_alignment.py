@@ -121,7 +121,7 @@ class CliTests(unittest.TestCase):
             # Disable image-extent check: this template carries known
             # pre-#24 INJECT_MAP-drift findings until T05 lands.
             rc = main([
-                "zeitung-a4-grun", "--md", tmp, "--no-check-image-extent",
+                "zeitung-a4", "--md", tmp, "--no-check-image-extent",
             ])
             self.assertEqual(rc, 0)
             content = Path(tmp).read_text(encoding="utf-8")
@@ -213,7 +213,7 @@ class ImageExtentAuditTests(unittest.TestCase):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             rc = main([
-                "zeitung-a4-grun", "--no-check-image-extent", "--json",
+                "zeitung-a4", "--no-check-image-extent", "--json",
             ])
         # rc may be 0 or 1 depending on existing #23 visual_adjacency_drift
         # suspicious_pairs (out of scope for this test); we only care that
@@ -230,7 +230,7 @@ class ImageExtentAuditTests(unittest.TestCase):
         import io, contextlib, json as _json
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            main(["zeitung-a4-grun", "--json"])
+            main(["zeitung-a4", "--json"])
         d = _json.loads(buf.getvalue())
         for page in d.get("pages", []):
             self.assertIn("image_extent_warnings", page)

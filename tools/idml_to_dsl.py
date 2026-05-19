@@ -160,7 +160,7 @@ _FRAME_HEIGHT_SAFETY_PT = 4.0  # absolute cushion for lineGap + Scribus rounding
 # RECALIBRATED (issue: mixed-font headline split mis-calibration). The prior
 # 0.345 value was calibrated against pdfplumber text-matrix coordinates, NOT
 # the actual rendered ink. Measured against rendered ink-tops it over-shifted
-# the Vollkorn line UPWARD: on 26-03-flyer-a6-hochformat-portrait the page-1
+# the Vollkorn line UPWARD: on flyer-a6-hochformat-portraet the page-1
 # headline "dreizeilige" (38pt) rendered 7.68pt too high and the page-2
 # headline "Headline." (30pt) 5.60pt too high vs baseline.pdf. The Gotham
 # lines were pixel-exact in both renders, isolating the whole error to the

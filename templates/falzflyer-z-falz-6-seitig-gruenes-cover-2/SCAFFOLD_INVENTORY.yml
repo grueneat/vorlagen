@@ -1,5 +1,5 @@
 schema_version: 1
-template: 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2
+template: falzflyer-z-falz-6-seitig-gruenes-cover-2
 text_runs:
   total_idml: 55
   by_paragraph_style:
@@ -1149,7 +1149,7 @@ frames:
     - -105.0
     - 99.0
     - 41.692
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2/crops/green-pine-trees-covered-with-fog-u2cd.png
+    build_py_image_ref: ../../shared/assets/falzflyer-z-falz-6-seitig-gruenes-cover-2/crops/green-pine-trees-covered-with-fog-u2cd.png
     build_py_position_mm:
     - 99.1764
     - 0.0

@@ -44,7 +44,7 @@ Master per Page-Panel auf Seiten anwenden: Rechtsklick auf Seite → "Musterseit
 `template.sla` wird aus `build.py` über die DSL erzeugt:
 
 ```bash
-python3 templates/zeitung-a4-grun/build.py
+python3 templates/zeitung-a4/build.py
 ```
 
 Wer das Layout strukturell ändern will (z.B. neue Beispielseite, Master-Page-Anpassung) editiert `build.py` und re-generiert. Wer nur Inhalte ändert oder eine konkrete Ausgabe baut, arbeitet direkt in Scribus an der `template.sla`.
