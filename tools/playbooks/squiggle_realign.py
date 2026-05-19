@@ -100,22 +100,38 @@ def _find_preview_word(
     frame_box_pt: tuple[float, float, float, float],
     word: str,
     word_index: int,
+    squiggle_box_pt: tuple[float, float, float, float] | None = None,
 ) -> dict | None:
     """Locate the anchor word in preview.pdf.
 
-    Primary key: the reading-order ordinal within the target frame (stable
-    across a different line-wrap). When the ordinal's text does not match
-    (e.g. tokenisation differs), fall back to the nearest same-text word.
+    A reading-order ordinal is NOT a reliable key when the target frame
+    holds more than one column: pdfplumber interleaves the columns line by
+    line, so a tighter wrap in one column shifts every later ordinal. The
+    reliable key is geometry — the squiggle is placed next to the word it
+    decorates, so the correct preview word is the same-text word nearest
+    the squiggle's own box.
+
+    Resolution order:
+      1. If ``squiggle_box_pt`` is given, pick the same-text word whose box
+         origin is closest to the squiggle box origin.
+      2. Otherwise fall back to the reading-order ordinal, then to the
+         same-text word with the closest ordinal.
     """
     frame_words = _words_in_box(page_words, frame_box_pt)
     if not frame_words:
         return None
+    same = [(i, w) for i, w in enumerate(frame_words) if w["text"] == word]
+    if same and squiggle_box_pt is not None:
+        sx0, st = squiggle_box_pt[0], squiggle_box_pt[1]
+        _, w = min(
+            same,
+            key=lambda iw: (iw[1]["x0"] - sx0) ** 2 + (iw[1]["top"] - st) ** 2,
+        )
+        return w
     if 0 <= word_index < len(frame_words):
         cand = frame_words[word_index]
         if cand["text"] == word:
             return cand
-    # Fall back: same text, ordinal closest to the recorded index.
-    same = [(i, w) for i, w in enumerate(frame_words) if w["text"] == word]
     if not same:
         return None
     i, w = min(same, key=lambda iw: abs(iw[0] - word_index))
@@ -201,8 +217,19 @@ def apply(slug: str, repo: Path, dry_run: bool = False) -> tuple[int, list[str]]
             )
             if page_idx not in page_words_cache:
                 page_words_cache[page_idx] = pdf.pages[page_idx].extract_words()
+            # Where the squiggle currently is in build.py — read first so it
+            # can disambiguate a repeated anchor word by geometric proximity.
+            m = _polyline_block(build_text, anname)
+            if not m:
+                log.append(f"  {anname}: PolyLine not found in build.py — skipped")
+                continue
+            block = m.group(1)
+            cur_x = float(re.search(r"x_mm=(-?\d+(?:\.\d+)?)", block).group(1))
+            cur_y = float(re.search(r"y_mm=(-?\d+(?:\.\d+)?)", block).group(1))
+            sq_box_pt = (cur_x * PT_PER_MM, cur_y * PT_PER_MM)
             pw = _find_preview_word(
                 page_words_cache[page_idx], fb_pt, a["word"], a["word_index"],
+                squiggle_box_pt=sq_box_pt,
             )
             if pw is None:
                 log.append(
@@ -214,14 +241,6 @@ def apply(slug: str, repo: Path, dry_run: bool = False) -> tuple[int, list[str]]
             off = a["offset_from_word_mm"]
             target_x = pw["x0"] / PT_PER_MM + off["dx_mm"]
             target_y = pw["top"] / PT_PER_MM + off["dy_mm"]
-            # Where the squiggle currently is in build.py.
-            m = _polyline_block(build_text, anname)
-            if not m:
-                log.append(f"  {anname}: PolyLine not found in build.py — skipped")
-                continue
-            block = m.group(1)
-            cur_x = float(re.search(r"x_mm=(-?\d+(?:\.\d+)?)", block).group(1))
-            cur_y = float(re.search(r"y_mm=(-?\d+(?:\.\d+)?)", block).group(1))
             dx = target_x - cur_x
             dy = target_y - cur_y
             if abs(dx) < MIN_SHIFT_MM and abs(dy) < MIN_SHIFT_MM:
