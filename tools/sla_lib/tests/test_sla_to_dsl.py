@@ -32,20 +32,57 @@ def _diff_clean(left: Path, right: Path) -> sla_diff.DiffReport:
 
 
 def _run_build(build_py: Path) -> Path:
-    """Run ``python build.py`` with PYTHONPATH set to the repo's tools/.
-    Returns the path of the produced template.sla."""
+    """Run ``python build.py`` in an isolated temp copy of its directory.
+
+    A committed ``templates/<id>/build.py`` ends with
+    ``build_template().save(HERE / "template.sla")`` where ``HERE`` is the
+    script's own directory. Running it in place would overwrite the
+    *committed* ``template.sla`` (and ``template-preview.sla``) in the
+    working tree — a side effect that silently mutates tracked files and
+    breaks downstream gates such as ``bin/check-stale-previews`` (this is
+    the exact "passes locally / fails in CI" failure mode that motivated
+    this helper's isolation).
+
+    To stay side-effect free we copy the build script's directory into a
+    fresh tempdir and run the copy there. ``HERE`` then resolves to the
+    temp copy, so every ``HERE / ...`` write lands in the tempdir and the
+    committed working tree is never touched. ``PYTHONPATH`` is pinned to
+    the repo's ``tools/`` so ``sla_lib`` imports still resolve regardless
+    of where the copy lives.
+
+    Returns the path of the produced template.sla (inside the tempdir).
+    """
+    src_dir = build_py.parent
+    work = Path(tempfile.mkdtemp(prefix="run_build_"))
+    # Copy the build script and any sibling asset files it may read via
+    # ``HERE / ...`` (e.g. a samples/ directory). Skip heavyweight,
+    # build-irrelevant artifacts (rendered PNGs, caches, the committed
+    # SLA/PDF outputs) to keep the copy fast.
+    _SKIP_NAMES = {"__pycache__"}
+    _SKIP_SUFFIXES = {".png", ".pdf", ".sla"}
+    for entry in src_dir.iterdir():
+        if entry.name in _SKIP_NAMES:
+            continue
+        if entry.is_file() and entry.suffix.lower() in _SKIP_SUFFIXES:
+            continue
+        dest = work / entry.name
+        if entry.is_dir():
+            shutil.copytree(entry, dest)
+        else:
+            shutil.copy2(entry, dest)
+    work_build_py = work / build_py.name
     env = {
         **{k: v for k, v in __import__("os").environ.items() if not k.startswith("PYTHONPATH")},
         "PYTHONPATH": str(ROOT / "tools"),
     }
     result = subprocess.run(
-        [sys.executable, str(build_py)],
-        capture_output=True, text=True, env=env, cwd=str(build_py.parent),
+        [sys.executable, str(work_build_py)],
+        capture_output=True, text=True, env=env, cwd=str(work),
     )
     if result.returncode != 0:
         raise RuntimeError(
             f"build.py failed:\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}")
-    return build_py.parent / "template.sla"
+    return work / "template.sla"
 
 
 class PostkarteRoundTrip(unittest.TestCase):
