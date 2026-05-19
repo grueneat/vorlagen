@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat gruenes Cover Ordner/26-03-Flyer
   A6 gruenes Cover.idml
-previews_for_sla: ab8355d522b6991b7de7858a7383cf938ae94475369ec04d4296a7e0b8f3c298
+previews_for_sla: e5c98814234b1772e21bd04b5fba38ef6ecaffa95166256b7904e892466c4949
 title: Flyer A6 Querformat – Grünes Cover
 version: 0.1.0
-build_py_sha256: 7f73fb21acb42a30b111cb6e899934c2fd0ddb58fbf83b31c22c7af238c65742
+build_py_sha256: c9b527047ed76da2c04162322b841090eff0afe0aa5f2c630dd65e10439c9fb6
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/flyer-a6-querformat-gruenes-cover/template.sla
