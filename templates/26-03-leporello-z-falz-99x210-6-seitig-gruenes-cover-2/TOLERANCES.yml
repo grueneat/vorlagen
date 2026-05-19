@@ -1,0 +1,99 @@
+tolerances:
+- id: tol:image-audit-inline-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  reason: '26 image_audit issues: inline vector-path deltas plus region colour drift
+    classified predominantly icc_likely. The IDML emits curly quote marks and decorative
+    ornament glyphs as inline vector paths inside text frames; the converter extracts
+    these as inline images rather than regenerating them as Scribus Polygon items, and
+    Scribus vs pdftocairo flatten the .ai-derived paths differently. icc_likely region
+    colour drift is the ICC-profile rendering difference upstream in Scribus. Neither
+    is converter-fixable at the build.py level. Same gap class as the shipped sibling
+    gruenes-cover (tol:image-audit-vector-path-and-icc-delta).'
+  follow_up_issue: converter-extension; future Stage-1 work (pattern_library inline-TextPath)
+  max_issues: 35
+  severity: structural
+- id: tol:asset-extraction-composite-ai-social-icons
+  audit: asset_extraction
+  classification: human-review
+  reason: '1 composite-AI flag fired for "Social Media Icons weiss.ai" (3 distinct
+    frame offsets reference one .ai). All links resolve on disk (links_missing: []);
+    the scaffold imported it via --allow-composite-ai. Per L-002 composite-AI is a
+    per-template concern. The audit flag is non-actionable for this template; same
+    residual class as the shipped sibling gruenes-cover
+    (tol:composite-ai-social-media-icons-weiss).'
+  follow_up_issue: converter-extension; future Stage-1 work (asset_extraction_audit
+    classifier for split-icon)
+  max_issues: 1
+  severity: cosmetic
+- id: tol:image-frame-visibility-composite-ai-and-white-on-dark
+  audit: image_frame_visibility_audit
+  classification: scribus-engine-bug
+  reason: 'Left-column social-media icon frames render invisible: they reference the
+    composite "Social Media Icons weiss.ai" 4-icon strip and Scribus 1.6.x does not
+    render that small-frame composite-crop RGBA path. The remaining flagged frames
+    are white-on-dark false positives (L-014: the visibility audit measures dark ink
+    and reads ~0% on a white logo over a dark green panel, which IS rendering). The
+    proper fix is the composite-AI split (a Stage-1 converter concern). Same gap class
+    as the shipped sibling gruenes-cover.'
+  follow_up_issue: authoring; re-scaffold with composite_ai_split for the left-column
+    icons + audit polarity fix (L-014)
+  max_issues: 6
+  severity: structural
+- id: tol:cross-renderer-line-wrap-structural
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  reason: 'Scribus 1.6.x wraps paragraph text at different points than InDesign because
+    Gotham Narrow / Vollkorn render a fraction wider per line in Scribus. Frames re-flow
+    by a line, shifting every subsequent word and producing large word-position deltas
+    (>5pt). This is intrinsic to the renderer font-metric difference and is not fixable
+    at the converter or build.py level — a leading override does not move a wrap point.
+    Same class as the shipped sibling gruenes-cover (tol:cross-renderer-line-wrap-structural).'
+  follow_up_issue: engine-bug; no upstream issue yet
+  max_issues: 260
+  severity: structural
+- id: tol:cross-renderer-line-wrap-jitter
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  reason: 'Sub-perceptible (<=5pt) word-position drift from the same Scribus vs InDesign
+    font-metric difference described in tol:cross-renderer-line-wrap-structural. Below
+    the visible-shift threshold; accepted as renderer noise. Same class as the shipped
+    sibling gruenes-cover (tol:cross-renderer-line-wrap-jitter).'
+  follow_up_issue: engine-bug; no upstream issue yet
+  max_issues: 150
+  severity: cosmetic
+- id: tol:line-match-cross-renderer-wrap
+  audit: line_match_audit
+  classification: scribus-engine-bug
+  reason: 'line_match_audit reports body-copy lines mismatched because the cross-renderer
+    line-wrap (tol:cross-renderer-line-wrap-structural) re-flows paragraphs by a line.
+    The audit matches whole rendered lines; a wrap re-flow shifts every line below the
+    wrap point so the line-by-line match fails even though content is identical.
+    text_render_audit verifies content equality independently. Same gap class as the
+    shipped sibling gruenes-cover.'
+  follow_up_issue: engine-bug; aggregate of the cross-renderer wrap rows above
+  max_issues: 105
+  severity: structural
+- id: tol:systematic-text-actionable-wrap
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  reason: 'Frames carry sim-actionable drift attributed by the systematic audit to
+    "line count differs — text wrapped differently", which line_spacing_sim cannot
+    resolve (a leading override does not change the wrap point). Residual accepted as
+    cross-renderer line-wrap. Same gap class as the shipped sibling gruenes-cover
+    (tol:systematic-text-actionable-wrap).'
+  follow_up_issue: engine-bug; no upstream issue yet
+  max_issues: 12
+  severity: cosmetic
+- id: tol:visual-diff-regions-residual
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  reason: 'Hot regions are produced when the heatmap overlays preview against baseline.
+    They co-locate with residuals already documented above (cross-renderer line-wrap
+    text re-flow, inline vector deltas, the composite-AI invisible icon frames). No
+    new converter bug is flagged; visual_diff_regions is the page-level aggregate of
+    the rows above. Same gap class as the shipped sibling gruenes-cover
+    (tol:visual-diff-regions-residual).'
+  follow_up_issue: covered by other tolerances above
+  max_issues: 25
+  severity: structural

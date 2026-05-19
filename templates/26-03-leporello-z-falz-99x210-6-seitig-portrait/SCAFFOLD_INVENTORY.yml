@@ -762,10 +762,10 @@ frames:
     build_py_position_mm:
     - 204.6236
     - 151.759
-    - 71.6562
-    - 81.8444
+    - 83.6562
+    - 24.2006
     sla_pageobject_present: true
-    sla_storytext_runs: 3
+    sla_storytext_runs: 1
     source: idml
   - anname: u186
     idml_self: u186
@@ -776,8 +776,8 @@ frames:
     - 3.097
     build_py_position_mm:
     - 259.1
-    - 145.3924
-    - 21.1112
+    - 148.6594
+    - 20.8838
     - 8.0081
     sla_pageobject_present: true
     sla_storytext_runs: 1
@@ -792,10 +792,10 @@ frames:
     build_py_position_mm:
     - 16.8913
     - 17.4
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u1c7
     idml_self: u1c7
@@ -822,10 +822,10 @@ frames:
     build_py_position_mm:
     - 115.8913
     - 17.4
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u1fd
     idml_self: u1fd
@@ -1067,6 +1067,50 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: u16c_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 204.6236
+    - 161.79
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u16c_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 204.6236
+    - 175.8426
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1b0_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 16.8913
+    - 25.3375
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1e6_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 115.8913
+    - 25.3375
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   - anname: uf7
     idml_self: null
     idml_position_mm: null
@@ -1087,7 +1131,7 @@ frames:
     - -107.0
     - 101.176
     - 214.0
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/leonore-stehend-lang-retuschiert.jpg
+    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/crops/leonore-stehend-lang-retuschiert-u139.png
     build_py_position_mm:
     - 197.8236
     - -2.0
@@ -1105,14 +1149,14 @@ frames:
     - -97.283
     - 37.975
     - 33.256
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/gruene-logo-bund-weiss-cmyk.png
+    build_py_image_ref: null
     build_py_position_mm:
     - 273.24
     - 6.429
     - 17.82
     - 15.6052
     sla_pageobject_present: true
-    sla_pfile_present: true
+    sla_pfile_present: false
     pdf_image_present: true
     source: idml
   - anname: u14a
@@ -1123,12 +1167,12 @@ frames:
     - -3.75
     - 110.802
     - 108.925
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/schwarzer-verlauf-radial.png
+    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/crops/schwarzer-verlauf-radial-u14a.png
     build_py_position_mm:
     - 188.6107
-    - 101.25
+    - 114.3366
     - 110.8017
-    - 108.9249
+    - 95.8383
     sla_pageobject_present: true
     sla_pfile_present: true
     pdf_image_present: true
@@ -1141,7 +1185,7 @@ frames:
     - -105.0
     - 99.0
     - 41.692
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/crops/green-pine-trees-covered-with-fog-u2cd.png
     build_py_position_mm:
     - 99.1764
     - 0.0
@@ -1159,14 +1203,14 @@ frames:
     - -105.187
     - 99.0
     - 210.375
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-portrait/plakat-dunkel-fuer-flyer.png
+    build_py_image_ref: null
     build_py_position_mm:
     - 198.0
-    - -0.1874
+    - 0.0
     - 99.0
-    - 210.3748
+    - 210.0
     sla_pageobject_present: true
-    sla_pfile_present: true
+    sla_pfile_present: false
     pdf_image_present: true
     source: idml
   - anname: u3e7
@@ -1300,10 +1344,10 @@ frames:
     - 20.884
     - 20.884
     build_py_position_mm:
-    - 259.7247
-    - 138.6244
-    - 19.8617
-    - 19.8617
+    - 256.498
+    - 141.8511
+    - 20.8838
+    - 20.8838
     sla_pageobject_present: true
     source: idml
   - anname: u19d
@@ -2119,18 +2163,18 @@ assets:
 - basename: gruene-logo-bund-weiss-cmyk.pdf
   on_disk: true
   classified: external
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u141
   parent_composite: null
   sha256: 152dcdea289ffc33102d5e169894486a61fce3a717cf9d41d7ce13d7d80a660c
   byte_length: 101374
-- basename: leonore-stehend-lang-retuschiert.jpg
+- basename: leonore-stehend-lang-retuschiert.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u139
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 6196cfd14b4de67b91c04642b1c32366a0e095c0625aa377419ecd671bb5306b
-  byte_length: 13248206
+  sha256: 9ac216157d7f9503717e09800478161c802b6f8152dee4e4032605ad70f539e3
+  byte_length: 16100664
 - basename: mail-weiss.png
   on_disk: true
   classified: embedded
@@ -2149,34 +2193,39 @@ assets:
   byte_length: 1773655
 - basename: plakat-dunkel-fuer-flyer.png
   on_disk: true
-  classified: external
+  classified: embedded
   referenced_from_frames:
   - u3a0
   parent_composite: null
-  sha256: 7322fb3409a5d5eb2dc223bface1552a9622bfb47f11cc37c9d145c00290aa1c
-  byte_length: 8558653
+  sha256: fe934fcae32f83c4683b33d2bb1eba5ce0cb2656f076aa0a316d9ff6aa3f7158
+  byte_length: 8514698
 - basename: schwarzer-verlauf-radial.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u14a
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 3224fbcf1253e28f10d05baa220c55e161708f3e5ddc21f334cf7fb5d32e77c0
-  byte_length: 932180
+  sha256: cfc1dea2de639280f7577a9ae37f01a9294754358e69216bc11c1428bfd73d12
+  byte_length: 92212
 - basename: social-media-icons-weiss.png
-  on_disk: false
-  classified: external
-  referenced_from_frames: []
+  on_disk: true
+  classified: embedded
+  referenced_from_frames:
+  - u3e7
+  - u3f0
+  - u3f5
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: 757673ca9ef031a157c66e85ef3efc9c3d024222ec204dc469c87bee4c295aee
+  byte_length: 116981
 - basename: social-media-icons-weiss.pdf
-  on_disk: false
+  on_disk: true
   classified: external
-  referenced_from_frames: []
+  referenced_from_frames:
+  - u3e7
+  - u3f0
+  - u3f5
   parent_composite: null
-  sha256: null
-  byte_length: null
+  sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
+  byte_length: 1774462
 - basename: website-weiss.png
   on_disk: true
   classified: embedded
@@ -2193,29 +2242,64 @@ assets:
   parent_composite: null
   sha256: f01096a280160cf4f76dcab54ed149774eaf50478fc56ab33b6710aaec69fb94
   byte_length: 1772511
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
 - basename: green-pine-trees-covered-with-fog.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: 7bb5faa62ce5b163a8e441e7dccf652ba918e920e6db892cf039e774da0d5194
+  byte_length: 230144
+- basename: leonore-stehend-lang-retuschiert-crop.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: e5986580db0b3ad8e1d958cba002877f44e09559efb09bb6f9ec48473c9ca668
+  byte_length: 1793918
+- basename: leonore-stehend-lang-retuschiert.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: 6196cfd14b4de67b91c04642b1c32366a0e095c0625aa377419ecd671bb5306b
+  byte_length: 13248206
+- basename: leonore-stehend-lang-retuschiert-u139.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u139
+  parent_composite: null
+  sha256: null
+  byte_length: null
+- basename: schwarzer-verlauf-radial-u14a.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u14a
+  parent_composite: null
+  sha256: null
+  byte_length: null
+- basename: green-pine-trees-covered-with-fog-u2cd.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u2cd
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 444
-  preview_pdf_count: 444
-  missing_from_preview: []
-  extra_in_preview: []
-parse_warnings:
-- '/workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-portrait/build.py:776:
-  non-literal kwarg inline_image_data'
-- '/workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-portrait/build.py:777:
-  non-literal kwarg inline_image_ext'
-- '/workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-portrait/build.py:799:
-  non-literal kwarg inline_image_data'
-- '/workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-portrait/build.py:800:
-  non-literal kwarg inline_image_ext'
-- '/workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-portrait/build.py:822:
-  non-literal kwarg inline_image_data'
-- '/workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-portrait/build.py:823:
-  non-literal kwarg inline_image_ext'
+  preview_pdf_count: 445
+  missing_from_preview:
+  - störer
+  extra_in_preview:
+  - er
+  - stör
+parse_warnings: []

@@ -3,105 +3,60 @@ asset_policy:
   - bluesky-weiss.png
   - gruene-logo-bund-weiss-cmyk.png
   - mail-weiss.png
+  - plakat-dunkel-fuer-flyer.png
   - social-media-icons-weiss.png
   - website-weiss.png
   external:
-  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
-    weiss--0.pdf
-  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
-    weiss--1.pdf
-  - 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social Media Icons
-    weiss--2.pdf
   - green-pine-trees-covered-with-fog.jpg
-  - plakat-dunkel-fuer-flyer.png
+  - green-pine-trees-covered-with-fog.png
   - ziesel.jpg
+  - ziesel.png
   shipped: []
 build:
   output: template.sla
   script: build.py
+brand_overrides:
+- id: brand:bleed_3mm
+  reason: 'IDML-imported leporello template (scaffold). The IDML''s InDesign document was
+    authored with bleed=0 and build.py deliberately emits bleed_mm=0 (see the build.py module
+    docstring) so the rendered PDF compares directly against the InDesign baseline.pdf, which
+    itself exports trim-only. The Quickguide requires a 3mm print bleed; the existing IDML
+    asset predates that requirement. Same gap class as the shipped sibling 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover
+    which carries the identical brand_overrides block. Resolution path: extend tools/idml_to_dsl.py
+    to inject the brand-required 3mm bleed at scaffold time (deferred).'
+- id: brand:image_text_overlap
+  reason: 'IDML-imported leporello template (scaffold). The original InDesign layout deliberately
+    overlays text on full-bleed photo backdrops and on decorative brand-color shapes (headline/Zitat
+    frames over green-pine photo backgrounds and over the magenta Stoerer diamond) — the visual
+    result is intentional white-text-on-photo / text-on-color. The brand:image_text_overlap
+    rule cannot distinguish intentional design overlay from accidental clipping. Same gap
+    class as the shipped sibling 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover which
+    carries the identical brand_overrides block. Resolution path: per-frame intent annotation
+    in the rule (deferred to a separate pass).'
+- id: brand:inside_page
+  reason: 'IDML-imported leporello template (scaffold). The IDML spread coordinate system
+    places multi-panel content (6 panels) on a single oversized canvas while the converter
+    declares trim-sized pages; frames belonging to later panels register outside their declared
+    page''s trim box. tools/idml_to_dsl.py preserves the source geometry verbatim per issue
+    #35 P1 (baseline.pdf is the convergence target). Same gap class as the shipped sibling
+    26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover which carries the identical brand_overrides
+    block. Resolution path: emit a true multi-panel spread layout from the converter so every
+    frame registers inside one of the panel pages (deferred).'
+- id: brand:line_spacing_0.9
+  reason: 'IDML-imported leporello template (scaffold). The original InDesign ParagraphStyles
+    (the idml/* family plus the ci/* family) carry leading values that do NOT follow the Quickguide
+    0.9-factor convention (18 styles affected, e.g. ci/default linesp=13 fontsize=12 = 1.08x;
+    ci/headline-ultra linesp=23 fontsize=27 = 0.85x; idml/no-paragraph-style linesp=17.4 fontsize=12
+    = 1.45x). tools/idml_to_dsl.py emits these verbatim from the IDML Resources/Styles.xml;
+    changing them would diverge from the InDesign-authored baseline.pdf which is the convergence
+    target (issue #35 P1). Same gap class as the shipped sibling 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover
+    which carries the identical brand_overrides block. Resolution path: per-template tune
+    pass to reconcile leading against the brand convention (deferred).'
 format: A4
 id: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
-idml_source: ../../originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes
+idml_source: ../../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes Cover.idml
-previews_for_sla: bcba4899b1c9dcb5bf5cdfcaa44076ff2214ab68a0831b269f0ecce258a181fc
+previews_for_sla: 74288ca76871742f5ad960f02c5401ff76e900d2268b3d596ebb4c1d2626be09
 title: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 version: 0.1.0
-build_py_sha256: a7f1796e4989691cf2fb0b7d2e8eb9317f3fa00f7cff4cd93a8dc9131130d371
-
-category: falzflyer
-category_label: Falzflyer
-variant_label: Z-Falz 6-seitig (zweigeteiltes Cover)
-
-# brand_overrides — IDML-import gap parity with sibling leporello falz templates
-# (portrait, gruenes-cover-2). Every entry below
-# documents an audit-engine gap the converter cannot close per the
-# current pipeline; each is mirrored by a TOLERANCE_LOG.md row.
-# See TOLERANCE_LOG.md and TOLERANCES.yml for the full context.
-brand_overrides:
-  - id: brand:line_spacing_0.9
-    reason: >-
-      IDML-imported template. The original InDesign ParagraphStyles
-      (idml/headline-in-gruenem-kasten, idml/absatzformat-1,
-      idml/fliesstext-auf-gruenem-hintergrund,
-      idml/aufzaehlungen-auf-gruenem-hintergrund, idml/normalparagraphstyle,
-      idml/no-paragraph-style, plus the ci/* family) carry leading
-      values that do NOT follow the Quickguide 0.9-factor convention
-      (e.g. headline-in-gruenem-kasten linesp=12 fontsize=12 = 1.0x;
-      fliesstext-auf-gruenem-hintergrund linesp=16 fontsize=11 = 1.45x;
-      absatzformat-1 linesp=14.3 fontsize=11 = 1.3x). The converter
-      emits these verbatim from the IDML Resources/Styles.xml; changing
-      them would diverge from the InDesign-authored baseline.pdf which
-      is the convergence target (issue 35 P1). Same gap class as the
-      sibling leporello falz templates.
-  - id: brand:font_family
-    reason: >-
-      IDML-imported template. 11 text frames inherit FONT="Times Roman"
-      via the idml/no-paragraph-style and idml/normalparagraphstyle
-      defaults that the IDML preserves untouched (the InDesign source
-      never overrides them for these minor labels). The converter
-      cannot remap these to brand fonts without changing the
-      baseline.pdf convergence target. Resolution path: extend
-      tools/idml_to_dsl.py font resolution; tracked alongside issue 37
-      as a converter completeness gap. Same gap class as the sibling
-      leporello falz templates.
-  - id: brand:bleed_3mm
-    reason: >-
-      IDML-imported template. The IDML's InDesign document was authored
-      with bleed=0; converter respects the source page geometry. The
-      baseline.pdf (convergence target) also has bleed=0. Adjusting
-      bleed would force a deviation from the InDesign-authored output.
-      Brand-team review pending — the canonical Quickguide requires
-      3mm but the existing IDML asset predates that requirement. Same
-      gap class as the sibling leporello falz templates.
-  - id: brand:inside_page
-    reason: >-
-      IDML-imported template. Multiple frames in the original IDML
-      extend slightly outside the trim box (u1ae background polygon
-      with 1.82mm overshoot; u514, u3a2, and several decorative
-      shapes with similar overshoot). These were intentional InDesign-
-      side bleed/extension marks in the source asset. The converter
-      preserves the source geometry verbatim per issue 35 P1
-      (baseline.pdf is the convergence target). Same gap class as the
-      sibling leporello falz templates.
-  - id: brand:image_text_overlap
-    reason: >-
-      IDML-imported template. The IDML places impressum text and other
-      white-on-green text overlapping the green page-background
-      polygon by design — the visual result is white-text-on-green,
-      visually correct against baseline.pdf. The brand:image_text_overlap
-      rule cannot distinguish "text on a colored polygon backdrop"
-      (intentional) from "text on a raster image" (overlap concern).
-      Same gap class as the sibling leporello falz templates.
-
-# ci_overrides — non-CI styles / colors / layers the IDML preserves
-# verbatim from the InDesign source. Mirrors the leporello falz template pattern.
-ci_overrides:
-  non_ci_styles:
-    - "idml/absatzformat-1"
-    - "idml/aufzaehlungen-auf-gruenem-hintergrund"
-    - "idml/fliesstext-auf-gruenem-hintergrund"
-    - "idml/headline-in-gruenem-kasten"
-    - "idml/no-paragraph-style"
-    - "idml/normalparagraphstyle"
-  non_ci_colors: []
-  non_ci_layers: []
+build_py_sha256: 3a46053c1dbaaebd37e1acece671763e8e0a346b5881ea81b8d85df1635c5537

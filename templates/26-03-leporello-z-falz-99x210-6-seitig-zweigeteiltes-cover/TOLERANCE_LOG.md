@@ -177,3 +177,44 @@ decorations, sub-perceptible text-position drifts). No new converter
 bugs flagged.
 
 Follow-up: covered by other tolerances above.
+
+---
+
+## 2026-05-19 — re-scaffold for the 3-line headline + green-texture-embed converter fix set
+
+This template was re-scaffolded (`bin/idml-import --scaffold-only
+--reimport`) so build.py is regenerated with the converter's
+single-line-per-headline-line emission. Two defects from the
+pre-fix scaffold are closed:
+
+- **3-line headline.** The cover headline "Das ist die / dreizeilige
+  / Headline" is now emitted as three single-line TextFrames
+  (`u16c` / `u16c_l2` / `u16c_l3`) at the IDML Leading interval, each
+  `LINESPMode=0 LINESP=34.13`. `line_spacing_pixel_audit` reports
+  0.0pt per-line drift against baseline.pdf — `split_headline_spacing`
+  is GREEN. (The pre-fix scaffold rendered the headline as one
+  mixed-font frame with broken inter-line spacing.)
+- **Green brand texture.** `plakat-dunkel-fuer-flyer.png` (the green
+  crumpled-paper brand texture, despite the filename) now classifies
+  as `asset_policy::embedded` via the converter's known-brand-asset
+  rule (`tools/idml_import_driver.py::_EMBEDDED_BRAND_STEMS`). The
+  converter inlines the texture bytes; `template.sla` carries it as
+  `isInlineImage` ImageData (no `PFILE` reference) so the downloaded
+  SLA always shows the brand panel, never a missing-image
+  placeholder.
+
+`meta.yml::brand_overrides` was re-added (4 rules: `bleed_3mm`,
+`image_text_overlap`, `inside_page`, `line_spacing_0.9`) — the
+re-scaffold regenerates meta.yml and drops them; they are restored
+in parity with the shipped sibling
+26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover (each gap class
+already documented row-by-row above in this log). The stale
+`template-preview.sla` orphaned by the re-scaffold was removed (the
+regenerated build.py has an empty INJECT_MAP, so the gallery renders
+`template.sla` directly, matching gruenes-cover).
+
+Residual preflight reds (image_audit vector-path delta,
+line_match / text_position cross-renderer line-wrap, composite-AI
+social-icon visibility) are the documented Scribus-vs-InDesign
+engine-floor classes covered by the TOLERANCES.yml rows above —
+unchanged in kind from the pre-fix state and from gruenes-cover.

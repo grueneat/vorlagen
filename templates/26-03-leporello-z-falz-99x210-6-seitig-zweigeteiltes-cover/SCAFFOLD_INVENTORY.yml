@@ -1,34 +1,3 @@
-# SCAFFOLD_INVENTORY.yml — anchor calibration baseline for 26-03 Leporello.
-#
-# Source: /workspace/templates/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/
-#         (untracked in main checkout; this file is the committed snapshot.)
-#
-# Regenerate: python3 tools/inventory_extract.py \
-#               --slug 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover \
-#               --output templates/26-03-.../SCAFFOLD_INVENTORY.yml
-#
-# Self-compare: python3 tools/inventory_compare.py \
-#                  --expected templates/26-03-.../SCAFFOLD_INVENTORY.yml \
-#                  --actual /tmp/inv-actual.yml
-#               # → exit 0
-#
-# Hand-verification log (issue #40 + review-fix regeneration):
-# - schema_version: 1, template slug matches directory name
-# - text_runs.total_idml: 55 (was 36 — walker now emits one run per Content
-#   child instead of folding multi-Run paragraphs into one string)
-# - by_paragraph_style buckets unified across IDML / build.py / SLA sides
-#   (F2: slugifier normalises identities; F1: SLA reads PARENT not PSTYLE)
-# - frames: 23 text + 10 image + 52 polygon + 12 group
-# - paragraph_styles: 6 rows, every style has its build_py + sla_pstyle_present
-#   populated (F2)
-# - colors: 15 (matches IDML Resources/Graphic.xml)
-# - assets: 20 (8 IDML-linked originals + 9 PNG/PDF derivatives + 3
-#   composite-AI splits); embedded brand assets now report
-#   referenced_from_frames via links_export.yml join (F5); sha256 +
-#   byte_length populated for every on-disk asset (F6)
-# - frames.image_frames[].pdf_image_present per-frame via page lookup (F4)
-# - words: 444 preview/baseline (NFC+ligature-folded; raw pdftotext gives 450)
-# - parse_warnings: [] (no non-literal kwargs in build.py)
 schema_version: 1
 template: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover
 text_runs:
@@ -793,10 +762,10 @@ frames:
     build_py_position_mm:
     - 204.6236
     - 111.6485
-    - 71.6562
-    - 81.8444
+    - 83.6562
+    - 24.2006
     sla_pageobject_present: true
-    sla_storytext_runs: 3
+    sla_storytext_runs: 1
     source: idml
   - anname: u186
     idml_self: u186
@@ -807,8 +776,8 @@ frames:
     - 3.097
     build_py_position_mm:
     - 259.1
-    - 105.2819
-    - 21.1112
+    - 108.5489
+    - 20.8838
     - 8.0081
     sla_pageobject_present: true
     sla_storytext_runs: 1
@@ -823,10 +792,10 @@ frames:
     build_py_position_mm:
     - 16.8913
     - 17.4
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u1c7
     idml_self: u1c7
@@ -853,10 +822,10 @@ frames:
     build_py_position_mm:
     - 115.8913
     - 17.4
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u1fd
     idml_self: u1fd
@@ -1098,6 +1067,50 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: u16c_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 204.6236
+    - 121.6795
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u16c_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 204.6236
+    - 135.7321
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1b0_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 16.8913
+    - 25.3375
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1e6_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 115.8913
+    - 25.3375
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   - anname: uf7
     idml_self: null
     idml_position_mm: null
@@ -1118,7 +1131,7 @@ frames:
     - -106.8
     - 101.0
     - 106.8
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/ziesel.jpg
+    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/crops/ziesel-u514.png
     build_py_position_mm:
     - 198.0
     - -1.8
@@ -1154,7 +1167,7 @@ frames:
     - -105.0
     - 99.0
     - 41.692
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/crops/green-pine-trees-covered-with-fog-u2cd.png
     build_py_position_mm:
     - 99.1764
     - 0.0
@@ -1172,14 +1185,14 @@ frames:
     - -105.187
     - 99.0
     - 210.375
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover/plakat-dunkel-fuer-flyer.png
+    build_py_image_ref: null
     build_py_position_mm:
     - 198.0
-    - -0.1874
+    - 0.0
     - 99.0
-    - 210.3748
+    - 210.0
     sla_pageobject_present: true
-    sla_pfile_present: true
+    sla_pfile_present: false
     pdf_image_present: true
     source: idml
   - anname: u3e7
@@ -1341,10 +1354,10 @@ frames:
     - 20.884
     - 20.884
     build_py_position_mm:
-    - 259.7247
-    - 98.5139
-    - 19.8617
-    - 19.8617
+    - 256.498
+    - 101.7406
+    - 20.8838
+    - 20.8838
     sla_pageobject_present: true
     source: idml
   - anname: u19d
@@ -2169,12 +2182,12 @@ assets:
   byte_length: 1773655
 - basename: plakat-dunkel-fuer-flyer.png
   on_disk: true
-  classified: external
+  classified: embedded
   referenced_from_frames:
   - u3a0
   parent_composite: null
-  sha256: 7322fb3409a5d5eb2dc223bface1552a9622bfb47f11cc37c9d145c00290aa1c
-  byte_length: 8558653
+  sha256: fe934fcae32f83c4683b33d2bb1eba5ce0cb2656f076aa0a316d9ff6aa3f7158
+  byte_length: 8514698
 - basename: social-media-icons-weiss.png
   on_disk: true
   classified: embedded
@@ -2211,22 +2224,20 @@ assets:
   parent_composite: null
   sha256: f01096a280160cf4f76dcab54ed149774eaf50478fc56ab33b6710aaec69fb94
   byte_length: 1772511
-- basename: ziesel.jpg
+- basename: ziesel.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u514
+  referenced_from_frames: []
   parent_composite: null
-  sha256: e73d2e5e1750ae0a832de7b3d534c3c3562f6824853bda3ef79f0818f579161c
-  byte_length: 11713327
-- basename: green-pine-trees-covered-with-fog.jpg
+  sha256: 9ecc4176e1155041fca1926ab46891b31bab116a88261a153583c17890ce33f4
+  byte_length: 16077622
+- basename: green-pine-trees-covered-with-fog.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u2cd
+  referenced_from_frames: []
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
 - basename: 26-03-leporello-z-falz-99x210-6-seitig-zweigeteiltes-cover--ai-Social
     Media Icons weiss--0.pdf
   on_disk: true
@@ -2254,37 +2265,42 @@ assets:
   parent_composite: Social Media Icons weiss.ai
   sha256: f38049295bb46e3dc15bb9f3b81decafffdf0bddc8fa7f3e1797d49382176ad5
   byte_length: 1774462
-- basename: social-media-icon-facebook.png
+- basename: green-pine-trees-covered-with-fog.jpg
   on_disk: true
-  classified: embedded
+  classified: external
   referenced_from_frames: []
   parent_composite: null
-  sha256: 674719499cf5a27aadd862a9250c8192899771328329cefcde5983ac4ad5653a
-  byte_length: 7979
-- basename: social-media-icon-instagram.png
+  sha256: 7bb5faa62ce5b163a8e441e7dccf652ba918e920e6db892cf039e774da0d5194
+  byte_length: 230144
+- basename: ziesel.jpg
   on_disk: true
-  classified: embedded
+  classified: external
   referenced_from_frames: []
   parent_composite: null
-  sha256: 1f6321928819857cad67af611a1df3e40166b7d8921b302499e020987d074ab5
-  byte_length: 13569
-- basename: social-media-icon-tiktok.png
+  sha256: e73d2e5e1750ae0a832de7b3d534c3c3562f6824853bda3ef79f0818f579161c
+  byte_length: 11713327
+- basename: ziesel-u514.png
   on_disk: true
-  classified: embedded
-  referenced_from_frames: []
+  classified: external
+  referenced_from_frames:
+  - u514
   parent_composite: null
-  sha256: 707cce01ad0cf4f4a6e96c1a36c313ac6e952fde1c1ac21aaf9969ac6067d901
-  byte_length: 11644
-- basename: social-media-icon-x.png
+  sha256: null
+  byte_length: null
+- basename: green-pine-trees-covered-with-fog-u2cd.png
   on_disk: true
-  classified: embedded
-  referenced_from_frames: []
+  classified: external
+  referenced_from_frames:
+  - u2cd
   parent_composite: null
-  sha256: ca928484af99e9e06667d352a2b23608564b5a45644de1808690b01f8570e31c
-  byte_length: 14262
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 444
-  preview_pdf_count: 444
-  missing_from_preview: []
-  extra_in_preview: []
+  preview_pdf_count: 445
+  missing_from_preview:
+  - störer
+  extra_in_preview:
+  - er
+  - stör
 parse_warnings: []
