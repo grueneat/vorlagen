@@ -148,9 +148,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         fontsize=11,
         align=3,
         fcolor='White',
-        # P5/tune: baseline renders body at 15.00pt gap (baseline-grid aligned);
-        # converter emits 16.0 → +1pt/line drift, 11-line overflow. line_spacing_full_audit.
-        linesp=15.0,
+        linesp=15.0,  # P5/tune: line_spacing_full_audit baseline gap 15.00 vs converter 16.0 (+1pt/line drift, 11-line overflow)
         linesp_mode=0,
         tab_stops=((15, 0),),
         min_glyph_shrink=0.98,
@@ -172,8 +170,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         fontsize=11,
         align=0,
         fcolor='White',
-        # P5/tune: baseline body gap 15.00pt (see fliesstext-auf-gruenem-hintergrund).
-        linesp=15.0,
+        linesp=15.0,  # P5/tune: line_spacing_full_audit baseline gap 15.00 vs converter 16.0 (+1pt/line drift, 11-line overflow)
         linesp_mode=0,
         tab_stops=((5, 0), (13, 0)),
         left_indent_pt=13,
@@ -186,13 +183,12 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         fontsize=11,
         align=3,
         fcolor='Dunkelgrün',
-        # P5/tune: baseline body gap 15.00pt (see fliesstext-auf-gruenem-hintergrund).
-        linesp=15.0,
+        linesp=15.0,  # P5/tune: line_spacing_full_audit baseline gap 15.00 vs converter 16.0 (+1pt/line drift, 11-line overflow)
         linesp_mode=0,
-        # P5/tune: IDML declares SpaceAfter=5.6693 but the baseline render snaps
-        # body text to a 5.30mm baseline grid that absorbs the sub-pitch SpaceAfter.
-        # Emitting it in Scribus (no grid model) adds a real per-paragraph gap →
-        # structural drift. Baseline u92e/u94a show uniform 5.30mm line gaps.
+        # P5/tune: SpaceAfter dropped — IDML declares SameParaStyleSpacing=5.6693 but the InDesign
+        # baseline snaps body to a 5.30mm grid that absorbs the sub-pitch SpaceAfter (baseline u92e/u94a
+        # show uniform 5.30mm gaps, no inter-paragraph jump). Scribus has no grid model so emitting it
+        # adds a real gap and structural drift.
         min_glyph_shrink=0.98,
     ))
     return None
@@ -276,7 +272,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     page0.add(TextFrame(
         x_mm=6.125,
-        y_mm=54.3071,
+        y_mm=56.9212,
         w_mm=83.6562,
         h_mm=24.2006,
         anname='u621_l2',
@@ -439,7 +435,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=15,
-        y_mm=20.7182,
+        y_mm=22.7819,
         w_mm=77.2174,
         h_mm=19.4028,
         anname='u6aa_l2',

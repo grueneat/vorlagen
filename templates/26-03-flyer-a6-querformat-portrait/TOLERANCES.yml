@@ -114,11 +114,14 @@ tolerances:
   audit: line_match_audit
   classification: scribus-engine-bug
   severity: structural
-  max_issues: 27
-  reason: '27 mismatched lines (40/67 matched). Documentation-only (severity
-    structural — preflight stays red, not fudged green). Breakdown of the 27:
-    (a) 22 wrap/unmatched findings in the justified 2-column body frames u6d8
-    (8), u92e (8), u94a (5), u67c (1) — cross-renderer line-wrap divergence,
+  max_issues: 28
+  reason: '28 mismatched lines (40/68 matched). Documentation-only (severity
+    structural — preflight stays red, not fudged green; the cap on a structural
+    tolerance never flips an audit ok — render_pipeline._build_preflight skips
+    non-cosmetic tolerances entirely, the count here is bookkeeping). Breakdown
+    of the 28: (a) 23 wrap/unmatched findings in the justified 2-column body
+    frames u6d8 (9), u92e (8), u94a (5), u67c (1) — cross-renderer line-wrap
+    divergence,
     the same root cause as text_position_audit_structural. Gotham Narrow Book
     renders ~0.75% wider in Scribus than InDesign so each justified line holds
     one word fewer (measured: baseline col-1 line-1 "Usapiene mporia quisin
