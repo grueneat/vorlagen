@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getCollection, render } from 'astro:content';
 
 export async function getStaticPaths() {
@@ -11,9 +12,19 @@ const { Content } = await render(t);
 
 const BASE = import.meta.env.BASE_URL;
 const url = (p: string) => BASE + p.replace(/^\//, '');
+
+// Breadcrumb category step. Mirrors the grouping in index.astro /
+// typ/[category].astro: templates without a category fall back to `other`,
+// for which typ/[category].astro still generates a route.
+const catId = t.data.category ?? 'other';
+const catLabel = t.data.category_label ?? 'Sonstige';
 ---
 <Base title={t.data.title}>
-  <p><a href={url('/')}>← Zurück zur Galerie</a></p>
+  <Breadcrumb items={[
+    { label: 'Galerie', href: url('/') },
+    { label: catLabel, href: url(`typ/${catId}/`) },
+    { label: t.data.title },
+  ]} />
   <h1>{t.data.title}</h1>
   <p>{t.data.description}</p>
 
@@ -43,13 +54,15 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
     </div>
   )}
 
-  <!-- Lightbox overlay for hi-res preview (Issue #28). Plain HTML +
-       inline JS — keeps the page Astro-static-site without adding
-       framework dependencies. -->
+  <!-- Lightbox overlay for hi-res previews (Issue #28). Plain HTML +
+       inline JS — keeps the page a static Astro site with no framework.
+       Navigates between previews via buttons, arrow keys and touch-swipe. -->
   <div id="preview-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box; align-items: center; justify-content: center;">
-    <button id="preview-close" type="button" aria-label="Schließen" style="position: absolute; top: 1rem; right: 1rem; background: white; color: black; border: none; border-radius: 4px; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; z-index: 1;">Schließen ✕</button>
-    <div id="preview-label" style="position: absolute; top: 1rem; left: 1rem; color: white; font-size: 0.95rem;"></div>
-    <img id="preview-image" src="" alt="" style="max-width: calc(100vw - 4rem); max-height: calc(100vh - 4rem); display: block; object-fit: contain;" />
+    <button id="preview-close" type="button" aria-label="Schließen" style="position: absolute; top: 1rem; right: 1rem; background: white; color: black; border: none; border-radius: 4px; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; z-index: 2;">Schließen ✕</button>
+    <div id="preview-label" style="position: absolute; top: 1rem; left: 1rem; color: white; font-size: 0.95rem; z-index: 2;"></div>
+    <button id="preview-prev" type="button" aria-label="Vorheriges Bild" style="display: none; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.9); color: black; border: none; border-radius: 50%; width: 3rem; height: 3rem; font-size: 1.7rem; line-height: 1; cursor: pointer; z-index: 2;">‹</button>
+    <button id="preview-next" type="button" aria-label="Nächstes Bild" style="display: none; position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.9); color: black; border: none; border-radius: 50%; width: 3rem; height: 3rem; font-size: 1.7rem; line-height: 1; cursor: pointer; z-index: 2;">›</button>
+    <img id="preview-image" src="" alt="" style="max-width: calc(100vw - 7rem); max-height: calc(100vh - 4rem); display: block; object-fit: contain; cursor: zoom-out;" />
   </div>
 
   <script is:inline>
@@ -58,15 +71,28 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
       const img = document.getElementById('preview-image');
       const label = document.getElementById('preview-label');
       const closeBtn = document.getElementById('preview-close');
-      if (!overlay || !img || !label || !closeBtn) return;
+      const prevBtn = document.getElementById('preview-prev');
+      const nextBtn = document.getElementById('preview-next');
+      const links = Array.prototype.slice.call(document.querySelectorAll('a.preview-link'));
+      if (!overlay || !img || !label || !closeBtn || !prevBtn || !nextBtn || links.length === 0) return;
 
-      function open(href, text) {
-        img.src = href;
-        img.alt = text || '';
-        label.textContent = text || '';
-        // Switch to flex so the image is centred both axes (vs the previous
-        // `display: block` which left-/top-aligned tall hires images and
-        // looked like "preview not visible").
+      let current = -1;
+      const multiple = links.length > 1;
+      prevBtn.style.display = multiple ? 'block' : 'none';
+      nextBtn.style.display = multiple ? 'block' : 'none';
+
+      function show(index) {
+        current = (index + links.length) % links.length;
+        const a = links[current];
+        img.src = a.dataset.hires;
+        img.alt = a.dataset.label || '';
+        label.textContent = multiple
+          ? (a.dataset.label || '') + ' — ' + (current + 1) + ' / ' + links.length
+          : (a.dataset.label || '');
+      }
+      function open(index) {
+        show(index);
+        // Switch to flex so the image is centred on both axes.
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
       }
@@ -75,20 +101,39 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
         img.src = '';
         document.body.style.overflow = '';
       }
+      function step(delta) { show(current + delta); }
 
-      document.querySelectorAll('a.preview-link').forEach(function (a) {
-        a.addEventListener('click', function (ev) {
-          ev.preventDefault();
-          open(a.dataset.hires, a.dataset.label);
-        });
+      links.forEach(function (a, i) {
+        a.addEventListener('click', function (ev) { ev.preventDefault(); open(i); });
       });
+      closeBtn.addEventListener('click', function (ev) { ev.stopPropagation(); close(); });
+      prevBtn.addEventListener('click', function (ev) { ev.stopPropagation(); step(-1); });
+      nextBtn.addEventListener('click', function (ev) { ev.stopPropagation(); step(1); });
       overlay.addEventListener('click', function (ev) {
         if (ev.target === overlay || ev.target === img) close();
       });
-      closeBtn.addEventListener('click', close);
       document.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Escape' && overlay.style.display !== 'none') close();
+        if (overlay.style.display === 'none') return;
+        if (ev.key === 'Escape') close();
+        else if (multiple && ev.key === 'ArrowLeft') step(-1);
+        else if (multiple && ev.key === 'ArrowRight') step(1);
       });
+
+      // Touch swipe (mobile): a horizontal drag over 40px navigates.
+      let startX = null, startY = null;
+      overlay.addEventListener('touchstart', function (ev) {
+        startX = ev.changedTouches[0].clientX;
+        startY = ev.changedTouches[0].clientY;
+      }, { passive: true });
+      overlay.addEventListener('touchend', function (ev) {
+        if (startX === null) return;
+        const dx = ev.changedTouches[0].clientX - startX;
+        const dy = ev.changedTouches[0].clientY - startY;
+        if (multiple && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+          step(dx < 0 ? 1 : -1);
+        }
+        startX = startY = null;
+      }, { passive: true });
     })();
   </script>
 
