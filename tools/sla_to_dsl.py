@@ -744,8 +744,12 @@ def _convert_pageobject(po: etree._Element,
                 if trail_overrides:
                     text_kwargs["trail_attrs"] = trail_overrides
             runs = _build_runs(story)
-        if "ALIGN" in po.attrib:
-            text_kwargs["text_align"] = int(po.attrib["ALIGN"])
+        # Scribus stores vertical text justification in PAGEOBJECT VAlign
+        # (0=top / 1=center / 2=bottom). ALIGN is not the vertical channel.
+        # VAlign="0" is Scribus's default (top) — only surface a non-default
+        # value so round-trips of top-aligned frames stay noise-free.
+        if "VAlign" in po.attrib and po.attrib["VAlign"] != "0":
+            text_kwargs["vertical_text_align"] = int(po.attrib["VAlign"])
         if "COLUMNS" in po.attrib and po.attrib["COLUMNS"] != "1":
             text_kwargs["columns"] = int(po.attrib["COLUMNS"])
         if "COLGAP" in po.attrib:

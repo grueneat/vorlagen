@@ -1,0 +1,91 @@
+tolerances:
+- id: tol:inventory-offpage-registration-marks
+  audit: inventory
+  classification: human-review
+  severity: cosmetic
+  max_issues: 4
+  reason: '4 dropped elements. The converter deliberately skips four 17.9x17.9pt
+    Rectangle elements (u6f0, u6f2, u77f, u964) that the IDML places far outside
+    the page bounds (x=-29.8mm / x=179..180mm — beyond the 174mm trim width).
+    They are inline vector paths with no <Image>/<PDF> child (registration /
+    colour-control furniture on the pasteboard). The converter logs each as
+    "[skip] Rectangle ... entirely outside page bounds ... InDesign design
+    artifact, not emitted"; InDesign also omits them from the trimmed PDF
+    export. A deliberate, documented non-emit — not a silent drop (the scaffold
+    completeness assertion passes: every element is either emitted or explicitly
+    recorded as skipped). Same class as the sibling 26-03-flyer-a6-querformat-
+    portrait template.'
+  follow_up_issue: none; correct converter behaviour, audit is conservative
+- id: tol:image-audit-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 48
+  reason: '43 vector-path / image deltas. Derivative of the Scribus raster/ICC
+    rendering differences on full-bleed Dunkelgruen page backgrounds and photo
+    content, plus the IDML inline decorative vector paths (Wahlkreis ellipse /
+    underline ornaments, curly quotes) that the converter extracts as inline
+    images rather than re-emitting as Scribus Polygon items. Same gap class as
+    the sibling flyer templates (26-03-flyer-a6-querformat-portrait,
+    26-03-flyer-a6-hochformat-*). Cap 48 vs 43 measured — small headroom for
+    raster-count jitter.'
+  follow_up_issue: engine-bug; intrinsic raster + ICC differences
+- id: tol:systematic-text-line-wrap-no-sim-rows
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 6
+  reason: '6 frames flagged sim-actionable. The line_spacing playbook simulator
+    (tools/line_spacing_sim.py) returned NO measurable drift for every candidate
+    on every frame across all tune-fix iterations — the drift is line-WRAP-count
+    divergence, not a leading value. systematic_text_audit.md confirms every
+    flagged frame carries a "line count differs" reason (u6d8 baseline 10 vs
+    preview 11, u67c 7 vs 9, u872 2 vs 3, u92e 10 vs 9, u9df 8 vs 7, ub3b 4 vs
+    3). No single (LINESPMode, LINESP) reconciles a wrap-count difference. The
+    y_mm_shift playbook found no uniform-offset actionable frames. Count dropped
+    11->6 this pass after the u9df single-column fix and y_mm correction.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)
+- id: tol:text-position-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 67
+  reason: '67 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+    InDesign per-character kerning jitter intrinsic to the two rasterisers. The
+    line_spacing sim returned no measurable drift for any frame. Sub-perceptible
+    jitter, below the visible threshold. The count rose 34->67 this pass: the
+    u9df single-column fix restored the 2-column flow, re-positioning every word
+    in that frame, and the +2.88pt y_mm anchor correction shifted u9df line
+    positions — both produce additional sub-perceptible word-position deltas. The
+    structural bucket (text_position_audit_structural) catches the larger >5pt
+    shifts. Cap == exact measured count (smallest tolerance).'
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:text-position-structural-cross-renderer-wrap
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 205
+  reason: '205 large (>5pt) word-position drifts. The drift is dominated by
+    cross-renderer line-wrap differences — Scribus and InDesign break the
+    justified body / bullet-list paragraphs (most of them inside the 2-column
+    frames u67c/u92e/u9df/u6d8) at slightly different words because their
+    font-metric and hyphenation models differ. Count dropped 269->205 this pass
+    after the u9df single-column fix restored its 2-column flow. Not a converter
+    bug and not a routing bug. NOT FIXED, NOT TOLERATED-AS-PASSING — preflight
+    stays red until a Scribus justification/hyphenation alignment lands or the
+    baseline is re-flowed. Cap == exact measured count.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+- id: tol:visual-diff-regions-raster-size-mismatch
+  audit: visual_diff_regions
+  classification: human-review
+  severity: structural
+  max_issues: 52
+  reason: '52 hot regions in the visual-diff heatmap. The regions trace to the
+    cross-renderer line-wrap divergence (body / bullet text breaks at different
+    words so the heatmap lights up wherever a word moved) plus the small
+    CMYK->sRGB tone residual on the dark plakat / photo frames. Not a converter
+    or build.py defect — the same hot-region class as the sibling flyer
+    templates. Surfaces as an audit row (not the prior phase ERROR — the
+    raster-size mismatch resolved this pass). Documented but preflight stays red:
+    severity structural, audit not flipped green.'
+  follow_up_issue: engine-bug; cross-renderer wrap + CMYK->sRGB tone residual

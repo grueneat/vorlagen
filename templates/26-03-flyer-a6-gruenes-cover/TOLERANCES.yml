@@ -1,0 +1,149 @@
+tolerances:
+- id: tol:inventory-offpage-registration-marks
+  audit: inventory
+  classification: human-review
+  severity: cosmetic
+  max_issues: 4
+  reason: '4 dropped elements. The converter deliberately skips four 6.3x6.3mm
+    Rectangle elements (u6f0, u6f2, u77f, u964) that the IDML places far outside
+    the page (x=-29.8mm or x~=180mm — beyond the page edges). They are inline
+    vector paths with no <Image>/<PDF> child (registration / colour-control
+    furniture on the pasteboard). The converter logs each as "[skip] Rectangle
+    ... entirely outside page bounds ... InDesign design artifact, not emitted";
+    InDesign also omits them from the trimmed PDF export. A deliberate,
+    documented non-emit — not a silent drop (the scaffold completeness
+    assertion every_idml_run_present_in_build_py passes).'
+  follow_up_issue: none; correct converter behaviour, audit is conservative
+- id: tol:image-audit-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 45
+  reason: '41 vector-path / image deltas, derivative of the Scribus raster/ICC
+    rendering differences on full-bleed Dunkelgruen page backgrounds and photo
+    content, plus the IDML inline decorative vector paths the converter
+    extracts as inline images rather than re-emitting as Scribus Polygon items.
+    Same gap class as the sibling flyer template
+    26-03-flyer-a6-hochformat-gruenes-cover (41 deltas, cap 45).'
+  follow_up_issue: engine-bug; intrinsic raster + ICC differences
+- id: tol:text-position-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 33
+  reason: '32 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+    InDesign per-character kerning jitter intrinsic to the two rasterisers. The
+    y_mm_shift playbook found no reliable calibration frame and the
+    line_spacing sim returned no rows for any frame. The structural bucket
+    (text_position_audit_structural) catches the larger >5pt shifts. Re-import
+    cap raised 26->33: the breakline + leading 16->15pt fixes moved several
+    formerly-structural (>5pt) drifts down into the sub-perceptible jitter band
+    — the total visible drift fell (structural 257->173) while a handful of
+    shifts crossed the 5pt line into this bucket.'
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:text-position-structural-cross-renderer-wrap
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 180
+  reason: '173 large (>5pt) word-position drifts, dominated by the body-frame
+    column-overflow reflow on u6d8 / u92e. Cap tightened 265->180 after the
+    re-import tune: two per-frame fixes (body ParaStyle leading 16->15pt to
+    match the measured 15.0pt baseline gap; IDML <Br> separators emitted as
+    <breakline/> instead of <para/> so no blank line / space_after is injected)
+    cut the drift from 257 to 173. The irreducible residual is the two
+    2-column body frames: their IDML TextFrame is undersized for the content
+    (the baseline.pdf itself CLIPS ~6 lines — it shows 9+9 of ~24 lines), the
+    converter widened the frame 53.76->63.5mm to avoid silent text loss, so the
+    preview holds ~2 more lines per column and the column break lands at a
+    different word than the clipped baseline. One wrap-point difference
+    cascades into dozens of downstream words counted as "drifted". A
+    min_glyph_shrink reduction was trialled — it closes line_match 24->12 but
+    regresses u6d8 per-region (line-spacing drift 6.24->16.8pt, past the
+    committed 14.4pt) so it was reverted: the per-region guard (P7) outranks
+    the global count. Closing the residual fully would require re-introducing
+    the baseline text loss. NOT FIXED, NOT TOLERATED-AS-PASSING —
+    severity:structural keeps preflight red.'
+  follow_up_issue: authoring-bug; IDML body TextFrame undersized for its content
+    (baseline clips, converter widens — column break diverges)
+- id: tol:systematic-text-line-count-divergence
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 5
+  reason: '4 frames flagged "line count differs" / "text wrapped differently" —
+    the per-frame view of the same column-overflow / cross-renderer wrap
+    divergence as text_position_audit_structural. Cap tightened 11->5 after the
+    re-import tune (the leading + breakline + min_glyph_shrink fixes resolved
+    the per-line leading drift the pixel audit now reports OK). The line_spacing
+    playbook ran line_spacing_sim on all flagged frames and returned "no
+    candidate had a measurable drift" — leading is correct, only the wrap point
+    differs. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural keeps
+    preflight red.'
+  follow_up_issue: authoring-bug; IDML body TextFrame undersized (same root
+    cause as structural text-position drift)
+- id: tol:text-render-cross-renderer-wrap-wordsplit
+  audit: text_render_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 12
+  reason: '12 unique words reported "missing" (impressum, consent., eaque,
+    eosenihicto, quaturem, volor, xxxxxx, et, ipis, nam, quatur., quis) — all
+    verified present in build.py (2-3 occurrences each). The audit also reports
+    extra_in_preview: impressu, confirming the words are SPLIT at a different
+    line-wrap point (impressum -> impressu + m) so the per-word string
+    comparison no longer matches. The same cross-renderer line-wrap divergence
+    surfacing in the text-extraction word comparison; no text is actually
+    suppressed. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural keeps
+    preflight red.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap word-split in text
+    extraction
+- id: tol:image-content-cmyk-render
+  audit: image_content_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 2
+  reason: '2 image frames classified broken. ube9 (2026-03-leonore-fuer-flyer,
+    converted from a CMYK PSD) renders with a mean-RGB shift (mean_delta_rgb
+    75.5, hist_divergence 0.19) — the known broken CMYK-PSD conversion:
+    tools/links_export.py convert -flatten produces non-ICC CMYK->RGB output
+    that posterizes/discolours the portrait. u906
+    (green-pine-trees-covered-with-fog.jpg, CMYK JPEG, recipe passthrough)
+    renders fully blank — Scribus 1.6.x cannot rasterise CMYK JPEGs. Both are
+    Stage-1 asset-pipeline limitations from the overnight brief''s known-shared-
+    issues list, not converter or build.py bugs. NOT FIXED, NOT TOLERATED-AS-
+    PASSING — severity:structural keeps preflight red.'
+  follow_up_issue: authoring/asset-pipeline; links_export.py CMYK handling
+- id: tol:image-frame-visibility-cmyk-jpeg-blank
+  audit: image_frame_visibility_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 1
+  reason: '1 invisible frame. u906 (green-pine-trees-covered-with-fog.jpg) is
+    invisible in the preview (preview_ink_density 0.0). The frame was already
+    switched to scale_type=0 (the documented frame_visibility playbook fix); it
+    remained invisible because the source is a CMYK JPEG Scribus 1.6.x cannot
+    decode at all — the same CMYK-JPEG blank-render shared issue as
+    image_content_audit. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:
+    structural keeps preflight red.'
+  follow_up_issue: authoring/asset-pipeline; Scribus CMYK-JPEG decode failure
+- id: tol:visual-diff-cross-renderer-wrap-and-cmyk-tone
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 55
+  reason: '54 hot grid cells (8-10 per page, all 6 pages). The dominant
+    contributor is the body-frame column-overflow reflow on the 2-column
+    Fliesstext frames (u6d8 / u92e) — same root cause as
+    text_position_audit_structural: the IDML body TextFrame is undersized, the
+    converter widened it to avoid text loss, and the column break diverges from
+    the (clipped) baseline so the body band reads as a hot region on every
+    page. The remaining cells are the brief''s known-acceptable residual: the
+    ~0.75% Scribus-vs-InDesign glyph-width difference on the headlines, and the
+    small CMYK->sRGB tone residual on the dark-PSD candidate portrait and the
+    full-bleed forest photo. Re-import replaces the prior cap-0
+    image-size-mismatch tolerance (that crop-rounding ERROR no longer occurs on
+    this re-import). NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural
+    keeps preflight red.'
+  follow_up_issue: authoring/engine; body-frame column overflow + cross-renderer
+    glyph metrics + CMYK tone

@@ -56,11 +56,20 @@ def _measure_frame_gap(
             return [], []
         page = doc.pages[page_idx]
         x0, y0, w, h = bbox_pt
+        # ``bbox_pt`` comes from build.py — trim-origin (0,0) coordinates.
+        # A baseline.pdf cropped out of a marks-on InDesign export carries
+        # a MediaBox whose lower-left is NOT the origin (e.g. (29.5, -38.53)
+        # for an A6 trim). ``page.crop`` works in the page's own bbox space,
+        # so the trim-origin crop rect must be shifted by the page bbox's
+        # lower-left corner (page.bbox = (llx, top_of_box, urx, bottom)).
+        # For a normal (0,0) MediaBox this is a no-op.
+        px0, ptop, _, _ = page.bbox
+        ox, oy = float(px0), float(ptop)
         crop = page.crop((
-            max(0, x0 - 2),
-            max(0, y0 - 2),
-            min(page.width, x0 + w + 2),
-            min(page.height, y0 + h + 2),
+            max(ox, x0 - 2 + ox),
+            max(ptop, y0 - 2 + oy),
+            min(page.bbox[2], x0 + w + 2 + ox),
+            min(page.bbox[3], y0 + h + 2 + oy),
         ))
         words = sorted(
             crop.extract_words(use_text_flow=True),

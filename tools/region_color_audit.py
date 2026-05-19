@@ -1,12 +1,31 @@
 #!/usr/bin/env python3
-"""Per-region mean RGB color delta audit.
+"""Per-region offset-compensated RGB colour delta audit.
 
 For each frame in build.py with a bounding box, sample the corresponding region
-from baseline.pdf and preview.pdf (rasterised at 150 dpi). Compute mean and max
-RGB delta. Classify by severity: uniform small offset (icc_likely —
-icc_drift_uniform_small, sub-percent uniform RGB delta from CMYK to sRGB ICC
-profile rendering) vs concentrated large delta (fill_likely — converter
-fill-color bug).
+from baseline.pdf and preview.pdf and compute the signed RGB delta.
+
+Colour-consistency
+------------------
+Both PDFs are rasterised through ONE shared CMYK ICC profile (see
+``tools/pdf_color.py``) — the InDesign baseline carries a PDF/X output
+intent, the Scribus preview is raw DeviceCMYK, and rasterising them
+inconsistently produces a false uniform offset.
+
+Even with consistent rendering the two PDFs store the brand swatches in two
+different CMYK encodings (InDesign converts to the output intent; Scribus
+keeps the raw SLA values), which leaves a SYSTEMATIC document-wide RGB
+offset on every brand-coloured region. The audit estimates that offset (the
+per-channel median signed delta) and classifies every frame on the
+OFFSET-COMPENSATED residual:
+
+  - ok:          residual < 3   → matches the uniform colour-management
+                 offset (or within rasterisation noise) — not a bug
+  - icc_likely:  3 ≤ residual < 15 → small deviation from the uniform offset
+  - fill_likely: residual ≥ 15  → large deviation from the uniform offset —
+                 a wrong fill-colour emitted by the converter (fixable)
+
+The uniform colour-management offset is therefore never reported as
+per-frame drift; only the part of a frame's delta that DEVIATES from it is.
 
 Usage:
     python3 tools/region_color_audit.py \\
@@ -20,7 +39,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -28,22 +46,38 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
+_TOOLS = Path(__file__).resolve().parent
+if str(_TOOLS) not in sys.path:
+    sys.path.insert(0, str(_TOOLS))
+
+from pdf_color import (  # noqa: E402
+    pick_reference_cmyk_profile,
+    rasterise_color_managed,
+)
+
 
 # ---------------------------------------------------------------------------
 # PDF rasterisation
 # ---------------------------------------------------------------------------
 
-def rasterise_pdf(pdf_path: Path, out_prefix: Path, dpi: int = 150) -> list[Path]:
-    """Use pdftocairo to rasterise all pages of the PDF to PNG.
+def rasterise_pdf(
+    pdf_path: Path,
+    out_prefix: Path,
+    dpi: int = 150,
+    cmyk_profile: str | None = None,
+) -> list[Path]:
+    """Rasterise all pages of the PDF to PNG through a colour-managed path.
+
+    ``cmyk_profile`` is the shared CMYK ICC profile used to interpret
+    DeviceCMYK colour. The baseline.pdf and preview.pdf in one audit MUST
+    be rasterised with the SAME profile so their colour is comparable —
+    otherwise InDesign's output-intent-converted baseline and Scribus's raw
+    DeviceCMYK preview read as a uniform false offset (see
+    ``tools/pdf_color.py``).
 
     Returns a sorted list of PNG paths (one per page), in page order.
     """
-    subprocess.run(
-        ["pdftocairo", "-png", "-r", str(dpi), str(pdf_path), str(out_prefix)],
-        check=True,
-        capture_output=True,
-    )
-    return sorted(out_prefix.parent.glob(f"{out_prefix.name}-*.png"))
+    return rasterise_color_managed(pdf_path, out_prefix, dpi, cmyk_profile)
 
 
 # ---------------------------------------------------------------------------
@@ -239,12 +273,15 @@ def _do_sample(image: Image.Image, bbox_px: tuple[int, int, int, int]) -> tuple:
 # ---------------------------------------------------------------------------
 
 def classify_severity(mean_delta: float) -> str:
-    """Classify colour delta magnitude into audit severity bucket.
+    """Classify a colour delta magnitude into an audit severity bucket.
+
+    ``mean_delta`` is normally an OFFSET-COMPENSATED residual (see
+    :func:`classify_severity_compensated`) — the part of a frame's delta not
+    explained by the document-wide colour-management offset.
 
     Thresholds (RGB units, 0-255 scale):
     - ok:          mean_delta < 3   → within rasterisation noise floor
-    - icc_likely:  3 ≤ delta < 15  → uniform small offset, consistent with
-                   CMYK→sRGB ICC profile rendering drift (icc_drift_uniform_small)
+    - icc_likely:  3 ≤ delta < 15  → small deviation from the uniform offset
     - fill_likely: delta ≥ 15      → large concentrated delta, likely a
                    wrong fill-color emitted by the converter (fixable)
     """
@@ -274,6 +311,110 @@ def classify_pattern(by_severity: dict[str, int]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Per-colour offset compensation
+# ---------------------------------------------------------------------------
+
+def _median(values: list[float]) -> float:
+    """Return the median of a non-empty list of floats."""
+    s = sorted(values)
+    n = len(s)
+    mid = n // 2
+    if n % 2:
+        return s[mid]
+    return (s[mid - 1] + s[mid]) / 2.0
+
+
+def _color_bucket(rgb: tuple[float, float, float]) -> tuple[int, int, int]:
+    """Quantise a baseline RGB to a coarse colour bucket key.
+
+    Frames filled with the SAME brand swatch land in the same bucket so
+    their shared colour-management offset can be estimated together. A 48
+    RGB-unit grid is coarse enough that rasterisation noise never splits a
+    swatch across buckets, yet fine enough to keep distinct brand colours
+    (Dunkelgrün / Hellgrün / white / magenta) apart.
+    """
+    return tuple(int(round(c / 48.0)) for c in rgb)  # type: ignore[return-value]
+
+
+def per_color_offsets(
+    samples: list[tuple[tuple[float, float, float], tuple[float, float, float]]],
+) -> dict[tuple[int, int, int], tuple[float, float, float]]:
+    """Estimate the systematic colour offset for each baseline-colour bucket.
+
+    The InDesign baseline stores each swatch in its PDF/X output-intent CMYK
+    space; the Scribus preview stores the raw SLA DeviceCMYK. Even after a
+    consistent colour-managed render the two encodings differ, leaving a
+    SYSTEMATIC RGB offset that is SPECIFIC TO EACH BRAND COLOUR (the brand
+    green drifts, white does not). A single document-wide offset cannot
+    model that — so the offset is estimated PER baseline-colour bucket.
+
+    ``samples`` is a list of ``(baseline_rgb, signed_delta)`` pairs. Returns
+    a mapping ``bucket_key -> (median_dr, median_dg, median_db)``: the
+    robust per-channel median signed delta of every frame in that bucket,
+    i.e. the offset a colour-management residual frame of that colour shows.
+
+    A bucket with only ONE frame has no colour peers to estimate a shared
+    offset from — using that lone frame as its own reference would mask a
+    genuine fill bug on a unique colour. Singleton buckets therefore inherit
+    the document-wide median offset (a neutral prior), so a real per-frame
+    fill error on a unique colour still surfaces.
+    """
+    grouped: dict[tuple[int, int, int], list[tuple[float, float, float]]] = {}
+    for base_rgb, signed in samples:
+        grouped.setdefault(_color_bucket(base_rgb), []).append(signed)
+
+    all_deltas = [signed for _, signed in samples]
+    doc_offset = (
+        (
+            _median([d[0] for d in all_deltas]),
+            _median([d[1] for d in all_deltas]),
+            _median([d[2] for d in all_deltas]),
+        )
+        if all_deltas
+        else (0.0, 0.0, 0.0)
+    )
+
+    offsets: dict[tuple[int, int, int], tuple[float, float, float]] = {}
+    for key, deltas in grouped.items():
+        if len(deltas) < 2:
+            # No colour peers — fall back to the document-wide median.
+            offsets[key] = doc_offset
+            continue
+        offsets[key] = (
+            _median([d[0] for d in deltas]),
+            _median([d[1] for d in deltas]),
+            _median([d[2] for d in deltas]),
+        )
+    return offsets
+
+
+def classify_severity_compensated(
+    base_rgb: tuple[float, float, float],
+    signed_delta: tuple[float, float, float],
+    offsets: dict[tuple[int, int, int], tuple[float, float, float]],
+) -> tuple[str, float]:
+    """Classify a frame on its delta AFTER removing its colour's offset.
+
+    ``offsets`` is the per-colour-bucket offset map from
+    :func:`per_color_offsets`. The residual ``signed_delta − offset`` is the
+    part of the frame's colour delta NOT explained by the systematic
+    colour-management offset shared by every region of that brand colour —
+    i.e. the part that would indicate a real converter fill-colour bug.
+
+    Returns ``(severity, residual_mean_delta)``. A frame that matches its
+    colour peers' offset has a near-zero residual and classifies ``ok``; a
+    frame that DEVIATES from it classifies ``icc_likely`` / ``fill_likely``
+    on the residual magnitude via :func:`classify_severity`.
+    """
+    offset = offsets.get(_color_bucket(base_rgb), (0.0, 0.0, 0.0))
+    rr = signed_delta[0] - offset[0]
+    rg = signed_delta[1] - offset[1]
+    rb = signed_delta[2] - offset[2]
+    residual = (abs(rr) + abs(rg) + abs(rb)) / 3.0
+    return classify_severity(residual), residual
+
+
+# ---------------------------------------------------------------------------
 # Main audit entry point
 # ---------------------------------------------------------------------------
 
@@ -300,8 +441,15 @@ def run_region_color_audit(
         base_prefix = tmpdir_path / "base"
         prev_prefix = tmpdir_path / "prev"
 
-        base_pages = rasterise_pdf(baseline_pdf, base_prefix, dpi)
-        prev_pages = rasterise_pdf(preview_pdf, prev_prefix, dpi)
+        # Both PDFs must be rasterised through ONE shared CMYK profile so
+        # their colour is comparable — the InDesign baseline carries an
+        # output-intent ICC, the Scribus preview is raw DeviceCMYK.
+        cmyk_profile, profile_source = pick_reference_cmyk_profile(
+            baseline_pdf, preview_pdf, tmpdir_path / "profiles",
+        )
+
+        base_pages = rasterise_pdf(baseline_pdf, base_prefix, dpi, cmyk_profile)
+        prev_pages = rasterise_pdf(preview_pdf, prev_prefix, dpi, cmyk_profile)
 
         # Cache opened images to avoid re-opening for each frame.
         base_imgs: dict[int, Image.Image] = {}
@@ -311,7 +459,8 @@ def run_region_color_audit(
         for idx, p in enumerate(prev_pages):
             prev_imgs[idx] = Image.open(p)
 
-        results: list[dict] = []
+        # Pass 1 — sample every frame and record its signed RGB delta.
+        sampled: list[dict] = []
         for f in frames:
             page = f["page"]
             if page not in base_imgs or page not in prev_imgs:
@@ -329,37 +478,71 @@ def run_region_color_audit(
             dr = prev_rgb[0] - base_rgb[0]
             dg = prev_rgb[1] - base_rgb[1]
             db = prev_rgb[2] - base_rgb[2]
-            mean_delta = (abs(dr) + abs(dg) + abs(db)) / 3.0
-            rms_delta = (dr * dr + dg * dg + db * db) ** 0.5
-
-            severity = classify_severity(mean_delta)
-
-            results.append(
+            sampled.append(
                 {
-                    "anname": f["anname"],
+                    "frame": f,
                     "page": page,
-                    "type": f["type"],
-                    "bbox_mm": [f["x_mm"], f["y_mm"], f["w_mm"], f["h_mm"]],
-                    "baseline_rgb": [
-                        round(base_rgb[0], 1),
-                        round(base_rgb[1], 1),
-                        round(base_rgb[2], 1),
-                    ],
-                    "preview_rgb": [
-                        round(prev_rgb[0], 1),
-                        round(prev_rgb[1], 1),
-                        round(prev_rgb[2], 1),
-                    ],
-                    "mean_delta": round(mean_delta, 2),
-                    "rms_delta": round(rms_delta, 2),
-                    "severity": severity,
+                    "base_rgb": base_rgb,
+                    "prev_rgb": prev_rgb,
+                    "signed": (dr, dg, db),
                 }
             )
 
+    # Estimate the systematic colour-management offset per brand colour (the
+    # InDesign-CMYK vs Scribus-CMYK encoding difference, which is specific to
+    # each swatch) and classify every frame on the OFFSET-COMPENSATED
+    # residual, so a colour's uniform offset is never reported as per-frame
+    # drift — only a frame DEVIATING from its colour peers is flagged.
+    color_offsets = per_color_offsets(
+        [
+            ((s["base_rgb"][0], s["base_rgb"][1], s["base_rgb"][2]), s["signed"])
+            for s in sampled
+        ]
+    )
+
+    # Pass 2 — classify each frame against its colour bucket's offset.
+    results: list[dict] = []
+    for s in sampled:
+        f = s["frame"]
+        dr, dg, db = s["signed"]
+        raw_mean_delta = (abs(dr) + abs(dg) + abs(db)) / 3.0
+        rms_delta = (dr * dr + dg * dg + db * db) ** 0.5
+        severity, residual_delta = classify_severity_compensated(
+            (s["base_rgb"][0], s["base_rgb"][1], s["base_rgb"][2]),
+            s["signed"],
+            color_offsets,
+        )
+        base_rgb = s["base_rgb"]
+        prev_rgb = s["prev_rgb"]
+        results.append(
+            {
+                "anname": f["anname"],
+                "page": s["page"],
+                "type": f["type"],
+                "bbox_mm": [f["x_mm"], f["y_mm"], f["w_mm"], f["h_mm"]],
+                "baseline_rgb": [
+                    round(base_rgb[0], 1),
+                    round(base_rgb[1], 1),
+                    round(base_rgb[2], 1),
+                ],
+                "preview_rgb": [
+                    round(prev_rgb[0], 1),
+                    round(prev_rgb[1], 1),
+                    round(prev_rgb[2], 1),
+                ],
+                "mean_delta": round(raw_mean_delta, 2),
+                "residual_delta": round(residual_delta, 2),
+                "rms_delta": round(rms_delta, 2),
+                "severity": severity,
+            }
+        )
+
     # Sort: fill_likely first, then icc_likely, then ok; within each group
-    # descending by mean_delta.
+    # descending by offset-compensated residual delta.
     _sev_order = {"fill_likely": 0, "icc_likely": 1, "ok": 2}
-    results.sort(key=lambda r: (_sev_order.get(r["severity"], 3), -r["mean_delta"]))
+    results.sort(
+        key=lambda r: (_sev_order.get(r["severity"], 3), -r["residual_delta"]),
+    )
 
     by_severity: dict[str, int] = {"ok": 0, "icc_likely": 0, "fill_likely": 0}
     for r in results:
@@ -367,10 +550,22 @@ def run_region_color_audit(
 
     pattern = classify_pattern(by_severity)
 
+    # Report the largest per-colour offset as the document's dominant
+    # colour-management residual — the systematic offset the audit removed.
+    if color_offsets:
+        dominant = max(
+            color_offsets.values(),
+            key=lambda o: (abs(o[0]) + abs(o[1]) + abs(o[2])),
+        )
+    else:
+        dominant = (0.0, 0.0, 0.0)
+
     return {
         "template": template,
         "by_severity": by_severity,
         "pattern": pattern,
+        "color_profile": profile_source,
+        "dominant_color_offset_rgb": [round(c, 1) for c in dominant],
         "frames": results[:40],
     }
 

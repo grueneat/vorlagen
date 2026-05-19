@@ -885,9 +885,21 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             if candidate.exists():
                 idml_source = candidate
                 break
-    # Also try a common originals path pattern
+    # The meta.yml::idml_source relative path is worktree-dependent and can
+    # be stale (the Flyer slugs carry '../../../../originals/...', the
+    # leporello '../../originals/...'); when it does not resolve, use the
+    # slug-keyed resolver so the inventory + attribute-coverage gate audit
+    # the RIGHT IDML instead of the first .idml in originals/.
     if idml_source is None:
-        # Search originals/ for an .idml matching the template's source dir
+        try:
+            from line_spacing_full_audit import _resolve_idml_source
+            idml_source = _resolve_idml_source(
+                tid, ROOT / "templates", ROOT / "originals"
+            )
+        except Exception:
+            idml_source = None
+    # Last resort: first IDML under originals/ (legacy behaviour).
+    if idml_source is None:
         for candidate in sorted((ROOT / "originals").rglob("*.idml")):
             idml_source = candidate
             break
@@ -1147,6 +1159,47 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             file=sys.stderr,
         )
 
+    # Phase D8b: line_match_audit — strict per-line, per-frame layout match.
+    # Where D8 matches words by text + nearest neighbour (blind to line
+    # structure), D8b clusters words into lines within each build.py frame
+    # and checks first-word x + line baseline y STRICTLY (zero tolerance
+    # beyond a 1pt raster epsilon) and inter-word spacing with a minimal
+    # tolerance. NO issue cap — a single wrong line fails preflight.
+    line_match_audit_path = out_dir / "line_match_audit.yml"
+    if preview_pdf.exists() and baseline.exists():
+        try:
+            from line_match_audit import run_audit as _run_line_match
+            lma_report = _run_line_match(
+                preview_pdf, baseline, tid,
+                build_py=(tdir / "build.py") if (tdir / "build.py").exists() else None,
+            )
+            line_match_audit_path.write_text(
+                yaml.safe_dump(lma_report, sort_keys=False, allow_unicode=True),
+                encoding="utf-8",
+            )
+            if not lma_report["ok"]:
+                print(
+                    f"[{tid}] line_match_audit: {lma_report['issues']} line(s) "
+                    f"mismatched ({lma_report['lines_matched']}/"
+                    f"{lma_report['lines_total']} match) → FAIL",
+                    file=sys.stderr,
+                )
+                issue_parts.append(
+                    f"{lma_report['issues']} line(s) with layout mismatch"
+                )
+            else:
+                print(f"[{tid}] line_match_audit: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "line_match_audit",
+                "D8b (line_match_audit)", exc, tid,
+            )
+    else:
+        print(
+            f"[{tid}] audit D8b (line_match_audit): skipped (no preview.pdf or baseline.pdf)",
+            file=sys.stderr,
+        )
+
     # Phase F: run_style_audit — per-Run font/size/color fidelity.
     # Catches wrong font assigned to a Run (e.g. Gotham where Vollkorn was expected),
     # wrong PointSize (fractional rounding artifacts), wrong color (bad brand mapping).
@@ -1272,7 +1325,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             from line_spacing_full_audit import main as _lsfa_main
             slug = tid
             originals_dir = Path("/workspace/originals")
-            templates_dir = Path("/workspace/templates")
+            templates_dir = (ROOT / "templates")
             _lsfa_main([
                 "--slug", slug,
                 "--templates-dir", str(templates_dir),
@@ -1326,7 +1379,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     if preview_pdf.exists() and baseline.exists() and build_py.exists():
         try:
             from line_spacing_pixel_audit import main as _lspa_main
-            templates_dir = Path("/workspace/templates")
+            templates_dir = (ROOT / "templates")
             _lspa_main([
                 "--slug", tid,
                 "--templates-dir", str(templates_dir),
@@ -1383,7 +1436,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             from external_asset_substitution_audit import main as _eas_main
             _eas_main([
                 "--slug", tid,
-                "--templates-dir", str(Path("/workspace/templates")),
+                "--templates-dir", str((ROOT / "templates")),
                 "--out-yaml", str(eas_path),
                 "--out-md", str(eas_md),
             ])
@@ -1422,7 +1475,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
             from image_content_audit import main as _ica_main
             _ica_main([
                 "--slug", tid,
-                "--templates-dir", str(Path("/workspace/templates")),
+                "--templates-dir", str((ROOT / "templates")),
                 "--dpi", "150",
                 "--out-yaml", str(image_content_path),
                 "--out-md", str(image_content_md),
@@ -1461,7 +1514,7 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     if preview_pdf.exists() and baseline.exists() and build_py.exists():
         try:
             from image_frame_visibility_audit import main as _ifv_main
-            templates_dir = Path("/workspace/templates")
+            templates_dir = (ROOT / "templates")
             _ifv_main([
                 "--slug", tid,
                 "--templates-dir", str(templates_dir),
@@ -1545,6 +1598,78 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
     else:
         print(
             f"[{tid}] audit E5b (systematic_text_audit): skipped",
+            file=sys.stderr,
+        )
+
+    # Phase E5e: squiggle_alignment_audit — for templates carrying the
+    # Grüne yellow squiggle motif, verify each squiggle still sits on the
+    # word it underlines. Scribus wraps text differently from InDesign, so
+    # the emphasised word can drift while the squiggle (placed at absolute
+    # coordinates) does not. The matching remediation is the
+    # squiggle_realign playbook dispatched by bin/tune-fix.
+    squiggle_alignment_path = out_dir / "squiggle_alignment_audit.yml"
+    try:
+        from squiggle_alignment_audit import (
+            run_squiggle_alignment_audit as _saa_run,
+            _yaml_dump as _saa_yaml,
+        )
+        saa_report = _saa_run(tid, repo=Path(__file__).resolve().parent.parent)
+        squiggle_alignment_path.write_text(_saa_yaml(saa_report), encoding="utf-8")
+        n_saa = int(saa_report.get("issues", 0) or 0)
+        if n_saa:
+            issue_parts.append(
+                f"{n_saa} squiggle(s) off their word"
+            )
+            print(
+                f"[{tid}] squiggle_alignment_audit: {saa_report.get('detail')}",
+                file=sys.stderr,
+            )
+        else:
+            print(f"[{tid}] squiggle_alignment_audit: OK")
+    except Exception as exc:
+        _record_phase_error(
+            phase_errors, "squiggle_alignment_audit",
+            "E5e (squiggle_alignment_audit)", exc, tid,
+        )
+
+    # Phase E5f: idml_attribute_coverage gate — diffs the attributes PRESENT
+    # in this template's source IDML against the converter's CONSUMED set,
+    # and fails when a SIGNIFICANT unconsumed attribute is NOT in the
+    # checked-in baseline (ATTRIBUTE_COVERAGE_BASELINE.yml). Catches the
+    # silent-attribute-drop class of bug (the ParagraphStyle/SpaceBefore
+    # regression) at import time instead of by eyeball — a future template
+    # using a converter-dropped attribute is flagged here.
+    attribute_coverage_path = out_dir / "attribute_coverage_audit.yml"
+    if idml_source is not None:
+        try:
+            from idml_attribute_coverage_audit import (
+                run_attribute_coverage_gate as _acg_run,
+            )
+            acg = _acg_run(idml_source)
+            attribute_coverage_path.write_text(
+                yaml.dump(acg.to_report(), sort_keys=False,
+                          allow_unicode=True, default_flow_style=False),
+                encoding="utf-8",
+            )
+            if not acg.ok:
+                issue_parts.append(
+                    f"{acg.issues} new unconsumed IDML attribute(s)"
+                )
+                print(
+                    f"[{tid}] idml_attribute_coverage: {acg.detail}",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"[{tid}] idml_attribute_coverage: OK")
+        except Exception as exc:
+            _record_phase_error(
+                phase_errors, "idml_attribute_coverage",
+                "E5f (idml_attribute_coverage)", exc, tid,
+            )
+    else:
+        print(
+            f"[{tid}] audit E5f (idml_attribute_coverage): "
+            f"skipped (no IDML source)",
             file=sys.stderr,
         )
 
@@ -2070,15 +2195,19 @@ def _run_audit(tdir: Path, meta: dict, args) -> tuple[int, str]:
         font_audit_path=font_audit_path,
         text_render_audit_path=text_render_audit_path,
         text_position_audit_path=text_position_audit_path,
+        line_match_audit_path=line_match_audit_path,
         run_style_audit_path=run_style_audit_path,
         color_audit_path=color_audit_path,
         visual_diff_regions_path=vd_region_path,
         line_spacing_audit_path=line_spacing_audit_path,
+        line_spacing_pixel_path=line_spacing_pixel_path,
         asset_audit_path=asset_audit_path,
         systematic_text_audit_path=systematic_audit_path,
         image_visibility_path=image_visibility_path,
         image_content_path=image_content_path,
         external_asset_substitution_path=eas_path,
+        squiggle_alignment_path=squiggle_alignment_path,
+        attribute_coverage_path=attribute_coverage_path,
         phase_errors=phase_errors,
     )
     preflight_path = out_dir / "preflight.yml"
@@ -2119,13 +2248,17 @@ def _build_preflight(
     text_position_audit_path: Path,
     run_style_audit_path: Path,
     color_audit_path: Path,
+    line_match_audit_path: Path | None = None,
     visual_diff_regions_path: Path | None = None,
     line_spacing_audit_path: Path | None = None,
+    line_spacing_pixel_path: Path | None = None,
     asset_audit_path: Path | None = None,
     systematic_text_audit_path: Path | None = None,
     image_visibility_path: Path | None = None,
     image_content_path: Path | None = None,
     external_asset_substitution_path: Path | None = None,
+    squiggle_alignment_path: Path | None = None,
+    attribute_coverage_path: Path | None = None,
     phase_errors: dict[str, str] | None = None,
 ) -> dict:
     """Aggregate every sub-audit yml into a single preflight dict (Issue #37 P1 task 6).
@@ -2240,6 +2373,22 @@ def _build_preflight(
         _record("text_position_audit", True, int(tpa.get("large_deltas_count", 0) or 0),
                 f"split into jitter + structural buckets")
 
+    # line_match_audit (D8b): strict per-line, per-frame layout match.
+    # First-word x and line baseline y must match; inter-word spacing gets
+    # a minimal tolerance. No issue cap — any finding fails preflight.
+    if line_match_audit_path is not None:
+        lma = _load_yml(line_match_audit_path)
+        if lma is not None:
+            n_lma = int(lma.get("issues", 0) or 0)
+            _record(
+                "line_match_audit",
+                bool(lma.get("ok", False)),
+                n_lma,
+                (f"{n_lma} line(s) mismatched "
+                 f"({lma.get('lines_matched', 0)}/{lma.get('lines_total', 0)} match)")
+                if n_lma else "",
+            )
+
     rsa = _load_yml(run_style_audit_path)
     if rsa is not None:
         large = sum(
@@ -2302,6 +2451,45 @@ def _build_preflight(
                 detail,
             )
 
+    # Phase E4 (split mixed-font headline gate): line_spacing_pixel_audit
+    # rows of kind=split_headline measure a reconstructed mixed-font headline
+    # — the converter splits it into N overlapping single-line frames, so the
+    # ordinary per-frame ink scan reads a sibling line and reports a phantom
+    # 0.0 drift. A split_headline row with a per-line ink-top or inter-line
+    # spacing drift beyond SPLIT_HEADLINE_TOL_PT is a real mis-spacing (the
+    # FLOP-ascent-ratio calibration is wrong) and MUST fail preflight — it
+    # cannot ship and cannot be silently rationalised past. The ordinary
+    # per-frame rows of this audit stay informational (engine-floor jitter is
+    # the canonical-signal debate elsewhere); only split_headline majors gate.
+    if line_spacing_pixel_path is not None:
+        lspa = _load_yml(line_spacing_pixel_path)
+        if lspa is not None:
+            try:
+                from line_spacing_pixel_audit import SPLIT_HEADLINE_TOL_PT
+            except Exception:
+                SPLIT_HEADLINE_TOL_PT = 2.0
+            bad_headlines = []
+            for row in lspa.get("rows") or []:
+                if row.get("kind") != "split_headline":
+                    continue
+                md = row.get("max_drift_pt")
+                sd = row.get("max_spacing_drift_pt")
+                worst = max(
+                    abs(md) if md is not None else 0.0,
+                    abs(sd) if sd is not None else 0.0,
+                )
+                if worst > SPLIT_HEADLINE_TOL_PT:
+                    bad_headlines.append(
+                        f"{row.get('anname')} (worst {round(worst, 2)}pt)"
+                    )
+            _record(
+                "split_headline_spacing",
+                len(bad_headlines) == 0,
+                len(bad_headlines),
+                ("mixed-font headline mis-spaced: " + ", ".join(bad_headlines))
+                if bad_headlines else "",
+            )
+
     # Phase E5b (LESSONS_LEARNED L-010/L-011): systematic_text_audit
     # — fail-hard if any text frame has measurable drift > 1pt that
     # is NOT addressed via TOLERANCES.yml + sim outcome. This is the
@@ -2359,6 +2547,33 @@ def _build_preflight(
                 n_invisible == 0,  # faint is sub-threshold; invisible blocks
                 issues,
                 f"{n_invisible} invisible, {n_faint} faint" if issues else "",
+            )
+
+    # Phase E5e: squiggle_alignment_audit — yellow squiggle vs word tracking.
+    if squiggle_alignment_path is not None:
+        saa = _load_yml(squiggle_alignment_path)
+        if saa is not None:
+            n_saa = int(saa.get("issues", 0) or 0)
+            _record(
+                "squiggle_alignment_audit",
+                bool(saa.get("ok", True)),
+                n_saa,
+                saa.get("detail", "") or "",
+            )
+
+    # Phase E5f: idml_attribute_coverage — new converter-dropped IDML
+    # attributes not in the accepted baseline. A new significant drop
+    # fails preflight so a future template's silently-dropped attribute
+    # is caught at import, not by eyeball.
+    if attribute_coverage_path is not None:
+        acg = _load_yml(attribute_coverage_path)
+        if acg is not None:
+            n_acg = int(acg.get("issues", 0) or 0)
+            _record(
+                "idml_attribute_coverage",
+                bool(acg.get("ok", True)),
+                n_acg,
+                acg.get("detail", "") or "",
             )
 
     # Phase E (Issue #38 Task 2): asset_extraction_audit must be FIRST in the

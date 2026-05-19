@@ -89,6 +89,8 @@ def _styles_xml(*paragraph_styles: dict) -> bytes:
             ("FillColor", "fill_color"),
             ("FontStyle", "font_style"),
             ("Justification", "justification"),
+            ("SpaceBefore", "space_before"),
+            ("SpaceAfter", "space_after"),
         ):
             if ps_key in ps and ps[ps_key] is not None:
                 attrs[attr_key] = str(ps[ps_key])
@@ -265,3 +267,149 @@ def test_psr_without_justification_inherits_parastyle_align():
     seps = [r for r in runs if r.separator == "para"]
     assert len(seps) == 1
     assert seps[0].paragraph_attrs == {"ALIGN": "3"}, seps[0].paragraph_attrs
+
+
+# ---------------------------------------------------------------------------
+# Paragraph spacing — IDML SpaceBefore / SpaceAfter (converter attribute fix).
+# ---------------------------------------------------------------------------
+def test_space_after_parsed_from_paragraph_style():
+    """SpaceAfter on a ParagraphStyle is parsed as a float (points)."""
+    xml = _styles_xml(
+        {"Self": "ParagraphStyle/Fließtext auf weißem Hintergrund",
+         "Name": "Fließtext auf weißem Hintergrund",
+         "point_size": 11, "applied_font": "Gotham Narrow",
+         "justification": "LeftAlign",
+         "space_after": "5.669291338582678"},
+    )
+    styles = _read_paragraph_styles_from_xml(xml)
+    st = styles["ParagraphStyle/Fließtext auf weißem Hintergrund"]
+    assert st["space_after"] == 5.669291338582678
+    # SpaceBefore absent → None.
+    assert st["space_before"] is None
+
+
+def test_space_before_parsed_from_paragraph_style():
+    """SpaceBefore on a ParagraphStyle is parsed as a float (points)."""
+    xml = _styles_xml(
+        {"Self": "ParagraphStyle/Foo", "Name": "Foo",
+         "point_size": 12, "justification": "LeftAlign",
+         "space_before": "4"},
+    )
+    styles = _read_paragraph_styles_from_xml(xml)
+    assert styles["ParagraphStyle/Foo"]["space_before"] == 4.0
+
+
+def test_space_after_inherits_through_based_on_chain():
+    """A child style with no SpaceAfter inherits the parent's value."""
+    xml = _styles_xml(
+        {"Self": "ParagraphStyle/Parent", "Name": "Parent",
+         "point_size": 11, "justification": "LeftAlign",
+         "space_after": "5.669291338582678"},
+        {"Self": "ParagraphStyle/Child", "Name": "Child",
+         "based_on": "ParagraphStyle/Parent"},
+    )
+    styles = _read_paragraph_styles_from_xml(xml)
+    resolved = _resolve_paragraph_style(styles["ParagraphStyle/Child"], styles)
+    assert resolved["space_after"] == 5.669291338582678
+
+
+def test_space_after_own_value_overrides_parent():
+    """A child's own SpaceAfter takes precedence over the inherited value."""
+    xml = _styles_xml(
+        {"Self": "ParagraphStyle/Parent", "Name": "Parent",
+         "point_size": 11, "justification": "LeftAlign",
+         "space_after": "10"},
+        {"Self": "ParagraphStyle/Child", "Name": "Child",
+         "justification": "LeftAlign", "space_after": "3",
+         "based_on": "ParagraphStyle/Parent"},
+    )
+    styles = _read_paragraph_styles_from_xml(xml)
+    resolved = _resolve_paragraph_style(styles["ParagraphStyle/Child"], styles)
+    assert resolved["space_after"] == 3.0
+
+
+def test_ancestor_has_nonzero_detects_explicit_zero_override():
+    """A child that sets SpaceAfter=0 over a non-zero parent must be
+    detectable as an explicit override — _ancestor_has_nonzero is True so
+    the emitter writes space_after_pt=0 (cancels the inherited spacing)
+    rather than omitting it (which makes Scribus inherit the parent's air).
+    """
+    from idml_to_dsl import _ancestor_has_nonzero
+
+    xml = _styles_xml(
+        {"Self": "ParagraphStyle/Parent", "Name": "Parent",
+         "point_size": 11, "justification": "LeftAlign",
+         "space_after": "5.669291338582678"},
+        {"Self": "ParagraphStyle/Child", "Name": "Child",
+         "justification": "LeftAlign", "space_after": "0",
+         "based_on": "ParagraphStyle/Parent"},
+    )
+    styles = _read_paragraph_styles_from_xml(xml)
+    child = styles["ParagraphStyle/Child"]
+    # Child's own value is an explicit 0 …
+    assert child["space_after"] == 0.0
+    # … and an ancestor carries a non-zero value → explicit override.
+    assert _ancestor_has_nonzero(child, styles, "space_after") is True
+    # A child with no non-zero ancestor is NOT an override.
+    parent = styles["ParagraphStyle/Parent"]
+    assert _ancestor_has_nonzero(parent, styles, "space_after") is False
+
+
+# ---------------------------------------------------------------------------
+# TextFramePreference + BlendingSetting extraction (converter attribute fix).
+# ---------------------------------------------------------------------------
+def test_extract_opacity_returns_fraction():
+    """BlendingSetting/Opacity=70 → 0.7; Opacity=100 / absent → None."""
+    from idml_to_dsl import _extract_opacity
+
+    tf = etree.fromstring(
+        b"<TextFrame>"
+        b"<TransparencySetting><BlendingSetting Opacity='70'/></TransparencySetting>"
+        b"</TextFrame>"
+    )
+    assert _extract_opacity(tf) == 0.7
+
+    opaque = etree.fromstring(
+        b"<TextFrame>"
+        b"<TransparencySetting><BlendingSetting Opacity='100'/></TransparencySetting>"
+        b"</TextFrame>"
+    )
+    assert _extract_opacity(opaque) is None
+
+    bare = etree.fromstring(b"<TextFrame/>")
+    assert _extract_opacity(bare) is None
+
+
+def test_extract_textframe_prefs_vertical_justification():
+    """VerticalJustification=CenterAlign → vertical_text_align=1; TopAlign → omitted."""
+    from idml_to_dsl import _extract_textframe_prefs
+
+    centered = etree.fromstring(
+        b"<TextFrame><TextFramePreference VerticalJustification='CenterAlign'/>"
+        b"</TextFrame>"
+    )
+    assert _extract_textframe_prefs(centered)["vertical_text_align"] == 1
+
+    top = etree.fromstring(
+        b"<TextFrame><TextFramePreference VerticalJustification='TopAlign'/>"
+        b"</TextFrame>"
+    )
+    assert "vertical_text_align" not in _extract_textframe_prefs(top)
+
+
+def test_extract_textframe_prefs_multi_column():
+    """TextColumnCount=2 → columns=2 + col_gap_pt from TextColumnGutter."""
+    from idml_to_dsl import _extract_textframe_prefs
+
+    two_col = etree.fromstring(
+        b"<TextFrame><TextFramePreference TextColumnCount='2' "
+        b"TextColumnGutter='17.007874015748033'/></TextFrame>"
+    )
+    prefs = _extract_textframe_prefs(two_col)
+    assert prefs["columns"] == 2
+    assert abs(prefs["col_gap_pt"] - 17.007874015748033) < 1e-9
+
+    one_col = etree.fromstring(
+        b"<TextFrame><TextFramePreference TextColumnCount='1'/></TextFrame>"
+    )
+    assert "columns" not in _extract_textframe_prefs(one_col)

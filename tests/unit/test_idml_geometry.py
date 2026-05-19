@@ -81,11 +81,19 @@ def test_rotated_90deg_textframe():
         spread_item_transform_str="1 0 0 1 0 786.61",
         page_item_transform_str="1 0 0 1 -420.94 -140.31",
     )
-    # After 90° CCW, the inner 99×297.64 rectangle becomes 297.64×99 AABB
-    assert (w, h) == pytest.approx((297.64, 99), rel=1e-3)
+    # A rotated frame returns its UN-rotated WIDTH/HEIGHT (99×297.64) plus a
+    # rotation_deg — Scribus stores XPOS/YPOS/WIDTH/HEIGHT for the un-rotated
+    # frame and rotates it CCW around (XPOS, YPOS). Emitting the rotated AABB
+    # as the frame dims would mis-place the frame (a -90° full-bleed
+    # background would sweep off the top of the sheet).
+    assert (w, h) == pytest.approx((99, 297.64), rel=1e-3)
     # Rotation is ±90°; we don't pin sign here (Scribus CCW convention may flip
     # during emit testing — convention documented in code).
     assert abs(abs(rot) - 90) < 1
+    # (x, y) is the rotation pivot = image of the item-local top-left anchor
+    # (min-x, min-y) under the full item→page transform.
+    assert x == pytest.approx(396.80, abs=0.1)
+    assert y == pytest.approx(370.59, abs=0.1)
 
 
 def test_rotated_9deg_frame():

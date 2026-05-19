@@ -185,9 +185,13 @@ def main(argv=None):
             "",
         ])
         for f in actionable:
+            # max_drift_pt is None when the frame is actionable via the
+            # line-count-mismatch branch (no per-line drift to measure).
+            _md = f.get("max_drift_pt")
+            _md_str = f"{_md:+.2f}pt" if isinstance(_md, (int, float)) else "n/a"
             md_lines.extend([
                 f"### {f['anname']}",
-                f"- max drift: {f['max_drift_pt']:+.2f}pt",
+                f"- max drift: {_md_str}",
                 f"- cumulative drift: {f['cumulative_drift_pt']}",
                 f"- per-line: {f['per_line_drift_pt']}",
                 f"- reason: {f['reason']}",

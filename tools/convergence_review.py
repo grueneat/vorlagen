@@ -125,11 +125,16 @@ def _classify_text_position(issue: dict, idml_path: Path | None) -> str:
     return "human-review"
 
 
-def _classify_region_color(severity: str, mean_delta: float | None) -> str:
-    """region_color_audit::icc_likely + brand-color region => scribus-engine-bug."""
-    if severity == "icc_likely" and (mean_delta is None or mean_delta <= 5.0):
+def _classify_region_color(severity: str, delta: float | None) -> str:
+    """region_color_audit::icc_likely + brand-color region => scribus-engine-bug.
+
+    ``delta`` is the offset-compensated residual delta (the part of a
+    frame's colour delta NOT explained by the document's systematic
+    colour-management offset) — see tools/region_color_audit.py.
+    """
+    if severity == "icc_likely" and (delta is None or delta <= 5.0):
         return "scribus-engine-bug"
-    if severity == "fill_likely" and (mean_delta is None or mean_delta > 5.0):
+    if severity == "fill_likely" and (delta is None or delta > 5.0):
         return "converter-bug"
     return "human-review"
 
@@ -199,7 +204,12 @@ def _issues_from_region_color(rca: dict | None, next_id) -> list[dict]:
         if severity == "ok":
             continue
         mean_delta = frame.get("mean_delta")
-        cls = _classify_region_color(severity, mean_delta)
+        # Classify on the offset-compensated residual when present (the
+        # part of the delta NOT explained by the systematic
+        # colour-management offset); fall back to mean_delta for older
+        # audit YAML that predates residual_delta.
+        residual_delta = frame.get("residual_delta", mean_delta)
+        cls = _classify_region_color(severity, residual_delta)
         slot = frame.get("anname")
         page = frame.get("page")
         suggested = (

@@ -148,6 +148,39 @@ _FONT_ASCENT_RATIO = 1.15   # covers Vollkorn Black Italic usWinAscent/em=1.115
 _FONT_DESCENT_RATIO = 0.55  # covers Vollkorn Black Italic usWinDescent/em=0.489
 _FRAME_HEIGHT_SAFETY_PT = 4.0  # absolute cushion for lineGap + Scribus rounding
 
+# Per-font Scribus FLOP=1 first-baseline ratio (fraction of fontsize), used by
+# the mixed-font headline splitter. When a forced-line-break headline mixes
+# fonts (the corpus pattern: Gotham Narrow Ultra + a Vollkorn Black Italic
+# accent word), each line is emitted as its own single-line TextFrame; Scribus
+# places each line's first baseline FLOP=1 ("Font Ascent") below the frame
+# top, and the ascent of Vollkorn Black Italic differs from Gotham. Without a
+# correction the Vollkorn line renders too low relative to a Gotham line at
+# the same frame top (an InDesign↔Scribus font-metric mismatch).
+#
+# RECALIBRATED (issue: mixed-font headline split mis-calibration). The prior
+# 0.345 value was calibrated against pdfplumber text-matrix coordinates, NOT
+# the actual rendered ink. Measured against rendered ink-tops it over-shifted
+# the Vollkorn line UPWARD: on 26-03-flyer-a6-hochformat-portrait the page-1
+# headline "dreizeilige" (38pt) rendered 7.68pt too high and the page-2
+# headline "Headline." (30pt) 5.60pt too high vs baseline.pdf. The Gotham
+# lines were pixel-exact in both renders, isolating the whole error to the
+# Vollkorn correction. Correcting the ratio per page gives 0.345-7.68/38=
+# 0.1429 and 0.345-5.60/30=0.1583; the mean 0.15 leaves a ±0.27pt rendered-
+# ink residual on both — within the sub-2pt fidelity bar. A font absent from
+# this map is treated as the 0.0 reference (Gotham, any sans-serif face).
+_FONT_FLOP_ASCENT_RATIO: dict[str, float] = {
+    "vollkorn": 0.15,
+}
+
+
+def _font_flop_ratio(font: Optional[str]) -> float:
+    """Scribus FLOP=1 first-baseline ratio for ``font`` (see the constant)."""
+    fn = (font or "").lower()
+    for key, ratio in _FONT_FLOP_ASCENT_RATIO.items():
+        if key in fn:
+            return ratio
+    return 0.0
+
 
 # Exact CMYK match (0..100 ints) -> brand-palette name, per locked decision #1.
 # Source: shared/ci.yml palette cross-referenced against IDML Resources/Graphic.xml.
@@ -160,16 +193,26 @@ COLOR_CMYK_TO_BRAND: dict[tuple[int, int, int, int], str] = {
     (0,   100, 0,   0):   "Magenta",
 }
 
-# IDML built-in swatches that should not be emitted (process inks, registration,
-# transparency placeholders). See locked decision #1 commentary.
+# IDML built-in swatches that NEVER reach the SLA, even when referenced —
+# transparency placeholders and registration ink. These have no CMYK value
+# the brand map could resolve.
 IDML_BUILTIN_COLORS_SKIP = {
     "Color/None",
     "Color/Registration",
+    "Swatch/None",
+}
+
+# IDML latent process inks (Cyan/Magenta/Yellow/Black). InDesign ships these
+# as Hiddenreserved swatches that are normally unused — when unused they are
+# dropped. But a PageItem can legitimately reference one as FillColor /
+# StrokeColor (e.g. the Grüne yellow squiggle motif fills with Color/Yellow).
+# When that happens the swatch IS in ``used_colors`` and must be routed
+# through COLOR_CMYK_TO_BRAND like any other CMYK swatch instead of skipped.
+IDML_BUILTIN_PROCESS_INKS = {
     "Color/Cyan",
     "Color/Magenta",
     "Color/Yellow",
     "Color/Black",
-    "Swatch/None",
 }
 
 # Defence-in-depth XML parser settings. lxml 5.4 is XXE-safe by default on
@@ -386,16 +429,42 @@ def _compute_page_local_bbox_pt(
         for (px, py) in spread_local
     ]
 
-    xs = [p[0] for p in page_local]
-    ys = [p[1] for p in page_local]
-    min_x, max_x = min(xs), max(xs)
-    min_y, max_y = min(ys), max(ys)
-    w = max_x - min_x
-    h = max_y - min_y
-
     rotation_deg = math.degrees(math.atan2(b, a))
 
-    return (min_x, min_y, w, h, rotation_deg)
+    # NON-ROTATED frame (the common case): the axis-aligned bbox of the
+    # transformed anchors IS the frame rectangle. Return it unchanged.
+    if abs(rotation_deg) <= 1e-3:
+        xs = [p[0] for p in page_local]
+        ys = [p[1] for p in page_local]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        return (min_x, min_y, max_x - min_x, max_y - min_y, rotation_deg)
+
+    # ROTATED frame: the axis-aligned bbox of the rotated anchors is NOT the
+    # frame — Scribus stores XPOS/YPOS/WIDTH/HEIGHT for the *un-rotated*
+    # frame and rotates it CCW around (XPOS, YPOS). Emit that model:
+    #
+    #   WIDTH/HEIGHT = the un-rotated frame extent = item-local anchor
+    #                  extent × the transform's uniform scale.
+    #   XPOS/YPOS    = the image of the item-local top-left anchor
+    #                  (min-x, min-y in item-local space) under the full
+    #                  item→page transform. Because R·(0,0) == (0,0), this
+    #                  point is exactly the rotation pivot.
+    #
+    # This makes a -90°/180°/270° full-bleed background land on-page instead
+    # of sweeping off the top of the sheet (axis-aligned-bbox emission put
+    # the pivot at the bbox corner, which is wrong for any non-zero ROT).
+    a_xs = [p[0] for p in anchors]
+    a_ys = [p[1] for p in anchors]
+    a_min_x, a_max_x = min(a_xs), max(a_xs)
+    a_min_y, a_max_y = min(a_ys), max(a_ys)
+    w = (a_max_x - a_min_x) * sx
+    h = (a_max_y - a_min_y) * sy
+    # Map the item-local top-left anchor through the full transform chain.
+    tl_spread = _apply_matrix(item_to_spread, a_min_x, a_min_y)
+    pivot_x = tl_spread[0] - page_top_left_in_spread[0]
+    pivot_y = tl_spread[1] - page_top_left_in_spread[1]
+    return (pivot_x, pivot_y, w, h, rotation_deg)
 
 
 def _pt_to_mm(value_pt: float) -> float:
@@ -782,6 +851,14 @@ class _Ctx:
     template_id: str
     assets_dir: Path
     out: PythonRepr = field(default_factory=PythonRepr)
+    # The source IDML path. Used to locate the sibling baseline <stem>.pdf
+    # for render-page-mode detection (per-page vs spread-merged export).
+    source: Optional[Path] = None
+    # Render-page model: "spread" (a facing-pages spread → one wide SLA page,
+    # the default for leporello / fold templates) or "page" (each IDML page →
+    # its own SLA page, used when the baseline PDF was exported page-by-page).
+    # Resolved once by _resolve_render_page_mode().
+    render_page_mode: str = "spread"
     # Filled by Phase A
     doc_prefs: dict[str, Any] = field(default_factory=dict)
     # Filled by Phase B
@@ -834,6 +911,13 @@ class _Ctx:
     # inventory and fires UnhandledElement when the gap is non-empty.
     emitted_self_ids: set[str] = field(default_factory=set)
     skipped_with_reason: list[dict] = field(default_factory=list)
+    # Squiggle re-anchoring (yellow emphasis motif). Each filled-silhouette
+    # PolyLine (FillColor=Color/Yellow, closed path) records its page-local
+    # bbox so a post-emit pass can associate it with the word it underlines.
+    # Keyed lists are populated by _emit_pageitem; consumed by
+    # _emit_squiggle_anchors which writes templates/<slug>/squiggle_anchors.yml.
+    squiggle_records: list[dict] = field(default_factory=list)
+    textframe_records: list[dict] = field(default_factory=list)
 
     def record_skipped(self, self_id: str, reason: str) -> None:
         """Explicitly skip an IDML PageItem with a reason — bypasses the
@@ -1025,13 +1109,19 @@ def _emit_colors_from_xml(
     for c in root.findall(".//Color"):
         self_id = c.get("Self", "")
         if self_id in IDML_BUILTIN_COLORS_SKIP:
-            # Color/None / Swatch/None / Registration / Process inks listed
-            # in IDML_BUILTIN_COLORS_SKIP never reach the SLA.
+            # Color/None / Swatch/None / Registration never reach the SLA —
+            # they carry no resolvable CMYK value.
             continue
         override = c.get("ColorOverride", "")
-        if "Hiddenreserved" in override:
-            # Latent process inks (Cyan/Magenta/Yellow/Black) marked as hidden;
-            # never used, never emitted.
+        # Latent process inks (Cyan/Magenta/Yellow/Black) ship as
+        # Hiddenreserved. Drop them ONLY when truly unused; when a PageItem
+        # references one (e.g. the yellow squiggle motif fills with
+        # Color/Yellow) it is in ``used_colors`` and must resolve like a
+        # normal CMYK swatch via COLOR_CMYK_TO_BRAND below.
+        is_referenced_process_ink = (
+            self_id in IDML_BUILTIN_PROCESS_INKS and self_id in used_colors
+        )
+        if "Hiddenreserved" in override and not is_referenced_process_ink:
             continue
         space = c.get("Space", "")
         model = c.get("Model", "")
@@ -1288,6 +1378,12 @@ def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, An
         fill_color = ps.get("FillColor")
         font_style = ps.get("FontStyle")
         justification = ps.get("Justification")
+        # Paragraph spacing — IDML stores SpaceBefore/SpaceAfter in points
+        # already (no conversion needed). InDesign's default is 0; a designer
+        # who sets a non-zero value gets vertical air above/below the
+        # paragraph. SLA stores these as STYLE VOR/NACH.
+        space_before = ps.get("SpaceBefore")
+        space_after = ps.get("SpaceAfter")
         # LeadingModel controls how nominal Leading converts to baseline-to-
         # baseline gap. "LeadingModelAkiBelow" — InDesign's Japanese-typography
         # model used by default in this corpus — adds ~12% aki below each
@@ -1312,6 +1408,8 @@ def _read_paragraph_styles_from_xml(styles_xml: bytes) -> dict[str, dict[str, An
             "justification": justification,
             "applied_font": applied_font,
             "tab_stops": tab_stops if tab_stops else None,
+            "space_before": float(space_before) if space_before is not None else None,
+            "space_after": float(space_after) if space_after is not None else None,
         }
     return styles
 
@@ -1331,11 +1429,37 @@ def _resolve_paragraph_style(
         parent = all_styles[parent_self]
         for k in ("point_size", "leading", "leading_model", "grid_alignment",
                   "fill_color", "font_style", "justification", "applied_font",
-                  "tab_stops"):
+                  "tab_stops", "space_before", "space_after"):
             if resolved.get(k) is None:
                 resolved[k] = parent.get(k)
         parent_self = parent.get("based_on_self")
     return resolved
+
+
+def _ancestor_has_nonzero(
+    style: dict[str, Any],
+    all_styles: dict[str, dict[str, Any]],
+    key: str,
+) -> bool:
+    """True when an ANCESTOR (BasedOn chain) of ``style`` carries a non-zero
+    value for ``key``.
+
+    Used to detect an explicit zero-override: a child ParagraphStyle that
+    sets e.g. ``SpaceAfter="0"`` while its parent's resolved value is
+    non-zero. Such a 0 is NOT noise — emitting it cancels the inherited
+    value; omitting it makes Scribus inherit the parent's non-zero spacing.
+    Cycle-safe.
+    """
+    visited = {style["self_id"]}
+    parent_self = style.get("based_on_self")
+    while parent_self and parent_self in all_styles and parent_self not in visited:
+        visited.add(parent_self)
+        parent = all_styles[parent_self]
+        v = parent.get(key)
+        if v is not None and abs(float(v)) > 1e-6:
+            return True
+        parent_self = parent.get("based_on_self")
+    return False
 
 
 def _emit_paragraph_styles(out: PythonRepr, ctx: _Ctx) -> dict[str, str]:
@@ -1462,6 +1586,11 @@ def _emit_paragraph_styles_to_function(
                     ):
                         lp *= _AKI_BELOW_FACTOR
                     kwargs["linesp"] = lp
+                    # A resolved numeric LINESP is a FIXED leading — pair it
+                    # with Scribus LINESPMode=0 ("Fixed"). Without the mode the
+                    # STYLE inherits the parent's mode (often 1=Automatic),
+                    # which ignores LINESP and renders the font-metric gap.
+                    kwargs["linesp_mode"] = 0
                 except ValueError:
                     pass
             elif ld == "Auto" or ld is None:
@@ -1473,6 +1602,34 @@ def _emit_paragraph_styles_to_function(
                 if pt is not None:
                     multiplier = 1.45 if model == "LeadingModelAkiBelow" else 1.2
                     kwargs["linesp"] = float(pt) * multiplier
+                    kwargs["linesp_mode"] = 0
+            # Paragraph spacing (IDML SpaceBefore/SpaceAfter, in points) →
+            # SLA STYLE VOR/NACH. Emit a non-zero resolved value (e.g. the
+            # corpus body style's SpaceAfter=5.669pt). ALSO emit an explicit
+            # 0 when this style's OWN value is 0 but an ancestor in the
+            # BasedOn chain is non-zero — that 0 is a deliberate override
+            # (e.g. the sub-headline "Zwischenüberschrift" sets SpaceAfter=0
+            # over the body parent's 5.669pt). Omitting it makes Scribus
+            # inherit the parent's spacing, adding ~one half-line of air
+            # below the paragraph that InDesign never shows.
+            sb = resolved.get("space_before")
+            if sb is not None and abs(sb) > 1e-6:
+                kwargs["space_before_pt"] = round(sb, 4)
+            elif (
+                st.get("space_before") is not None
+                and abs(float(st["space_before"])) <= 1e-6
+                and _ancestor_has_nonzero(st, styles, "space_before")
+            ):
+                kwargs["space_before_pt"] = 0.0
+            sa = resolved.get("space_after")
+            if sa is not None and abs(sa) > 1e-6:
+                kwargs["space_after_pt"] = round(sa, 4)
+            elif (
+                st.get("space_after") is not None
+                and abs(float(st["space_after"])) <= 1e-6
+                and _ancestor_has_nonzero(st, styles, "space_after")
+            ):
+                kwargs["space_after_pt"] = 0.0
             # Tab stops: emit only those defined directly on THIS style (not inherited),
             # so child styles don't redundantly repeat the parent's tab stops.
             own_tabs = st.get("tab_stops")
@@ -1494,6 +1651,21 @@ def _emit_paragraph_styles_to_function(
                     max_tab_pt = max(pos for pos, _ in own_tabs)
                     kwargs["left_indent_pt"] = round(max_tab_pt, 4)
                     kwargs["first_indent_pt"] = round(-max_tab_pt, 4)
+            # Justification-compatibility default. Scribus's justified line-
+            # breaker runs looser than InDesign's: with no glyph-scaling
+            # headroom Scribus's word-spaces stretch wider, so it fits fewer
+            # words per line and the wrap diverges from the baseline. A small
+            # MinGlyphShrink budget (glyphs may compress to 98%) lets Scribus
+            # fit the same words InDesign does — empirically closes the bulk
+            # of the cross-renderer wrap drift on justified body text (A6
+            # flyer body frames: 254 -> ~130 word-position drifts). Applied
+            # to justified styles (ALIGN 3=justified, 4=forced) only; left/
+            # centre/right styles do not justify so glyph scaling never
+            # triggers. A template may still override per-frame in the tune
+            # stage. MinWordTrack is left at the Scribus default — tightening
+            # it as well over-packs some frames (per-template sweep finding).
+            if kwargs.get("align") in (3, 4) and "min_glyph_shrink" not in kwargs:
+                kwargs["min_glyph_shrink"] = 0.98
             ctx.out.w("doc.add_para_style(ParaStyle(")
             ctx.out.indent += 1
             for k, v in kwargs.items():
@@ -1594,6 +1766,81 @@ def _strict_no_threading(item: Any) -> None:
         )
 
 
+def _extract_opacity(item: Any) -> Optional[float]:
+    """Return the page item's fill opacity in [0.0, 1.0], or None when opaque.
+
+    IDML records object transparency under
+    ``<TransparencySetting><BlendingSetting Opacity="..."/></TransparencySetting>``.
+    Opacity is a percent (0-100); InDesign's default is 100 (fully opaque).
+    Returns None for a missing element or a 100 value so opaque frames stay
+    byte-identical (the SLA primitive omits TransValue for None).
+    """
+    ts = item.find("TransparencySetting")
+    if ts is None:
+        return None
+    bs = ts.find("BlendingSetting")
+    if bs is None:
+        return None
+    raw = bs.get("Opacity")
+    if raw is None:
+        return None
+    try:
+        pct = float(raw)
+    except (ValueError, TypeError):
+        return None
+    if abs(pct - 100.0) < 1e-6:
+        return None
+    return max(0.0, min(1.0, pct / 100.0))
+
+
+# IDML TextFramePreference/VerticalJustification → SLA PAGEOBJECT ALIGN
+# (vertical text alignment within the frame). TopAlign is both the IDML and
+# SLA default; only Center/Bottom/Justify need an explicit emit.
+_VERTICAL_JUSTIFICATION_MAP = {
+    "TopAlign": 0,
+    "CenterAlign": 1,
+    "BottomAlign": 2,
+    "JustifyAlign": 3,
+}
+
+
+def _extract_textframe_prefs(item: Any) -> dict[str, Any]:
+    """Return rendering-relevant TextFramePreference settings for a TextFrame.
+
+    Keys (all optional):
+      ``vertical_text_align`` — int 0/1/2/3 from VerticalJustification, omitted
+        for the default TopAlign.
+      ``columns`` — int TextColumnCount, omitted when 1.
+      ``col_gap_pt`` — float TextColumnGutter (points), only when columns > 1.
+    InDesign defaults (TopAlign / 1 column) are dropped so single-column,
+    top-aligned frames keep emitting nothing new.
+    """
+    out: dict[str, Any] = {}
+    tfp = item.find("TextFramePreference")
+    if tfp is None:
+        return out
+    vj = tfp.get("VerticalJustification")
+    if vj is not None and vj in _VERTICAL_JUSTIFICATION_MAP:
+        v = _VERTICAL_JUSTIFICATION_MAP[vj]
+        if v != 0:
+            out["vertical_text_align"] = v
+    cc = tfp.get("TextColumnCount")
+    if cc is not None:
+        try:
+            n = int(cc)
+        except (ValueError, TypeError):
+            n = 1
+        if n > 1:
+            out["columns"] = n
+            cg = tfp.get("TextColumnGutter")
+            if cg is not None:
+                try:
+                    out["col_gap_pt"] = float(cg)
+                except (ValueError, TypeError):
+                    pass
+    return out
+
+
 def _is_complex_polygon(item: Any) -> bool:
     """Return True if the Polygon has multiple sub-paths or open paths.
 
@@ -1630,6 +1877,30 @@ def _is_complex_polygon(item: Any) -> bool:
             if left_str != anchor_str or right_str != anchor_str:
                 return True
     return False
+
+
+def _is_open_polygon(item: Any) -> bool:
+    """Return True when ANY of the Polygon's sub-paths is an open path.
+
+    A squiggle silhouette is always closed (PathOpen=false on every
+    GeometryPathType) so it can be flood-filled. An open sub-path means
+    the shape is a stroked outline, never a fill motif.
+    """
+    pg = item.find("Properties/PathGeometry")
+    if pg is None:
+        pg = item.find(".//PathGeometry")
+    if pg is None:
+        return False
+    for sp in pg.findall("GeometryPathType"):
+        if sp.get("PathOpen", "false").lower() in ("true", "1"):
+            return True
+    return False
+
+
+def _page_index_from_var(page_var: str) -> int:
+    """Map a ``pageN`` receiver variable to its integer render-page index."""
+    digits = "".join(ch for ch in page_var if ch.isdigit())
+    return int(digits) if digits else 0
 
 
 def _extract_idml_sla_path(
@@ -1738,6 +2009,157 @@ def _extract_idml_sla_path(
     return " ".join(path_parts)
 
 
+@dataclass
+class _HeadlineLine:
+    """One visible line of a forced-break headline (see _split_mixed_font_lines)."""
+
+    runs: list  # the Run objects that make up this line (no separator runs)
+    font: Optional[str]  # the dominant font family of the line's first text run
+    fontsize: Optional[float]  # the line's max fontsize
+
+
+def _split_mixed_font_lines(runs: list) -> Optional[list[_HeadlineLine]]:
+    """Split a forced-break headline's runs into per-line groups, IF mixed-font.
+
+    A headline like ``u1175`` is ONE IDML paragraph whose CharacterStyleRanges
+    are separated by ``<Br/>`` forced line breaks and use different fonts
+    (Gotham Narrow Ultra → Vollkorn Black Italic → Gotham Narrow Ultra). The
+    converter emits the Br as a ``separator='para'`` Run, so the run list is::
+
+        [Run("Das ist die ", Gotham), Run(separator='para'),
+         Run("dreizeilige", Vollkorn), Run(separator='para'),
+         Run("Headline", Gotham)]
+
+    Scribus's per-line font-metric leading places the Vollkorn line at the
+    wrong baseline relative to the Gotham lines, so the headline must be
+    emitted as N single-line TextFrames at calibrated y (the caller does
+    that). This helper returns the per-line groups when ALL of:
+
+      * there are >= 2 lines (at least one ``para``/``breakline`` separator),
+      * every line carries exactly one text run (a single CSR — true for
+        every headline in the corpus; multi-run lines are body text, not a
+        headline, and are left as a single frame),
+      * the lines do NOT all share the same font family.
+
+    Returns ``None`` when the frame is not a mixed-font forced-break headline
+    (single-font headlines render fine as one frame once LINESPMode=0 is set).
+    """
+    lines: list[list] = [[]]
+    for r in runs:
+        if r.separator in ("para", "breakline"):
+            lines.append([])
+        elif r.separator is not None:
+            # tab / breakcol / breakframe — not a plain headline; bail out.
+            return None
+        elif r.text or r.has_itext:
+            lines[-1].append(r)
+    # Drop trailing empty line groups (a trailing Br leaves an empty bucket).
+    while lines and not lines[-1]:
+        lines.pop()
+    if len(lines) < 2:
+        return None
+    headline_lines: list[_HeadlineLine] = []
+    for grp in lines:
+        if len(grp) != 1:
+            return None  # multi-run line — body text, not a headline
+        run = grp[0]
+        if not (run.text or "").strip():
+            return None  # blank line — not a headline
+        fontsizes = [r.fontsize for r in grp if r.fontsize is not None]
+        headline_lines.append(
+            _HeadlineLine(
+                runs=grp,
+                font=run.font,
+                fontsize=max(fontsizes) if fontsizes else None,
+            )
+        )
+    fonts = {(hl.font or "").lower() for hl in headline_lines}
+    if len(fonts) < 2:
+        return None  # single-font forced-break frame — one frame is fine
+    return headline_lines
+
+
+def _emit_mixed_font_headline(
+    ctx: "_Ctx",
+    headline_lines: list[_HeadlineLine],
+    *,
+    x_mm: float,
+    y_mm: float,
+    w_mm: float,
+    leading_pt: float,
+    style_slug: str,
+    self_id: str,
+    layer_idx: int,
+    page_var: str,
+) -> None:
+    """Emit one single-line TextFrame per line of a mixed-font headline.
+
+    Each line keeps the original frame's x and the IDML <Leading> as its
+    stacking interval. Line N's frame y is::
+
+        y_N = y_1 + (N-1)*Leading  -  correction_N
+
+    where ``correction_N`` is the per-font FLOP=1 baseline correction relative
+    to line 1's font (see ``_FONT_FLOP_ASCENT_RATIO``): 0 for a line in the
+    same family as line 1, ``0.15*fontsize`` upward for a Vollkorn line under
+    a Gotham line 1. This makes every line's RENDERED ink land on the IDML
+    leading grid regardless of font, matching the InDesign baseline.
+
+    The frame width is widened by a margin so a Vollkorn accent word (which
+    Scribus renders wider than InDesign) does not clip; the frames are
+    left-aligned so widening the right edge is safe. Frame height is one
+    line's worth. LINESPMode=0 + LINESP pins the (single) line's spacing.
+    """
+    line_h_mm = leading_pt * PT_TO_MM
+    ref_ratio = _font_flop_ratio(headline_lines[0].font)
+    for idx, hl in enumerate(headline_lines):
+        fontsize_pt = hl.fontsize or (leading_pt / 1.2)
+        correction_mm = (
+            (_font_flop_ratio(hl.font) - ref_ratio) * fontsize_pt * PT_TO_MM
+        )
+        line_y = y_mm + idx * line_h_mm - correction_mm
+        # One line needs ascent+descent+safety; budget generously so neither
+        # a tall Vollkorn cap nor a descender clips.
+        line_frame_h = max(
+            line_h_mm,
+            (_FONT_ASCENT_RATIO + _FONT_DESCENT_RATIO) * fontsize_pt * PT_TO_MM
+            + _FRAME_HEIGHT_SAFETY_PT * PT_TO_MM,
+        )
+        # Widen the frame so a Vollkorn accent word does not clip; left-
+        # aligned, so the right edge moves out harmlessly.
+        line_w = w_mm + 12.0
+        line_anname = self_id if idx == 0 else f"{self_id}_l{idx + 1}"
+        kwargs: dict[str, Any] = {
+            "x_mm": _round_mm(x_mm),
+            "y_mm": _round_mm(line_y),
+            "w_mm": _round_mm(line_w),
+            "h_mm": _round_mm(line_frame_h),
+            "anname": line_anname,
+            "layer": layer_idx,
+        }
+        if style_slug:
+            kwargs["style"] = style_slug
+        kwargs["runs"] = list(hl.runs)
+        kwargs["trail_attrs"] = {
+            "LINESPMode": "0",
+            "LINESP": str(leading_pt),
+        }
+        if idx == 0:
+            ctx.out.w(
+                f"# Mixed-font headline {self_id!r} split into "
+                f"{len(headline_lines)} single-line frames: the IDML joins "
+                f"the lines with <Br/> but mixes fonts (e.g. Gotham + "
+                f"Vollkorn), and Scribus's per-line font-metric leading "
+                f"places them at the wrong baseline as one frame. Each line "
+                f"is stacked at the IDML Leading ({leading_pt:.2f}pt) with a "
+                f"per-font FLOP=1 baseline correction."
+            )
+        _emit_call(
+            ctx.out, "TextFrame", kwargs,
+            receiver=page_var, multiline=True,
+        )
+
+
 def _emit_pageitem(
     out: PythonRepr,
     item: Any,
@@ -1815,6 +2237,11 @@ def _emit_pageitem(
     raw_xs = [p[0] for p in anchors]
     raw_ys = [p[1] for p in anchors]
     frame_tl_anchor: tuple[float, float] = (min(raw_xs), min(raw_ys))
+    # Full anchor bbox (min-x, min-y, max-x, max-y) — the frame window the
+    # placed image is cropped against (see _aspect_crop_image).
+    frame_anchors_bbox: tuple[float, float, float, float] = (
+        min(raw_xs), min(raw_ys), max(raw_xs), max(raw_ys),
+    )
 
     # Detect nested vector logos (<PDF>) — defer per locked decision #2.
     pdf_children = item.findall(".//PDF")
@@ -1846,32 +2273,23 @@ def _emit_pageitem(
                 abs_mapped = (
                     mapped_path if mapped_path.is_absolute() else ROOT / mapped_path
                 )
-                # Extract per-PDF placement params from the PDF child's
-                # ItemTransform, then COMPOSE with the parent Rectangle's
-                # outer scale. Scribus's LOCALSCX is applied in rendered
-                # (post-Rectangle-transform) coordinates; the PDF child's
-                # ItemTransform is in frame-LOCAL coordinates. Composing
-                # gives the correct rendered-space scale.
-                pdf_transform_str = pdf.get("ItemTransform", "")
-                pdf_local_scale: Optional[tuple[float, float]] = None
-                pdf_local_offset: Optional[tuple[float, float]] = None
-                if pdf_transform_str:
-                    pdf_local_scale, pdf_local_offset = _extract_content_local_params(
-                        pdf_transform_str, frame_tl_anchor,
-                    )
-                    rect_a, _rb, _rc, rect_d, _, _ = _parse_matrix(item_t)
-                    if pdf_local_scale is not None:
-                        sx, sy = pdf_local_scale
-                        pdf_local_scale = (sx * rect_a, sy * rect_d)
-                    if pdf_local_offset is not None:
-                        ox, oy = pdf_local_offset
-                        pdf_local_offset = (ox * rect_a, oy * rect_d)
-                # Issue #39 Phase A + C: route through the inline-vs-
-                # relative helper. Never emit absolute paths.
+                # Vector logos (<PDF> children) are placed in InDesign with
+                # FrameFittingOption "ContentToFrame" — the artwork is fit to
+                # the frame, not free-scaled. Emit the rasterised logo with
+                # NO local_scale / local_offset so _emit_image_frame_call
+                # leaves SCALETYPE at its default 0 (Scribus ScaleAuto: fit
+                # the image proportionally into the frame).
+                #
+                # The previous code derived a literal LOCALSCX/SCY from the
+                # PDF child's ItemTransform and emitted SCALETYPE=1 (free
+                # scaling). Scribus 1.6.x has a known bug rendering a
+                # white-on-transparent RGBA image under SCALETYPE=1 — it
+                # comes out blank (the DIE GRÜNEN white logo vanished on
+                # every flyer/leporello). SCALETYPE=0 is the reliable path
+                # and is geometrically correct for a fit-to-frame logo.
                 _emit_image_or_inline(
                     out, x_mm, y_mm, w_mm, h_mm, rot, self_id, layer_idx,
                     abs_path=abs_mapped, ctx=ctx,
-                    local_scale=pdf_local_scale, local_offset_pt=pdf_local_offset,
                 )
                 return
             ctx.unmapped_logos.append((pdf.get("Self", "?"), basename or uri))
@@ -1882,7 +2300,8 @@ def _emit_pageitem(
         img = image_children[0]
         _emit_image_content(out, item, img, x_mm, y_mm, w_mm, h_mm, rot,
                             self_id, layer_idx, ctx,
-                            frame_tl_anchor=frame_tl_anchor)
+                            frame_tl_anchor=frame_tl_anchor,
+                            frame_anchors_bbox=frame_anchors_bbox)
         return
 
     if tag == "TextFrame":
@@ -1893,8 +2312,10 @@ def _emit_pageitem(
         runs: list[Run] = []
         trail_attrs: Optional[dict] = None
         _first_psr_style_self: Optional[str] = None  # for Pattern-9 leading lookup
+        _story_psr_count = 0  # ParagraphStyleRange count — gates the headline split
         if parent_story:
             story_root = _resolve_story_xml(ctx.pkg, parent_story)
+            _story_psr_count = len(story_root.findall(".//ParagraphStyleRange"))
             first_psr = story_root.find(".//ParagraphStyleRange")
             if first_psr is not None:
                 ap = first_psr.get("AppliedParagraphStyle")
@@ -1912,6 +2333,28 @@ def _emit_pageitem(
             # _walk_story handles <para> separators for non-final PSRs; the final
             # PSR's alignment goes here so TextFrame.trail_attrs emits it correctly.
             trail_attrs = _psr_trail_attrs_for_story(story_root)
+
+        # Rotated-TextFrame W/H convention. _compute_page_local_bbox_pt emits
+        # the *un-rotated* frame extent (WIDTH/HEIGHT of the frame before ROT
+        # is applied) plus the rotation pivot. That is the correct model for
+        # ImageFrames and for empty (background-fill) frames, both of which
+        # the TextFrame primitive places verbatim. But the primitive applies
+        # a TEXT-FLOW W/H swap to any ±90° frame that carries text (it must,
+        # so Scribus computes wrap width from the visible long edge — see
+        # sla_lib/builder/primitives.py to_pageobject). Feeding the primitive
+        # the un-rotated model AND letting it swap is a double-correction:
+        # the visible frame collapses to the short axis and text clips.
+        #
+        # For a ±90° non-empty TextFrame, emit the axis-aligned bbox of the
+        # ROTATED rectangle instead — the convention the primitive's swap is
+        # built around. Derivation (pivot at the un-rotated top-left):
+        #   -90°: rotated-bbox = (x,         y - w_unrot, h_unrot, w_unrot)
+        #   +90°: rotated-bbox = (x - h_unrot, y,         h_unrot, w_unrot)
+        if runs and abs(abs(rot) - 90.0) < 0.5:
+            if rot < 0:
+                x_mm, y_mm, w_mm, h_mm = x_mm, y_mm - w_mm, h_mm, w_mm
+            else:
+                x_mm, y_mm, w_mm, h_mm = x_mm - h_mm, y_mm, h_mm, w_mm
 
         # Pattern 9 — auto-widen h_mm when Scribus would clip lines.
         # Scribus clips text when frame_h < effective line height; InDesign
@@ -2007,6 +2450,48 @@ def _emit_pageitem(
             ctx.out.w(f"# {_widen_comment}")
             emitted_h_mm = _round_mm(_widened_h_mm)
 
+        # Mixed-font forced-break headline: emit N single-line TextFrames.
+        # A headline whose <Br/>-separated lines use different font families
+        # (Gotham + a Vollkorn accent word) cannot render correctly as one
+        # frame — Scribus's per-line font-metric leading places the Vollkorn
+        # line at the wrong baseline. Splitting into one frame per line, each
+        # stacked at the IDML <Leading> interval with a per-font FLOP=1
+        # baseline correction, makes the lines stack evenly.
+        #
+        # Gated to: a SINGLE-PSR story (one IDML paragraph whose lines are
+        # joined by <Br/> forced breaks — a multi-PSR story is body text with
+        # real paragraph breaks and must NOT be split), a non-rotated frame,
+        # an explicit numeric Leading, and headline-sized text (>=20pt — body
+        # paragraphs with mixed Book/Bold runs are ~11pt and stay one frame).
+        _headline_lines = (
+            _split_mixed_font_lines(runs)
+            if (
+                runs
+                and abs(rot) < 1e-3
+                and _leading_pt is not None
+                and _story_psr_count == 1
+                and _max_fontsize_pt is not None
+                and _max_fontsize_pt >= 20.0
+            )
+            else None
+        )
+        if _headline_lines is not None:
+            _emit_mixed_font_headline(
+                ctx, _headline_lines,
+                x_mm=x_mm, y_mm=y_mm, w_mm=w_mm,
+                leading_pt=_leading_pt, style_slug=style_slug,
+                self_id=self_id, layer_idx=layer_idx, page_var=page_var,
+            )
+            ctx.textframe_records.append({
+                "anname": self_id,
+                "page": _page_index_from_var(page_var),
+                "x_mm": _round_mm(x_mm),
+                "y_mm": _round_mm(y_mm),
+                "w_mm": _round_mm(w_mm),
+                "h_mm": _round_mm(h_mm),
+            })
+            return
+
         kwargs: dict[str, Any] = {
             "x_mm": _round_mm(x_mm),
             "y_mm": _round_mm(y_mm),
@@ -2060,10 +2545,37 @@ def _emit_pageitem(
         fc = _resolve_fill(item.get("FillColor"), ctx.color_map)
         if fc:
             kwargs["fill"] = fc
+        # TextFramePreference: vertical justification + multi-column layout.
+        # CenterAlign vertical justification (used by every Impressum frame in
+        # the corpus) centres the text block in the frame instead of pinning
+        # it to the top; multi-column (the Querformat body frames are 2-up)
+        # splits the story into N columns with a gutter.
+        tf_prefs = _extract_textframe_prefs(item)
+        if "vertical_text_align" in tf_prefs:
+            kwargs["vertical_text_align"] = tf_prefs["vertical_text_align"]
+        if "columns" in tf_prefs:
+            kwargs["columns"] = tf_prefs["columns"]
+            if "col_gap_pt" in tf_prefs:
+                kwargs["col_gap_mm"] = round(tf_prefs["col_gap_pt"] * PT_TO_MM, 4)
+        # Object opacity (BlendingSetting/Opacity) — the Impressum frames are
+        # placed at 70% in this corpus. None when fully opaque.
+        opacity = _extract_opacity(item)
+        if opacity is not None:
+            kwargs["fill_opacity"] = round(opacity, 4)
         _emit_call(
             ctx.out, "TextFrame", kwargs,
             receiver=page_var, multiline=True,
         )
+        # Record the frame's page-local bbox so the squiggle re-anchoring
+        # pass can pick the text frame a squiggle sits beneath.
+        ctx.textframe_records.append({
+            "anname": self_id,
+            "page": _page_index_from_var(page_var),
+            "x_mm": _round_mm(x_mm),
+            "y_mm": _round_mm(y_mm),
+            "w_mm": _round_mm(w_mm),
+            "h_mm": _round_mm(h_mm),
+        })
         return
 
     if tag in ("Rectangle", "Polygon", "Oval"):
@@ -2072,14 +2584,32 @@ def _emit_pageitem(
         # emit as PolyLine (PTYPE=7) with verbatim SLA path data extracted from
         # the IDML PathGeometry (transform chain: item → ancestors → page-local).
         if tag == "Polygon" and _is_complex_polygon(item):
-            sc = _resolve_fill(item.get("StrokeColor"), ctx.color_map)
-            if not sc:
-                sc = "Black"
+            # A complex Polygon can be a stroked outline (wind turbine icon),
+            # a filled silhouette (the Grüne yellow squiggle motif — closed
+            # bezier sub-paths filled with Color/Yellow, no stroke), or both.
+            # Resolve FillColor and StrokeColor independently:
+            #   - FillColor present  → emit it as the PolyLine fill (PCOLOR).
+            #   - StrokeColor present → emit it as the line colour (PCOLOR2).
+            # NEVER default a fill-only shape's stroke to Black — that turned
+            # the yellow squiggle into a black 1pt outline.
+            fill_color = _resolve_fill(item.get("FillColor"), ctx.color_map)
+            stroke_color = _resolve_fill(item.get("StrokeColor"), ctx.color_map)
             sw = item.get("StrokeWeight", "0")
             try:
                 sw_pt = float(sw)
             except (ValueError, TypeError):
                 sw_pt = 0.0
+            # ``line_color`` keeps the StrokeColor when a real stroke exists.
+            # A shape with a fill but no stroke must not paint an outline, so
+            # only fall back to Black when there is neither a fill nor a
+            # stroke (a degenerate Polygon — keep the legacy visible default).
+            if stroke_color:
+                line_color = stroke_color
+            elif fill_color:
+                line_color = "None"
+                sw_pt = 0.0
+            else:
+                line_color = "Black"
             sla_path = _extract_idml_sla_path(
                 item, item_t, ancestor_transforms,
                 spread_t, page_t, page_gb,
@@ -2091,11 +2621,13 @@ def _emit_pageitem(
                 "w_mm": _round_mm(w_mm),
                 "h_mm": _round_mm(h_mm),
                 "sla_path": sla_path,
-                "line_color": sc,
+                "line_color": line_color,
                 "line_width_pt": sw_pt,
                 "anname": self_id,
                 "layer": layer_idx,
             }
+            if fill_color:
+                pl_kwargs["fill"] = fill_color
             if abs(rot) > 1e-3:
                 pl_kwargs["rotation_deg"] = _round_rot(rot)
             # IDML EndCap / EndJoin → Scribus PLINEEND / PLINEJOIN (Qt::PenCapStyle
@@ -2124,6 +2656,24 @@ def _emit_pageitem(
                 ctx.out, "PolyLine", pl_kwargs,
                 receiver=page_var, multiline=True,
             )
+            # Squiggle re-anchoring: the Grüne yellow emphasis motif is a
+            # closed-path Polygon filled with the builtin Color/Yellow ink
+            # and no stroke. Record its page-local bbox so _emit_squiggle_
+            # anchors can bind it to the word it underlines. The discriminator
+            # is the builtin Color/Yellow (a named C=0 M=0 Y=100 K=0 swatch is
+            # a normal yellow shape, not the brush motif).
+            if (
+                item.get("FillColor") == "Color/Yellow"
+                and not _is_open_polygon(item)
+            ):
+                ctx.squiggle_records.append({
+                    "anname": self_id,
+                    "page": _page_index_from_var(page_var),
+                    "x_mm": _round_mm(x_mm),
+                    "y_mm": _round_mm(y_mm),
+                    "w_mm": _round_mm(w_mm),
+                    "h_mm": _round_mm(h_mm),
+                })
             return
 
         # No nested image/pdf — emit as a Polygon.
@@ -2154,6 +2704,9 @@ def _emit_pageitem(
                     pass
         if tag == "Oval":
             kwargs["shape"] = "ellipse"
+        opacity = _extract_opacity(item)
+        if opacity is not None:
+            kwargs["fill_opacity"] = round(opacity, 4)
         _emit_call(
             ctx.out, "Polygon", kwargs,
             receiver=page_var, multiline=True,
@@ -2327,6 +2880,7 @@ def _emit_image_frame_call(
     inline_ext: Optional[str] = None,
     local_scale: Optional[tuple[float, float]] = None,
     local_offset_pt: Optional[tuple[float, float]] = None,
+    fill_opacity: Optional[float] = None,
 ) -> None:
     """Append a page.add(ImageFrame(...)) call to ctx.out."""
     kwargs: dict[str, Any] = {
@@ -2339,6 +2893,8 @@ def _emit_image_frame_call(
     }
     if abs(rot) > 1e-3:
         kwargs["rotation_deg"] = _round_rot(rot)
+    if fill_opacity is not None:
+        kwargs["fill_opacity"] = round(fill_opacity, 4)
     if image_path:
         kwargs["image"] = image_path
     if inline_data is not None and inline_ext is not None:
@@ -2488,6 +3044,7 @@ def _emit_image_or_inline(
     ctx: _Ctx,
     local_scale: Optional[tuple[float, float]] = None,
     local_offset_pt: Optional[tuple[float, float]] = None,
+    fill_opacity: Optional[float] = None,
 ) -> None:
     """Issue #39 — emit an ImageFrame call self-contained per asset_policy.
 
@@ -2537,6 +3094,7 @@ def _emit_image_or_inline(
             ctx=ctx,
             local_scale=local_scale,
             local_offset_pt=local_offset_pt,
+            fill_opacity=fill_opacity,
         )
         return
 
@@ -2556,10 +3114,286 @@ def _emit_image_or_inline(
         ctx=ctx,
         local_scale=local_scale,
         local_offset_pt=local_offset_pt,
+        fill_opacity=fill_opacity,
     )
 
 
 _SCRIBUS_FRIENDLY_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
+
+
+def _image_graphic_bounds_pt(img: Any) -> Optional[tuple[float, float]]:
+    """Return the placed image's natural ``(width_pt, height_pt)``.
+
+    InDesign stores the placed image's natural size as a
+    ``Properties/GraphicBounds`` child of the ``<Image>`` element, in points.
+    Returns ``None`` when the element is absent or unparseable.
+    """
+    gb = img.find("Properties/GraphicBounds")
+    if gb is None:
+        gb = img.find(".//GraphicBounds")
+    if gb is None:
+        return None
+    try:
+        left = float(gb.get("Left", "0"))
+        top = float(gb.get("Top", "0"))
+        right = float(gb.get("Right", "0"))
+        bottom = float(gb.get("Bottom", "0"))
+    except (TypeError, ValueError):
+        return None
+    w = right - left
+    h = bottom - top
+    if w <= 0 or h <= 0:
+        return None
+    return (w, h)
+
+
+@dataclass
+class _AspectCropResult:
+    """Outcome of :func:`_aspect_crop_image`.
+
+    Attributes:
+        cropped: True when a derived asset was written to the destination.
+        offset_pt: ``(dx, dy)`` — the cropped image's top-left, measured from
+            the IDML frame's top-left, in points (rect-local). Non-zero only
+            when the placed image is smaller than the frame (the "contain"
+            case): the ImageFrame must shrink to the image's rendered rect so
+            no transparent padding is needed.
+        size_pt: ``(w, h)`` — the cropped image's rendered size in points.
+    """
+
+    cropped: bool
+    offset_pt: tuple[float, float] = (0.0, 0.0)
+    size_pt: tuple[float, float] = (0.0, 0.0)
+
+
+def _aspect_crop_image(
+    *,
+    src_path: Path,
+    dst_path: Path,
+    image_transform_str: str,
+    graphic_bounds_pt: tuple[float, float],
+    frame_anchors_bbox: tuple[float, float, float, float],
+) -> _AspectCropResult:
+    """Pre-crop a placed image to exactly the part the frame exposes.
+
+    InDesign places photos with "Fill Proportionally": the image is scaled
+    and positioned, then the frame acts as a window onto it. Scribus 1.6.x
+    has no aspect-fill mode, so the converter reproduces the InDesign crop in
+    Python BEFORE Scribus sees the asset.
+
+    The method intersects the placed image's rendered rectangle with the
+    frame rectangle (both in the frame's rect-local coordinate space), crops
+    the source image to that intersection in pixel space, and reports the
+    intersection's offset + size so the caller can place an ImageFrame of
+    exactly that rect with ``scale_type=0`` (aspect-preserving fit). The
+    cropped asset then fills its (possibly shrunk) ImageFrame pixel-for-pixel
+    — no transparent padding is ever produced, because Scribus 1.6.x silently
+    trims transparent borders of a ``scale_type=0`` image.
+
+    Two cases fall out of the same intersection:
+
+    - **cover** — the frame lies inside the image; the intersection is the
+      frame; the crop is a sub-rectangle of the image; the ImageFrame keeps
+      the IDML frame rect (offset 0).
+    - **contain** — the image lies inside the frame; the intersection is the
+      whole image; no pixels are cropped away; the ImageFrame shrinks to the
+      image's rendered rect (non-zero offset).
+
+    All geometry comes from the ``<Image>`` ItemTransform and the frame
+    anchors — nothing is guessed.
+
+    Returns an :class:`_AspectCropResult`. ``cropped`` is ``False`` when the
+    placement is identity (the source already matches the frame), the image
+    does not intersect the frame, or the geometry is unsupported (rotation /
+    shear on the image transform) — in which case the caller uses the source
+    asset unchanged.
+    """
+    try:
+        from PIL import Image as _PILImage
+    except ImportError:  # pragma: no cover — Pillow is a hard dependency
+        return _AspectCropResult(cropped=False)
+
+    a, b, c, d, tx, ty = _parse_matrix(image_transform_str)
+    # Only axis-aligned placements are croppable in pixel space. A rotated or
+    # sheared image transform (b/c non-zero, or negative scale) is rare in the
+    # corpus; fall back to the caller's existing path rather than guess.
+    if abs(b) > 1e-6 or abs(c) > 1e-6 or a <= 0 or d <= 0:
+        return _AspectCropResult(cropped=False)
+
+    nat_w_pt, nat_h_pt = graphic_bounds_pt
+    fx0, fy0, fx1, fy1 = frame_anchors_bbox
+
+    # The placed image's rendered rectangle in rect-local points: the Image
+    # ItemTransform maps image-content (0,0)→(nat_w,nat_h) to (tx,ty)→(...).
+    img_x0, img_y0 = tx, ty
+    img_x1, img_y1 = a * nat_w_pt + tx, d * nat_h_pt + ty
+
+    # Intersection of the image rect with the frame rect.
+    ix0 = max(fx0, img_x0)
+    iy0 = max(fy0, img_y0)
+    ix1 = min(fx1, img_x1)
+    iy1 = min(fy1, img_y1)
+    if ix1 - ix0 <= 0 or iy1 - iy0 <= 0:
+        # Image does not overlap the frame — nothing visible to crop.
+        return _AspectCropResult(cropped=False)
+
+    with _PILImage.open(str(src_path)) as _src:
+        img_w_px, img_h_px = _src.size
+        src_img = _src.convert("RGBA")
+
+    # Intersection corners → image pixels (invert x=a*u+tx, y=d*v+ty).
+    px_per_pt_x = img_w_px / nat_w_pt
+    px_per_pt_y = img_h_px / nat_h_pt
+    cu0 = (ix0 - tx) / a * px_per_pt_x
+    cu1 = (ix1 - tx) / a * px_per_pt_x
+    cv0 = (iy0 - ty) / d * px_per_pt_y
+    cv1 = (iy1 - ty) / d * px_per_pt_y
+
+    left = max(0, int(round(cu0)))
+    top = max(0, int(round(cv0)))
+    right = min(img_w_px, int(round(cu1)))
+    bottom = min(img_h_px, int(round(cv1)))
+    if right - left <= 0 or bottom - top <= 0:
+        return _AspectCropResult(cropped=False)
+
+    offset_pt = (ix0 - fx0, iy0 - fy0)
+    size_pt = (ix1 - ix0, iy1 - iy0)
+
+    # No-op: the whole source image is shown at the IDML frame rect.
+    is_identity = (
+        left == 0
+        and top == 0
+        and right == img_w_px
+        and bottom == img_h_px
+        and abs(offset_pt[0]) < 1e-3
+        and abs(offset_pt[1]) < 1e-3
+    )
+    if is_identity:
+        return _AspectCropResult(cropped=False)
+
+    cropped = src_img.crop((left, top, right, bottom))
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+    # PNG with no metadata so Scribus 1.6.x (which drops ICC-bearing PNGs)
+    # loads it, and output stays byte-deterministic for identical inputs.
+    cropped.save(str(dst_path), format="PNG", optimize=False)
+    return _AspectCropResult(
+        cropped=True, offset_pt=offset_pt, size_pt=size_pt,
+    )
+
+
+def _crop_output_path(ctx: _Ctx, source_asset: Path, self_id: str) -> Path:
+    """Deterministic path for a frame's pre-cropped derived asset.
+
+    The crop lives in a ``crops/`` subdirectory of the source asset's
+    directory so the flat ``asset_policy`` / ``asset_extraction`` audits
+    (which only walk the top level of ``shared/assets/<slug>/``) do not
+    treat it as an unclassified primary asset. The filename keys on the
+    frame's IDML Self ID so two frames cropping the same source never
+    collide.
+    """
+    return source_asset.parent / "crops" / f"{source_asset.stem}-{self_id}.png"
+
+
+@dataclass
+class _CropPlacement:
+    """A cropped asset plus the ImageFrame rect (page mm) it should occupy."""
+
+    path: Path
+    x_mm: float
+    y_mm: float
+    w_mm: float
+    h_mm: float
+
+
+def _maybe_aspect_crop(
+    *,
+    ctx: _Ctx,
+    img: Any,
+    rect: Any,
+    self_id: str,
+    source_asset: Path,
+    frame_anchors_bbox: Optional[tuple[float, float, float, float]],
+    frame_x_mm: float,
+    frame_y_mm: float,
+    frame_w_mm: float,
+    frame_h_mm: float,
+) -> Optional[_CropPlacement]:
+    """Produce a frame-window crop of ``source_asset`` if the geometry warrants.
+
+    Returns a :class:`_CropPlacement` (the derived asset path + the page rect
+    the ImageFrame should occupy) when a crop was written, or ``None`` when
+    the placement is identity, the image misses the frame, or the geometry is
+    unsupported. The crop is derived purely from the IDML ``<Image>``
+    ItemTransform + the frame's PathPointArray anchors — see
+    :func:`_aspect_crop_image`.
+
+    For the "contain" case (the placed image is smaller than the frame) the
+    ImageFrame is shrunk to the image's rendered rect; the rect-local
+    intersection offset maps to a page offset only when the parent Rectangle
+    is axis-aligned. A rotated Rectangle with a non-zero offset is rejected
+    (the crop is skipped) rather than mis-placed.
+    """
+    img_transform_str = img.get("ItemTransform", "")
+    if not img_transform_str or frame_anchors_bbox is None:
+        return None
+    if not source_asset.exists():
+        return None
+    graphic_bounds = _image_graphic_bounds_pt(img)
+    if graphic_bounds is None:
+        return None
+    # The Image ItemTransform and the frame anchors are both expressed in the
+    # parent Rectangle's local space, so they compose directly — no extra
+    # rect-transform correction is needed (unlike the LOCALSCX/LOCALY path).
+    dst = _crop_output_path(ctx, source_asset, self_id)
+    result = _aspect_crop_image(
+        src_path=source_asset,
+        dst_path=dst,
+        image_transform_str=img_transform_str,
+        graphic_bounds_pt=graphic_bounds,
+        frame_anchors_bbox=frame_anchors_bbox,
+    )
+    if not result.cropped:
+        return None
+
+    # The intersection offset is in the Rectangle's local space. It maps
+    # straight to a page-space offset only when the Rectangle is axis-aligned
+    # (no rotation). When the Rectangle is rotated, a non-zero offset cannot
+    # be applied without rotating it — reject the crop in that case (it would
+    # mis-place the frame). A zero offset (the cover case) is always safe.
+    off_x_pt, off_y_pt = result.offset_pt
+    has_offset = abs(off_x_pt) > 1e-3 or abs(off_y_pt) > 1e-3
+    rect_t = rect.get("ItemTransform", "1 0 0 1 0 0")
+    ra, rb, rc, rd, _, _ = _parse_matrix(rect_t)
+    rect_axis_aligned = (
+        abs(rb) < 1e-6 and abs(rc) < 1e-6
+        and abs(ra - 1.0) < 1e-6 and abs(rd - 1.0) < 1e-6
+    )
+    if has_offset and not rect_axis_aligned:
+        return None
+
+    if has_offset:
+        # Shrink the ImageFrame to the placed image's rendered rect.
+        x_mm = frame_x_mm + off_x_pt * PT_TO_MM
+        y_mm = frame_y_mm + off_y_pt * PT_TO_MM
+        w_mm = result.size_pt[0] * PT_TO_MM
+        h_mm = result.size_pt[1] * PT_TO_MM
+    else:
+        # Cover case — the crop fills the IDML frame rect unchanged.
+        x_mm, y_mm = frame_x_mm, frame_y_mm
+        w_mm, h_mm = frame_w_mm, frame_h_mm
+
+    # The crop carries a new basename absent from meta.yml::asset_policy.
+    # Mirror the source asset's classification so _emit_image_or_inline routes
+    # the derived asset the same way (inlined for embedded, SLA-relative path
+    # for external) — otherwise an embedded source's crop would leak to a
+    # path reference.
+    if source_asset.name in ctx.embedded_set:
+        ctx.embedded_set.add(dst.name)
+    elif source_asset.name in ctx.external_set:
+        ctx.external_set.add(dst.name)
+    return _CropPlacement(
+        path=dst, x_mm=x_mm, y_mm=y_mm, w_mm=w_mm, h_mm=h_mm,
+    )
 
 
 def _emit_image_content(
@@ -2575,6 +3409,7 @@ def _emit_image_content(
     layer_idx: int,
     ctx: _Ctx,
     frame_tl_anchor: Optional[tuple[float, float]] = None,
+    frame_anchors_bbox: Optional[tuple[float, float, float, float]] = None,
 ) -> None:
     """Emit a raster Image as an ImageFrame, resolving the file: URI.
 
@@ -2590,13 +3425,28 @@ def _emit_image_content(
          cannot render (``.psd``, ``.ai``, etc.) so the failure is loud
          instead of a blank preview.
 
+    Aspect-fill crop: InDesign places photos with "Fill Proportionally" —
+    the image is scaled to cover the frame and cropped to the frame aspect.
+    Scribus 1.6.x has no aspect-fill mode, so when the IDML geometry shows a
+    non-identity placement the converter pre-crops the resolved asset to the
+    exact frame window (:func:`_aspect_crop_image`) and emits the derived
+    asset with ``scale_type=0`` (auto-fit) and no ``local_scale`` /
+    ``local_offset`` — Scribus then fills the frame pixel-for-pixel. The crop
+    is computed from the ``<Image>`` ItemTransform + frame anchors, never
+    guessed empirically.
+
     Args:
         frame_tl_anchor: the ``(min_x, min_y)`` of the Rectangle frame's
             PathPointArray anchors in item-local coordinates. Used with the
             Image's ``ItemTransform`` to derive the correct Scribus
             ``LOCALX / LOCALY`` content placement (see
             ``_extract_content_local_params``).
+        frame_anchors_bbox: the full ``(min_x, min_y, max_x, max_y)`` anchor
+            bbox — the frame window the placed image is cropped against.
     """
+    # Object opacity (BlendingSetting/Opacity) lives on the enclosing
+    # Rectangle, not the <Image> child. None when fully opaque.
+    fill_opacity = _extract_opacity(rect)
     link = img.find(".//Link")
     uri = link.get("LinkResourceURI", "") if link is not None else ""
     basename = _basename_from_uri(uri)
@@ -2639,11 +3489,31 @@ def _emit_image_content(
             abs_mapped = (
                 mapped_path if mapped_path.is_absolute() else ROOT / mapped_path
             )
+            # Aspect-fill crop: when the IDML geometry shows a non-identity
+            # placement, pre-crop the asset to the frame window and emit the
+            # derived asset at scale_type=0 (no local_scale/offset). For the
+            # contain case the ImageFrame is shrunk to the image's rendered
+            # rect (see _maybe_aspect_crop).
+            crop = _maybe_aspect_crop(
+                ctx=ctx, img=img, rect=rect, self_id=self_id,
+                source_asset=abs_mapped,
+                frame_anchors_bbox=frame_anchors_bbox,
+                frame_x_mm=x_mm, frame_y_mm=y_mm,
+                frame_w_mm=w_mm, frame_h_mm=h_mm,
+            )
+            if crop is not None:
+                _emit_image_or_inline(
+                    ctx.out, crop.x_mm, crop.y_mm, crop.w_mm, crop.h_mm, rot,
+                    self_id, layer_idx, abs_path=crop.path, ctx=ctx,
+                    fill_opacity=fill_opacity,
+                )
+                return
             # Issue #39 Phase A + C: inline-vs-relative routing.
             _emit_image_or_inline(
                 ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
                 self_id, layer_idx, abs_path=abs_mapped, ctx=ctx,
                 local_scale=local_scale, local_offset_pt=local_offset_pt,
+                fill_opacity=fill_opacity,
             )
             return
         # asset_map is populated but this basename is missing → strict raise.
@@ -2675,6 +3545,7 @@ def _emit_image_content(
         ctx.out, x_mm, y_mm, w_mm, h_mm, rot,
         self_id, layer_idx, abs_path=asset_path, ctx=ctx,
         local_scale=local_scale, local_offset_pt=local_offset_pt,
+        fill_opacity=fill_opacity,
     )
 
 
@@ -2862,12 +3733,18 @@ def _walk_story(
         # Per-para LINESPMode + LINESP from the CSR's Properties/Leading.
         # InDesign renders with the explicit Leading value from the first CSR in
         # the paragraph; Scribus falls back to ~15pt without an explicit LINESP.
-        # Scribus SLA LINESPMode semantics (from reference.sla corpus):
-        #   0 = auto (proportional to font size; LINESP is a default, not enforced)
-        #   1 = auto-from-font-metrics (no explicit LINESP needed)
-        #   2 = explicit fixed LINESP value ("Fixed" in Scribus UI)
-        # We emit LINESPMode="2" + LINESP=<value> for numeric IDML Leading, or
-        # LINESPMode="1" for Auto-leading (font-metrics-based).
+        # Scribus SLA LINESPMode semantics (verified against the brand team's
+        # hand-built original .sla files — gruene-zeitung / plakat-a1 /
+        # postkarte — every one of which pins explicit leading this way):
+        #   0 = Fixed line spacing — uses the LINESP value verbatim.
+        #   1 = Automatic — font-metric line spacing (LINESP ignored).
+        #   2 = Align to baseline grid (NOT a fixed-leading mode).
+        # An explicit numeric IDML <Leading> is a FIXED leading → LINESPMode=0
+        # + LINESP=<value>. The old code emitted LINESPMode=2 (baseline grid)
+        # and fell back to LINESPMode=1 for sub-1.45×fontsize leadings; both
+        # were wrong — mode 2 renders WIDER than the LINESP value and mode 1
+        # ignores LINESP entirely, so every Vollkorn headline lost its
+        # authored leading. ``Auto`` leading stays on mode 1 (font metrics).
         psr_ld = _psr_effective_leading(psr)
         if psr_ld is not None:
             if psr_ld == "Auto":
@@ -2878,17 +3755,8 @@ def _walk_story(
                     csr_pt_attr = _first_csr_pointsize(psr)
                     if csr_pt_attr is not None and lp < csr_pt_attr * 0.5:
                         lp = csr_pt_attr * 1.2
-                    # Use LINESPMode=1 when Leading is below the font's
-                    # intrinsic minimum (~1.45×fontsize): Scribus enforces
-                    # the intrinsic anyway, but LINESPMode=2 with a small
-                    # LINESP value produces unexpected over-spacing on
-                    # some Vollkorn frames. LINESPMode=1 (auto) keeps the
-                    # rendered baseline gap predictable.
-                    if csr_pt_attr is not None and lp < csr_pt_attr * 1.45:
-                        psr_para_attrs["LINESPMode"] = "1"
-                    else:
-                        psr_para_attrs["LINESPMode"] = "2"
-                        psr_para_attrs["LINESP"] = str(lp)
+                    psr_para_attrs["LINESPMode"] = "0"
+                    psr_para_attrs["LINESP"] = str(lp)
                 except ValueError:
                     pass
 
@@ -2912,6 +3780,24 @@ def _walk_story(
                 f"<ParagraphStyleRange> contains unhandled child <{ctag}> "
                 f"(extend tools/idml_to_dsl.py:_walk_story)"
             )
+
+        # Drop a trailing <Br/>-generated paragraph separator. An IDML <Br/>
+        # that is the LAST child of the LAST CSR of a PSR is the paragraph
+        # terminator — the PSR boundary (inter-PSR separator below) or the
+        # end-of-story already terminates the paragraph. Keeping the Br's
+        # Run(separator="para") here doubles the break, injecting a spurious
+        # blank line between sections (the converter then renders one full
+        # leading + SpaceAfter of empty paragraph that InDesign never shows).
+        # A mid-PSR <Br/> (e.g. Content + Br + Content) is a real intra-
+        # paragraph break and is NOT last in para_runs, so it survives.
+        if para_runs:
+            _last = para_runs[-1]
+            if (
+                _last.separator == "para"
+                and not _last.text
+                and _last.has_itext is False
+            ):
+                para_runs.pop()
 
         # Attach paragraph_attrs to the FIRST text-content run of the PSR so
         # Scribus applies the PSR's alignment/leading to the paragraph that
@@ -3034,22 +3920,15 @@ def _psr_trail_attrs_for_story(story_root: Any) -> Optional[dict]:
                 csr_pt_attr = _first_csr_pointsize(last_psr)
                 if csr_pt_attr is not None and lp < csr_pt_attr * 0.5:
                     lp = csr_pt_attr * 1.2
-                # Mirror the <para> separator rule in _walk_story so that
-                # multi-paragraph frames have a CONSISTENT LINESPMode on
-                # every <para>/<trail> element. Direct measurement (issue
-                # #40 follow-up) shows that LINESPMode=2 + sub-metric
-                # LINESP renders WIDER than LINESPMode=1 (font-metric) in
-                # Scribus for every font tested (Gotham Narrow Ultra at
-                # 30pt: LINESP=27→46pt rendered vs auto→38pt; Vollkorn
-                # Black Italic at 23pt: LINESP=20.48→39pt vs auto→26pt).
-                # Stay on LINESPMode=1 (auto) when leading is sub-metric;
-                # template authors handle per-frame residual drift via
-                # inject.yml.
-                if csr_pt_attr is not None and lp < csr_pt_attr * 1.45:
-                    trail["LINESPMode"] = "1"
-                else:
-                    trail["LINESPMode"] = "2"
-                    trail["LINESP"] = str(lp)
+                # Mirror the <para> separator rule in _walk_story: an explicit
+                # numeric IDML <Leading> is a FIXED leading, so emit Scribus
+                # LINESPMode=0 (Fixed) + LINESP=<value>. The brand team's
+                # original .sla files pin leading exactly this way (e.g.
+                # plakat-a1 "Headlineweiß" LINESPMode=0 LINESP=150 on a 160pt
+                # font). LINESPMode=2 is baseline-grid (renders wider) and
+                # mode 1 ignores LINESP — neither honours the authored value.
+                trail["LINESPMode"] = "0"
+                trail["LINESP"] = str(lp)
             except ValueError:
                 pass
     return trail if trail else None
@@ -3235,45 +4114,370 @@ def _walk_csr(
     return runs
 
 
-def _emit_pages(ctx: _Ctx) -> None:
-    """Phase H driver: emit one _add_page_<i> function body per page."""
-    spreads = list(ctx.pkg.spreads)
-    pages = list(ctx.pkg.pages)
-    if len(spreads) != len(pages):
-        raise UnhandledElement(
-            f"Expected one Page per Spread, got {len(spreads)} spreads "
-            f"and {len(pages)} pages "
-            f"(extend tools/idml_to_dsl.py:_emit_pages)"
+def _item_page_local_bbox_pt(
+    child: Any,
+    spread_t: str,
+    pg: dict[str, Any],
+) -> Optional[tuple[float, float, float, float, float]]:
+    """Page-local bbox of a top-level spread item for routing.
+
+    For a leaf PageItem this is a single ``_compute_page_local_bbox_pt`` call.
+    For a Group it is the UNION of the group's leaf descendants' page-local
+    bboxes — ``_extract_anchors`` on a Group returns only the first child's
+    PathGeometry (Groups have no PathGeometry of their own), so routing a
+    Group by ``_extract_anchors`` mis-places it. Recursing into the leaves
+    with the group ItemTransform chain gives the true occupied rect.
+
+    Returns ``(x_pt, y_pt, w_pt, h_pt, 0.0)`` or ``None`` when no leaf yields
+    geometry.
+    """
+    tag = etree.QName(child).localname
+
+    def _leaf_bboxes(node: Any, ancestor_ts: list[str]) -> list[tuple[float, float, float, float]]:
+        out: list[tuple[float, float, float, float]] = []
+        node_tag = etree.QName(node).localname
+        if node_tag == "Group":
+            grp_t = node.get("ItemTransform", "1 0 0 1 0 0")
+            for sub in node:
+                if not isinstance(sub.tag, str):
+                    continue
+                if etree.QName(sub).localname not in _DISPATCHED_PAGEITEM_TAGS:
+                    continue
+                out.extend(_leaf_bboxes(sub, [grp_t, *ancestor_ts]))
+            return out
+        try:
+            anchors = _extract_anchors(node)
+            x, y, w, h, _ = _compute_page_local_bbox_pt(
+                node.get("ItemTransform", "1 0 0 1 0 0"),
+                anchors,
+                ancestor_ts,
+                spread_t,
+                pg["page_t"],
+                pg["page_gb"],
+            )
+        except UnhandledElement:
+            return out
+        out.append((x, y, w, h))
+        return out
+
+    if tag == "Group":
+        boxes = _leaf_bboxes(child, [])
+        if not boxes:
+            return None
+        x0 = min(b[0] for b in boxes)
+        y0 = min(b[1] for b in boxes)
+        x1 = max(b[0] + b[2] for b in boxes)
+        y1 = max(b[1] + b[3] for b in boxes)
+        return (x0, y0, x1 - x0, y1 - y0, 0.0)
+
+    try:
+        anchors = _extract_anchors(child)
+        return _compute_page_local_bbox_pt(
+            child.get("ItemTransform", "1 0 0 1 0 0"),
+            anchors,
+            [],
+            spread_t,
+            pg["page_t"],
+            pg["page_gb"],
         )
-    for i, (sp_path, page_obj) in enumerate(zip(spreads, pages)):
+    except UnhandledElement:
+        return None
+
+
+def _route_item_to_page(
+    child: Any,
+    spread_t: str,
+    pages: list[dict[str, Any]],
+    guard_pt: float,
+) -> Optional[int]:
+    """Pick which page of a multi-page spread a top-level item belongs to.
+
+    For a single-page spread this is trivial (index 0). For a facing-pages
+    spread (PageCount > 1) every page carries its own ItemTransform + bbox;
+    an item's spread geometry resolves to a different page-local bbox under
+    each page's transform. The item belongs to the page whose page-local
+    bbox CENTRE lands inside that page's [-guard, w+guard] x [-guard, h+guard]
+    region. Falls back to the page with the smallest centre-distance when no
+    region contains the centre (e.g. a bleed-only item straddling the spine).
+
+    Returns the local page index, or None when anchor extraction fails so the
+    caller can defer to its own out-of-page guard.
+    """
+    if len(pages) == 1:
+        return 0
+    best_idx: Optional[int] = None
+    best_dist = float("inf")
+    for idx, pg in enumerate(pages):
+        bbox = _item_page_local_bbox_pt(child, spread_t, pg)
+        if bbox is None:
+            continue
+        x_pt, y_pt, w_pt, h_pt, _ = bbox
+        cx = x_pt + w_pt / 2.0
+        cy = y_pt + h_pt / 2.0
+        if (
+            -guard_pt <= cx <= pg["page_w_pt"] + guard_pt
+            and -guard_pt <= cy <= pg["page_h_pt"] + guard_pt
+        ):
+            return idx
+        # Distance of the centre from this page's region, for the fallback.
+        dx = max(0.0, -cx, cx - pg["page_w_pt"])
+        dy = max(0.0, -cy, cy - pg["page_h_pt"])
+        dist = dx * dx + dy * dy
+        if dist < best_dist:
+            best_dist = dist
+            best_idx = idx
+    return best_idx
+
+
+def _pages_overlapped_by_item(
+    child: Any,
+    spread_t: str,
+    pages: list[dict[str, Any]],
+    guard_pt: float,
+) -> Optional[list[int]]:
+    """Return every page of a multi-page spread an item visibly covers.
+
+    ``_route_item_to_page`` answers "which ONE page owns this item" by the
+    bbox centre — correct for ordinary content. But a spread-spanning
+    background rectangle (e.g. a full-bleed coloured fill drawn across both
+    pages of a facing-pages spread) genuinely belongs to *every* page it
+    covers: in the legacy side-by-side "spread" SLA layout it rendered onto
+    both pages automatically; in the page-by-page SLA layout each page is a
+    separate canvas, so the item must be emitted once per overlapped page.
+
+    The owning page (by ``_route_item_to_page``'s centre rule) is always in
+    the result. An EXTRA page is added only when the item's page-local bbox
+    covers most of that page — a true full-bleed background fill, not an
+    ordinary content frame that merely bleeds a few mm past the spine. This
+    keeps routing identical for normal content (one index) and only widens
+    for spanning backgrounds. Returns ``None`` when anchor extraction fails
+    so the caller can fall back to its own guard.
+    """
+    if len(pages) == 1:
+        return [0]
+    owner = _route_item_to_page(child, spread_t, pages, guard_pt)
+    if owner is None:
+        return None
+    # An extra page qualifies only when the item covers >= this fraction of
+    # the page's area — a spanning background, not a spine-bleeding frame.
+    _COVER_FRACTION = 0.6
+    hit: list[int] = [owner]
+    for idx, pg in enumerate(pages):
+        if idx == owner:
+            continue
+        bbox = _item_page_local_bbox_pt(child, spread_t, pg)
+        if bbox is None:
+            continue
+        x_pt, y_pt, w_pt, h_pt, _ = bbox
+        pw = pg["page_w_pt"]
+        ph = pg["page_h_pt"]
+        ix = max(0.0, min(x_pt + w_pt, pw) - max(x_pt, 0.0))
+        iy = max(0.0, min(y_pt + h_pt, ph) - max(y_pt, 0.0))
+        if pw > 0 and ph > 0 and (ix * iy) >= _COVER_FRACTION * pw * ph:
+            hit.append(idx)
+    return sorted(hit)
+
+
+def _count_idml_pages(ctx: _Ctx) -> int:
+    """Total number of <Page> elements across every Spreads/*.xml file."""
+    total = 0
+    for sp_path in ctx.pkg.spreads:
+        xml = ctx.pkg.open(sp_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        spread_node = root.find(".//Spread")
+        if spread_node is not None:
+            total += len(spread_node.findall("Page"))
+    return total
+
+
+def _resolve_render_page_mode(ctx: _Ctx) -> None:
+    """Decide whether the SLA renders one page per spread or one per page.
+
+    The default ("spread") merges a facing-pages spread into a single wide
+    SLA page — correct for leporello / fold templates whose InDesign PDF
+    export is spread-based. But some templates (the A6 flyer family) author
+    their pages in 2-up facing spreads purely for editing convenience and
+    export the PDF **page-by-page**: the baseline then has one PDF page per
+    IDML page, not per spread.
+
+    Detection compares the sibling ``<stem>.pdf`` page count against the
+    IDML's page and spread counts:
+
+    * baseline pages == IDML page count  AND  != spread count → ``"page"``
+    * otherwise (including no baseline found)                → ``"spread"``
+
+    The asymmetric test is deliberately conservative: a template only flips
+    to per-page mode when the baseline unambiguously matches the page count
+    and the two counts genuinely differ (i.e. at least one facing spread
+    exists). Templates with no facing spreads keep the default and behave
+    identically either way.
+    """
+    n_pages = _count_idml_pages(ctx)
+    n_spreads = len(list(ctx.pkg.spreads))
+    if n_pages == n_spreads:
+        # No facing spreads — the two models are identical. Keep default.
+        ctx.render_page_mode = "spread"
+        return
+    baseline = None
+    if ctx.source is not None:
+        cand = ctx.source.with_suffix(".pdf")
+        if cand.exists():
+            baseline = cand
+    if baseline is None:
+        ctx.render_page_mode = "spread"
+        return
+    try:
+        import pdfplumber  # type: ignore
+
+        with pdfplumber.open(str(baseline)) as pdf:
+            n_baseline = len(pdf.pages)
+    except Exception:
+        ctx.render_page_mode = "spread"
+        return
+    if n_baseline == n_pages and n_baseline != n_spreads:
+        ctx.render_page_mode = "page"
+        print(
+            f"OK: baseline {baseline.name} has {n_baseline} pages == IDML "
+            f"page count ({n_pages}), spread count {n_spreads} — emitting "
+            f"one SLA page per IDML page (page-based export).",
+            file=sys.stderr,
+        )
+    else:
+        ctx.render_page_mode = "spread"
+
+
+def _collect_spread_pages(ctx: _Ctx) -> list[dict[str, Any]]:
+    """Return one entry per rendered SLA page.
+
+    In the default ``"spread"`` mode this is one entry per IDML spread: a
+    single-page spread exports as one PDF page, and a multi-page (facing)
+    spread exports as ONE wider PDF page whose width is the sum of its
+    constituent pages' widths.
+
+    In ``"page"`` mode (see ``_resolve_render_page_mode``) this is one entry
+    per IDML page: a facing-pages spread yields TWO render-page entries, each
+    sized to one page, each carrying a ``page_local_idx`` so ``_emit_pages``
+    can route the spread's items to the correct page via
+    ``_route_item_to_page``.
+
+    Each returned dict carries:
+
+    * ``sp_path``      — Spreads/<id>.xml member name.
+    * ``spread_t``     — the Spread's own ItemTransform string.
+    * ``pages``        — list of per-page dicts (page_t, page_gb, page_w_pt,
+                         page_h_pt) in document order, exactly as
+                         ``_emit_pages`` previously built ``spread_pages``.
+    * ``origin_t``     — the LEFTMOST page's ItemTransform. All items in the
+                         spread are placed relative to this page's top-left
+                         so a 2-page spread's right-hand items naturally land
+                         at +(left-page-width) in x.
+    * ``origin_gb``    — the leftmost page's GeometricBounds.
+    * ``page_w_pt``    — total rendered SLA page width (sum of page widths).
+    * ``page_h_pt``    — rendered SLA page height (max page height).
+    """
+    out: list[dict[str, Any]] = []
+    for sp_path in ctx.pkg.spreads:
         xml = ctx.pkg.open(sp_path).read()
         root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
         spread_node = root.find(".//Spread")
         spread_t = spread_node.get("ItemTransform", "1 0 0 1 0 0")
-        page_node = spread_node.find("Page")
-        page_t = page_node.get("ItemTransform", "1 0 0 1 0 0")
-        page_gb = _parse_geometric_bounds(page_node.get("GeometricBounds", "0 0 0 0"))
-        page_var = f"page{i}"
-        ctx._current_page_var = page_var  # type: ignore[attr-defined]
+        spread_pages: list[dict[str, Any]] = []
+        for page_node in spread_node.findall("Page"):
+            page_gb = _parse_geometric_bounds(
+                page_node.get("GeometricBounds", "0 0 0 0")
+            )
+            gb_y1, gb_x1, gb_y2, gb_x2 = page_gb
+            spread_pages.append({
+                "page_t": page_node.get("ItemTransform", "1 0 0 1 0 0"),
+                "page_gb": page_gb,
+                "page_w_pt": gb_x2 - gb_x1,
+                "page_h_pt": gb_y2 - gb_y1,
+            })
+        if not spread_pages:
+            raise UnhandledElement(
+                f"Spread {sp_path} contains no <Page> "
+                f"(extend tools/idml_to_dsl.py:_collect_spread_pages)"
+            )
+        # The leftmost page is the one whose top-left in spread coordinates
+        # has the smallest x. page_top_left_x = page_tx + page_gb_x1.
+        def _page_left_x(pg: dict[str, Any]) -> float:
+            _, _, _, _, ptx, _ = _parse_matrix(pg["page_t"])
+            _, gx1, _, _ = pg["page_gb"]
+            return ptx + gx1
+        if ctx.render_page_mode == "page":
+            # One render-page entry per IDML page. Items in a multi-page
+            # spread are routed by _route_item_to_page using page_local_idx.
+            ordered = sorted(spread_pages, key=_page_left_x)
+            for local_idx, pg in enumerate(ordered):
+                out.append({
+                    "sp_path": sp_path,
+                    "spread_t": spread_t,
+                    "pages": spread_pages,
+                    "page_local_idx": local_idx,
+                    "origin_t": pg["page_t"],
+                    "origin_gb": pg["page_gb"],
+                    "page_w_pt": pg["page_w_pt"],
+                    "page_h_pt": pg["page_h_pt"],
+                })
+            continue
+        leftmost = min(spread_pages, key=_page_left_x)
+        out.append({
+            "sp_path": sp_path,
+            "spread_t": spread_t,
+            "pages": spread_pages,
+            "page_local_idx": None,
+            "origin_t": leftmost["page_t"],
+            "origin_gb": leftmost["page_gb"],
+            "page_w_pt": sum(p["page_w_pt"] for p in spread_pages),
+            "page_h_pt": max(p["page_h_pt"] for p in spread_pages),
+        })
+    return out
 
-        # Override the task-3 stub for this page.
-        ctx.out.w("")
-        ctx.out.w(f"def _add_page_{i}(doc: Document, {page_var}) -> None:  # overrides task-3 stub")
-        ctx.out.indent += 1
-        ctx.out.w(f'"""Auto-generated page-items for page {i + 1} (Spread {sp_path})."""')
 
-        # Page dimensions for the out-of-page guard below.
-        page_gb_y1, page_gb_x1, page_gb_y2, page_gb_x2 = page_gb
-        page_w_pt = page_gb_x2 - page_gb_x1
-        page_h_pt = page_gb_y2 - page_gb_y1
-        # Items more than this many mm outside the page+bleed area are treated
-        # as InDesign design artifacts (e.g. guide markers on printable layers)
-        # that InDesign does not export to PDF.  Bleed is typically ≤3 mm so
-        # a 20 mm guard safely excludes true out-of-page artifacts.
-        _OUT_OF_PAGE_GUARD_MM = 20.0
-        _guard_pt = _OUT_OF_PAGE_GUARD_MM / PT_TO_MM
+def _emit_pages(ctx: _Ctx) -> None:
+    """Phase H driver: emit one _add_page_<i> function body per SPREAD.
 
-        emit_count = 0
+    InDesign exports spread-based PDFs: a facing-pages spread (PageCount > 1)
+    becomes ONE wide PDF page. The converter mirrors that — one SLA page per
+    spread — so the rendered preview compares page-for-page against the
+    baseline. All items in a spread are placed relative to the leftmost
+    page's top-left origin (see ``_collect_spread_pages``); the right-hand
+    page's items therefore land at +(left-page-width) automatically.
+    """
+    # Items more than this many mm outside the page+bleed area are treated
+    # as InDesign design artifacts (e.g. guide markers on printable layers)
+    # that InDesign does not export to PDF.  Bleed is typically ≤3 mm so
+    # a 20 mm guard safely excludes true out-of-page artifacts.
+    _OUT_OF_PAGE_GUARD_MM = 20.0
+    _guard_pt = _OUT_OF_PAGE_GUARD_MM / PT_TO_MM
+
+    spread_infos = _collect_spread_pages(ctx)
+    for spread_idx, sp_info in enumerate(spread_infos):
+        i = spread_idx
+        sp_path = sp_info["sp_path"]
+        spread_t = sp_info["spread_t"]
+        # In "spread" mode all items share one merged SLA page placed
+        # relative to the leftmost page's top-left origin. In "page" mode
+        # each render-page entry is one IDML page; items in a multi-page
+        # spread are routed by _route_item_to_page using page_local_idx.
+        page_t = sp_info["origin_t"]
+        page_gb = sp_info["origin_gb"]
+        page_w_pt = sp_info["page_w_pt"]
+        page_h_pt = sp_info["page_h_pt"]
+        page_local_idx = sp_info.get("page_local_idx")
+        spread_page_dicts = sp_info["pages"]
+
+        # Collect every emittable top-level item for this render page. In
+        # "page" mode, _route_item_to_page filters items to the single
+        # IDML page this entry represents. ``spread_item_suffix`` runs in
+        # lock-step with ``spread_items``: it is "" for the page that owns
+        # the item and "_p<idx>" for a spanning background re-emitted onto
+        # a non-owner page (the suffix keeps the duplicate anname unique).
+        spread_items: list[Any] = []
+        spread_item_suffix: list[str] = []
+        xml = ctx.pkg.open(sp_path).read()
+        root = etree.fromstring(xml, parser=_SECURE_XMLPARSER)
+        spread_node = root.find(".//Spread")
         for child in spread_node:
             if not isinstance(child.tag, str):
                 continue
@@ -3286,16 +4490,10 @@ def _emit_pages(ctx: _Ctx) -> None:
                 # reach the InDesign PDF baseline either. Items on visible
                 # but non-printing layers (e.g. "Info") DO reach the baseline
                 # and must emit; ctx.printable_layer_ids is built from
-                # Visible, not Printable. (Falz lines, if authored on Info,
-                # would now leak through — but the corpus does not put Falz
-                # on Info; if a future template does, add a GraphicLine-on-
-                # Info skip here.)
+                # Visible, not Printable.
                 _ch_sid = child.get("Self", "")
                 if _ch_sid:
-                    ctx.record_skipped(
-                        _ch_sid,
-                        f"hidden layer {item_layer!r}",
-                    )
+                    ctx.record_skipped(_ch_sid, f"hidden layer {item_layer!r}")
                 continue
             if tag not in _DISPATCHED_PAGEITEM_TAGS:
                 # GraphicLine on a visible-but-non-printable layer (Info) is
@@ -3316,58 +4514,120 @@ def _emit_pages(ctx: _Ctx) -> None:
                     f"layer {item_layer!r} not handled "
                     f"(extend tools/idml_to_dsl.py:_emit_pages)"
                 )
-            # Out-of-page guard: skip items that lie entirely outside the page
-            # bounds by more than _guard_pt. These are InDesign design artifacts
-            # (guides, registration marks) that InDesign excludes from PDF export
-            # even when placed on a printable layer.
-            #
-            # Groups are EXCLUDED from this guard: InDesign Group containers
-            # store their PathGeometry anchors in a design-time local space that
-            # does not directly map to page coordinates via the Group's own
-            # ItemTransform. The guard would use the Group's container bbox
-            # (which can appear wildly off-page) while the Group's children are
-            # placed correctly via their own transforms. Skipping the guard for
-            # Groups lets recursion in _emit_pageitem handle child placement.
-            if tag != "Group":
-                child_t = child.get("ItemTransform", "1 0 0 1 0 0")
-                try:
-                    child_anchors = _extract_anchors(child)
-                    child_x_pt, child_y_pt, child_w_pt, child_h_pt, _ = _compute_page_local_bbox_pt(
-                        child_t, child_anchors, [], spread_t, page_t, page_gb
-                    )
-                    if (
-                        child_x_pt + child_w_pt < -_guard_pt
-                        or child_x_pt > page_w_pt + _guard_pt
-                        or child_y_pt + child_h_pt < -_guard_pt
-                        or child_y_pt > page_h_pt + _guard_pt
-                    ):
-                        sid = child.get("Self", "?")
-                        print(
-                            f"  [skip] {tag} Self={sid!r}: entirely outside page "
-                            f"bounds (x={child_x_pt * PT_TO_MM:.1f}mm "
-                            f"y={child_y_pt * PT_TO_MM:.1f}mm "
-                            f"w={child_w_pt * PT_TO_MM:.1f}mm "
-                            f"h={child_h_pt * PT_TO_MM:.1f}mm) — "
-                            f"InDesign design artifact, not emitted",
-                            file=sys.stderr,
+            # Page-based mode: a facing spread becomes N render-page entries.
+            # Route each top-level item to the IDML page(s) it covers so it is
+            # emitted on the correct page. A spread-spanning background fill
+            # covers BOTH pages and is emitted on each (with a "_p<idx>"
+            # anname suffix on every non-owner page so the duplicate is
+            # unique). When routing cannot resolve (anchor extraction failed)
+            # the item lands on page 0 so it is never dropped.
+            if page_local_idx is not None and len(spread_page_dicts) > 1:
+                covered = _pages_overlapped_by_item(
+                    child, spread_t, spread_page_dicts, _guard_pt
+                )
+                if not covered:
+                    covered = [0]
+                if page_local_idx not in covered:
+                    continue
+                owner = covered[0]
+                suffix = "" if page_local_idx == owner else f"_p{page_local_idx}"
+            else:
+                suffix = ""
+            spread_items.append(child)
+            spread_item_suffix.append(suffix)
+
+        # Emit one _add_page_<i> per SPREAD.
+        if True:
+            page_var = f"page{i}"
+            ctx._current_page_var = page_var  # type: ignore[attr-defined]
+
+            # Override the task-3 stub for this page.
+            ctx.out.w("")
+            ctx.out.w(
+                f"def _add_page_{i}(doc: Document, {page_var}) -> None:  "
+                f"# overrides task-3 stub"
+            )
+            ctx.out.indent += 1
+            ctx.out.w(
+                f'"""Auto-generated page-items for spread {i + 1} '
+                f'(Spread {sp_path})."""'
+            )
+
+            emit_count = 0
+            for child, _an_suffix in zip(spread_items, spread_item_suffix):
+                tag = etree.QName(child).localname
+                item_layer = child.get("ItemLayer", "")
+                # Out-of-page guard: skip items that lie entirely outside the
+                # page bounds by more than _guard_pt. These are InDesign design
+                # artifacts (guides, registration marks) that InDesign excludes
+                # from PDF export even when placed on a printable layer.
+                #
+                # Groups are EXCLUDED from this guard: InDesign Group containers
+                # store their PathGeometry anchors in a design-time local space
+                # that does not directly map to page coordinates via the Group's
+                # own ItemTransform. Skipping the guard for Groups lets recursion
+                # in _emit_pageitem handle child placement.
+                if tag != "Group":
+                    child_t = child.get("ItemTransform", "1 0 0 1 0 0")
+                    try:
+                        child_anchors = _extract_anchors(child)
+                        (
+                            child_x_pt,
+                            child_y_pt,
+                            child_w_pt,
+                            child_h_pt,
+                            _,
+                        ) = _compute_page_local_bbox_pt(
+                            child_t, child_anchors, [], spread_t, page_t, page_gb
                         )
-                        if sid:
-                            ctx.record_skipped(
-                                sid,
-                                "InDesign design artifact (entirely outside page+bleed)",
+                        if (
+                            child_x_pt + child_w_pt < -_guard_pt
+                            or child_x_pt > page_w_pt + _guard_pt
+                            or child_y_pt + child_h_pt < -_guard_pt
+                            or child_y_pt > page_h_pt + _guard_pt
+                        ):
+                            sid = child.get("Self", "?")
+                            print(
+                                f"  [skip] {tag} Self={sid!r}: entirely outside "
+                                f"page bounds (x={child_x_pt * PT_TO_MM:.1f}mm "
+                                f"y={child_y_pt * PT_TO_MM:.1f}mm "
+                                f"w={child_w_pt * PT_TO_MM:.1f}mm "
+                                f"h={child_h_pt * PT_TO_MM:.1f}mm) — "
+                                f"InDesign design artifact, not emitted",
+                                file=sys.stderr,
                             )
-                        continue
-                except UnhandledElement:
-                    # If anchor extraction fails for a non-Group, skip the guard.
-                    pass
-            layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
-            _emit_pageitem(ctx.out, child, [], spread_t, page_t, page_gb,
-                           page_var, ctx, layer_idx)
-            emit_count += 1
-        if emit_count == 0:
-            ctx.out.w("return None")
-        ctx.out.indent -= 1
-        ctx.out.w("")
+                            if sid:
+                                ctx.record_skipped(
+                                    sid,
+                                    "InDesign design artifact "
+                                    "(entirely outside page+bleed)",
+                                )
+                            continue
+                    except UnhandledElement:
+                        # Anchor extraction failed for a non-Group — skip guard.
+                        pass
+                layer_idx = ctx.layer_id_to_idx.get(item_layer, 0)
+                # A spanning background re-emitted onto a non-owner page
+                # carries a "_p<idx>" anname suffix so the duplicate frame
+                # is uniquely named. _emit_pageitem reads the anname from
+                # the element's Self attribute — set it for this emit, then
+                # restore so the next page sees the original ID.
+                _orig_self = child.get("Self")
+                if _an_suffix and _orig_self is not None:
+                    child.set("Self", f"{_orig_self}{_an_suffix}")
+                try:
+                    _emit_pageitem(
+                        ctx.out, child, [], spread_t, page_t, page_gb,
+                        page_var, ctx, layer_idx,
+                    )
+                finally:
+                    if _an_suffix and _orig_self is not None:
+                        child.set("Self", _orig_self)
+                emit_count += 1
+            if emit_count == 0:
+                ctx.out.w("return None")
+            ctx.out.indent -= 1
+            ctx.out.w("")
 
 
 _PAGE_ITEM_LEAF_TAGS = frozenset({
@@ -3576,6 +4836,19 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     prefs = ctx.doc_prefs
     trim_w_mm = prefs["page_width_pt"] * PT_TO_MM
     trim_h_mm = prefs["page_height_pt"] * PT_TO_MM
+    # The master must be at least as large as the widest doc page. With
+    # spread-merged pages a facing spread is wider than a single page, so
+    # the master is sized to the widest spread (it stays empty either way
+    # for this brand — see Phase C MasterSpread emptiness check).
+    _spread_infos_for_master = _collect_spread_pages(ctx)
+    master_w_mm = max(
+        (sp["page_w_pt"] * PT_TO_MM for sp in _spread_infos_for_master),
+        default=trim_w_mm,
+    )
+    master_h_mm = max(
+        (sp["page_h_pt"] * PT_TO_MM for sp in _spread_infos_for_master),
+        default=trim_h_mm,
+    )
     # InDesign's default PDF export emits a trim-only MediaBox (no bleed
     # area); our baselines were captured that way. Emit bleed_mm=0 so the
     # Scribus PDF MediaBox matches and visual_diff can compare like-for-like.
@@ -3596,7 +4869,14 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     out.w(f"title={_py_value(ctx.template_id)},")
     out.w(f"template_id={_py_value(ctx.template_id)},")
     out.w('author="Die Grünen Niederösterreich",')
-    out.w(f"facing_pages={_py_value(prefs['facing_pages'])},")
+    # The converter emits one SLA page per IDML SPREAD (a facing-pages
+    # spread becomes ONE wide page — see _emit_pages / _collect_spread_pages),
+    # so each rendered page is already a self-contained spread. facing_pages
+    # is therefore forced False: the two-column scratch stacking it triggers
+    # is meaningless once spreads are merged, and single-column stacking
+    # keeps page geometry simple. The IDML's authored FacingPages value is
+    # preserved in DocumentSetupPreference for downstream print prep.
+    out.w("facing_pages=False,")
     out.w("layers=[")
     out.indent += 1
     for lyr in ctx.layers:
@@ -3650,18 +4930,23 @@ def _emit_document_scaffold(out: PythonRepr, ctx: _Ctx) -> None:
     out.w(f"doc.add_master(")
     out.indent += 1
     out.w('name="Normal",')
-    out.w(f"size=({_py_value(trim_w_mm)}, {_py_value(trim_h_mm)}),")
+    out.w(f"size=({_py_value(master_w_mm)}, {_py_value(master_h_mm)}),")
     out.w(f"bleed_mm={_py_value(bleed_mm)},")
     out.w("margins_mm=(0.0, 0.0, 0.0, 0.0),")
     out.indent -= 1
     out.w(")")
     out.w("")
-    # One add_page per page in pkg.pages
-    page_count = len(list(ctx.pkg.pages))
-    for i in range(page_count):
+    # One add_page per IDML SPREAD. A single-page spread is trim-sized;
+    # a facing-pages spread is as wide as the sum of its pages (InDesign
+    # exports spread-based PDFs — see _collect_spread_pages).
+    spread_infos = _collect_spread_pages(ctx)
+    page_count = len(spread_infos)
+    for i, sp_info in enumerate(spread_infos):
+        sp_w_mm = sp_info["page_w_pt"] * PT_TO_MM
+        sp_h_mm = sp_info["page_h_pt"] * PT_TO_MM
         out.w(f"page{i} = doc.add_page(")
         out.indent += 1
-        out.w(f"size=({_py_value(trim_w_mm)}, {_py_value(trim_h_mm)}),")
+        out.w(f"size=({_py_value(sp_w_mm)}, {_py_value(sp_h_mm)}),")
         out.w(f"bleed_mm={_py_value(bleed_mm)},")
         out.w("margins_mm=(0.0, 0.0, 0.0, 0.0),")
         out.w('master="Normal",')
@@ -3688,12 +4973,18 @@ def _emit_styles_stub(out: PythonRepr, ctx: _Ctx) -> None:
 
 
 def _emit_page_stubs(out: PythonRepr, ctx: _Ctx) -> None:
-    """Task 3 stub: emit empty _add_page_<i> functions. Task 6+7 fill them."""
-    page_count = len(list(ctx.pkg.pages))
+    """Task 3 stub: emit empty _add_page_<i> functions, one per render page.
+
+    In "spread" mode a facing-pages spread becomes one wide page, so the stub
+    count matches the spread count. In "page" mode each IDML page is its own
+    render page (see _resolve_render_page_mode), so the count matches the
+    total IDML page count. _collect_spread_pages reflects the active mode.
+    """
+    page_count = len(_collect_spread_pages(ctx))
     for i in range(page_count):
         out.w(f"def _add_page_{i}(doc: Document, page) -> None:")
         out.indent += 1
-        out.w(f'"""Page {i + 1} page items — populated by tools/idml_to_dsl.py Phase H."""')
+        out.w(f'"""Render page {i + 1} items — populated by tools/idml_to_dsl.py Phase H."""')
         out.w("# (no page items in this task-3 skeleton)")
         out.w("return None")
         out.indent -= 1
@@ -3768,6 +5059,228 @@ def _emit_footer(out: PythonRepr) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Squiggle re-anchoring (Part B).
+#
+# The yellow squiggle motif is a free-standing Polygon placed at absolute page
+# coordinates. Scribus wraps text differently from InDesign, so the underlined
+# WORD shifts while the squiggle does not — it ends up under the wrong word.
+# This pass binds each squiggle to the word it underlines in baseline.pdf and
+# persists the mapping to templates/<slug>/squiggle_anchors.yml. The render-
+# time playbook (tools/playbooks/squiggle_realign.py) reads that mapping,
+# locates the same word in preview.pdf, and shifts the squiggle to track it.
+# ---------------------------------------------------------------------------
+
+# A squiggle is taller than a single underline only when it loops around a
+# word (a circle-style emphasis). Treat any word whose ink box vertically
+# overlaps the squiggle band — extended by this many points above the band —
+# as a candidate; the squiggle is drawn BEHIND the text it emphasises.
+_SQUIGGLE_WORD_Y_TOL_PT = 16.0
+
+
+def _words_in_frame(page_words: list[dict], frame_box_pt: tuple[float, float, float, float]) -> list[dict]:
+    """Return baseline.pdf words whose center lies inside ``frame_box_pt``.
+
+    ``frame_box_pt`` is (x0, top, x1, bottom) in PDF points. The word list is
+    kept in pdfplumber reading order so each word's index is a stable, render-
+    independent ordinal that survives a different line-wrap in preview.pdf.
+    """
+    fx0, ft, fx1, fb = frame_box_pt
+    out: list[dict] = []
+    for w in page_words:
+        cx = (w["x0"] + w["x1"]) / 2.0
+        cy = (w["top"] + w["bottom"]) / 2.0
+        if fx0 - 2.0 <= cx <= fx1 + 2.0 and ft - 2.0 <= cy <= fb + 2.0:
+            out.append(w)
+    return out
+
+
+def _associate_squiggle_to_word(
+    sq_box_pt: tuple[float, float, float, float],
+    frame_words: list[dict],
+) -> Optional[dict]:
+    """Pick the anchor word a squiggle underlines from a frame's word list.
+
+    The squiggle is a band drawn behind text. The anchor word is the
+    LEFTMOST word on the line whose baseline best matches the squiggle band:
+    that word's left edge is the most stable handle to translate the squiggle
+    by when the line wraps elsewhere.
+
+    Returns a dict ``{index, text, x0, top, x1, bottom}`` (index = position
+    in ``frame_words``), or None when no word overlaps.
+    """
+    sx0, st, sx1, sb = sq_box_pt
+    candidates: list[tuple[int, dict, float]] = []
+    for idx, w in enumerate(frame_words):
+        # Horizontal overlap with the squiggle band.
+        ox = min(sx1, w["x1"]) - max(sx0, w["x0"])
+        if ox <= 0.5:
+            continue
+        # Vertical proximity: the word's ink box must touch the squiggle band
+        # (extended upward — the squiggle sits at/below the text baseline).
+        if w["bottom"] < st - _SQUIGGLE_WORD_Y_TOL_PT:
+            continue
+        if w["top"] > sb + _SQUIGGLE_WORD_Y_TOL_PT:
+            continue
+        # Score: vertical distance from the word baseline to the squiggle
+        # center (smaller = better match), tie-broken by leftmost x.
+        sq_cy = (st + sb) / 2.0
+        v_dist = abs(w["bottom"] - sq_cy)
+        candidates.append((idx, w, v_dist))
+    if not candidates:
+        return None
+    # Best line: the minimum vertical distance.
+    best_v = min(c[2] for c in candidates)
+    on_line = [c for c in candidates if c[2] <= best_v + 6.0]
+    # Leftmost word on that line is the anchor.
+    idx, w, _ = min(on_line, key=lambda c: c[1]["x0"])
+    return {
+        "index": idx,
+        "text": w["text"],
+        "x0": round(w["x0"], 3),
+        "top": round(w["top"], 3),
+        "x1": round(w["x1"], 3),
+        "bottom": round(w["bottom"], 3),
+    }
+
+
+def _emit_squiggle_anchors(ctx: _Ctx, output: Path) -> None:
+    """Write templates/<slug>/squiggle_anchors.yml for the squiggle playbook.
+
+    Reads the sibling ``baseline.pdf`` (scaffolded into the template dir before
+    the converter runs). For each recorded squiggle Polygon it:
+
+      1. Finds the text frame it geometrically overlaps (page-local mm).
+      2. Extracts that frame's words from baseline.pdf in reading order.
+      3. Picks the anchor word the squiggle underlines.
+      4. Records the squiggle bbox, the anchor word's baseline box, the word's
+         ordinal within the frame (disambiguates repeats), and the squiggle's
+         offset from the word box in the InDesign baseline.
+
+    The file is only written when at least one squiggle was bound; templates
+    with no yellow motif produce nothing.
+    """
+    if not ctx.squiggle_records:
+        return
+    try:
+        import yaml  # local import — only needed when squiggles exist
+        import pdfplumber  # type: ignore[import-not-found]
+    except ImportError as exc:  # pragma: no cover - env guard
+        print(
+            f"squiggle anchors: skipped — {exc} not available",
+            file=sys.stderr,
+        )
+        return
+
+    baseline_pdf = output.parent / "baseline.pdf"
+    if not baseline_pdf.exists():
+        print(
+            f"squiggle anchors: skipped — no baseline.pdf at {baseline_pdf}",
+            file=sys.stderr,
+        )
+        return
+
+    PT = 72.0 / 25.4
+
+    def _mm_box_to_pt(rec: dict) -> tuple[float, float, float, float]:
+        return (
+            rec["x_mm"] * PT,
+            rec["y_mm"] * PT,
+            (rec["x_mm"] + rec["w_mm"]) * PT,
+            (rec["y_mm"] + rec["h_mm"]) * PT,
+        )
+
+    anchors: list[dict] = []
+    with pdfplumber.open(str(baseline_pdf)) as pdf:
+        n_pages = len(pdf.pages)
+        # Cache extracted words per page.
+        page_words_cache: dict[int, list[dict]] = {}
+        for sq in ctx.squiggle_records:
+            page_idx = sq["page"]
+            if page_idx >= n_pages:
+                continue
+            sq_box = _mm_box_to_pt(sq)
+            # Candidate text frames on the same page, ranked by bbox overlap.
+            frame_hits: list[tuple[float, dict]] = []
+            for tf in ctx.textframe_records:
+                if tf["page"] != page_idx:
+                    continue
+                tb = _mm_box_to_pt(tf)
+                ox = min(sq_box[2], tb[2]) - max(sq_box[0], tb[0])
+                oy = min(sq_box[3], tb[3]) - max(sq_box[1], tb[1])
+                if ox > 0 and oy > -_SQUIGGLE_WORD_Y_TOL_PT:
+                    frame_hits.append((ox * max(oy, 0.1), tf))
+            if not frame_hits:
+                continue
+            frame_hits.sort(key=lambda h: -h[0])
+            if page_idx not in page_words_cache:
+                page_words_cache[page_idx] = pdf.pages[page_idx].extract_words()
+            page_words = page_words_cache[page_idx]
+            # Try each candidate frame until one yields an anchor word.
+            anchor_word = None
+            target_frame = None
+            for _, tf in frame_hits:
+                fw = _words_in_frame(page_words, _mm_box_to_pt(tf))
+                aw = _associate_squiggle_to_word(sq_box, fw)
+                if aw is not None:
+                    anchor_word = aw
+                    target_frame = tf
+                    break
+            if anchor_word is None or target_frame is None:
+                continue
+            anchors.append({
+                "anname": sq["anname"],
+                "page": page_idx,
+                "target_frame": target_frame["anname"],
+                "word": anchor_word["text"],
+                # Ordinal within the frame's reading-order word list — the
+                # disambiguator when the word string repeats.
+                "word_index": anchor_word["index"],
+                "baseline_word_box_pt": {
+                    "x0": anchor_word["x0"],
+                    "top": anchor_word["top"],
+                    "x1": anchor_word["x1"],
+                    "bottom": anchor_word["bottom"],
+                },
+                "baseline_squiggle_box_mm": {
+                    "x_mm": sq["x_mm"],
+                    "y_mm": sq["y_mm"],
+                    "w_mm": sq["w_mm"],
+                    "h_mm": sq["h_mm"],
+                },
+                # Squiggle origin offset from the anchor word's box, in mm,
+                # measured in the InDesign baseline. The playbook keeps this
+                # offset constant: new_squiggle_xy = preview_word_xy + offset.
+                "offset_from_word_mm": {
+                    "dx_mm": round(sq["x_mm"] - anchor_word["x0"] / PT, 4),
+                    "dy_mm": round(sq["y_mm"] - anchor_word["top"] / PT, 4),
+                },
+            })
+
+    if not anchors:
+        return
+    doc = {
+        "template": ctx.template_id,
+        "_schema_version": 1,
+        "_doc": (
+            "Squiggle re-anchoring map. Each entry binds a yellow squiggle "
+            "Polygon (anname) to the word it underlines in baseline.pdf. "
+            "tools/playbooks/squiggle_realign.py consumes this to keep the "
+            "squiggle tracking its word when Scribus wraps text differently."
+        ),
+        "anchors": anchors,
+    }
+    anchors_path = output.parent / "squiggle_anchors.yml"
+    anchors_path.write_text(
+        yaml.dump(doc, sort_keys=False, allow_unicode=True, default_flow_style=False),
+        encoding="utf-8",
+    )
+    print(
+        f"OK: wrote {anchors_path} ({len(anchors)} squiggle anchor(s))",
+        file=sys.stderr,
+    )
+
+
+# ---------------------------------------------------------------------------
 def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             logo_map_path: Optional[Path] = None,
             asset_map_path: Optional[Path] = None,
@@ -3795,7 +5308,14 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
             f"If this is a .indd, re-export from InDesign: "
             f"File > Export > InDesign Markup (IDML)."
         )
-    if assets_dir is not None and not assets_dir.exists():
+    # The legacy --assets-dir is only consulted when no Phase-2 --asset-map
+    # manifest is supplied. Validate its existence only in that case, so a
+    # missing/auto-derived assets dir never masks the real --asset-map error.
+    if (
+        asset_map_path is None
+        and assets_dir is not None
+        and not assets_dir.exists()
+    ):
         raise UnhandledElement(
             f"--assets-dir {assets_dir} does not exist "
             f"(extend tools/idml_to_dsl.py:convert or pass a different directory)"
@@ -3865,6 +5385,7 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
 
     with IDMLPackage(str(source)) as pkg:
         ctx = _Ctx(pkg=pkg, template_id=template_id, assets_dir=assets_dir)
+        ctx.source = source
         ctx.logo_map = logo_map
         ctx.asset_map = asset_map
 
@@ -3906,6 +5427,10 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         }
         # Phase C
         _check_masters_empty(pkg)
+        # Resolve the render-page model (per-page vs spread-merged) by
+        # comparing the sibling baseline.pdf page count against the IDML's
+        # page/spread counts. Must run before _emit_page_stubs / _emit_pages.
+        _resolve_render_page_mode(ctx)
         # Phase F — colors (run early so styles/items can translate FillColor refs)
         _emit_colors(ctx)
 
@@ -3931,10 +5456,32 @@ def convert(source: Path, output: Path, template_id: str, assets_dir: Path,
         if not allow_dropped_pageitems:
             _assert_conversion_completeness(ctx)
 
+        # Emit a machine-readable manifest of IDML PageItems the converter
+        # deliberately skipped (off-page artifacts, hidden layers, Falz/print
+        # marks). The Stage-1 inventory gate reads these ``# idml-skip:`` lines
+        # to distinguish a deliberate skip from a silent drop.
+        if ctx.skipped_with_reason:
+            ctx.out.w("")
+            ctx.out.w(
+                "# --- IDML PageItems intentionally not emitted "
+                "(machine-readable; do not delete) ---"
+            )
+            for entry in ctx.skipped_with_reason:
+                reason = str(entry["reason"]).replace("\n", " ")
+                ctx.out.w(f"# idml-skip: {entry['self_id']} — {reason}")
+
         # Write emitted Python source
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(ctx.out.render(), encoding="utf-8")
         print(f"OK: wrote {output}", file=sys.stderr)
+
+        # Part B: bind each yellow squiggle to the word it underlines and
+        # persist templates/<slug>/squiggle_anchors.yml for the realign
+        # playbook. Best-effort — never fails the conversion.
+        try:
+            _emit_squiggle_anchors(ctx, output)
+        except Exception as exc:  # pragma: no cover - defensive
+            print(f"squiggle anchors: skipped — {exc}", file=sys.stderr)
         print(
             f"OK: opened {source.name} — "
             f"{len(pkg.spreads_objects)} spreads, "
@@ -4009,13 +5556,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--assets-dir",
         type=Path,
         required=False,
-        default=Path(
-            "originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2 Ordner/Links"
-        ),
+        default=None,
         help=(
             "Legacy: directory containing the IDML's linked raster assets "
             "(resolves file: URIs by basename). Used when --asset-map is "
-            "not supplied. Prefer --asset-map for new templates."
+            "not supplied. When omitted, defaults to the IDML's sibling "
+            "Links/ directory. Prefer --asset-map for new templates."
         ),
     )
     ap.add_argument(
@@ -4041,6 +5587,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         ),
     )
     args = ap.parse_args(argv)
+
+    # Resolve the legacy --assets-dir default to the IDML's sibling Links/
+    # directory. The legacy fallback is only consulted when --asset-map is
+    # absent; deriving it from the source IDML keeps multi-template runs
+    # independent of each other.
+    if args.assets_dir is None:
+        args.assets_dir = args.source.parent / "Links"
 
     # Auto-invoke fallback: no --asset-map AND no --logo-map AND a sibling
     # Links/ directory exists → run tools/links_export.py to produce one.

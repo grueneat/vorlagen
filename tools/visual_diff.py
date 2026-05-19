@@ -211,8 +211,18 @@ def render_sla_to_pdf(sla_path: Path, pdf_path: Path) -> None:
 
 
 def rasterise(pdf_path: Path, prefix: Path, dpi: int) -> list[Path]:
-    """Run pdftoppm to produce <prefix>-<NN>.png; return sorted list of PNGs."""
+    """Run pdftoppm to produce <prefix>-<NN>.png; return sorted list of PNGs.
+
+    Stale <prefix>-<NN>.png files from a prior render are removed first:
+    ``pdftoppm`` only overwrites the page numbers the *current* PDF has, so
+    if the page count DECREASED since the last run (e.g. a converter change
+    that merges facing-pages spreads 6->4 pages) the leftover higher-numbered
+    PNGs would inflate the returned list and trigger a spurious
+    "page count mismatch" RuntimeError.
+    """
     prefix.parent.mkdir(parents=True, exist_ok=True)
+    for stale in prefix.parent.glob(prefix.name + "-*.png"):
+        stale.unlink()
     _run(["pdftoppm", "-r", str(dpi), "-png", str(pdf_path), str(prefix)])
     return sorted(prefix.parent.glob(prefix.name + "-*.png"))
 
@@ -293,9 +303,21 @@ def compare_grid(
     base = Image.open(baseline_png).convert("RGB")
     prev = Image.open(preview_png).convert("RGB")
     if base.size != prev.size:
-        raise ValueError(
-            f"image size mismatch: baseline={base.size}, preview={prev.size}"
-        )
+        # A 1-2px difference is sub-pixel rasterisation rounding (the trim
+        # crop and the page-size conversion each round independently), not a
+        # real geometry mismatch — crop both to the common extent so the
+        # region diff still runs. A larger gap is a genuine page-size bug.
+        dw = abs(base.size[0] - prev.size[0])
+        dh = abs(base.size[1] - prev.size[1])
+        if dw > 2 or dh > 2:
+            raise ValueError(
+                f"image size mismatch: baseline={base.size}, "
+                f"preview={prev.size}"
+            )
+        cw = min(base.size[0], prev.size[0])
+        ch = min(base.size[1], prev.size[1])
+        base = base.crop((0, 0, cw, ch))
+        prev = prev.crop((0, 0, cw, ch))
     w_px, h_px = base.size
 
     # Integer cell sizes; the LAST column/row absorbs the modulus so we

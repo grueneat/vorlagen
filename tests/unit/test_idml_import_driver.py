@@ -271,3 +271,77 @@ def test_bin_shim_invokes_driver():
     )
     assert result.returncode == 0
     assert "idml-import" in result.stdout.lower()
+
+
+# ---------------------------------------------------------------------------
+# Test 12 — _crop_pdf_page_boxes rewrites page boxes losslessly.
+# ---------------------------------------------------------------------------
+def _minimal_pdf(media_box: tuple[float, float, float, float]) -> bytes:
+    """Build a one-page PDF with the given MediaBox and one CMYK fill."""
+    x0, y0, x1, y1 = media_box
+    content = b"0.85 0.35 0.95 0.10 k 0 0 50 50 re f\n"
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (
+            f"<< /Type /Page /Parent 2 0 R /MediaBox "
+            f"[{x0} {y0} {x1} {y1}] /Contents 4 0 R >>"
+        ).encode("ascii"),
+        b"<< /Length %d >>\nstream\n" % len(content) + content + b"endstream",
+    ]
+    out = b"%PDF-1.4\n"
+    offsets = []
+    for i, o in enumerate(objs):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % (i + 1) + o + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n" % (len(objs) + 1)
+    out += b"0000000000 65535 f \n"
+    for off in offsets:
+        out += b"%010d 00000 n \n" % off
+    out += (
+        b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF"
+        % (len(objs) + 1, xref)
+    )
+    return out
+
+
+def test_crop_pdf_page_boxes_sets_trim_rect(tmp_path):
+    """_crop_pdf_page_boxes sets MediaBox + CropBox to the trim rectangle."""
+    src = tmp_path / "src.pdf"
+    dest = tmp_path / "dest.pdf"
+    src.write_bytes(_minimal_pdf((0.0, 0.0, 200.0, 300.0)))
+
+    ok = drv._crop_pdf_page_boxes(src, dest, (20.0, 30.0, 180.0, 270.0))
+    assert ok is True
+    assert dest.exists()
+
+    info = subprocess.run(
+        ["pdfinfo", "-box", str(dest)], capture_output=True, text=True,
+    ).stdout
+    # Cropped page is 160×240 pt (the trim rect).
+    assert "160" in info and "240" in info
+    text = dest.read_bytes()
+    assert b"/CropBox [20.0000 30.0000 180.0000 270.0000]" in text
+    assert b"/MediaBox [20.0000 30.0000 180.0000 270.0000]" in text
+
+
+def test_crop_pdf_page_boxes_preserves_content(tmp_path):
+    """The page-box rewrite does not touch the page content stream."""
+    src = tmp_path / "src.pdf"
+    dest = tmp_path / "dest.pdf"
+    src.write_bytes(_minimal_pdf((0.0, 0.0, 200.0, 300.0)))
+
+    drv._crop_pdf_page_boxes(src, dest, (20.0, 30.0, 180.0, 270.0))
+
+    # The DeviceCMYK fill operator is untouched — colour is preserved.
+    assert b"0.85 0.35 0.95 0.10 k" in dest.read_bytes()
+
+
+def test_crop_pdf_page_boxes_no_page_returns_false(tmp_path):
+    """A PDF with no /Type /Page dict yields False (caller copies verbatim)."""
+    src = tmp_path / "src.pdf"
+    dest = tmp_path / "dest.pdf"
+    src.write_bytes(b"%PDF-1.4\n% no page object here\n%%EOF")
+
+    assert drv._crop_pdf_page_boxes(src, dest, (0.0, 0.0, 10.0, 10.0)) is False

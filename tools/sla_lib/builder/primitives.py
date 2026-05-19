@@ -474,6 +474,13 @@ class _Frame:
     # the rule still TESTS every page; only individual feature frames opt
     # out, and the opt-out is visible at the frame definition.
     is_full_bleed: bool = False
+    # Object opacity in [0.0, 1.0] (1.0 = fully opaque, the default). ``None``
+    # leaves the PAGEOBJECT fully opaque (no TransValue attribute emitted —
+    # matches the original SLAs which omit it). A value < 1.0 is written as
+    # Scribus's TransValue/TransValueS, which store *transparency*
+    # (1 - opacity): InDesign's BlendingSetting/Opacity=70 → opacity 0.7 →
+    # TransValue 0.3.
+    fill_opacity: Optional[float] = None
 
     def _xy_pt(self, page) -> tuple[float, float]:
         """Return absolute XPOS/YPOS in scratch canvas space."""
@@ -542,6 +549,25 @@ def _apply_soft_shadow(attrs: dict, ss: Optional[SoftShadow]) -> None:
     attrs["SOFTSHADOWOBJTRANS"] = "1" if ss.object_trans else "0"
 
 
+def _apply_fill_opacity(attrs: dict, fill_opacity: Optional[float]) -> None:
+    """Emit Scribus TransValue/TransValueS when the frame is not fully opaque.
+
+    Scribus stores object *transparency* (TransValue for fill, TransValueS
+    for stroke) as ``1 - opacity``: 0 = opaque, 1 = invisible. The original
+    SLAs omit the attribute entirely for opaque objects, so ``None`` (or a
+    value within an ulp of 1.0) emits nothing — keeping opaque frames
+    byte-identical to the round-trip baseline.
+    """
+    if fill_opacity is None:
+        return
+    op = max(0.0, min(1.0, fill_opacity))
+    if abs(op - 1.0) < 1e-6:
+        return
+    trans = 1.0 - op
+    attrs["TransValue"] = _fmt_num(trans)
+    attrs["TransValueS"] = _fmt_num(trans)
+
+
 # ---------------------------------------------------------------------------
 # TextFrame
 # ---------------------------------------------------------------------------
@@ -553,9 +579,12 @@ class TextFrame(_Frame):
     runs: Optional[list] = None  # list of Run, or legacy (text, dict, sep) tuples
     columns: int = 1
     col_gap_mm: float = 4
-    # ALIGN attribute: vertical text alignment within the frame (0=top, 1=center, 2=bottom).
-    # ``vertical_text_align`` is the canonical name.  ``text_align`` is kept as a
-    # backward-compat alias — both map to the same PAGEOBJECT ALIGN attribute.
+    # VAlign attribute: vertical text alignment within the frame (0=top,
+    # 1=center, 2=bottom). Scribus stores vertical text justification in the
+    # PAGEOBJECT ``VAlign`` attribute — NOT ``ALIGN`` (which is the paragraph
+    # horizontal-alignment default and has no vertical-centring effect).
+    # ``vertical_text_align`` is the canonical name.  ``text_align`` is kept as
+    # a backward-compat alias — both map to the PAGEOBJECT ``VAlign`` attribute.
     vertical_text_align: Optional[int] = None
     text_align: Optional[int] = None  # deprecated alias for vertical_text_align
     default_linesp_mode: Optional[int] = None  # DefaultStyle LINESPMode attribute
@@ -579,6 +608,16 @@ class TextFrame(_Frame):
     # silently dropped to ``<DefaultStyle/>`` and the rendered hero text
     # drifted in size and alignment.
     default_style_attrs: Optional[dict] = None
+    # First-line offset mode (Scribus FLOP attribute): controls where the
+    # first baseline sits relative to the frame top.
+    #   0 = Maximum Ascent   1 = Font Ascent   2 = Line Spacing   3 = Baseline Grid
+    # InDesign's default FirstBaselineOffset is "AscentOffset" — first
+    # baseline at the font ascent below the frame top — which maps to
+    # Scribus FLOP=1. FLOP=2 (the legacy default) places the first baseline
+    # a full LINESP below the top, ~5-6pt too low for body text. The
+    # converter sets this per-frame from the IDML's FirstBaselineOffset; a
+    # template may override it. None → the builder's default (FLOP=1).
+    first_line_offset: Optional[int] = None
     next_item: Optional["TextFrame"] = field(default=None, repr=False, compare=False)
     # Internal: pre-allocated ItemID for chain ordering. Set by Document._build_xml.
     _preallocated_id: Optional[int] = field(default=None, repr=False, compare=False)
@@ -630,9 +669,19 @@ class TextFrame(_Frame):
         # unrotated top-left:
         #   -90°: visible TL = (XPOS,     YPOS - W);  new YPOS = YPOS - W + H
         #   +90°: visible TL = (XPOS - H, YPOS);      new XPOS = XPOS + W - H
+        #
+        # The swap is a TEXT-FLOW compensation only. An empty TextFrame (no
+        # text, no runs) — used as a coloured background-fill rectangle — has
+        # nothing to flow, so the swap serves no purpose; applying it merely
+        # mis-places the rectangle (the swap is not perfectly placement-
+        # invariant when WIDTH != HEIGHT). Skip it for empty frames so a
+        # rotated full-bleed background lands exactly where the converter's
+        # geometry model (un-rotated WIDTH/HEIGHT + pivot) intends.
+        _is_empty = not self.text and not self.runs
         if (
             abs(abs(self.rotation_deg) - 90.0) < 0.5
             and self.custom_path is None
+            and not _is_empty
         ):
             if self.rotation_deg < 0:
                 y = y - w_pt + h_pt
@@ -654,14 +703,17 @@ class TextFrame(_Frame):
             "PICART": "1", "SCALETYPE": "1", "RATIO": "1",
             "COLUMNS": str(self.columns), "COLGAP": _fmt_num(mm_to_pt(self.col_gap_mm)),
             "AUTOTEXT": "0", "EXTRA": "0", "TEXTRA": "0", "BEXTRA": "0", "REXTRA": "0",
-            # FLOP=2 (Line Spacing): first baseline = LINESP below frame
-            # top. Matches InDesign's "AscentOffset" closer than FLOP=0/1
-            # for this corpus' Gotham/Vollkorn fonts — empirically baseline
-            # puts the first cap ~15pt below frame top for a 30pt headline
-            # frame, which corresponds to LINESP-1 ascent (~6pt) not the
-            # raw font-ascent (~24pt). FLOP=0/1 placed text flush against
-            # the frame top; FLOP=2 pushes it down by the line height.
-            "VAlign": "0", "FLOP": "2", "PLTSHOW": "0", "BASEOF": "0",
+            # FLOP (first-line offset): InDesign's default FirstBaselineOffset
+            # is "AscentOffset" — first baseline at the font ascent below the
+            # frame top — which is Scribus FLOP=1 ("Font Ascent"). FLOP=2
+            # ("Line Spacing") places the first baseline a full LINESP below
+            # the top, ~5-6pt too low for body text (measured on the A6 flyer
+            # body frames). Default FLOP=1; per-frame override via
+            # TextFrame.first_line_offset (the converter sets it from the
+            # IDML FirstBaselineOffset).
+            "VAlign": "0",
+            "FLOP": str(self.first_line_offset if self.first_line_offset is not None else 1),
+            "PLTSHOW": "0", "BASEOF": "0",
             "textPathType": "0", "textPathFlipped": "0",
             "gXpos": _fmt_num(x), "gYpos": _fmt_num(y),
             "gWidth": "0", "gHeight": "0",
@@ -683,16 +735,19 @@ class TextFrame(_Frame):
             _apply_shape_attrs(attrs, self, w_pt, h_pt,
                                 default_path=rect_path, default_frtype="0")
         _apply_soft_shadow(attrs, self.soft_shadow)
+        _apply_fill_opacity(attrs, self.fill_opacity)
         if self.fill is not None:
             attrs["PCOLOR"] = self.fill
         if self.line_color is not None:
             attrs["PCOLOR2"] = self.line_color
         # vertical_text_align= is canonical; text_align= is the deprecated alias.
         # Both were validated and merged in __post_init__ (text_align migrated to
-        # vertical_text_align).  Use vertical_text_align as the authoritative source.
+        # vertical_text_align).  Use vertical_text_align as the authoritative
+        # source.  Scribus stores vertical justification in PAGEOBJECT VAlign
+        # (0=top / 1=center / 2=bottom); the default written above is "0".
         _eff_valign = self.vertical_text_align
         if _eff_valign is not None:
-            attrs["ALIGN"] = str(_eff_valign)
+            attrs["VAlign"] = str(_eff_valign)
         if self.anname:
             attrs["ANNAME"] = self.anname
         po = etree.Element("PAGEOBJECT", attrib=attrs)
@@ -879,6 +934,7 @@ class ImageFrame(_Frame):
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=rect_path, default_frtype="0")
         _apply_soft_shadow(attrs, self.soft_shadow)
+        _apply_fill_opacity(attrs, self.fill_opacity)
         if self.anname:
             attrs["ANNAME"] = self.anname
         return etree.Element("PAGEOBJECT", attrib=attrs)
@@ -927,6 +983,7 @@ class Polygon(_Frame):
         _apply_shape_attrs(attrs, self, w_pt, h_pt,
                             default_path=default_path, default_frtype=default_frtype)
         _apply_soft_shadow(attrs, self.soft_shadow)
+        _apply_fill_opacity(attrs, self.fill_opacity)
         if self.line_color is not None:
             attrs["PCOLOR2"] = self.line_color
         if self.fill_shade != 100:
@@ -962,10 +1019,15 @@ class Polygon(_Frame):
 class PolyLine:
     """A complex multi-segment polyline (PTYPE=7 in Scribus).
 
-    Used for complex open or mixed-open/closed vector paths emitted with a
-    stroke (linescolor) and no fill. The canonical use case is importing
-    InDesign Polygon elements whose PathGeometry has multiple sub-paths
-    (e.g. wind turbines, logos, icons).
+    Used for complex open or mixed-open/closed vector paths. Two shapes:
+
+    * **stroked outline** — ``line_color`` set, ``fill`` left ``None``
+      (PCOLOR stays ``"None"``). The canonical case is a wind turbine /
+      logo / icon imported from an InDesign Polygon with multiple sub-paths.
+    * **filled silhouette** — ``fill`` set to a colour name. PCOLOR emits
+      the fill so closed bezier sub-paths paint as a solid shape. The
+      canonical case is the Grüne yellow squiggle emphasis motif (a closed
+      brush-stroke silhouette filled with Color/Yellow, drawn behind text).
 
     ``sla_path`` is a verbatim Scribus SLA SVG-like path string in **local
     points** (origin = frame top-left = 0,0). The frame bounding box
@@ -983,6 +1045,20 @@ class PolyLine:
             line_width_pt=4.204,
             anname="u2b0",
         ))
+
+    Filled-silhouette example (yellow squiggle, no stroke)::
+
+        page.add(PolyLine(
+            x_mm=14.8,
+            y_mm=89.8,
+            w_mm=19.2,
+            h_mm=1.0,
+            sla_path="M53.27 0.659 C46.44 0.318 ... Z",
+            fill="Gelb",
+            line_color="None",
+            line_width_pt=0,
+            anname="u11e3",
+        ))
     """
     x_mm: float = 0
     y_mm: float = 0
@@ -991,6 +1067,9 @@ class PolyLine:
     sla_path: str = "M0 0 L10 10"  # local-pt SVG path string
     line_color: str = "Black"
     line_width_pt: float = 1.0
+    # Optional polygon fill (PCOLOR). When None the shape is stroke-only and
+    # PCOLOR stays "None" — preserving the legacy stroked-outline behaviour.
+    fill: Optional[str] = None
     layer: int = 0
     anname: str = ""
     rotation_deg: float = 0.0
@@ -1018,7 +1097,7 @@ class PolyLine:
             "HEIGHT": _fmt_num(h_pt),
             "FRTYPE": "3",
             "CLIPEDIT": "1",
-            "PCOLOR": "None",
+            "PCOLOR": self.fill if self.fill is not None else "None",
             "PCOLOR2": self.line_color,
             "PWIDTH": _fmt_num(self.line_width_pt),
             "PLINEART": "1",

@@ -80,15 +80,49 @@ def test_registration_skipped():
     assert "Color/Registration" not in resolved
 
 
-def test_process_ink_cyan_skipped_when_hidden_reserved():
+def test_process_ink_cyan_skipped_when_hidden_reserved_and_unused():
     xml = _graphic_xml([
         {"Self": "Color/Cyan", "Name": "Cyan", "Space": "CMYK",
          "Model": "Process", "ColorValue": "100 0 0 0",
          "ColorOverride": "Hiddenreserved"},
     ])
-    # Used or not, Hiddenreserved process inks never reach the SLA.
+    # An UNUSED Hiddenreserved process ink is dropped.
     resolved = _emit_colors_from_xml(xml, used_colors=set())
     assert "Color/Cyan" not in resolved
+
+
+def test_referenced_hidden_yellow_resolves_to_brand_gelb():
+    """A Hiddenreserved process ink that IS referenced (e.g. the yellow
+    squiggle motif fills with the builtin Color/Yellow) must resolve through
+    COLOR_CMYK_TO_BRAND instead of being silently skipped — otherwise the
+    squiggle's FillColor is unresolvable and the shape renders black."""
+    xml = _graphic_xml([
+        {"Self": "Color/Yellow", "Name": "Yellow", "Space": "CMYK",
+         "Model": "Process", "ColorValue": "0 0 100 0",
+         "ColorOverride": "Hiddenreserved"},
+    ])
+    resolved = _emit_colors_from_xml(xml, used_colors={"Color/Yellow"})
+    assert resolved["Color/Yellow"] == "Gelb"
+
+
+def test_referenced_hidden_black_resolves_to_brand_black():
+    xml = _graphic_xml([
+        {"Self": "Color/Black", "Name": "Black", "Space": "CMYK",
+         "Model": "Process", "ColorValue": "0 0 0 100",
+         "ColorOverride": "Hiddenreserved"},
+    ])
+    resolved = _emit_colors_from_xml(xml, used_colors={"Color/Black"})
+    assert resolved["Color/Black"] == "Black"
+
+
+def test_color_none_skipped_even_when_referenced():
+    """Color/None / Swatch/None carry no resolvable CMYK — always dropped."""
+    xml = _graphic_xml([
+        {"Self": "Color/None", "Name": "None", "Space": "CMYK",
+         "Model": "Process", "ColorValue": "0 0 0 0", "ColorOverride": "Normal"},
+    ])
+    resolved = _emit_colors_from_xml(xml, used_colors={"Color/None"})
+    assert "Color/None" not in resolved
 
 
 def test_non_brand_printable_registers_as_local():

@@ -62,6 +62,10 @@ PLAYBOOKS = [
     # not-ok (covers the L-014 false positive whose count = 1 always).
     ("image_frame_visibility_audit", "playbooks.frame_visibility",
      lambda audit: not audit.get("ok", True)),
+    # squiggle_realign re-anchors the yellow squiggle motif onto its word
+    # when Scribus's line-wrap shifts the word away from the squiggle.
+    ("squiggle_alignment_audit", "playbooks.squiggle_realign",
+     lambda audit: (audit.get("issues") or 0) > 0),
 ]
 
 

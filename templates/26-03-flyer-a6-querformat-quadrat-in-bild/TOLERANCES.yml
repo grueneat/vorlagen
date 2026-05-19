@@ -1,0 +1,135 @@
+tolerances:
+- id: tol:inventory-offpage-registration-marks
+  audit: inventory
+  classification: human-review
+  severity: cosmetic
+  max_issues: 4
+  reason: '4 dropped elements. The converter deliberately skips four 6.3x6.3mm
+    (17.9x17.9pt) Rectangle elements (u6f0, u6f2, u77f, u964) that the IDML
+    places far outside the page (x=-504pt or x=+508..510pt — well beyond the
+    419pt page width). They are inline vector paths with no <Image>/<PDF> child
+    (registration / colour-control furniture on the pasteboard). The converter
+    logs each as "[skip] Rectangle ... entirely outside page bounds ... InDesign
+    design artifact, not emitted"; InDesign also omits them from the trimmed PDF
+    export. A deliberate, documented non-emit — not a silent drop (the scaffold
+    completeness assertion passes: every element is either emitted or explicitly
+    recorded as skipped).'
+  follow_up_issue: none; correct converter behaviour, audit is conservative
+- id: tol:image-audit-vector-path-delta
+  audit: image_audit
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 48
+  reason: '45 vector-path / image deltas, derivative of the Scribus raster/ICC
+    rendering differences on full-bleed Dunkelgruen page backgrounds and photo
+    content, plus the IDML inline decorative vector paths (Wahlkreis ellipse /
+    underline ornaments, curly quotes) the converter extracts as inline images
+    rather than re-emitting as Scribus Polygon items, plus the CMYK-JPEG /
+    CMYK-PSD render gaps catalogued in image_content_audit. Same gap class as
+    the sibling flyer templates (26-03-flyer-a6-querformat-portrait,
+    26-03-flyer-a6-hochformat-*).'
+  follow_up_issue: engine-bug; intrinsic raster + ICC differences
+- id: tol:image-content-cmyk-render
+  audit: image_content_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 4
+  reason: 'RESOLVED — image_content_audit is now GREEN (0 broken, 5 ok). The
+    converter fix-set re-exports the CMYK source assets via the ICC-aware
+    "convert -profile sRGB -strip" recipe (replacing the old "passthrough" /
+    "convert -flatten" recipes). green-pine-trees-covered-with-fog and
+    leonore-sitzend-kopie now ship as sRGB PNGs; schwarzer-verlauf-radial.png
+    is re-exported ICC-aware. Scribus rasterises all five frames correctly.
+    Row kept for the audit trail; cap unchanged but no residual remains.'
+  follow_up_issue: none; resolved by ICC-aware CMYK->sRGB asset export
+- id: tol:image-frame-visibility-cmyk-jpeg
+  audit: image_frame_visibility_audit
+  classification: authoring-bug
+  severity: structural
+  max_issues: 2
+  reason: 'RESOLVED — image_frame_visibility_audit is now GREEN (5 ok, 0
+    invisible, 0 faint). The ICC-aware CMYK->sRGB asset re-export (see
+    tol:image-content-cmyk-render) fixed the previously invisible/faint
+    pine-tree frames; the white Grünen logo ua5a renders at visibility
+    ratio 0.85 (asset_render_ratio 0.85, well above the 0.35 floor). Row
+    kept for the audit trail; no residual remains.'
+  follow_up_issue: none; resolved by ICC-aware CMYK->sRGB asset export
+- id: tol:systematic-text-line-wrap-no-sim-rows
+  audit: systematic_text_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 3
+  reason: '3 frames flagged sim-actionable (u6d8, u872, u92e) — down from 11
+    after the body-leading + headline fixes below. The line_spacing playbook
+    simulator returns no measurable drift for every frame: the residual is
+    line-WRAP-COUNT divergence, not a leading value. line_spacing_pixel_audit
+    confirms the line spacing itself is correct (u6d8 cumulative -0.48pt, u872
+    0pt) — the audit flags them only because Scribus and InDesign break the
+    justified 2-column body paragraphs (u6d8/u92e) at different words, and
+    the audit miscounts a phantom line on u872 (pdfplumber sees 2 lines, the
+    audit clusterer reports 3). No single (LINESPMode, LINESP) reconciles a
+    wrap-count difference. Same root cause as text_position_audit.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)
+- id: tol:text-position-jitter-freetype-kerning
+  audit: text_position_audit_jitter
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 24
+  reason: '41 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+    InDesign per-character kerning jitter intrinsic to the two rasterisers.
+    The count rose from 21 because the body-leading calibration un-clipped
+    ~26 previously-overflowed body words (preview word count 306 → 332): the
+    extra rendered words add their own sub-5pt kerning jitter. The cap stays
+    at 24 (NOT raised — tolerance growth is P4-gated). Preflight stays red on
+    this audit alongside the line_match / structural bucket — all the same
+    cross-renderer 2-column line-wrap class. Sub-perceptible, below the
+    visible threshold; documented, not closeable without a Scribus
+    justification/kerning model change.'
+  follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
+- id: tol:text-position-structural-cross-renderer-wrap
+  audit: text_position_audit_structural
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 280
+  reason: '152 large (>5pt) word-position drifts — down from 208 after the
+    body-leading calibration (green Fliesstext + Aufzählungen styles 16.0pt
+    → 15.0pt to match the InDesign-rendered ~15.04pt baseline; the IDML CSR
+    Leading 14.3pt does not equal the rendered spacing). The residual is
+    dominated by cross-renderer line-wrap differences — Scribus and InDesign
+    break the justified 2-column body paragraphs (u6d8/u92e) at different
+    words because their font-metric and hyphenation models differ; a column-1
+    wrap-count difference shifts all of column 2 by one line-height. Not a
+    converter bug and not a routing bug. NOT FIXED, NOT TOLERATED-AS-PASSING —
+    preflight stays red until a Scribus justification/hyphenation alignment
+    lands or the baseline is re-flowed.'
+  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+- id: tol:text-render-cross-renderer-wrap-overflow
+  audit: text_render_audit
+  classification: scribus-engine-bug
+  severity: structural
+  max_issues: 0
+  reason: 'RESOLVED — text_render_audit is now GREEN (0 issues). Previously 12
+    tail words of the justified body paragraphs (u6d8/u92e) overflowed the
+    frame and were clipped, because the green Fliesstext style rendered at a
+    16.0pt leading instead of the InDesign ~15.04pt — the extra ~1.2pt/line
+    accumulated to roughly one clipped line per frame. The body-leading
+    calibration (see tol:text-position-structural-cross-renderer-wrap) brought
+    every body line back inside its frame, so no word is clipped. Row kept for
+    the audit trail; the cap is now 0 (no residual to tolerate).'
+  follow_up_issue: none; resolved by body-leading calibration
+- id: tol:visual-diff-regions-cross-renderer-wrap
+  audit: visual_diff_regions
+  classification: scribus-engine-bug
+  severity: cosmetic
+  max_issues: 1
+  reason: '52 hot diff regions. The regions are the pixel-level footprint of
+    the same cross-renderer 2-column line-wrap divergence catalogued in
+    tol:text-position-structural-cross-renderer-wrap — wherever Scribus and
+    InDesign break the justified body paragraphs (u6d8/u92e) at a different
+    word, the whole tail of the column re-flows and the diff lights up. The
+    page geometry itself is correct (per-page mm dimensions match the
+    baseline; line spacing is calibrated). The cap stays at 1 (NOT raised —
+    P4-gated); preflight stays red on this audit alongside line_match and the
+    structural bucket. Not closeable without a Scribus justification model
+    change.'
+  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as text_position_audit)

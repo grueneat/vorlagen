@@ -16,8 +16,12 @@ from region_color_audit import (  # noqa: E402
     parse_frames_from_build_py,
     bbox_mm_to_px,
     _sample_region_rgb_pure as sample_region_rgb_pure,
+    _color_bucket,
+    _median,
     classify_severity,
+    classify_severity_compensated,
     classify_pattern,
+    per_color_offsets,
     _yaml_dump,
     run_region_color_audit,
 )
@@ -255,6 +259,82 @@ def test_pattern_mixed():
 
 
 # ---------------------------------------------------------------------------
+# 8b. Per-colour offset compensation
+# ---------------------------------------------------------------------------
+
+def test_median_odd_and_even():
+    """_median returns the middle element (odd) or the mean of two (even)."""
+    assert _median([5.0, 1.0, 3.0]) == 3.0
+    assert _median([1.0, 2.0, 3.0, 4.0]) == 2.5
+
+
+def test_color_bucket_quantises_close_colors_together():
+    """Colours within the 48-unit grid land in the same bucket."""
+    # Two greens 10 RGB units apart → same bucket.
+    assert _color_bucket((60.0, 92.0, 45.0)) == _color_bucket((68.0, 100.0, 52.0))
+    # A green and a white → different buckets.
+    assert _color_bucket((60.0, 92.0, 45.0)) != _color_bucket((250.0, 250.0, 250.0))
+
+
+def test_per_color_offsets_estimates_each_colour_separately():
+    """Each colour bucket gets its own median signed offset.
+
+    Two green peers drift by (-1, -13, +3); two white peers drift ~0. The
+    offset map must report a distinct offset per colour bucket.
+    """
+    samples = [
+        ((60.0, 92.0, 45.0), (-1.0, -13.0, 3.0)),
+        ((61.0, 93.0, 46.0), (-1.0, -13.0, 3.0)),
+        ((250.0, 250.0, 250.0), (0.0, -1.0, 0.0)),
+        ((251.0, 251.0, 251.0), (0.0, -1.0, 0.0)),
+    ]
+    offsets = per_color_offsets(samples)
+    green = offsets[_color_bucket((60.0, 92.0, 45.0))]
+    white = offsets[_color_bucket((250.0, 250.0, 250.0))]
+    assert green == (-1.0, -13.0, 3.0)
+    assert white == (0.0, -1.0, 0.0)
+
+
+def test_per_color_offsets_singleton_uses_document_median():
+    """A singleton colour bucket inherits the document-wide median offset.
+
+    The lone unique-colour frame must NOT become its own reference (that
+    would mask a genuine fill bug); it gets the document median instead.
+    """
+    samples = [
+        ((60.0, 92.0, 45.0), (5.0, 5.0, 5.0)),
+        ((61.0, 93.0, 46.0), (5.0, 5.0, 5.0)),
+        ((61.0, 92.0, 45.0), (5.0, 5.0, 5.0)),
+        ((250.0, 10.0, 200.0), (40.0, 40.0, 40.0)),  # unique colour
+    ]
+    offsets = per_color_offsets(samples)
+    singleton = offsets[_color_bucket((250.0, 10.0, 200.0))]
+    # Document median of all four deltas is (5, 5, 5), not the frame's own.
+    assert singleton == (5.0, 5.0, 5.0)
+
+
+def test_classify_severity_compensated_removes_shared_offset():
+    """A frame matching its colour's offset classifies 'ok'."""
+    offsets = {_color_bucket((60.0, 92.0, 45.0)): (-1.0, -13.0, 3.0)}
+    severity, residual = classify_severity_compensated(
+        (60.0, 92.0, 45.0), (-1.0, -13.0, 3.0), offsets,
+    )
+    assert severity == "ok"
+    assert residual < 3.0
+
+
+def test_classify_severity_compensated_flags_deviation():
+    """A frame deviating from its colour's offset classifies 'fill_likely'."""
+    offsets = {_color_bucket((60.0, 92.0, 45.0)): (-1.0, -13.0, 3.0)}
+    # This frame is +30 on every channel beyond the shared offset.
+    severity, residual = classify_severity_compensated(
+        (60.0, 92.0, 45.0), (29.0, 17.0, 33.0), offsets,
+    )
+    assert severity == "fill_likely"
+    assert residual > 15.0
+
+
+# ---------------------------------------------------------------------------
 # 9. _yaml_dump — deterministic output (byte-identical on re-run)
 # ---------------------------------------------------------------------------
 
@@ -363,40 +443,105 @@ def test_run_audit_u1ae_in_frames(tmp_path):
     assert "u1ae" in annames
 
 
-def test_run_audit_large_delta_is_fill_likely(tmp_path):
-    """A 30-unit RGB delta on a frame → severity 'fill_likely'."""
+# A build.py with four quadrant regions — enough colour peers that the
+# offset-compensated audit can tell a uniform colour-management offset
+# (shared by peers) from a real fill-colour bug (one region deviating).
+# Geometry: A4 @ 150 dpi is 1240×1754 px = 209.97×297.04 mm; each quadrant
+# is 620×877 px = 104.99×148.52 mm. The build.py parser needs literal
+# float coordinates, so they are spelled out below.
+_FOUR_QUADRANT_BUILD_PY = """\
+def _add_page_0(doc, page0):
+    from sla_lib.builder import Polygon
+    page0.add(Polygon(
+        x_mm=2.0, y_mm=2.0, w_mm=100.0, h_mm=144.0,
+        anname='peer0', layer=0,
+    ))
+    page0.add(Polygon(
+        x_mm=107.0, y_mm=2.0, w_mm=100.0, h_mm=144.0,
+        anname='peer1', layer=0,
+    ))
+    page0.add(Polygon(
+        x_mm=2.0, y_mm=150.0, w_mm=100.0, h_mm=144.0,
+        anname='peer2', layer=0,
+    ))
+    page0.add(Polygon(
+        x_mm=107.0, y_mm=150.0, w_mm=100.0, h_mm=144.0,
+        anname='peer3', layer=0,
+    ))
+"""
+
+
+def _make_quadrant_pdf(path, quadrant_colors):
+    """Write a 1-page PDF split into 4 equal quadrants of the given colours.
+
+    quadrant_colors is [(r,g,b), ...] for [top-left, top-right,
+    bottom-left, bottom-right]. Page is A4 @ 150 dpi (1240×1754).
+    """
+    from PIL import ImageDraw
+    img = Image.new("RGB", (1240, 1754), color=(255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    hw, hh = 620, 877
+    rects = [(0, 0, hw, hh), (hw, 0, 1240, hh),
+             (0, hh, hw, 1754), (hw, hh, 1240, 1754)]
+    for (x0, y0, x1, y1), color in zip(rects, quadrant_colors):
+        draw.rectangle([x0, y0, x1 - 1, y1 - 1], fill=color)
+    img.save(str(path), "PDF", resolution=150)
+
+
+def test_run_audit_uniform_offset_not_flagged(tmp_path):
+    """A uniform offset shared by every colour peer classifies 'ok'.
+
+    Four same-coloured peers all drift by +6 on every channel — that is a
+    document-wide colour-management offset, not a per-frame fill bug. After
+    offset compensation every peer's residual is ~0, so none is flagged.
+    """
     baseline_pdf = tmp_path / "baseline.pdf"
     preview_pdf = tmp_path / "preview.pdf"
     build_py = tmp_path / "build.py"
+    build_py.write_text(_FOUR_QUADRANT_BUILD_PY, encoding="utf-8")
 
-    _make_solid_pdf(baseline_pdf, 60, 92, 45)
-    # 30-unit delta across all channels
-    _make_solid_pdf(preview_pdf, 90, 122, 75)
-    build_py.write_text(_MINIMAL_BUILD_PY, encoding="utf-8")
+    base = (60, 92, 45)
+    _make_quadrant_pdf(baseline_pdf, [base] * 4)
+    # Every quadrant drifts identically by +6 — a uniform offset.
+    drifted = tuple(c + 6 for c in base)
+    _make_quadrant_pdf(preview_pdf, [drifted] * 4)
 
     result = run_region_color_audit(build_py, baseline_pdf, preview_pdf, "test-tpl")
 
-    u1ae_frame = next((f for f in result["frames"] if f["anname"] == "u1ae"), None)
-    assert u1ae_frame is not None
-    assert u1ae_frame["severity"] == "fill_likely"
-    assert u1ae_frame["mean_delta"] > 15
+    peers = [f for f in result["frames"] if f["anname"].startswith("peer")]
+    assert len(peers) == 4
+    # The raw delta is ~6 but the offset-compensated residual is ~0.
+    for f in peers:
+        assert f["severity"] == "ok", f
+        assert f["residual_delta"] < 3.0
 
 
-def test_run_audit_small_delta_is_icc_likely(tmp_path):
-    """A 5-unit RGB delta on a frame → severity 'icc_likely'."""
+def test_run_audit_deviating_region_is_fill_likely(tmp_path):
+    """A region deviating from its colour peers classifies 'fill_likely'.
+
+    Three peers carry the uniform +6 colour-management offset; the fourth
+    is wrong by a further +30. After offset compensation the three peers
+    classify 'ok' and only the deviating region is flagged 'fill_likely'.
+    """
     baseline_pdf = tmp_path / "baseline.pdf"
     preview_pdf = tmp_path / "preview.pdf"
     build_py = tmp_path / "build.py"
+    build_py.write_text(_FOUR_QUADRANT_BUILD_PY, encoding="utf-8")
 
-    _make_solid_pdf(baseline_pdf, 60, 92, 45)
-    _make_solid_pdf(preview_pdf, 65, 97, 50)   # +5 on each channel
-    build_py.write_text(_MINIMAL_BUILD_PY, encoding="utf-8")
+    base = (60, 92, 45)
+    _make_quadrant_pdf(baseline_pdf, [base] * 4)
+    uniform = tuple(c + 6 for c in base)
+    bug = tuple(c + 36 for c in base)  # +30 beyond the uniform offset
+    _make_quadrant_pdf(preview_pdf, [uniform, uniform, uniform, bug])
 
     result = run_region_color_audit(build_py, baseline_pdf, preview_pdf, "test-tpl")
 
-    u1ae_frame = next((f for f in result["frames"] if f["anname"] == "u1ae"), None)
-    assert u1ae_frame is not None
-    assert u1ae_frame["severity"] == "icc_likely"
+    by_name = {f["anname"]: f for f in result["frames"]}
+    # peer0..2 share the uniform offset → ok; peer3 deviates → fill_likely.
+    for name in ("peer0", "peer1", "peer2"):
+        assert by_name[name]["severity"] == "ok", by_name[name]
+    assert by_name["peer3"]["severity"] == "fill_likely", by_name["peer3"]
+    assert by_name["peer3"]["residual_delta"] > 15
 
 
 def test_run_audit_sorted_fill_before_icc(tmp_path):

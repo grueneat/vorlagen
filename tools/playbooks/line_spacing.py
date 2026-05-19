@@ -155,6 +155,7 @@ def _run_sim(slug: str, anname: str, candidates: list[str],
         "python3", str(repo / "tools" / "line_spacing_sim.py"),
         "--slug", slug, "--anname", anname,
         "--candidates", ",".join(candidates),
+        "--templates-dir", str(repo / "templates"),
     ]
     if expected_words:
         cmd.extend(["--expected-words", expected_words])

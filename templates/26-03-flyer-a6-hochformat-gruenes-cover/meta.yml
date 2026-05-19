@@ -1,0 +1,19 @@
+asset_policy:
+  embedded:
+  - gruene-logo-bund-weiss-cmyk.png
+  external:
+  - 2026-03-leonore-fuer-flyer.png
+  - green-pine-trees-covered-with-fog.jpg
+  - green-pine-trees-covered-with-fog.png
+  shipped: []
+build:
+  output: template.sla
+  script: build.py
+format: A4
+id: 26-03-flyer-a6-hochformat-gruenes-cover
+idml_source: ../../../../originals/26-03-Flyer A6 Hochformat gruenes Cover Ordner/26-03-Flyer
+  A6 Hochformat gruenes Cover.idml
+previews_for_sla: 203df0d757b15984548dfb49509f657389471fb5edb07a166a70d1f7099257cc
+title: 26-03-flyer-a6-hochformat-gruenes-cover
+version: 0.1.0
+build_py_sha256: c1ce5591d25ea3cfd4fc7914736cc7e340a2da02964257b6f1a04a755198c3eb

@@ -70,10 +70,26 @@ def extract_words_with_positions(pdf_path: Path) -> list[dict[str, Any]]:
     layouts produces visually reversed words (e.g. ":musserpmI" for
     "Impressum:"). Issue #37 P1 task 2 fixes this by forcing visual-order
     glyph stitching via ``use_text_flow=False`` and small x/y tolerances.
+
+    COORDINATE NORMALISATION: a baseline.pdf cropped from a marks-on
+    InDesign export carries a MediaBox whose lower-left corner is NOT the
+    origin — e.g. ``(29.5, -38.53)`` for an A6 trim cropped out of a
+    bleed page. pdfplumber reports ``x0`` in raw MediaBox-absolute points
+    and ``top`` measured from the MediaBox top edge, so the baseline's
+    word coordinates sit a whole MediaBox-origin offset away from a
+    trim-origin preview.pdf — the line-match/position audits then read
+    every word as "drifted" by that constant offset. Re-anchoring every
+    word to the page's MediaBox lower-left corner (subtract ``llx`` from
+    x, subtract ``lly`` from ``top``) makes a cropped baseline and a
+    zero-origin preview directly comparable. For a normal ``(0, 0)``
+    MediaBox this is a no-op.
     """
     records: list[dict[str, Any]] = []
     with pdfplumber.open(pdf_path) as pdf:
         for page_idx, page in enumerate(pdf.pages):
+            mb = page.mediabox
+            llx = float(mb[0])
+            lly = float(mb[1])
             for w in page.extract_words(
                 use_text_flow=False,
                 keep_blank_chars=False,
@@ -84,10 +100,10 @@ def extract_words_with_positions(pdf_path: Path) -> list[dict[str, Any]]:
                 records.append({
                     "page": page_idx,
                     "text": w["text"],
-                    "x0_pt": round(float(w["x0"]), 2),
-                    "y0_pt": round(float(w["top"]), 2),
-                    "x1_pt": round(float(w["x1"]), 2),
-                    "y1_pt": round(float(w["bottom"]), 2),
+                    "x0_pt": round(float(w["x0"]) - llx, 2),
+                    "y0_pt": round(float(w["top"]) - lly, 2),
+                    "x1_pt": round(float(w["x1"]) - llx, 2),
+                    "y1_pt": round(float(w["bottom"]) - lly, 2),
                 })
     return records
 

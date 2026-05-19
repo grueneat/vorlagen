@@ -83,6 +83,26 @@ def _get_raster_counts(baseline_pdf: Path) -> dict[int, int]:
 # PDF vector path enumeration via SVG
 # ---------------------------------------------------------------------------
 
+_NUM_RE = re.compile(r"-?\d*\.?\d+(?:e-?\d+)?")
+# Crop/registration marks hug the page perimeter — a path whose whole
+# coordinate cloud sits within this band of a page edge is printer's-
+# marks furniture, not template content. Interior content (curly quotes,
+# wind turbine, squiggle) is never in the band, so a small curly quote
+# in the text body is NOT mistaken for a mark. Size alone is NOT used as
+# a discriminator: curly quotes are as small as corner dots.
+_EDGE_BAND_PT = 10.0
+
+
+def _path_extent(d: str) -> tuple[float, float, float, float] | None:
+    """Return (x_min, y_min, x_max, y_max) of a path's coordinate cloud."""
+    nums = [float(n) for n in _NUM_RE.findall(d)]
+    if len(nums) < 4:
+        return None
+    xs = nums[0::2]
+    ys = nums[1::2]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
 def _count_svg_content_paths(svg_path: str) -> int:
     """Count <path> elements outside <defs> sections in the SVG.
 
@@ -92,6 +112,14 @@ def _count_svg_content_paths(svg_path: str) -> int:
     We exclude:
     - paths in <defs> (glyph definitions, clip paths)
     - paths with d="M 0 0" or near-empty (invisible sentinel paths)
+    - printer's-marks furniture: crop/registration marks that an
+      InDesign export bakes near the trim edges. A baseline.pdf cropped
+      to its trim box keeps any marks sitting right at the trim edge —
+      they are NOT template content and the converter (correctly) never
+      emits them, so counting them inflates the vector-path delta. A
+      path is furniture only when its WHOLE coordinate cloud hugs the
+      page perimeter; interior content (curly quotes, wind turbine) is
+      always counted, however small.
     """
     try:
         tree = ET.parse(svg_path)
@@ -99,15 +127,40 @@ def _count_svg_content_paths(svg_path: str) -> int:
     except Exception:
         return 0
 
+    def _svg_dim(attr: str) -> float:
+        raw = (root.get(attr) or "").strip()
+        m = _NUM_RE.match(raw)
+        return float(m.group()) if m else 0.0
+
+    page_w = _svg_dim("width")
+    page_h = _svg_dim("height")
+
     count = [0]
+
+    def _is_marks_furniture(d: str) -> bool:
+        if not (page_w and page_h):
+            return False
+        ext = _path_extent(d)
+        if ext is None:
+            return False
+        x0, y0, x1, y1 = ext
+        # Furniture only when the WHOLE path cloud sits within a perimeter
+        # band — crop/registration marks at a trim edge. Interior content
+        # (however small) spans away from every edge and is kept.
+        near_left = x1 <= _EDGE_BAND_PT
+        near_right = x0 >= page_w - _EDGE_BAND_PT
+        near_top = y1 <= _EDGE_BAND_PT
+        near_bot = y0 >= page_h - _EDGE_BAND_PT
+        return near_left or near_right or near_top or near_bot
 
     def walk(el: ET.Element, in_defs: bool = False) -> None:
         tag = el.tag.split("}")[-1] if "}" in el.tag else el.tag
         new_in_defs = in_defs or tag == "defs"
         if tag == "path" and not in_defs:
             d = el.get("d", "").strip()
-            # Skip trivially empty paths
-            if d and d not in ("M 0 0", "M0 0", "M 0,0"):
+            # Skip trivially empty paths and printer's-marks furniture.
+            if (d and d not in ("M 0 0", "M0 0", "M 0,0")
+                    and not _is_marks_furniture(d)):
                 count[0] += 1
         for child in el:
             walk(child, new_in_defs)
