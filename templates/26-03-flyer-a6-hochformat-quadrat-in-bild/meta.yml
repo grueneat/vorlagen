@@ -15,7 +15,7 @@ format: A4
 id: 26-03-flyer-a6-hochformat-quadrat-in-bild
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Quadrat in Bild Ordner/26-03-Flyer
   A6 Hochformat Quadrat in Bild.idml
-previews_for_sla: 652d2d1e006708312724f087cd112d20cf45d0520c62a1fdcb54b738cbb0a46b
+previews_for_sla: 714af0f2236a45c6e0876693872e5afc34d38c5ab0f44b5baf69aa7dae0f1ad1
 title: 26-03-flyer-a6-hochformat-quadrat-in-bild
 version: 0.1.0
-build_py_sha256: 6c55efa44fcf20a3b4b822df01e3ef3ba44de850fdb97a44d4bfee8420971271
+build_py_sha256: 526bdc9adcd886ecfc34fe6e8bd110f6b2e14ca1765884c735fcfbd6201884a3

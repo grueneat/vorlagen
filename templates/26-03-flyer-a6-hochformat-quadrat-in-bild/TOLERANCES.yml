@@ -42,10 +42,10 @@ tolerances:
   classification: scribus-engine-bug
   severity: structural
   max_issues: 11
-  reason: '6 frames flagged sim-actionable (9 the prior overnight run; the
-    green-body SpaceAfter restore + u133f/u133f_l2 headline geometry fixes
-    this re-render cleared three). The line_spacing playbook simulator
-    (tools/line_spacing_sim.py) returned NO ROWS for every remaining frame —
+  reason: '4 frames flagged sim-actionable (u1287, u129e, u12b5, u13a7 — 6
+    the prior re-render; the green-body SpaceAfter restore on the FINAL
+    verification re-render cleared two more). The line_spacing playbook
+    simulator (tools/line_spacing_sim.py) returned NO ROWS for every frame —
     the drift is line-WRAP-count divergence, not a leading value.
     line_spacing_pixel_audit confirms line-count mismatches (u129e 9->10,
     u12b5 11). No single (LINESPMode, LINESP) reconciles a wrap-count

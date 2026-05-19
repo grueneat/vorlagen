@@ -17,7 +17,76 @@ hand-edits were re-applied below (rows 2-4).
 
 ---
 
-## FINAL re-render (template 2 of 8, FINAL pass) — newest
+## FINAL re-render — verification pass (newest)
+
+Re-import + tune against the current committed converter/audit fix set
+(HEAD `870a9a3`). The re-import regenerated `build.py`, overwriting the
+prior pass's tune edits. The current converter's mixed-font headline
+splitter now emits the recalibrated geometry directly: each split line
+frame is widened by a `+12mm` clip-safety margin (`w_mm=70.4538`) and
+the per-line FLOP correction is applied in-converter — so the prior
+pass's manual `u133f_l2` `y_mm +6.24pt` shift and `w_mm 70.4538→58.4538`
+narrowing are NO LONGER the right edits (they fought an older converter).
+This pass re-applies only what the converter genuinely drops, and fixes
+one shared audit-tool bug.
+
+### Edits applied (build.py)
+
+| # | What | Values (before → after) | Drift it resolves | Why conservative |
+|---|------|--------------------------|-------------------|------------------|
+| G1 | `space_after_pt` on green body ParaStyle `idml/fliesstext-auf-gruenem-hintergrund` (build.py `_add_styles`) | (absent) → `space_after_pt=5.6693` | `text_position_audit_structural` 152 → **46**; `systematic_text_audit` 6 → 4. The IDML carries the green body's inter-paragraph spacing as `<SameParaStyleSpacing>` (its `BasedOn` is `[No paragraph style]`, `SpaceAfter=0`); the converter does not consume `SameParaStyleSpacing`, so a re-import drops it. The white sibling `fliesstext-auf-weissem-hintergrund` carries `5.669…` explicitly via `SpaceAfter`. `baseline.pdf` shows ~5.67pt inter-paragraph spacing on the green body + bullet lists. | Restores the IDML-rendered spacing exactly (5.6693pt, the white-sibling value). Same fix templates 1-3 needed on re-import. |
+| G2 | `u133f` 3-line headline split frames: centred + frame x shifted to keep frame-centre on the IDML frame-centre (build.py) | all three `x_mm` 23.2731 → 17.2731; lines 2-3 `paragraph_attrs` gained `ALIGN: '1'`; all three `trail_attrs` gained `ALIGN: '1'` | `line_match_audit` headline findings — preview headline rendered LEFT-hugging the green box instead of centred. | The IDML story `Story_u1342.xml` is `Justification="CenterAlign"`. The current converter widens each split frame by `+12mm` (`line_w = w_mm + 12`) but emits left-alignment; a single-Run frame's only paragraph is closed by `<trail>`, so `ALIGN` must live in `trail_attrs` AND in lines 2-3 `paragraph_attrs`. The `x_mm` shift of `-6.0mm` (half the `+12` widening) keeps the widened frame's centre exactly on the IDML text frame's centre (IDML `x=23.2731`, `w=58.4538` → centre `52.50mm`; new `x=17.2731`, `w=70.4538` → centre `52.50mm`), so the centred lines land on the InDesign text-column centre. The converter-emitted `y_mm` values are kept untouched — the pixel-clean scan (below) confirms all three lines render at 0.0pt drift at the converter's `y`. |
+| G3 | `# noinject:` comment on ImageFrame `u1386` (build.py) | `external_asset_substitution_audit`: 1 missing → 0 | Cleared `external_asset_substitution_audit` (`u1386` flagged "missing INJECT_MAP/noinject"). | `u1386` is the genuine IDML-placed radial-gradient vignette overlay (`Schwarzer Verlauf radial.psd`) — a fixed dark vignette over the page-6 portrait so the white citation stays legible. Not a substitutable demo photo. `# noinject:` with a content reason is the audit's documented disposition. |
+
+### Shared audit-tool bugfix (`tools/line_spacing_pixel_audit.py`)
+
+`measure_split_headline` reported a phantom `split_headline_spacing`
+failure (`u133f` "worst 2.88pt") that did not respond to any frame
+`y_mm` move. Root cause: the current converter widens each split-
+headline frame by `+12mm` past its IDML text width, so the union bbox
+of the three `u133f` lines (`x` 17.27→87.73mm) overhangs the green box
+(`x` 21→84mm) onto the foggy pine-forest photo. The audit's white-
+colour ink scan (`_scan_color_lines`, `min_ink_columns=6`) latched onto
+the diffuse atmospheric fog (12–35 matched columns) instead of the
+headline glyph cap-row (82–119 columns). A direct pixel scan restricted
+to the green box (x 25–90mm) measured ALL THREE headline lines at
+**0.0pt drift** — the headline geometry is correct; only the audit was
+contaminated. Fix: a new density-aware scanner `_scan_color_headline_top`
+groups matched rows into bands, selects the band with the highest peak
+column count (the real glyphs — diffuse contamination forms low-peak
+bands), and returns the first row reaching half the band peak (the
+glyph cap-top, skipping any faint contamination skirt that merged into
+the band). `measure_split_headline` now calls it for both PDFs. The 10
+`tests/unit/test_line_spacing_pixel_audit.py` cases still pass; the
+change only affects split-headline rows and is drift-neutral for clean
+headlines (both renders measured identically). `split_headline_spacing`
+went RED → GREEN.
+
+### Accepted residuals — preflight RED (documented, genuinely unclosable in Stage 2)
+
+| Audit | Residual | Classification | Reason accepted |
+|-------|----------|----------------|-----------------|
+| `line_match_audit` | 16 of 70 lines mismatched | scribus-engine | Same documented breakdown as the prior pass: 6 body line-wrap + 1 unmatched (`u1242`, `u129e` — Scribus breaks justified paragraphs at different words); 3 rotated-frame (`u11fd`/`u126f` Δ28.34pt rotated `-90°` Impressum sidebar, `u1358` Δ-1.47pt rotated `-9°` Störer — Scribus rotated-frame engine limit); 6 sub-2pt centred/justified `first_word_x` (`u133f`×3 Δ~1.2pt, `u12fb` Δ-1.92pt, `u1390`×2 Δ~1.8pt — the ~0.75% Vollkorn/Gotham glyph-width difference shifts a centred line's start by ~half the width delta). `bin/tune-fix` exhausted every playbook; `line_spacing_sim` returned no rows. All 16 fall in the brief's known-acceptable residual classes (cross-renderer line-wrap, rotated-frame centring, ~0.75% glyph-width). `line_match_audit` is not tolerance-able — preflight stays red; no fix is durable (any frame nudge fits renderer noise and is dropped on re-import). |
+| `text_position_audit_structural` | 46 large drifts (>5pt) | scribus-engine | Cross-renderer line-wrap. Down from 152 (the G1 `SpaceAfter` fix). The remaining 46 are the 2 wrap events (`u1242`, `u129e`) cascading downstream words on their pages. All 6 pages verified visually — content + frame geometry correct. Within cap 260. `severity: structural` — preflight red by design. |
+| `systematic_text_audit` | 4 frames sim-actionable | scribus-engine | `line_spacing_sim` returned no rows for every frame (`u1287`, `u129e`, `u12b5`, `u13a7`) — line-WRAP-count divergence, not a leading value. `line_spacing_pixel_audit` confirms per-line GAP is correct in both renderers. Within cap 11 (improved from 6 last pass). |
+| `image_frame_visibility_audit` | 1 faint frame: `u1386` | accepted (CMYK→sRGB tone) | `u1386` visibility_ratio 0.686, `asset_render_ratio` 0.987 — the radial vignette renders, just lighter than baseline (small CMYK→sRGB tone shift on the dark PSD). 0 invisible frames; overall audit verdict `ok`. |
+
+### Audits driven / held GREEN this pass
+
+`split_headline_spacing` (RED → GREEN — see audit-tool bugfix above;
+the headline geometry was correct throughout), `squiggle_alignment_audit`
+(8 yellow squiggles, all on their words), `idml_attribute_coverage`
+(0 unconsumed), `image_content_audit` (5 ok / 0 broken),
+`image_frame_visibility_audit` (0 invisible; logo `u1336`
+`asset_render_ratio` 0.849), `external_asset_substitution_audit`
+(0 missing), `text_render_audit`, `per_region_regression`, `inventory`
+(exit 0 — no structural regression vs `SCAFFOLD_INVENTORY.yml`).
+
+No tolerance cap grew this pass.
+
+---
+
+## FINAL re-render (template 2 of 8, FINAL pass) — prior
 
 This re-import + tune cycle was driven against the full committed
 converter/audit fix set including the 6 audit-coordinate fixes from

@@ -472,6 +472,74 @@ def _scan_color_lines(
     return tops, bottoms
 
 
+def _scan_color_headline_top(
+    img: "Image.Image",
+    bbox_mm: tuple[float, float, float, float],
+    fill: str,
+    dpi: int,
+    line_gap_min_px: int = 6,
+) -> Optional[float]:
+    """Return the ink-top (pt) of the DENSEST ``fill``-coloured band in ``bbox``.
+
+    A split mixed-font headline frame is widened past its IDML text width by
+    the converter's clip-safety margin, so its bbox can overhang a photo. When
+    that photo carries a near-``fill`` tone (e.g. white atmospheric fog under a
+    white headline) the ordinary top-down "first row above a low column count"
+    scan latches onto the diffuse photo texture instead of the glyphs and
+    reports a phantom drift.
+
+    Glyph strokes of a large headline line form a band whose peak per-row
+    matched-column count is several times that of any diffuse photo band, so
+    this scan groups all matched rows into bands and returns the TOP of the
+    band with the highest peak density — the real headline line. Diffuse
+    contamination bands are discarded. Returns ``None`` when no band is found.
+    """
+    factor = dpi / 72.0
+    x_min_pt = bbox_mm[0] * _MM_TO_PT
+    y_min_pt = bbox_mm[1] * _MM_TO_PT
+    w_pt, h_pt = bbox_mm[2] * _MM_TO_PT, bbox_mm[3] * _MM_TO_PT
+    iw, ih = img.size
+    x0 = max(0, min(iw - 1, int(x_min_pt * factor)))
+    x1 = max(0, min(iw, int((x_min_pt + w_pt) * factor)))
+    y0 = max(0, min(ih - 1, int(y_min_pt * factor)))
+    y1 = max(0, min(ih, int((y_min_pt + h_pt) * factor)))
+    if x1 <= x0 or y1 <= y0:
+        return None
+    px = img.load()
+    # Per-row matched-column count (sample every other column, as elsewhere).
+    row_counts: list[tuple[int, int]] = []
+    for y in range(y0, y1):
+        cnt = 0
+        for x in range(x0, x1, 2):
+            r, g, b = px[x, y][:3]
+            if _color_match(r, g, b, fill):
+                cnt += 1
+        if cnt > 0:
+            row_counts.append((y, cnt))
+    if not row_counts:
+        return None
+    # Group consecutive matched rows into bands.
+    bands: list[list[tuple[int, int]]] = [[row_counts[0]]]
+    for y, cnt in row_counts[1:]:
+        if y - bands[-1][-1][0] > line_gap_min_px:
+            bands.append([(y, cnt)])
+        else:
+            bands[-1].append((y, cnt))
+    # The real headline line is the band with the highest peak column count;
+    # diffuse photo contamination forms low-peak bands and is discarded.
+    best = max(bands, key=lambda band: max(c for _, c in band))
+    peak = max(c for _, c in best)
+    # Diffuse photo contamination (e.g. fog) can border the glyphs closely
+    # enough to merge into the same band; its rows carry far fewer matched
+    # columns than a glyph cap row. Return the first row inside the densest
+    # band whose count reaches half the band peak — the glyph cap-top — so a
+    # faint contamination skirt below the threshold cannot pull the top up.
+    for y, cnt in best:
+        if cnt * 2 >= peak:
+            return round(y / factor, 3)
+    return round(best[0][0] / factor, 3)
+
+
 def measure_split_headline(
     group: list[str],
     frames: dict[str, FrameInfo],
@@ -518,10 +586,13 @@ def measure_split_headline(
         # line that drifted DOWN still reports its own top, and a line that
         # drifted UP into its sibling is exactly the mis-spacing this catches.
         line_box = (union[0], fi.bbox_mm[1], union[2], fi.bbox_mm[3])
-        bt, _ = _scan_color_lines(bl_img, line_box, fcolor, dpi)
-        pt, _ = _scan_color_lines(pv_img, line_box, fcolor, dpi)
-        b_top = bt[0] if bt else None
-        p_top = pt[0] if pt else None
+        # Density-aware scan: the converter widens a split-headline frame past
+        # its IDML text width, so the band can overhang a photo whose tone
+        # matches the headline fill (e.g. white fog under a white headline).
+        # The densest matched band is the real glyph line; diffuse photo
+        # contamination forms low-peak bands and is discarded.
+        b_top = _scan_color_headline_top(bl_img, line_box, fcolor, dpi)
+        p_top = _scan_color_headline_top(pv_img, line_box, fcolor, dpi)
         bl_tops.append(b_top)
         pv_tops.append(p_top)
         drift = (round(p_top - b_top, 3)

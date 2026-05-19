@@ -173,10 +173,12 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
         linesp=14.3,
         linesp_mode=0,
         tab_stops=((15, 0),),
-        # IDML drops SpaceAfter on the green body variant (BasedOn '[No
-        # paragraph style]' SpaceAfter=0); the white sibling carries 5.6693
-        # explicitly. baseline.pdf shows ~5.67pt inter-paragraph spacing on
-        # the green body + bullet lists — restore it to match.
+        # IDML carries inter-paragraph spacing on the green body variant as
+        # <SameParaStyleSpacing> (BasedOn '[No paragraph style]' SpaceAfter=0),
+        # which the converter does not consume — so a re-import drops it. The
+        # white sibling carries 5.6693 explicitly via SpaceAfter. baseline.pdf
+        # shows ~5.67pt inter-paragraph spacing on the green body + bullet
+        # lists — restore it to match.
         space_after_pt=5.6693,
         min_glyph_shrink=0.98,
     ))
@@ -273,9 +275,9 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     # h_mm widened 31.2959mm→67.0278mm: Scribus clips lines when frame_h < 4 explicit lines × line height (leading=32.12pt; IDML overflows silently)
     # Mixed-font headline 'u133f' split into 3 single-line frames: the IDML joins the lines with <Br/> but mixes fonts (e.g. Gotham + Vollkorn), and Scribus's per-line font-metric leading places them at the wrong baseline as one frame. Each line is stacked at the IDML Leading (32.12pt) with a per-font FLOP=1 baseline correction.
     page0.add(TextFrame(
-        x_mm=23.2731,
+        x_mm=17.2731,
         y_mm=50.222,
-        w_mm=58.4538,
+        w_mm=70.4538,
         h_mm=20.0025,
         anname='u133f',
         layer=0,
@@ -284,9 +286,9 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'},
     ))
     page0.add(TextFrame(
-        x_mm=23.2731,
-        y_mm=59.9813,
-        w_mm=58.4538,
+        x_mm=17.2731,
+        y_mm=59.9129,
+        w_mm=70.4538,
         h_mm=20.0025,
         anname='u133f_l2',
         layer=0,
@@ -295,9 +297,9 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'},
     ))
     page0.add(TextFrame(
-        x_mm=23.2731,
+        x_mm=17.2731,
         y_mm=72.8847,
-        w_mm=58.4538,
+        w_mm=70.4538,
         h_mm=20.0025,
         anname='u133f_l3',
         layer=0,
@@ -404,7 +406,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     page1.add(TextFrame(
         x_mm=15,
-        y_mm=20.8737,
+        y_mm=22.9375,
         w_mm=87,
         h_mm=19.4028,
         anname='u1214_l2',
