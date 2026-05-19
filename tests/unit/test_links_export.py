@@ -79,7 +79,7 @@ class TestSlugify:
     def test_idml_filename_stem(self):
         stem = "26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover 2"
         assert _slugify(stem) == (
-            "falzflyer-z-falz-6-seitig-gruenes-cover-2"
+            "26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2"
         )
 
     def test_empty_raises(self):
@@ -154,7 +154,7 @@ class TestDeriveOutDir:
         )
         result = derive_out_dir(idml)
         assert result.name == (
-            "falzflyer-z-falz-6-seitig-gruenes-cover-2"
+            "26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover-2"
         )
 
 
