@@ -68,7 +68,7 @@ category_label: 'Flyer'
 category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat zweigeteilt Ordner/26-03-Flyer
   A6 Querformat zweigeteilt.idml
-previews_for_sla: 00c4fcb9bc5be1cda631b581954decfb929d62bdd8c6a862eb5422687465d942
+previews_for_sla: 76d44015165f0418d5953fea679d0ca75f89192c9ef38fde01723046be59a75e
 title: 'Flyer A6 Querformat – Zweigeteilt'
 version: 0.1.0
-build_py_sha256: c7c3500ace4daea38aa8c85d09f8db7a57c2fb996c11c30ae7ede3116cb06b6f
+build_py_sha256: 0b2d10a6e01b4bb1352aa6bebcbb7fd67609e945b0e6af2bc18dfb5ca8228453

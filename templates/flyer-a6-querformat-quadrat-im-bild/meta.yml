@@ -54,7 +54,7 @@ category_label: 'Flyer'
 category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Quadrat in Bild Ordner/26-03-Flyer
   A6 Querformat Quadrat in Bild.idml
-previews_for_sla: f0e11c1ac36665a189897a2bf2293406705fcb485f373c1181f3ec31433ae9da
+previews_for_sla: 4c979be1854b4a391ba8ece7533fdcbd4ef8ebb306eafeff2080d0ab88a3924a
 title: 'Flyer A6 Querformat – Quadrat im Bild'
 version: 0.1.0
-build_py_sha256: 2853e13c6594fc719c68d335f9046dbe4013a1066f154f842b9622568366de0f
+build_py_sha256: 9bcfc4ff45b826a4d740652ee2f5d9fb03a2a4805c182b7356a579adc878d329
