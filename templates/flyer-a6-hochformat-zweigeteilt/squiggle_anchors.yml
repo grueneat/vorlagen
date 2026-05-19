@@ -1,0 +1,150 @@
+template: flyer-a6-hochformat-zweigeteilt
+_schema_version: 1
+_doc: Squiggle re-anchoring map. Each entry binds a yellow squiggle Polygon (anname)
+  to the word it underlines in baseline.pdf. tools/playbooks/squiggle_realign.py consumes
+  this to keep the squiggle tracking its word when Scribus wraps text differently.
+anchors:
+- anname: uf05
+  page: 1
+  target_frame: uf66
+  word: Lia
+  word_index: 51
+  baseline_word_box_pt:
+    x0: 42.524
+    top: 245.104
+    x1: 56.318
+    bottom: 256.104
+  baseline_squiggle_box_mm:
+    x_mm: 14.8006
+    y_mm: 89.8339
+    w_mm: 19.1982
+    h_mm: 0.9961
+  offset_from_word_mm:
+    dx_mm: -0.2008
+    dy_mm: 3.3668
+- anname: uf06
+  page: 1
+  target_frame: uf66
+  word: in
+  word_index: 5
+  baseline_word_box_pt:
+    x0: 233.303
+    top: 119.374
+    x1: 241.762
+    bottom: 130.374
+  baseline_squiggle_box_mm:
+    x_mm: 80.869
+    y_mm: 41.8
+    w_mm: 11.749
+    h_mm: 3.8145
+  offset_from_word_mm:
+    dx_mm: -1.4352
+    dy_mm: -0.3123
+- anname: uf04
+  page: 2
+  target_frame: uf09
+  word: vellaccum
+  word_index: 5
+  baseline_word_box_pt:
+    x0: 136.992
+    top: 119.374
+    x1: 183.97
+    bottom: 130.374
+  baseline_squiggle_box_mm:
+    x_mm: 48.7981
+    y_mm: 45.3856
+    w_mm: 25.0055
+    h_mm: 1.1564
+  offset_from_word_mm:
+    dx_mm: 0.4705
+    dy_mm: 3.2733
+- anname: uf08
+  page: 2
+  target_frame: uf4e
+  word: auch
+  word_index: 2
+  baseline_word_box_pt:
+    x0: 138.224
+    top: 45.399
+    x1: 203.594
+    bottom: 75.399
+  baseline_squiggle_box_mm:
+    x_mm: 48.6007
+    y_mm: 23.0943
+    w_mm: 25.399
+    h_mm: 1.8007
+  offset_from_word_mm:
+    dx_mm: -0.1615
+    dy_mm: 7.0786
+- anname: uf9a
+  page: 3
+  target_frame: ufcb
+  word: volor
+  word_index: 7
+  baseline_word_box_pt:
+    x0: 42.524
+    top: 125.996
+    x1: 66.46
+    bottom: 136.996
+  baseline_squiggle_box_mm:
+    x_mm: 14.506
+    y_mm: 47.3934
+    w_mm: 51.5317
+    h_mm: 2.1749
+  offset_from_word_mm:
+    dx_mm: -0.4954
+    dy_mm: 2.9448
+- anname: uf9b
+  page: 3
+  target_frame: ufcb
+  word: volor
+  word_index: 7
+  baseline_word_box_pt:
+    x0: 42.524
+    top: 125.996
+    x1: 66.46
+    bottom: 136.996
+  baseline_squiggle_box_mm:
+    x_mm: 14.506
+    y_mm: 47.3934
+    w_mm: 51.5317
+    h_mm: 2.1749
+  offset_from_word_mm:
+    dx_mm: -0.4954
+    dy_mm: 2.9448
+- anname: ufb3
+  page: 3
+  target_frame: ufcb
+  word: Nam
+  word_index: 52
+  baseline_word_box_pt:
+    x0: 143.105
+    top: 237.426
+    x1: 165.248
+    bottom: 248.426
+  baseline_squiggle_box_mm:
+    x_mm: 50.0921
+    y_mm: 82.6
+    w_mm: 21.211
+    h_mm: 5.1895
+  offset_from_word_mm:
+    dx_mm: -0.3923
+    dy_mm: -1.1586
+- anname: uf98
+  page: 4
+  target_frame: ufe2
+  word: ex
+  word_index: 30
+  baseline_word_box_pt:
+    x0: 59.75
+    top: 248.38
+    x1: 70.574
+    bottom: 259.38
+  baseline_squiggle_box_mm:
+    x_mm: 23.8023
+    y_mm: 87.5834
+    w_mm: 17.252
+    h_mm: 3.7129
+  offset_from_word_mm:
+    dx_mm: 2.724
+    dy_mm: -0.0396

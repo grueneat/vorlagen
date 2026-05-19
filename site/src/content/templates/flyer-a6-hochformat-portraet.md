@@ -59,10 +59,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Portrait Ordner/26-03-Flyer
   A6 Hochformat Portrait.idml
-previews_for_sla: 38d759ac840b4cad9f7b84d5d33d741e3aa64977901e099d05b0c54f12bfe6ca
+previews_for_sla: 5fdd5950715bfc81a73368e2d78da9a0d7f3207d6449a0d59978b46f9eb76b8b
 title: Flyer A6 Hochformat – Porträt-Cover
 version: 0.1.0
-build_py_sha256: d99649e487413617017ffd8a3d12e85c55d85f8c5ac31dc12c48e1406cce3844
+build_py_sha256: 6ae60cc0ab61a01185e51f7b400876e00318ae53bbcc7451a616ed3f1280d682
 _downloads:
 - label: Vollständig (SLA + PDF)
   sla: /templates/flyer-a6-hochformat-portraet/template.sla
