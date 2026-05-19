@@ -7,6 +7,7 @@ asset_policy:
   - website-weiss.png
   external:
   - green-pine-trees-covered-with-fog.jpg
+  - green-pine-trees-covered-with-fog.png
   - plakat-dunkel-fuer-flyer.png
   shipped: []
 build:
@@ -16,7 +17,7 @@ format: A4
 id: 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover
 idml_source: ../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover.idml
-previews_for_sla: 86d35fd23b148bb1a5fa7b30e84907e06f2c47c30a05495218ac95273796c4ca
+previews_for_sla: b3f58698d0d20cc9d068e35b68173ef5ffd59d64c2b82700667b9df56718b080
 title: 26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover
 version: 0.1.0
-build_py_sha256: 75e5193024c3155a89b49167eae5b1cdff3bf07c6c3ca353d53b1e2eb9215db0
+build_py_sha256: 2145f1e492e63eba8b0a9cf67a50e0da5e8ac84b52720e51cc2a162aea8568d8

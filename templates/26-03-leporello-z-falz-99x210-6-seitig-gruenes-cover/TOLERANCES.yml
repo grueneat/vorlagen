@@ -21,10 +21,15 @@ tolerances:
   reason: 'Sub-perceptible (<=5pt) word-position drift from the same Scribus vs
     InDesign font-metric difference described in
     tol:cross-renderer-line-wrap-structural. These are below the visible-shift
-    threshold; accepted as renderer noise.'
+    threshold; accepted as renderer noise. Cap raised 30 -> 34 on the
+    converter-fix-set re-import: the u1c7 y_mm_shift moved several words from the
+    >5pt structural band into the 2-5pt jitter band (net structural -80,
+    line_match -18). The pixel audit confirms 0 frames carry any remaining
+    uniform vertical offset, so the jitter is irreducible at build.py level. See
+    TOLERANCE_LOG.md 2026-05-19 row.'
   follow_up_issue: engine-bug; no upstream issue yet
   severity: cosmetic
-  max_issues: 30
+  max_issues: 34
 - id: tol:systematic-text-actionable-wrap
   audit: systematic_text_audit
   classification: scribus-engine-bug
@@ -38,40 +43,12 @@ tolerances:
   follow_up_issue: engine-bug; no upstream issue yet
   severity: cosmetic
   max_issues: 12
-- id: tol:u2cd-pine-cmyk-jpeg-blank
-  audit: image_content_audit
-  classification: authoring-bug
-  reason: 'u2cd references green-pine-trees-covered-with-fog.jpg which is a CMYK
-    JPEG (identify confirms Colorspace: CMYK, Type: ColorSeparation). Scribus
-    1.6.x renders CMYK JPEGs blank — links_export.py passes the JPEG through
-    unchanged (recipe: passthrough) and there is no ICC conversion path. This is
-    a known shared batch issue: a CMYK JPEG asset that the engine cannot
-    rasterise. The asset file is present on disk (not a missing-link blocker);
-    the fix is an authoring-side re-export of the photo as sRGB (the sibling
-    gruenes-cover-2 template ships a green-pine-trees-covered-with-fog-srgb.png
-    for this reason). Accepted as authoring-bug residual; no converter fix.'
-  follow_up_issue: authoring; baseline asset needs sRGB re-export
-  severity: major
-  max_issues: 1
-- id: tol:social-icons-composite-ai-invisible
-  audit: image_frame_visibility_audit
-  classification: authoring-bug
-  reason: 'u3e7/u3f0/u3f5 (left-column social-media icons) render invisible. They
-    reference the composite Social Media Icons weiss.ai (aspect 3.46, 4 icons in
-    one file). The scaffold ran with --allow-composite-ai, which keeps the
-    composite whole and crops it per-frame via local_offset_mm + SCALETYPE=1.
-    Scribus 1.6.x does not render that small-frame composite-crop RGBA path, so
-    the frames are blank. The proper fix is the composite-AI split
-    (tools/composite_ai_split.py) which is a Stage-1 / converter-stage concern
-    (re-scaffold) — it cannot be done as a Stage-2 build.py edit because the
-    individual icon files do not exist on disk and the per-frame icon mapping is
-    not derivable from the offsets without rendering. The right-column icons
-    u477/u4a2/u4da carry individual split blobs and render correctly. u2cd is
-    also counted here (CMYK JPEG, see tol:u2cd-pine-cmyk-jpeg-blank). The 5th
-    flagged frame is a white-on-dark false positive (audit gap L-014).'
-  follow_up_issue: authoring; re-scaffold with composite_ai_split for left-column icons
-  severity: major
-  max_issues: 5
+# REMOVED tol:u2cd-pine-cmyk-jpeg-blank — 2026-05-19: the converter fix set
+# routes the CMYK pine JPEG through CMYK->sRGB + aspect-fill crop; u2cd renders
+# (asset_render_ratio 0.994, image_content_audit 0 broken). See TOLERANCE_LOG.md.
+# REMOVED tol:social-icons-composite-ai-invisible — 2026-05-19: the three left-
+# column icons were sliced from the composite into individual crops and switched
+# to image= ref + scale_type=0; all three render. See TOLERANCE_LOG.md.
 - id: tol:composite-ai-social-media-icons-weiss
   audit: asset_extraction
   classification: authoring-bug

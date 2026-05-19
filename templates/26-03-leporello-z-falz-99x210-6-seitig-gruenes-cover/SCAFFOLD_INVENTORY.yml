@@ -762,10 +762,10 @@ frames:
     build_py_position_mm:
     - 204.6236
     - 151.759
-    - 71.6562
-    - 81.8444
+    - 83.6562
+    - 24.2006
     sla_pageobject_present: true
-    sla_storytext_runs: 3
+    sla_storytext_runs: 1
     source: idml
   - anname: u186
     idml_self: u186
@@ -792,10 +792,10 @@ frames:
     build_py_position_mm:
     - 16.8913
     - 17.4
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u1c7
     idml_self: u1c7
@@ -822,10 +822,10 @@ frames:
     build_py_position_mm:
     - 115.8913
     - 17.4
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u1fd
     idml_self: u1fd
@@ -911,9 +911,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 188.0
-    - 192.6
-    - 53.4
+    - 139.2
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -1067,6 +1067,50 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: u16c_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 204.6236
+    - 161.79
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u16c_l3
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 204.6236
+    - 175.8426
+    - 83.6562
+    - 24.2006
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1b0_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 16.8913
+    - 25.3375
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u1e6_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 115.8913
+    - 25.3375
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   - anname: uf7
     idml_self: null
     idml_position_mm: null
@@ -1105,7 +1149,7 @@ frames:
     - -105.0
     - 99.0
     - 41.692
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover/crops/green-pine-trees-covered-with-fog-u2cd.png
     build_py_position_mm:
     - 99.1764
     - 0.0
@@ -1123,12 +1167,12 @@ frames:
     - -105.187
     - 99.0
     - 210.375
-    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover/plakat-dunkel-fuer-flyer.png
+    build_py_image_ref: ../../shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover/crops/plakat-dunkel-fuer-flyer-u3a0.png
     build_py_position_mm:
     - 198.0
-    - -0.1874
+    - 0.0
     - 99.0
-    - 210.3748
+    - 210.0
     sla_pageobject_present: true
     sla_pfile_present: true
     pdf_image_present: true
@@ -2121,11 +2165,10 @@ assets:
 - basename: plakat-dunkel-fuer-flyer.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - u3a0
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 7322fb3409a5d5eb2dc223bface1552a9622bfb47f11cc37c9d145c00290aa1c
-  byte_length: 8558653
+  sha256: fe934fcae32f83c4683b33d2bb1eba5ce0cb2656f076aa0a316d9ff6aa3f7158
+  byte_length: 8514698
 - basename: social-media-icons-weiss.png
   on_disk: true
   classified: embedded
@@ -2162,20 +2205,39 @@ assets:
   parent_composite: null
   sha256: f01096a280160cf4f76dcab54ed149774eaf50478fc56ab33b6710aaec69fb94
   byte_length: 1772511
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
 - basename: green-pine-trees-covered-with-fog.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
+  byte_length: 6896771
+- basename: green-pine-trees-covered-with-fog-u2cd.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u2cd
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
+- basename: plakat-dunkel-fuer-flyer-u3a0.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - u3a0
+  parent_composite: null
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 444
-  preview_pdf_count: 445
-  missing_from_preview:
-  - impressum
-  extra_in_preview:
-  - impressu
-  - m
+  preview_pdf_count: 444
+  missing_from_preview: []
+  extra_in_preview: []
 parse_warnings: []
