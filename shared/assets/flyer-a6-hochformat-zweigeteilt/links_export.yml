@@ -10,8 +10,12 @@ assets:
   Plakat dunkel für Flyer.psd:
     kind: raster_psd
     output: shared/assets/flyer-a6-hochformat-zweigeteilt/plakat-dunkel-fuer-flyer.png
-    recipe: convert -flatten
+    recipe: convert -profile sRGB -strip (ICC-aware)
+  common-ground-squirrel-blooming-meadow-european-suslik-spermophilus-citellus.jpg:
+    kind: raster_jpg
+    output: shared/assets/flyer-a6-hochformat-zweigeteilt/common-ground-squirrel-blooming-meadow-european-suslik-spermophilus-citellus.png
+    recipe: convert -profile sRGB -strip (ICC-aware)
   green-pine-trees-covered-with-fog.jpg:
     kind: raster_jpg
-    output: shared/assets/flyer-a6-hochformat-zweigeteilt/green-pine-trees-covered-with-fog.jpg
-    recipe: passthrough
+    output: shared/assets/flyer-a6-hochformat-zweigeteilt/green-pine-trees-covered-with-fog.png
+    recipe: convert -profile sRGB -strip (ICC-aware)
