@@ -39,115 +39,124 @@ scaffold with NO converter changes required:
 
 ## Tune outcome — RESIDUAL (documented, preflight stays red)
 
-This is the expected terminal state for the flyer family — identical
-to the sibling `26-03-flyer-a6-hochformat-gruenes-cover`, which also
-finishes RESIDUAL with the same documented `severity: structural`
-tolerances. Preflight is red because of cross-renderer line-wrap
-divergence (intrinsic Scribus-vs-InDesign behaviour) and two CMYK
-asset-pipeline limitations — none is a converter or build.py bug.
+Re-imported on the carried converter + audit-chain fix set, then
+tuned. Preflight finishes RED on the documented cross-renderer
+line-wrap residual (`severity: structural` tolerances) — the expected
+terminal state for the flyer family. The re-import + tune RESOLVED
+several issues the prior tune had to tolerate (CMYK assets, word-split
+FPs) and cut the body-text drift sharply.
 
-Build.py changes during tune (no numeric tolerance growth — all
-playbook-class image-frame fixes):
+Three per-frame `build.py` fixes (the closeable wins):
 
-- **uad7 (DIE GRÜNEN logo, page 1 cover)**: switched from
-  `inline_image_data` + `scale_type=1` to a direct `image=` reference
-  + `scale_type=0`. The inline PNG rendered fully transparent under
-  the Scribus 1.6.x SCALETYPE=1 white-on-transparent-PNG bug; the swap
-  is the documented `frame_visibility` playbook fix. The logo now
-  renders — `image_frame_visibility_audit` dropped from 2 invisible
-  frames to 1.
-- **u906 (pine-forest photo, page 5)**: switched from `scale_type=1`
-  + `local_scale`/`local_offset_mm` to `scale_type=0`. Still invisible
-  (see CMYK-JPEG residual below) but now in the correct fit-to-frame
-  form.
-- **2x `# noinject:` markers** added above the u906 and ube9
-  ImageFrame calls — both are real IDML content images, not demo
-  placeholders. This cleared `external_asset_substitution_audit`.
+- **Body ParaStyle leading 16.0 -> 15.0pt** (`fliesstext-auf-gruenem-`,
+  `fliesstext-auf-weissem-`, `aufzaehlungen-auf-gruenem-hintergrund`).
+  The IDML flow stories carry no explicit `<Leading>` — AutoLeading
+  120% — and the converter emitted ~16.0pt. The baseline.pdf body line
+  gap measures a uniform 15.0pt (pixel-scan of every body column, all
+  6 pages). 16->15 closes the per-line leading drift:
+  `line_spacing_pixel_audit` (E4) now reports OK (was 2 frames major
+  >3pt).
+- **IDML `<Br>` -> `<breakline/>`** on `u6d8` / `u92e`. Stories `u6db`
+  and `u931` are each ONE `ParagraphStyleRange` with 3 `<Br>` forced
+  line breaks; the converter emitted them as `separator='para'` empty
+  paragraphs, injecting a blank line + `space_after` at each break and
+  overflowing the 2-column flow. Changed to `separator='breakline'`.
+  Body text now flows continuously at 15pt like the baseline; this
+  also cleared `text_render_audit` (the word-split FPs are gone).
+- **`u9df` bullet LINESP 8.0 -> 15.0pt.** The IDML carries `Leading=8`
+  on a trailing empty CharacterStyleRange; the converter applied it
+  frame-wide, so the page-5 bullet list rendered with overlapping
+  lines. Baseline renders the bullets at a 15.0pt gap.
 
-## Tolerances granted (9 entries — see TOLERANCE_LOG.md for full detail)
+A `min_glyph_shrink` reduction (0.98->0.94) was trialled — it closes
+`line_match_audit` 24->12 but regresses `u6d8` per-region
+(`line_spacing_max_drift` 6.24->16.8pt, past the committed baseline's
+14.4pt). The per-region regression guard (P7) outranks the global
+count, so `min_glyph_shrink` is left at the IDML-calibrated 0.98.
 
-All caps are current-count + small buffer; no tolerance was grown to
-mask a real bug.
+Image-frame fixes (carried from the prior tune, re-verified):
+the DIE GRÜNEN logo (uad7) and the CMYK assets all render — the
+re-import's converter fix set resolved the prior CMYK-blank /
+CMYK-discolour issues. `image_content_audit`,
+`image_frame_visibility_audit` and `external_asset_substitution_audit`
+are all GREEN at 0 issues.
 
-1. `tol:inventory-offpage-registration-marks` — `inventory`, cosmetic,
-   cap 4. The four deliberately-skipped off-page artifact rectangles.
-   human-review (correct converter behaviour).
-2. `tol:image-audit-vector-path-delta` — `image_audit`, cosmetic,
-   cap 45 (current 41). Scribus raster/ICC differences on full-bleed
-   backgrounds + inline decorative vector paths. scribus-engine.
-3. `tol:text-position-jitter-freetype-kerning` —
-   `text_position_audit_jitter`, cosmetic, cap 26 (current 22).
-   Sub-perceptible FreeType-vs-InDesign kerning jitter. scribus-engine.
-4. `tol:text-position-structural-cross-renderer-wrap` —
-   `text_position_audit_structural`, structural, cap 265 (current 257).
-   Cross-renderer line-wrap cascade. Keeps preflight red by design.
-   scribus-engine.
-5. `tol:systematic-text-line-count-divergence` —
-   `systematic_text_audit`, structural, cap 11 (current 10). Per-frame
-   view of the same wrap divergence; sim returned no rows.
-   scribus-engine.
-6. `tol:text-render-cross-renderer-wrap-wordsplit` —
-   `text_render_audit`, structural, cap 12 (current 12). 12 "missing"
-   words all verified present in build.py — they are line-wrap
-   word-splits (e.g. `impressum` -> `impressu` + `m`), not text loss.
-   scribus-engine.
-7. `tol:image-content-cmyk-render` — `image_content_audit`,
-   structural, cap 2. u906 (CMYK JPEG, blank) + ube9 (CMYK PSD,
-   discoloured). authoring-bug.
-8. `tol:image-frame-visibility-cmyk-jpeg-blank` —
-   `image_frame_visibility_audit`, structural, cap 1. u906 invisible
-   (CMYK JPEG, Scribus cannot decode). authoring-bug.
-9. `tol:visual-diff-image-size-mismatch` — `visual_diff_regions`,
-   documentation-only (phase error, hard red regardless). 1px raster
-   size mismatch from the printer's-marks baseline crop.
-   authoring-bug / scribus-engine adjacent.
+## Tolerances (see TOLERANCE_LOG.md for full detail)
+
+Caps tightened where the re-import improved the count; one
+auto-accept-conservative bump; one stale entry replaced.
+
+- `tol:inventory-offpage-registration-marks` — `inventory`, cap 4
+  (current 4). Four deliberately-skipped off-page artifact rectangles.
+- `tol:image-audit-vector-path-delta` — `image_audit`, cap 45
+  (current 40). Scribus raster/ICC differences on full-bleed
+  backgrounds + inline decorative vector paths.
+- `tol:text-position-jitter-freetype-kerning` —
+  `text_position_audit_jitter`, cap 26 -> **33** (current 32).
+  Sub-perceptible FreeType-vs-InDesign kerning jitter; the leading +
+  breakline fixes shifted a few >5pt drifts down into this bucket.
+- `tol:text-position-structural-cross-renderer-wrap` —
+  `text_position_audit_structural`, cap 265 -> **180** (TIGHTENED,
+  current 173). Body-frame column-overflow reflow. `severity:
+  structural` keeps preflight red by design.
+- `tol:systematic-text-line-count-divergence` —
+  `systematic_text_audit`, cap 11 -> **5** (TIGHTENED, current 4).
+- `tol:text-render-cross-renderer-wrap-wordsplit` — `text_render_audit`,
+  cap 12, now UNUSED (audit passes at 0 — the breakline fix removed
+  the word-split FPs).
+- `tol:image-content-cmyk-render` — `image_content_audit`, cap 2, now
+  UNUSED (audit passes at 0 — the CMYK assets render).
+- `tol:image-frame-visibility-cmyk-jpeg-blank` —
+  `image_frame_visibility_audit`, cap 1, now UNUSED (audit passes at
+  0).
+- `tol:visual-diff-cross-renderer-wrap-and-cmyk-tone` —
+  `visual_diff_regions`, cap **55** (current 54). Replaces the stale
+  `tol:visual-diff-image-size-mismatch` — the crop-rounding ERROR no
+  longer occurs on this re-import; the 54 hot cells are the body-frame
+  column overflow + the brief's known-acceptable glyph-width + CMYK
+  tone residual.
 
 ## Residual drift numbers (final render)
 
-- `text_position_audit_structural`: 257 large (>5pt) word drifts —
-  cross-renderer line-wrap. Querformat brief band is ~279; 257 sits
-  just under it.
-- `text_position_audit_jitter`: 22 sub-perceptible (<=5pt) drifts.
-- `systematic_text_audit`: 10 frames with line-count/SPLIT divergence.
-- `text_render_audit`: 12 word-split false positives.
-- `image_audit`: 41 vector-path deltas.
-- `image_content_audit`: 2 broken (u906, ube9).
-- `image_frame_visibility_audit`: 1 invisible (u906).
+- `line_match_audit`: 24 line(s) mismatched (38/62 match) — driven
+  down from 45 by the leading + breakline + LINESP fixes. The 24:
+  17 in the two body frames (u6d8/u92e column-overflow), 2 rotated
+  Impressum sidebar (u693/u85a — Scribus rotated-frame engine limit),
+  2 bullet wrap (cross-renderer), 3 sub-perceptible (1-2pt).
+- `text_position_audit_structural`: 173 large (>5pt) word drifts —
+  body-frame column-overflow reflow (down from 257).
+- `text_position_audit_jitter`: 32 sub-perceptible (<=5pt) drifts.
+- `systematic_text_audit`: 4 frames with line-count divergence (the
+  two body frames + ub92 + u872 — all "wrapped differently").
+- `visual_diff_regions`: 54 hot grid cells.
+- `image_audit`: 40 vector-path deltas.
 - `inventory`: 4 deliberately-skipped off-page artifacts.
-- `visual_diff_regions`: phase error, baseline 874x620 vs preview
-  875x621 (1px each axis).
+- `line_spacing_pixel_audit`, `text_render_audit`,
+  `image_content_audit`, `image_frame_visibility_audit`,
+  `squiggle_alignment_audit`, `split_headline_spacing`,
+  `idml_attribute_coverage`, `per_region_regression`: all OK.
 
-## human-review / authoring-bug items
+## Root cause of the structural residual — authoring-bug
 
-- **human-review**: the 4 off-page registration-mark rectangles
-  (`tol:inventory-offpage-registration-marks`) — correct converter
-  behaviour; the audit is conservative.
-- **authoring-bug**: the two CMYK assets. `u906`
-  (`green-pine-trees-covered-with-fog.jpg`) is a CMYK JPEG that
-  Scribus 1.6.x cannot decode — renders fully blank. `ube9`
-  (`2026-03-leonore-fuer-flyer.png`) is converted from a CMYK PSD by
-  the `convert -flatten` recipe, which yields non-ICC CMYK->RGB output
-  that posterizes/discolours the portrait. Both are on the overnight
-  brief's "known shared issues — do not re-litigate" list. The
-  `visual_diff_regions` 1px mismatch is also authoring-adjacent (the
-  baseline.pdf had printer's marks; the auto-crop pixel rounding does
-  not match the trim-only SLA page).
+The two 2-column body frames (`u6d8` page 2, `u92e` page 4) have an
+IDML `TextFrame` that is **undersized for its content**. The
+baseline.pdf itself CLIPS ~6 lines — it renders 9 + 9 of ~24 total
+lines. The converter widened the frame 53.76 -> 63.5mm to avoid
+silent text loss, so the Scribus preview holds ~2 more lines per
+column and the column break lands at a different word than the
+clipped baseline. One wrap-point difference cascades into dozens of
+downstream word-position drifts. Closing the residual fully would
+require re-introducing the baseline's text loss — a worse regression.
+Classification: authoring-bug (undersized IDML frame).
 
 ## What to eyeball in preview.pdf vs baseline.pdf
 
-- **Page 1 (cover)**: confirm the DIE GRÜNEN logo (top-right, uad7)
-  now renders white-on-green. This was invisible before the tune;
-  verify the swap to `image=` ref worked.
-- **Page 5**: the pine-forest photo strip (u906) renders BLANK/white
-  in the preview — this is the accepted CMYK-JPEG authoring-bug. The
-  baseline shows the green pine photo. Expected residual, not a
-  regression.
-- **Page 6**: the candidate portrait (ube9) renders with distorted
-  colours (posterized) vs the natural portrait in the baseline — the
-  accepted CMYK-PSD conversion authoring-bug.
-- **Body pages 2-4**: text content is all present and correct, but
-  bullet-list and justified paragraphs wrap at slightly different
-  words than the baseline, shifting downstream lines. This is the
-  intrinsic cross-renderer line-wrap difference — confirm no text is
-  actually missing (it is not; all 56 runs are present), only
-  re-flowed.
+- **Page 1 (cover)**: DIE GRÜNEN logo (top-right) renders
+  white-on-green; the headline split ("Ich bin eine" white /
+  "Headline." yellow italic) and the yellow squiggle are correct.
+- **Page 5**: the pine-forest photo renders; the bullet list has
+  proper 15pt spacing (no overlap) after the LINESP fix.
+- **Body pages 2 & 4**: all text is present (56 runs, inventory gate
+  exit 0). The body wraps at slightly different words than the
+  baseline and the column break diverges — the documented undersized-
+  frame residual. No text is missing, only re-flowed.

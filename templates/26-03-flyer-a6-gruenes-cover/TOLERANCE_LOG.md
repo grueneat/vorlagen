@@ -213,3 +213,81 @@ rounding) / scribus-engine adjacent (pdftocairo DPI rounding).
 
 None of these grows a numeric tolerance; all are playbook-class
 structural image-frame fixes.
+
+---
+
+## Re-import tune — 2026-05-19
+
+Re-import on the carried converter + audit-chain fix set. Three
+per-frame fixes in `build.py` cut the cross-renderer drift sharply.
+
+### build.py changes (no numeric tolerance growth)
+
+- **Body ParaStyle leading 16.0 → 15.0pt** (`fliesstext-auf-gruenem-`,
+  `fliesstext-auf-weissem-`, `aufzaehlungen-auf-gruenem-hintergrund`).
+  The IDML flow stories carry no explicit `<Leading>` (AutoLeading
+  120%); the converter emitted ≈16.0pt. The baseline.pdf body line gap
+  measures a uniform 15.0pt (pixel-scan of every body column, all 6
+  pages). 16→15 closes the per-line leading drift — `line_spacing_
+  pixel_audit` (E4) now reports OK (was 2 frames major >3pt).
+- **IDML `<Br>` → `<breakline/>`** on `u6d8` / `u92e`. Stories `u6db`
+  and `u931` are each ONE `ParagraphStyleRange` with 3 `<Br>` forced
+  line breaks; the converter emitted them as `separator='para'` empty
+  paragraphs, which injected a blank line + `space_after` at each break
+  and overflowed the 2-column flow. Changed to `separator='breakline'`
+  (one `<breakline/>`, no paragraph). Body now flows continuously at
+  15pt like the baseline.
+- **`u9df` bullet LINESP 8.0 → 15.0pt.** The IDML carries `Leading=8`
+  on a trailing empty CharacterStyleRange; the converter applied it
+  frame-wide so the page-5 bullet list rendered with overlapping
+  lines. Baseline renders the bullets at a 15.0pt gap (pixel-scan).
+- **`min_glyph_shrink` reduction trialled, then REVERTED to 0.98.**
+  Lowering it (→0.94) closes `line_match_audit` 24→12 and
+  `text_position_audit_structural` 173→115, but it regresses `u6d8`
+  per-region (`line_spacing_max_drift` 6.24→16.8pt — past the committed
+  baseline's 14.4pt). The per-region regression guard (P7) outranks the
+  global count, so `min_glyph_shrink` is left at the IDML-calibrated
+  0.98.
+
+### Tolerance updates
+
+- **tol:text-position-jitter-freetype-kerning** — cap 26 → 33.
+  Auto-accept conservative (legacy-text bucket). The breakline +
+  leading fixes moved several formerly-structural (>5pt) drifts down
+  across the 5pt line into the sub-perceptible jitter band; structural
+  fell 257→173 while jitter rose 22→32.
+  Classification: scribus-engine-bug (FreeType kerning jitter).
+- **tol:text-position-structural-cross-renderer-wrap** — cap 265 →
+  180 (TIGHTENED). Current 173. Residual is the body-frame
+  column-overflow reflow on `u6d8`/`u92e`: the IDML body TextFrame is
+  undersized for its content — the baseline.pdf itself CLIPS ~6 lines
+  (shows 9+9 of ~24) — the converter widened the frame 53.76→63.5mm to
+  avoid silent text loss, so the preview holds ~2 more lines per column
+  and the column break lands at a different word. Closing fully would
+  re-introduce the baseline text loss. `severity: structural` keeps
+  preflight red. Classification: authoring-bug (undersized IDML frame).
+- **tol:systematic-text-line-count-divergence** — cap 11 → 5
+  (TIGHTENED). Current 4. Same root cause; the leading sim returns
+  "no measurable drift" on every flagged frame (leading is correct,
+  only the wrap point differs). `severity: structural` keeps preflight
+  red. Classification: authoring-bug.
+- **tol:visual-diff-cross-renderer-wrap-and-cmyk-tone** — replaces the
+  stale `tol:visual-diff-image-size-mismatch` (the crop-rounding ERROR
+  no longer occurs on this re-import). cap 0 → 55, current 54 hot grid
+  cells: body-frame column overflow (dominant) plus the brief's
+  known-acceptable ~0.75% glyph-width difference and the small
+  CMYK→sRGB tone residual on the dark-PSD portrait and forest photo.
+  `severity: structural` keeps preflight red. Classification:
+  scribus-engine-bug.
+
+### Resolved on re-import (tolerances now unused)
+
+- `text_render_audit` — was cap 12, now 0 issues. The `<breakline/>`
+  fix removed the word-split FPs.
+- `image_content_audit` — was cap 2, now 0. The CMYK assets render.
+- `image_frame_visibility_audit` — was cap 1, now 0. No invisible
+  frame; the logo `asset_render_ratio` is well above the 0.35 floor.
+
+The three caps above are left in `TOLERANCES.yml` at their prior
+values as unused headroom — the audits pass on their own at 0 issues,
+so the caps do not gate.

@@ -754,10 +754,10 @@ frames:
     build_py_position_mm:
     - 6.3
     - 57.0735
-    - 90.0
-    - 43.7444
+    - 102.0
+    - 25.4
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: ub92
     idml_self: ub92
@@ -813,9 +813,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.0
-    - 53.4
+    - 39.6
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -829,10 +829,10 @@ frames:
     build_py_position_mm:
     - 15.0
     - 14.8444
-    - 65.2174
-    - 33.1611
+    - 77.2174
+    - 19.4028
     sla_pageobject_present: true
-    sla_storytext_runs: 2
+    sla_storytext_runs: 1
     source: idml
   - anname: u6c1
     idml_self: u6c1
@@ -918,9 +918,9 @@ frames:
     - 10.0
     build_py_position_mm:
     - 138.0
-    - 93.15
-    - 53.4
+    - 39.75
     - 10.0
+    - 53.4
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
@@ -984,6 +984,28 @@ frames:
     sla_pageobject_present: true
     sla_storytext_runs: 1
     source: idml
+  - anname: ub73_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 6.3
+    - 67.8014
+    - 102.0
+    - 25.4
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
+  - anname: u6aa_l2
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - 15.0
+    - 22.7819
+    - 77.2174
+    - 19.4028
+    sla_pageobject_present: true
+    sla_storytext_runs: 1
+    source: build_py
   image_frames:
   - anname: uad7
     idml_self: uad7
@@ -1011,7 +1033,7 @@ frames:
     - -55.5
     - 151.0
     - 42.292
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-gruenes-cover/green-pine-trees-covered-with-fog.jpg
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-gruenes-cover/crops/green-pine-trees-covered-with-fog-u906.png
     build_py_position_mm:
     - 0.0
     - -3.0
@@ -1029,12 +1051,12 @@ frames:
     - -42.511
     - 82.851
     - 98.011
-    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-gruenes-cover/2026-03-leonore-fuer-flyer.png
+    build_py_image_ref: ../../shared/assets/26-03-flyer-a6-gruenes-cover/crops/2026-03-leonore-fuer-flyer-ube9.png
     build_py_position_mm:
-    - -8.8509
+    - 3.7863
     - 9.9892
-    - 82.8509
-    - 98.0108
+    - 57.5764
+    - 97.9795
     sla_pageobject_present: true
     sla_pfile_present: true
     pdf_image_present: true
@@ -1324,6 +1346,16 @@ frames:
     - 3.6
     sla_pageobject_present: true
     source: idml
+  - anname: u676_p1
+    idml_self: null
+    idml_position_mm: null
+    build_py_position_mm:
+    - -151.0
+    - -3.0
+    - 302.0
+    - 111.0
+    sla_pageobject_present: true
+    source: build_py
   - anname: ub72
     idml_self: null
     idml_position_mm: null
@@ -1571,11 +1603,10 @@ assets:
 - basename: 2026-03-leonore-fuer-flyer.png
   on_disk: true
   classified: external
-  referenced_from_frames:
-  - ube9
+  referenced_from_frames: []
   parent_composite: null
-  sha256: 03dd2b64987c30730c1a01026f26501f46eda120b7913406b5d8700f3e90428e
-  byte_length: 5112548
+  sha256: 79485f82cdd9f9f02e82befcb6f97b916445283d5efe3f3f8a2f5baa2c1bfe3e
+  byte_length: 3737420
 - basename: gruene-logo-bund-weiss-cmyk.png
   on_disk: true
   classified: embedded
@@ -1592,24 +1623,39 @@ assets:
   parent_composite: null
   sha256: 152dcdea289ffc33102d5e169894486a61fce3a717cf9d41d7ce13d7d80a660c
   byte_length: 101374
+- basename: green-pine-trees-covered-with-fog.png
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: c3c014fe9e5b4587246cfdf4e867e5bda32d0a5b5e9338b5981264aef6279210
+  byte_length: 6702484
 - basename: green-pine-trees-covered-with-fog.jpg
+  on_disk: true
+  classified: external
+  referenced_from_frames: []
+  parent_composite: null
+  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
+  byte_length: 6896771
+- basename: green-pine-trees-covered-with-fog-u906.png
   on_disk: true
   classified: external
   referenced_from_frames:
   - u906
   parent_composite: null
-  sha256: b17157b6e4c5905c3d470dbbdde956ec83ba56348a5f164af8faa70d878080f1
-  byte_length: 6896771
+  sha256: null
+  byte_length: null
+- basename: 2026-03-leonore-fuer-flyer-ube9.png
+  on_disk: true
+  classified: external
+  referenced_from_frames:
+  - ube9
+  parent_composite: null
+  sha256: null
+  byte_length: null
 words:
   baseline_pdf_count: 337
-  preview_pdf_count: 311
-  missing_from_preview:
-  - consent.
-  - eosenihicto
-  - impressum
-  - nam
-  - quatur.
-  - xxxxxx
-  extra_in_preview:
-  - impressu
+  preview_pdf_count: 337
+  missing_from_preview: []
+  extra_in_preview: []
 parse_warnings: []

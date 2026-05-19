@@ -30,44 +30,58 @@ tolerances:
   audit: text_position_audit_jitter
   classification: scribus-engine-bug
   severity: cosmetic
-  max_issues: 26
-  reason: '22 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
+  max_issues: 33
+  reason: '32 sub-perceptible (<=5pt) per-word position drifts — FreeType-vs-
     InDesign per-character kerning jitter intrinsic to the two rasterisers. The
     y_mm_shift playbook found no reliable calibration frame and the
     line_spacing sim returned no rows for any frame. The structural bucket
-    (text_position_audit_structural) catches the larger >5pt shifts.'
+    (text_position_audit_structural) catches the larger >5pt shifts. Re-import
+    cap raised 26->33: the breakline + leading 16->15pt fixes moved several
+    formerly-structural (>5pt) drifts down into the sub-perceptible jitter band
+    — the total visible drift fell (structural 257->173) while a handful of
+    shifts crossed the 5pt line into this bucket.'
   follow_up_issue: engine-bug; intrinsic to FreeType rasterisation
 - id: tol:text-position-structural-cross-renderer-wrap
   audit: text_position_audit_structural
   classification: scribus-engine-bug
   severity: structural
-  max_issues: 265
-  reason: '257 large (>5pt) word-position drifts, dominated by cross-renderer
-    line-wrap differences — Scribus and InDesign break the justified body /
-    bullet-list paragraphs at slightly different words because their
-    font-metric and hyphenation models differ. One wrap-point difference
-    cascades into dozens of downstream words counted as "drifted". The
-    line_spacing_pixel_audit probe of the worst frame (u67c) shows 7 lines in
-    both baseline and preview with the preview text starting ~62pt lower and
-    the lines compressed to catch up — a reflow cascade, not a per-line leading
-    error (line_spacing_full_audit classifies every paragraph drift_minor,
-    ~1pt). Not a converter bug. Documented cross-renderer line-wrap gap for
-    Querformat flyers. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural
-    keeps preflight red.'
-  follow_up_issue: engine-bug; cross-renderer paragraph line-wrap divergence
+  max_issues: 180
+  reason: '173 large (>5pt) word-position drifts, dominated by the body-frame
+    column-overflow reflow on u6d8 / u92e. Cap tightened 265->180 after the
+    re-import tune: two per-frame fixes (body ParaStyle leading 16->15pt to
+    match the measured 15.0pt baseline gap; IDML <Br> separators emitted as
+    <breakline/> instead of <para/> so no blank line / space_after is injected)
+    cut the drift from 257 to 173. The irreducible residual is the two
+    2-column body frames: their IDML TextFrame is undersized for the content
+    (the baseline.pdf itself CLIPS ~6 lines — it shows 9+9 of ~24 lines), the
+    converter widened the frame 53.76->63.5mm to avoid silent text loss, so the
+    preview holds ~2 more lines per column and the column break lands at a
+    different word than the clipped baseline. One wrap-point difference
+    cascades into dozens of downstream words counted as "drifted". A
+    min_glyph_shrink reduction was trialled — it closes line_match 24->12 but
+    regresses u6d8 per-region (line-spacing drift 6.24->16.8pt, past the
+    committed 14.4pt) so it was reverted: the per-region guard (P7) outranks
+    the global count. Closing the residual fully would require re-introducing
+    the baseline text loss. NOT FIXED, NOT TOLERATED-AS-PASSING —
+    severity:structural keeps preflight red.'
+  follow_up_issue: authoring-bug; IDML body TextFrame undersized for its content
+    (baseline clips, converter widens — column break diverges)
 - id: tol:systematic-text-line-count-divergence
   audit: systematic_text_audit
   classification: scribus-engine-bug
   severity: structural
-  max_issues: 11
-  reason: '10 frames flagged "line count differs" / "SPLIT offset" / "text
-    wrapped differently" — the per-frame view of the same cross-renderer wrap
-    divergence as text_position_audit_structural. The line_spacing playbook ran
-    line_spacing_sim on all flagged frames and returned no rows for any of
-    them, so no (LINESPMode, LINESP) override is derivable. NOT FIXED, NOT
-    TOLERATED-AS-PASSING — severity:structural keeps preflight red.'
-  follow_up_issue: engine-bug; cross-renderer line-wrap (same root cause as
-    structural text-position drift)
+  max_issues: 5
+  reason: '4 frames flagged "line count differs" / "text wrapped differently" —
+    the per-frame view of the same column-overflow / cross-renderer wrap
+    divergence as text_position_audit_structural. Cap tightened 11->5 after the
+    re-import tune (the leading + breakline + min_glyph_shrink fixes resolved
+    the per-line leading drift the pixel audit now reports OK). The line_spacing
+    playbook ran line_spacing_sim on all flagged frames and returned "no
+    candidate had a measurable drift" — leading is correct, only the wrap point
+    differs. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural keeps
+    preflight red.'
+  follow_up_issue: authoring-bug; IDML body TextFrame undersized (same root
+    cause as structural text-position drift)
 - id: tol:text-render-cross-renderer-wrap-wordsplit
   audit: text_render_audit
   classification: scribus-engine-bug
@@ -113,19 +127,23 @@ tolerances:
     image_content_audit. NOT FIXED, NOT TOLERATED-AS-PASSING — severity:
     structural keeps preflight red.'
   follow_up_issue: authoring/asset-pipeline; Scribus CMYK-JPEG decode failure
-- id: tol:visual-diff-image-size-mismatch
+- id: tol:visual-diff-cross-renderer-wrap-and-cmyk-tone
   audit: visual_diff_regions
   classification: scribus-engine-bug
-  severity: cosmetic
-  max_issues: 0
-  reason: 'visual_diff_regions errors with "image size mismatch:
-    baseline=(874, 620), preview=(875, 621)" — a 1-pixel difference in each
-    dimension. The scaffold cropped the baseline.pdf to remove printer''s marks
-    (cropped to trim box 419.5x297.6pt); the auto-crop box does not land on an
-    exact pixel boundary at 150dpi, so the cropped baseline rasterises to
-    874x620 while the trim-only SLA preview rasterises to 875x621. This
-    surfaces as a phase ERROR (not an audit issue); preflight treats any
-    errors-dict entry as a hard red regardless of tolerances, so this entry is
-    documentation only. The sibling querformat-portrait template — whose
-    baseline had no printer''s marks — does not hit this error.'
-  follow_up_issue: authoring; baseline.pdf printer's-marks crop pixel rounding
+  severity: structural
+  max_issues: 55
+  reason: '54 hot grid cells (8-10 per page, all 6 pages). The dominant
+    contributor is the body-frame column-overflow reflow on the 2-column
+    Fliesstext frames (u6d8 / u92e) — same root cause as
+    text_position_audit_structural: the IDML body TextFrame is undersized, the
+    converter widened it to avoid text loss, and the column break diverges from
+    the (clipped) baseline so the body band reads as a hot region on every
+    page. The remaining cells are the brief''s known-acceptable residual: the
+    ~0.75% Scribus-vs-InDesign glyph-width difference on the headlines, and the
+    small CMYK->sRGB tone residual on the dark-PSD candidate portrait and the
+    full-bleed forest photo. Re-import replaces the prior cap-0
+    image-size-mismatch tolerance (that crop-rounding ERROR no longer occurs on
+    this re-import). NOT FIXED, NOT TOLERATED-AS-PASSING — severity:structural
+    keeps preflight red.'
+  follow_up_issue: authoring/engine; body-frame column overflow + cross-renderer
+    glyph metrics + CMYK tone
