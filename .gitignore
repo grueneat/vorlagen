@@ -27,6 +27,10 @@ node_modules/
 *.ttf
 *.ttc
 
+# Exception: the SIL-OFL Gotham alternatives (Issue 42) are freely
+# redistributable and intentionally bundled for the font-comparison page.
+!shared/fonts/alternatives/**/*.ttf
+
 # tools/links_export.py emits .pdf siblings to .ai/.psd raster outputs for
 # forward-compat vector use. The SLA references the raster, not the .pdf.
 # The audit (tools/asset_policy_audit.py) filters them as derived.
