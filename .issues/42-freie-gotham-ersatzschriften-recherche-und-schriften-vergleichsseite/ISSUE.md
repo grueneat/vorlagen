@@ -1,7 +1,7 @@
 ---
 id: '42'
 title: 'Freie Gotham-Ersatzschriften: Recherche und Schriften-Vergleichsseite'
-status: open
+status: done
 priority: high
 labels:
 - templates
