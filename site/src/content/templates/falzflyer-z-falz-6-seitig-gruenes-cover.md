@@ -69,9 +69,34 @@ title: Falzflyer Z-Falz 6-seitig – Grünes Cover
 version: 0.1.0
 build_py_sha256: c8f9e7798c1fb1411187f311372b037d8dd3393905bb417d3ca4776d49ef3c90
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/template.sla
-  pdf: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/impressum/wien.sla
+_preview_pdf: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/falzflyer-z-falz-6-seitig-gruenes-cover/page-01.png

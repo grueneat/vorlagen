@@ -161,9 +161,34 @@ category: tischschild
 category_label: Tischschild
 variant_label: A5 Querformat
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/tischschild-a5-quer/template.sla
-  pdf: /templates/tischschild-a5-quer/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/tischschild-a5-quer/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/tischschild-a5-quer/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/tischschild-a5-quer/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/tischschild-a5-quer/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/tischschild-a5-quer/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/tischschild-a5-quer/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/tischschild-a5-quer/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/tischschild-a5-quer/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/tischschild-a5-quer/impressum/wien.sla
+_preview_pdf: /templates/tischschild-a5-quer/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/tischschild-a5-quer/page-01.png

@@ -143,9 +143,34 @@ category: zeitung
 category_label: Zeitung
 variant_label: A4 mehrseitig
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/zeitung-a4/template.sla
-  pdf: /templates/zeitung-a4/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/zeitung-a4/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/zeitung-a4/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/zeitung-a4/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/zeitung-a4/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/zeitung-a4/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/zeitung-a4/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/zeitung-a4/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/zeitung-a4/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/zeitung-a4/impressum/wien.sla
+_preview_pdf: /templates/zeitung-a4/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/zeitung-a4/page-01.png

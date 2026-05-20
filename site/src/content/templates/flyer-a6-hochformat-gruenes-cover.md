@@ -61,9 +61,34 @@ title: Flyer A6 Hochformat – Grünes Cover
 version: 0.1.0
 build_py_sha256: 1dfbabd8cca5e4c2e766acb475d33c58d93c2867ae71310f01dfb8f1a1a1c800
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/flyer-a6-hochformat-gruenes-cover/template.sla
-  pdf: /templates/flyer-a6-hochformat-gruenes-cover/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/flyer-a6-hochformat-gruenes-cover/impressum/wien.sla
+_preview_pdf: /templates/flyer-a6-hochformat-gruenes-cover/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/flyer-a6-hochformat-gruenes-cover/page-01.png

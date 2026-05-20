@@ -61,9 +61,34 @@ title: Flyer A6 Querformat – Porträt-Cover
 version: 0.1.0
 build_py_sha256: 4c6d92f8e773f8cab30e070683efa82b68ee2903c84e6d778ddacc3844d85ef8
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/flyer-a6-querformat-portraet/template.sla
-  pdf: /templates/flyer-a6-querformat-portraet/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/flyer-a6-querformat-portraet/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/flyer-a6-querformat-portraet/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/flyer-a6-querformat-portraet/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/flyer-a6-querformat-portraet/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/flyer-a6-querformat-portraet/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/flyer-a6-querformat-portraet/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/flyer-a6-querformat-portraet/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/flyer-a6-querformat-portraet/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/flyer-a6-querformat-portraet/impressum/wien.sla
+_preview_pdf: /templates/flyer-a6-querformat-portraet/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/flyer-a6-querformat-portraet/page-01.png
