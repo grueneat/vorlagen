@@ -4,6 +4,22 @@
   "rendered": true,
   "fonts": [
     {
+      "slug": "original",
+      "name": "Original — Gotham Narrow",
+      "license": "Proprietär (Hoefler & Co.)",
+      "source": "https://www.typography.com/fonts/gotham/styles/gothamnarrow",
+      "family": "Gotham Narrow",
+      "summary": "Die Schrift, in der die Vorlagen aktuell gesetzt sind: Gotham Narrow von Hoefler & Co. (heute Monotype). Sie ist hier als Vergleichs-Grundlage abgebildet — die unveränderte Original-Gestaltung, an der sich die fünf freien Alternativen messen lassen. Gotham Narrow ist eine kommerziell lizenzierte, proprietäre Schrift und darf nicht frei mit den Vorlagen weitergegeben werden; genau deshalb werden die freien, SIL-OFL-lizenzierten Ersatzschriften evaluiert. Diese Spalte wird nicht neu gerendert, sondern zeigt die regulären Render-Artefakte des Flyers.",
+      "weights": {
+        "Book": "Book",
+        "Bold": "Bold",
+        "Black": "Black",
+        "Ultra": "Ultra"
+      },
+      "original": true,
+      "pdf": "/schriften/original/original.pdf"
+    },
+    {
       "slug": "montserrat",
       "name": "Montserrat",
       "license": "SIL OFL 1.1",
@@ -16,6 +32,7 @@
         "Black": "ExtraBold",
         "Ultra": "Black"
       },
+      "original": false,
       "pdf": "/schriften/montserrat/montserrat.pdf",
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat/montserrat.sla"
     },
@@ -32,6 +49,7 @@
         "Black": "ExtraBold",
         "Ultra": "Black"
       },
+      "original": false,
       "pdf": "/schriften/outfit/outfit.pdf",
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/outfit/outfit.sla"
     },
@@ -48,6 +66,7 @@
         "Black": "ExtraBold",
         "Ultra": "Black"
       },
+      "original": false,
       "pdf": "/schriften/urbanist/urbanist.pdf",
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/urbanist/urbanist.sla"
     },
@@ -64,6 +83,7 @@
         "Black": "ExtraBold",
         "Ultra": "Black"
       },
+      "original": false,
       "pdf": "/schriften/raleway/raleway.pdf",
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/raleway/raleway.sla"
     },
@@ -80,6 +100,7 @@
         "Black": "ExtraBold",
         "Ultra": "Black"
       },
+      "original": false,
       "pdf": "/schriften/barlow-semi-condensed/barlow-semi-condensed.pdf",
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/barlow-semi-condensed/barlow-semi-condensed.sla"
     }
@@ -88,6 +109,10 @@
     {
       "page": 1,
       "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-01.png",
+          "hires": "/schriften/original/original-page-01-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-01.png",
           "hires": "/schriften/montserrat/montserrat-page-01-hires.png"
@@ -113,6 +138,10 @@
     {
       "page": 2,
       "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-02.png",
+          "hires": "/schriften/original/original-page-02-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-02.png",
           "hires": "/schriften/montserrat/montserrat-page-02-hires.png"
@@ -138,6 +167,10 @@
     {
       "page": 3,
       "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-03.png",
+          "hires": "/schriften/original/original-page-03-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-03.png",
           "hires": "/schriften/montserrat/montserrat-page-03-hires.png"
@@ -163,6 +196,10 @@
     {
       "page": 4,
       "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-04.png",
+          "hires": "/schriften/original/original-page-04-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-04.png",
           "hires": "/schriften/montserrat/montserrat-page-04-hires.png"
@@ -188,6 +225,10 @@
     {
       "page": 5,
       "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-05.png",
+          "hires": "/schriften/original/original-page-05-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-05.png",
           "hires": "/schriften/montserrat/montserrat-page-05-hires.png"
@@ -213,6 +254,10 @@
     {
       "page": 6,
       "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-06.png",
+          "hires": "/schriften/original/original-page-06-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-06.png",
           "hires": "/schriften/montserrat/montserrat-page-06-hires.png"
