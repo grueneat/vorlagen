@@ -15,8 +15,20 @@ alternatives in ``shared/fonts/alternatives.yml``:
      gallery pipeline uses).
   4. Place the artifacts under templates/<flyer>/fonts/<slug>/ and mirror
      the PNGs + PDF to site/public/schriften/<slug>/.
-  5. Write site/src/data/schriften.json — the data source the comparison
-     page (site/src/pages/schriften/index.astro) consumes.
+  5. Copy the flyer's own committed page renders (the ORIGINAL set in the
+     proprietary Gotham Narrow) into site/public/schriften/original/ — it is
+     the first column of the comparison, the baseline the free alternatives
+     are measured against. The original is NOT re-rendered: the flyer's
+     normal build already produces page-*.png and preview.pdf.
+  6. Write site/src/data/schriften.json — the data source the comparison
+     page (site/src/pages/schriften/index.astro) consumes. The original is
+     the first entry in ``fonts`` and the first per-page preview.
+
+The ORIGINAL is a deliberate special case here rather than an entry in
+shared/fonts/alternatives.yml: that file is, by definition, the list of
+*free SIL-OFL* alternatives, and Gotham Narrow is neither free nor an
+alternative. Modelling it as a build-tool constant keeps alternatives.yml
+honest and leaves the five-font data source (and its tests) untouched.
 
 Rendering needs Scribus. When ``scribus`` is not on PATH (CI / this
 environment), steps 1–2 and 5 still run: the variant SLAs and the JSON data
@@ -58,6 +70,36 @@ FONT_INSTALL_DIR = Path("/usr/local/share/fonts/gruene-alternatives")
 ALTERNATIVES_DIR = ROOT / "shared" / "fonts" / "alternatives"
 SITE_PUBLIC = ROOT / "site" / "public" / "schriften"
 SITE_DATA = ROOT / "site" / "src" / "data" / "schriften.json"
+
+# The original flyer — set in the proprietary Gotham Narrow — is the first
+# column of the comparison. It is handled here as a dedicated special case
+# (see the module docstring): no variant SLA, no rendering. Its preview PNGs
+# and PDF are the flyer's own committed build artifacts, copied verbatim.
+ORIGINAL_SLUG = "original"
+ORIGINAL_ENTRY = {
+    "slug": ORIGINAL_SLUG,
+    "name": "Original — Gotham Narrow",
+    "license": "Proprietär (Hoefler & Co.)",
+    "source": "https://www.typography.com/fonts/gotham/styles/gothamnarrow",
+    "family": "Gotham Narrow",
+    "summary": (
+        "Die Schrift, in der die Vorlagen aktuell gesetzt sind: Gotham "
+        "Narrow von Hoefler & Co. (heute Monotype). Sie ist hier als "
+        "Vergleichs-Grundlage abgebildet — die unveränderte Original-"
+        "Gestaltung, an der sich die fünf freien Alternativen messen lassen. "
+        "Gotham Narrow ist eine kommerziell lizenzierte, proprietäre Schrift "
+        "und darf nicht frei mit den Vorlagen weitergegeben werden; genau "
+        "deshalb werden die freien, SIL-OFL-lizenzierten Ersatzschriften "
+        "evaluiert. Diese Spalte wird nicht neu gerendert, sondern zeigt die "
+        "regulären Render-Artefakte des Flyers."
+    ),
+    "weights": {
+        "Book": "Book",
+        "Bold": "Bold",
+        "Black": "Black",
+        "Ultra": "Ultra",
+    },
+}
 
 
 def scribus_available() -> bool:
@@ -157,42 +199,101 @@ def mirror_to_public(slug: str, render: dict) -> None:
             shutil.copy(hires, dest / hires.name)
 
 
+def mirror_original(flyer_dir: Path) -> dict:
+    """Copy the flyer's own committed renders into schriften/original/.
+
+    The original flyer (proprietary Gotham Narrow) is not re-rendered: the
+    flyer's normal build already commits ``page-NN.png``, ``page-NN-hires.png``
+    and ``preview.pdf``. They are copied verbatim into
+    ``site/public/schriften/original/`` under the ``original-*`` naming the
+    comparison page expects, so the original behaves like any other variant.
+
+    Returns ``{"pdf": Path | None, "pages": {n: (thumb, hires)}}`` — the same
+    shape ``render_variant`` returns — or ``{}`` when no page render exists.
+    """
+    dest = SITE_PUBLIC / ORIGINAL_SLUG
+    page_pngs = sorted(flyer_dir.glob("page-*[0-9].png"))
+    if not page_pngs:
+        print(
+            f"[fonts_compare] no committed page renders in {flyer_dir} — "
+            "original column will show 'not rendered'"
+        )
+        return {}
+
+    dest.mkdir(parents=True, exist_ok=True)
+    pages: dict[int, tuple[Path, Path]] = {}
+    for thumb_src in page_pngs:
+        # page-03.png -> 3 ; the matching hi-res is page-03-hires.png.
+        n = int(thumb_src.stem.split("-")[1])
+        hires_src = flyer_dir / f"page-{n:02d}-hires.png"
+        thumb_dest = dest / f"{ORIGINAL_SLUG}-page-{n:02d}.png"
+        hires_dest = dest / f"{ORIGINAL_SLUG}-page-{n:02d}-hires.png"
+        shutil.copy(thumb_src, thumb_dest)
+        if hires_src.exists():
+            shutil.copy(hires_src, hires_dest)
+        pages[n] = (thumb_dest, hires_dest if hires_src.exists() else thumb_dest)
+
+    pdf_dest: Path | None = None
+    preview_pdf = flyer_dir / "preview.pdf"
+    if preview_pdf.exists():
+        pdf_dest = dest / f"{ORIGINAL_SLUG}.pdf"
+        shutil.copy(preview_pdf, pdf_dest)
+
+    print(
+        f"[fonts_compare] {ORIGINAL_SLUG}: copied {len(pages)} committed "
+        f"page render(s){' + preview.pdf' if pdf_dest else ''}"
+    )
+    return {"pdf": pdf_dest, "pages": pages}
+
+
 def build_data(data: dict, renders: dict[str, dict], rendered: bool) -> dict:
     """Assemble the schriften.json payload for the comparison page.
 
     ``fonts`` carries metadata + per-font asset paths; ``pages`` is one entry
     per flyer page, each listing the per-font PNG paths (``null`` when not
     rendered). All paths are public-root absolute (served from site/public).
+
+    The proprietary original (Gotham Narrow) is the FIRST entry of ``fonts``
+    and the first per-page preview — the baseline column. It carries no
+    variant SLA (it is the unmodified template) and is never re-rendered.
     """
     flyer_dir = ROOT / "templates" / data["flyer"]
     fonts_out = []
     page_count = 0
 
-    for entry in data["fonts"]:
+    # Original first, then the five free alternatives — the comparison reads
+    # left-to-right as "Original vs. Alternative 1..5".
+    columns = [ORIGINAL_ENTRY] + list(data["fonts"])
+
+    for entry in columns:
         slug = entry["slug"]
+        is_original = slug == ORIGINAL_SLUG
         render = renders.get(slug)
-        variant_sla = font_variants.variant_sla_path(
-            flyer_dir / "template.sla", slug
-        )
         pdf_public = (
-            f"/schriften/{slug}/{slug}.pdf" if render else None
+            f"/schriften/{slug}/{slug}.pdf"
+            if render and render.get("pdf")
+            else None
         )
-        fonts_out.append(
-            {
-                "slug": slug,
-                "name": entry["name"],
-                "license": entry["license"],
-                "source": entry["source"],
-                "family": entry["family"],
-                "summary": entry["summary"].strip(),
-                "weights": entry["weights"],
-                "pdf": pdf_public,
-                # The variant SLA is always available; the page falls back to
-                # it as a download when no PDF was rendered.
-                "sla": _rel(variant_sla),
-            }
-        )
-        if render:
+        font_out = {
+            "slug": slug,
+            "name": entry["name"],
+            "license": entry["license"],
+            "source": entry["source"],
+            "family": entry["family"],
+            "summary": entry["summary"].strip(),
+            "weights": entry["weights"],
+            "original": is_original,
+            "pdf": pdf_public,
+        }
+        if not is_original:
+            # The variant SLA is always available; the page falls back to
+            # it as a download when no PDF was rendered. The original has
+            # no variant SLA — it is the unmodified flyer template.
+            font_out["sla"] = _rel(
+                font_variants.variant_sla_path(flyer_dir / "template.sla", slug)
+            )
+        fonts_out.append(font_out)
+        if render and render.get("pages"):
             page_count = max(page_count, len(render["pages"]))
 
     # When nothing rendered, derive the page count from the source flyer's
@@ -203,10 +304,10 @@ def build_data(data: dict, renders: dict[str, dict], rendered: bool) -> dict:
     pages = []
     for n in range(1, page_count + 1):
         per_font: dict[str, dict[str, str | None]] = {}
-        for entry in data["fonts"]:
+        for entry in columns:
             slug = entry["slug"]
             render = renders.get(slug)
-            if render and n in render["pages"]:
+            if render and n in render.get("pages", {}):
                 per_font[slug] = {
                     "thumb": f"/schriften/{slug}/{slug}-page-{n:02d}.png",
                     "hires": f"/schriften/{slug}/{slug}-page-{n:02d}-hires.png",
@@ -253,6 +354,13 @@ def main(argv: list[str] | None = None) -> int:
     slas = generate_variant_slas(data, flyer_dir)
 
     renders: dict[str, dict] = {}
+
+    # The original column always uses the flyer's own committed renders —
+    # this is a verbatim copy, independent of Scribus availability.
+    original = mirror_original(flyer_dir)
+    if original:
+        renders[ORIGINAL_SLUG] = original
+
     if do_render:
         for entry in data["fonts"]:
             slug = entry["slug"]
