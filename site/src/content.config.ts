@@ -28,7 +28,18 @@ const templates = defineCollection({
     brand_overrides: z.array(z.any()).optional(),
     ci_overrides: z.record(z.any()).optional(),
     idml_source: z.string().optional(),
-    _downloads: z.array(z.any()).optional(),
+    // _downloads: one row per offered file. Issue #41 added the optional
+    // `bundesland` slug for per-Bundesland impressum SLAs; `pdf` stays
+    // optional so family-template rows (SLA + PDF) keep validating.
+    _downloads: z.array(z.object({
+      label: z.string(),
+      sla: z.string(),
+      pdf: z.string().optional(),
+      bundesland: z.string().optional(),
+    })).optional(),
+    // _preview_pdf: shared preview PDF for templates with per-Bundesland
+    // downloads (issue #41) — linked separately from the download list.
+    _preview_pdf: z.string().optional(),
     _previews: z.array(z.any()).optional(),
   }),
 });
