@@ -43,6 +43,8 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from visual_diff import render_sla_to_pdf, rasterise  # noqa: E402
 
+import impressum  # noqa: E402
+
 DEFAULT_DPI = 50
 # Hi-res rasterise pass for the gallery's click-through preview (Issue #28).
 # 150 dpi = 3× the thumbnail dpi → ~1240×1754 px on A4 portrait. Stored
@@ -752,6 +754,25 @@ def _orchestrate_family(tdir: Path, meta: dict, public_dir: Path, args) -> int:
     return 0
 
 
+def _emit_impressum_slas(tdir: Path, tid: str) -> None:
+    """Emit per-Bundesland impressum SLAs for one template.
+
+    Reuses tools/impressum.py. Writes templates/<id>/impressum/<slug>.sla for
+    every Bundesland from the central data source. Purely textual substitution
+    on template.sla — does not touch the PDF/PNG/diff flow. Idempotent: the
+    same template.sla yields byte-identical output, so a double run produces
+    no git diff.
+    """
+    sla = tdir / "template.sla"
+    if not sla.exists():
+        return
+    data = impressum.load_bundeslaender()
+    for entry in data["bundeslaender"]:
+        out = tdir / "impressum" / f"{entry['slug']}.sla"
+        n = impressum.apply_impressum(sla, out, entry)
+        print(f"[{tid}] impressum/{entry['slug']}.sla — {n} frame(s)")
+
+
 def _orchestrate_template(tdir: Path, args) -> int:
     """Orchestrate one template directory end-to-end.
 
@@ -825,6 +846,14 @@ def _orchestrate_template(tdir: Path, args) -> int:
                 f"[{tid}] meta.yml build_py_sha256 update skipped: {exc}",
                 file=sys.stderr,
             )
+
+    # Emit per-Bundesland impressum SLAs from the just-built template.sla
+    # (issue #41). Independent of the PDF/PNG/diff flow below.
+    if not getattr(args, "dry_run", False):
+        try:
+            _emit_impressum_slas(tdir, tid)
+        except (OSError, RuntimeError) as exc:
+            print(f"[{tid}] impressum SLA emit skipped: {exc}", file=sys.stderr)
 
     if is_family:
         return _orchestrate_family(tdir, meta, site_public_dir, args)
