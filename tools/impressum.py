@@ -66,14 +66,18 @@ def _frame_text(pageobject: ET.Element) -> str:
 
 
 def find_impressum_frames(root: ET.Element) -> list[ET.Element]:
-    """Return PAGEOBJECT elements whose story text contains 'impressum'.
+    """Return PAGEOBJECT elements identified as impressum frames.
 
-    Match is case-insensitive and frame-level: the concatenation of every
-    ITEXT run in the frame is searched, so split-run placeholders are caught.
+    A frame is an impressum frame when 'impressum' (case-insensitive) appears
+    either in its concatenated ITEXT/@CH text — so split-run placeholders are
+    caught — or in its ANNAME (the frame name set in InDesign/Scribus). The
+    ANNAME fallback covers templates whose impressum frame already carries a
+    rendered text without the literal word (e.g. tischschild-a5-quer).
     """
     frames = []
     for po in root.iter("PAGEOBJECT"):
-        if "impressum" in _frame_text(po).lower():
+        anname = (po.get("ANNAME") or "").lower()
+        if "impressum" in _frame_text(po).lower() or "impressum" in anname:
             frames.append(po)
     return frames
 

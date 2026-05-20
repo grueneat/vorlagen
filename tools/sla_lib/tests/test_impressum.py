@@ -81,6 +81,21 @@ class ApplyImpressumTest(unittest.TestCase):
         frames = find_impressum_frames(root)
         self.assertEqual(len(frames), 1)
 
+    def test_find_impressum_frames_matches_anname(self):
+        """A frame named 'Impressum' is detected even when its text carries
+        no literal word (e.g. tischschild-a5-quer)."""
+        import xml.etree.ElementTree as ET
+
+        root = ET.fromstring(
+            '<DOCUMENT>'
+            '<PAGEOBJECT PTYPE="4" ANNAME="Impressum (Tent)"><StoryText>'
+            '<ITEXT CH="Medieninhaber: Die Gruenen"/>'
+            '</StoryText></PAGEOBJECT>'
+            '</DOCUMENT>'
+        )
+        frames = find_impressum_frames(root)
+        self.assertEqual(len(frames), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
