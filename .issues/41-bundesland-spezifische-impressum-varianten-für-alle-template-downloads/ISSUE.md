@@ -1,7 +1,7 @@
 ---
 id: '41'
 title: Bundesland-spezifische Impressum-Varianten für alle Template-Downloads
-status: open
+status: done
 priority: high
 labels:
 - templates
