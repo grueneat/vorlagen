@@ -11,3 +11,10 @@ templates/**/golden/** filter=lfs diff=lfs merge=lfs -text
 templates/**/samples/**/*.png  filter=lfs diff=lfs merge=lfs -text
 templates/**/samples/**/*.jpg  filter=lfs diff=lfs merge=lfs -text
 templates/**/samples/**/*.tif  filter=lfs diff=lfs merge=lfs -text
+
+# Text data/config under shared/fonts/ must stay normal git blobs. The LFS
+# rule above is meant for font binaries; tools/font_variants.py parses
+# alternatives.yml at runtime and the CI checkout does not fetch LFS, so an
+# LFS pointer there breaks the build (issue 42 deploy fix).
+shared/fonts/alternatives.yml  text eol=lf -filter -diff -merge
+shared/fonts/**/OFL.txt        text eol=lf -filter -diff -merge
