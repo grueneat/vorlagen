@@ -26,6 +26,8 @@ from pathlib import Path
 
 import yaml
 
+import impressum
+
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATES_DIR = ROOT / "templates"
 SITE_CONTENT = ROOT / "site" / "src" / "content" / "templates"
@@ -96,7 +98,6 @@ def process_template(tdir: Path) -> dict | None:
         )
         if not (sla.exists() and pdf.exists() and page_pngs):
             _fail_missing(tid, sla, pdf, page_pngs)
-        shutil.copy(sla, public_dir / "template.sla")
         shutil.copy(pdf, public_dir / "preview.pdf")
         for p in page_pngs:
             shutil.copy(p, public_dir / p.name)
@@ -108,11 +109,35 @@ def process_template(tdir: Path) -> dict | None:
         # previews on the deployed site.
         for p in sorted(tdir.glob("page-*-hires.png")):
             shutil.copy(p, public_dir / p.name)
-        meta["_downloads"] = [{
-            "label": "Vollständig (SLA + PDF)",
-            "sla": f"/templates/{tid}/template.sla",
-            "pdf": f"/templates/{tid}/preview.pdf",
-        }]
+
+        # Issue #41: only impressum-bearing SLAs are downloadable. The
+        # generic, impressum-less template.sla is no longer offered. Copy
+        # templates/<id>/impressum/<slug>.sla and list one download per
+        # Bundesland, in bundeslaender.yml order.
+        impressum_src = tdir / "impressum"
+        bl_data = impressum.load_bundeslaender()
+        downloads = []
+        impressum_public = public_dir / "impressum"
+        impressum_public.mkdir(parents=True, exist_ok=True)
+        for entry in bl_data["bundeslaender"]:
+            slug = entry["slug"]
+            variant = impressum_src / f"{slug}.sla"
+            if not variant.exists():
+                sys.exit(
+                    f"FATAL: impressum SLA missing for template '{tid}':\n"
+                    f"  expected: {variant}\n"
+                    f"\nRun `bin/render-gallery` or `python3 tools/impressum.py "
+                    f"--all` to generate the per-Bundesland SLAs, then\n"
+                    f"`git add templates/ site/public/ && git commit`."
+                )
+            shutil.copy(variant, impressum_public / variant.name)
+            downloads.append({
+                "label": entry["name"],
+                "bundesland": slug,
+                "sla": f"/templates/{tid}/impressum/{slug}.sla",
+            })
+        meta["_downloads"] = downloads
+        meta["_preview_pdf"] = f"/templates/{tid}/preview.pdf"
         meta["_previews"] = [
             {"label": f"Seite {i+1}", "src": f"/templates/{tid}/{p.name}"}
             for i, p in enumerate(page_pngs)
