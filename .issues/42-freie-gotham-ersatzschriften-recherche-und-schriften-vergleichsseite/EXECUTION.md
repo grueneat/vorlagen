@@ -141,3 +141,57 @@
 **Completed:** 2026-05-20
 **Commits:** 7 task commits (5b26651, 3f3e1c8, ad08dad, 8ba89d5, c2f96fe,
 7e57c62, c2c0bd6) + this execution log.
+
+## Follow-up — Original column (2026-05-20)
+
+The comparison showed only the five free alternatives. The original flyer
+in the proprietary **Gotham Narrow** — the baseline the alternatives are
+meant to be measured against — was added as the **first** column.
+
+### What changed
+
+- `tools/fonts_compare_build.py`: the original is a dedicated build-tool
+  special case (`ORIGINAL_ENTRY`), **not** an entry in
+  `shared/fonts/alternatives.yml`. That file is, by definition, the list of
+  *free SIL-OFL* alternatives; Gotham Narrow is neither free nor an
+  alternative, so modelling it as a constant keeps the data source honest
+  and leaves the five-font test (`test_five_entries_each_complete`,
+  expects exactly 5) untouched.
+- New `mirror_original()` copies the flyer's own committed `page-NN.png` /
+  `-hires` renders and `preview.pdf` verbatim into
+  `site/public/schriften/original/` — the original is **never re-rendered**.
+- `build_data()` emits the original as the first `fonts` entry and the
+  first per-page preview, with an `original: true` flag and no variant SLA.
+- `site/src/pages/schriften/index.astro`: legend + grid now render
+  Original + 5 alternatives. The original is flagged proprietary with an
+  honest German summary; the lightbox switches through all six versions
+  per page. Label separator changed from ` — ` to ` · ` so the
+  dash-bearing name "Original — Gotham Narrow" is recovered correctly.
+
+### New per-row column count
+
+**6** — one Original (Gotham Narrow) + five free alternatives. 6 flyer
+pages × 6 columns = 36 preview thumbnails; the lightbox steps through 6
+font versions per page.
+
+### Verification
+
+- `python3 tools/fonts_compare_build.py` → re-emitted variant SLAs
+  (idempotent, byte-identical), copied 6 original page renders +
+  `preview.pdf`, wrote `schriften.json` (6 columns, original first).
+- `ruff check tools/fonts_compare_build.py` → all checks passed.
+- `python3 -m pytest tools/sla_lib/tests/test_font_variants.py` → 5 passed;
+  `python3 -m unittest discover` → 5 passed (dual-runner gate green).
+- `npx astro build` in `site/` → 27 pages, `Complete!`;
+  `/schriften/index.html` has 36 `schrift-preview` anchors and a
+  `repeat(6, 1fr)` grid.
+
+### Deviations
+
+- The five variant PDFs re-render with a fresh embedded `/CreationDate`
+  each run (timestamp-only churn; PNGs stay byte-identical). They were
+  reverted so the diff carries only the genuine original-column change —
+  the five free fonts' artifacts are visually unchanged.
+
+**Follow-up commits:** e9e4008 (build tool + page), a4bc93e (regenerated
+artifacts), + this log update.
