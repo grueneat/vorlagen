@@ -81,9 +81,34 @@ category: plakat
 category_label: Plakat
 variant_label: A1 Hochformat
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/plakat-a1-hochformat/template.sla
-  pdf: /templates/plakat-a1-hochformat/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/plakat-a1-hochformat/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/plakat-a1-hochformat/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/plakat-a1-hochformat/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/plakat-a1-hochformat/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/plakat-a1-hochformat/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/plakat-a1-hochformat/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/plakat-a1-hochformat/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/plakat-a1-hochformat/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/plakat-a1-hochformat/impressum/wien.sla
+_preview_pdf: /templates/plakat-a1-hochformat/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/plakat-a1-hochformat/page-01.png

@@ -15,6 +15,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "tools"))
 
 import gallery_build  # noqa: E402
+import impressum  # noqa: E402
 from gallery_build import process_template, _fail_missing  # noqa: E402
 
 
@@ -23,6 +24,18 @@ def _write_meta(tdir: Path, meta: dict) -> None:
         yaml.safe_dump(meta, allow_unicode=True, sort_keys=False),
         encoding="utf-8",
     )
+
+
+def _make_impressum_slas(tdir: Path) -> None:
+    """Create per-Bundesland impressum SLA fixtures (issue #41).
+
+    gallery_build copies templates/<id>/impressum/<slug>.sla but does not
+    generate them — the render pipeline does. The fixture mirrors that.
+    """
+    impr = tdir / "impressum"
+    impr.mkdir(exist_ok=True)
+    for entry in impressum.load_bundeslaender()["bundeslaender"]:
+        (impr / f"{entry['slug']}.sla").write_bytes(b"<SLA/>")
 
 
 def _make_non_family_template(tdir: Path, *, page_count: int = 2) -> None:
@@ -37,6 +50,7 @@ def _make_non_family_template(tdir: Path, *, page_count: int = 2) -> None:
     (tdir / "preview.pdf").write_bytes(b"%PDF-1.4")
     for i in range(1, page_count + 1):
         (tdir / f"page-0{i}.png").write_bytes(b"PNG")
+    _make_impressum_slas(tdir)
 
 
 def _make_family_template(tdir: Path, *, codes: list = None, page_count: int = 1) -> None:
@@ -74,6 +88,31 @@ class NonFamilySuccessTests(unittest.TestCase):
             self.assertIn("Seite 1", result["_previews"][0]["label"])
             self.assertIn("Seite 2", result["_previews"][1]["label"])
 
+    def test_non_family_downloads_one_per_bundesland(self):
+        """Issue #41: _downloads lists one impressum SLA per Bundesland and
+        carries no impressum-less template.sla download."""
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td) / "postkarte-bl"
+            tdir.mkdir()
+            site_public = Path(td) / "public"
+            _make_non_family_template(tdir, page_count=2)
+            with unittest.mock.patch.object(gallery_build, "SITE_PUBLIC", site_public):
+                result = process_template(tdir)
+            bl = impressum.load_bundeslaender()["bundeslaender"]
+            self.assertEqual(len(result["_downloads"]), len(bl))
+            # Order matches bundeslaender.yml.
+            self.assertEqual(
+                [d["bundesland"] for d in result["_downloads"]],
+                [e["slug"] for e in bl],
+            )
+            for d in result["_downloads"]:
+                self.assertIn("impressum/", d["sla"])
+                self.assertNotEqual(d["sla"], f"/templates/{tdir.name}/template.sla")
+            # Shared preview PDF is still exposed for the common preview.
+            self.assertEqual(
+                result["_preview_pdf"], f"/templates/{tdir.name}/preview.pdf"
+            )
+
     def test_non_family_copies_artifacts_to_site_public(self):
         with tempfile.TemporaryDirectory() as td:
             tdir = Path(td) / "postcard"
@@ -83,10 +122,31 @@ class NonFamilySuccessTests(unittest.TestCase):
             with unittest.mock.patch.object(gallery_build, "SITE_PUBLIC", site_public):
                 process_template(tdir)
             pub_dir = site_public / "postcard"
-            self.assertTrue((pub_dir / "template.sla").exists())
             self.assertTrue((pub_dir / "preview.pdf").exists())
             self.assertTrue((pub_dir / "page-01.png").exists())
             self.assertTrue((pub_dir / "page-02.png").exists())
+            # Issue #41: per-Bundesland impressum SLAs are copied;
+            # the impressum-less template.sla is no longer offered.
+            self.assertFalse((pub_dir / "template.sla").exists())
+            for entry in impressum.load_bundeslaender()["bundeslaender"]:
+                self.assertTrue(
+                    (pub_dir / "impressum" / f"{entry['slug']}.sla").exists()
+                )
+
+    def test_non_family_missing_impressum_sla_raises(self):
+        """Issue #41: a missing impressum SLA aborts with a FATAL message."""
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td) / "postkarte-noimpr"
+            tdir.mkdir()
+            site_public = Path(td) / "public"
+            _make_non_family_template(tdir, page_count=2)
+            # Remove one Bundesland variant.
+            next(iter((tdir / "impressum").glob("*.sla"))).unlink()
+            with unittest.mock.patch.object(gallery_build, "SITE_PUBLIC", site_public):
+                with self.assertRaises(SystemExit) as ctx:
+                    process_template(tdir)
+            self.assertIn("FATAL", str(ctx.exception))
+            self.assertIn("tools/impressum.py", str(ctx.exception))
 
     def test_skip_no_meta_yml(self):
         with tempfile.TemporaryDirectory() as td:

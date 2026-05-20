@@ -63,9 +63,34 @@ title: Flyer A6 Hochformat – Quadrat im Bild
 version: 0.1.0
 build_py_sha256: 322dc41dc3156ab70c23b469347cd5a84f6d69af205be63f9846d87b312de6bf
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/template.sla
-  pdf: /templates/flyer-a6-hochformat-quadrat-im-bild/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/flyer-a6-hochformat-quadrat-im-bild/impressum/wien.sla
+_preview_pdf: /templates/flyer-a6-hochformat-quadrat-im-bild/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/flyer-a6-hochformat-quadrat-im-bild/page-01.png

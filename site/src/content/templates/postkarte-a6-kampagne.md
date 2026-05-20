@@ -112,9 +112,34 @@ category: postkarte
 category_label: Postkarte
 variant_label: A6 Kampagne
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/postkarte-a6-kampagne/template.sla
-  pdf: /templates/postkarte-a6-kampagne/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/postkarte-a6-kampagne/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/postkarte-a6-kampagne/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/postkarte-a6-kampagne/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/postkarte-a6-kampagne/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/postkarte-a6-kampagne/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/postkarte-a6-kampagne/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/postkarte-a6-kampagne/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/postkarte-a6-kampagne/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/postkarte-a6-kampagne/impressum/wien.sla
+_preview_pdf: /templates/postkarte-a6-kampagne/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/postkarte-a6-kampagne/page-01.png

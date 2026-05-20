@@ -68,9 +68,34 @@ brand_overrides:
     the sibling 26-03 flyer templates. Resolution path: per-template tune pass to
     reconcile leading against the brand convention (deferred).'
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/flyer-a6-hochformat-zweigeteilt/template.sla
-  pdf: /templates/flyer-a6-hochformat-zweigeteilt/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/flyer-a6-hochformat-zweigeteilt/impressum/wien.sla
+_preview_pdf: /templates/flyer-a6-hochformat-zweigeteilt/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/flyer-a6-hochformat-zweigeteilt/page-01.png

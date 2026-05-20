@@ -1,0 +1,58 @@
+# shared/impressum/bundeslaender.yml
+#
+# Impressum-Bausteine je Landesorganisation der Grünen.
+# Quelle: jeweilige <land>.gruene.at/impressum-Seite, Stand 2026-05-20.
+#
+# MAINTAINER: Diese Angaben sind rechtspflichtig (österr. Mediengesetz §§ 24/25).
+# Vor Veröffentlichung juristisch verifizieren — Adressen/Namen können sich ändern.
+#
+# Schema:
+#   default:       slug des Fallback-Bundeslandes (hat immer ein gültiges Impressum)
+#   bundeslaender: Liste mit slug, name, impressum (1 Zeile), druck (separat, optional), quelle
+default: noe
+bundeslaender:
+  - slug: bgld
+    name: Burgenland
+    impressum: "Die Grünen – Die Grüne Alternative Burgenland, Hauptstraße 38/Top 5, 7000 Eisenstadt"
+    druck: ""
+    quelle: "https://burgenland.gruene.at/impressum"
+  - slug: ktn
+    name: Kärnten
+    impressum: "Die Grünen Kärnten – Landesorganisation, Bahnhofstraße 38a, 9020 Klagenfurt"
+    druck: ""
+    quelle: "https://kaernten.gruene.at/impressum"
+  - slug: noe
+    name: Niederösterreich
+    impressum: "Die Grünen Niederösterreich, Daniel-Gran-Straße 48, 3100 St. Pölten"
+    druck: ""
+    quelle: "https://noe.gruene.at/impressum"
+  - slug: ooe
+    name: Oberösterreich
+    impressum: "Die Grünen – Die Grüne Alternative Oberösterreich, Landgutstraße 17, 4040 Linz"
+    druck: ""
+    quelle: "https://ooe.gruene.at/impressum"
+  - slug: sbg
+    name: Salzburg
+    impressum: "Die Grünen Salzburg, Glockengasse 6, 5020 Salzburg"
+    druck: ""
+    quelle: "https://salzburg.gruene.at/impressum"
+  - slug: stmk
+    name: Steiermark
+    impressum: "Die Grünen Steiermark, Kaiserfeldgasse 5–7, 8010 Graz"
+    druck: ""
+    quelle: "https://stmk.gruene.at/impressum"
+  - slug: tirol
+    name: Tirol
+    impressum: "Die Grünen – Die Grüne Alternative Tirol, Müllerstraße 7, 6020 Innsbruck"
+    druck: ""
+    quelle: "https://tirol.gruene.at/impressum"
+  - slug: vbg
+    name: Vorarlberg
+    impressum: "Die GRÜNEN – Grüne Alternative Vorarlberg, St.-Anna-Straße 1/Top 7, 6900 Bregenz"
+    druck: ""
+    quelle: "https://vorarlberg.gruene.at/impressum"
+  - slug: wien
+    name: Wien
+    impressum: "Die Grünen – Grüne Alternative Wien, Würtzlerstraße 3/3, 1030 Wien"
+    druck: ""
+    quelle: "https://wien.gruene.at/impressum"

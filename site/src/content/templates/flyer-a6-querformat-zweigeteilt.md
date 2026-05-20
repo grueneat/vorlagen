@@ -75,9 +75,34 @@ title: Flyer A6 Querformat – Zweigeteilt
 version: 0.1.0
 build_py_sha256: 0321105e25ee3d58a3b7d24d9dc02516b5f1384402e0bd715a98ba9953cb12f1
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/flyer-a6-querformat-zweigeteilt/template.sla
-  pdf: /templates/flyer-a6-querformat-zweigeteilt/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/flyer-a6-querformat-zweigeteilt/impressum/wien.sla
+_preview_pdf: /templates/flyer-a6-querformat-zweigeteilt/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/flyer-a6-querformat-zweigeteilt/page-01.png

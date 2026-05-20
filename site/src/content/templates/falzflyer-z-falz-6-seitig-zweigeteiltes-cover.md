@@ -70,9 +70,34 @@ title: Falzflyer Z-Falz 6-seitig – Zweigeteiltes Cover
 version: 0.1.0
 build_py_sha256: a3f6ec0844d384426f22c76206788e2f500e2b791f6b63cd86db4354f4585525
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/template.sla
-  pdf: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/impressum/wien.sla
+_preview_pdf: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/page-01.png

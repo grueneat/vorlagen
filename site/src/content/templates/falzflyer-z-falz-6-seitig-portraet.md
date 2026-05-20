@@ -72,9 +72,34 @@ title: Falzflyer Z-Falz 6-seitig – Porträt-Cover
 version: 0.1.0
 build_py_sha256: 42e086d5d1a710c789b875b961301ac470595e43c5001d12b2fbe5c11a7d1ecb
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/falzflyer-z-falz-6-seitig-portraet/template.sla
-  pdf: /templates/falzflyer-z-falz-6-seitig-portraet/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/falzflyer-z-falz-6-seitig-portraet/impressum/wien.sla
+_preview_pdf: /templates/falzflyer-z-falz-6-seitig-portraet/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/falzflyer-z-falz-6-seitig-portraet/page-01.png

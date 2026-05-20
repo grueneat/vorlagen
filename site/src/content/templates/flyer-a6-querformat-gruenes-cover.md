@@ -61,9 +61,34 @@ title: Flyer A6 Querformat – Grünes Cover
 version: 0.1.0
 build_py_sha256: c9b527047ed76da2c04162322b841090eff0afe0aa5f2c630dd65e10439c9fb6
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/flyer-a6-querformat-gruenes-cover/template.sla
-  pdf: /templates/flyer-a6-querformat-gruenes-cover/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/flyer-a6-querformat-gruenes-cover/impressum/wien.sla
+_preview_pdf: /templates/flyer-a6-querformat-gruenes-cover/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/flyer-a6-querformat-gruenes-cover/page-01.png

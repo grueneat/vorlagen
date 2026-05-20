@@ -64,9 +64,34 @@ title: Flyer A6 Hochformat – Porträt-Cover
 version: 0.1.0
 build_py_sha256: 6ae60cc0ab61a01185e51f7b400876e00318ae53bbcc7451a616ed3f1280d682
 _downloads:
-- label: Vollständig (SLA + PDF)
-  sla: /templates/flyer-a6-hochformat-portraet/template.sla
-  pdf: /templates/flyer-a6-hochformat-portraet/preview.pdf
+- label: Burgenland
+  bundesland: bgld
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/bgld.sla
+- label: Kärnten
+  bundesland: ktn
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/ktn.sla
+- label: Niederösterreich
+  bundesland: noe
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/noe.sla
+- label: Oberösterreich
+  bundesland: ooe
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/ooe.sla
+- label: Salzburg
+  bundesland: sbg
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/sbg.sla
+- label: Steiermark
+  bundesland: stmk
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/stmk.sla
+- label: Tirol
+  bundesland: tirol
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/tirol.sla
+- label: Vorarlberg
+  bundesland: vbg
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/vbg.sla
+- label: Wien
+  bundesland: wien
+  sla: /templates/flyer-a6-hochformat-portraet/impressum/wien.sla
+_preview_pdf: /templates/flyer-a6-hochformat-portraet/preview.pdf
 _previews:
 - label: Seite 1
   src: /templates/flyer-a6-hochformat-portraet/page-01.png

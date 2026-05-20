@@ -138,14 +138,17 @@ const catLabel = t.data.category_label ?? 'Sonstige';
   </script>
 
   <h2>Download</h2>
+  <p>Bitte die Vorlage mit dem Impressum eures Bundeslandes herunterladen.</p>
   <ul>
     {t.data._downloads && t.data._downloads.map(d => (
       <li>
-        <strong>{d.label}</strong>:
-        <a href={url(d.sla)}>SLA</a> · <a href={url(d.pdf)}>Vorschau-PDF</a>
+        {d.label}: <a href={url(d.sla)}>SLA herunterladen</a>
       </li>
     ))}
   </ul>
+  {t.data._preview_pdf && (
+    <p>Gemeinsame Vorschau: <a href={url(t.data._preview_pdf)}>Vorschau-PDF</a></p>
+  )}
 
   <h2>Anleitung</h2>
   <Content />
