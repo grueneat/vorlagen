@@ -28,9 +28,11 @@ ALTERNATIVES_DIR = REPO_ROOT / "shared" / "fonts" / "alternatives"
 
 
 class LoadAlternativesTest(unittest.TestCase):
-    def test_five_entries_each_complete(self):
+    def test_entries_each_complete(self):
         data = load_alternatives()
-        self.assertEqual(len(data["fonts"]), 5)
+        # Five free SIL-OFL alternatives plus Tahoma (the proprietary
+        # negative-example column added for the decision comparison).
+        self.assertEqual(len(data["fonts"]), 6)
         for entry in data["fonts"]:
             # German summary is mandatory (Issue 42 acceptance criterion).
             self.assertTrue(entry["summary"].strip())
@@ -38,11 +40,22 @@ class LoadAlternativesTest(unittest.TestCase):
             self.assertEqual(
                 set(entry["weights"]), {"Book", "Bold", "Black", "Ultra"}
             )
-            # Every bundled file actually exists in the repo.
             self.assertTrue(entry["files"])
+            if entry.get("proprietary"):
+                # Proprietary fonts (Tahoma) are deliberately NOT committed —
+                # the .ttf binaries are git-ignored (see .gitignore). They are
+                # present only on a maintainer machine for local rendering, so
+                # their on-disk presence is not asserted here.
+                continue
+            # Every bundled free font file actually exists in the repo.
             for fname in entry["files"]:
                 fpath = ALTERNATIVES_DIR / entry["slug"] / fname
                 self.assertTrue(fpath.exists(), f"missing bundled file {fpath}")
+
+    def test_exactly_one_proprietary_entry(self):
+        data = load_alternatives()
+        proprietary = [e for e in data["fonts"] if e.get("proprietary")]
+        self.assertEqual([e["slug"] for e in proprietary], ["tahoma"])
 
     def test_barlow_semi_condensed_is_the_narrow_option(self):
         data = load_alternatives()

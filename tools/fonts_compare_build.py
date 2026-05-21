@@ -200,28 +200,60 @@ def mirror_to_public(slug: str, render: dict) -> None:
 
 
 def mirror_original(flyer_dir: Path) -> dict:
-    """Copy the flyer's own committed renders into schriften/original/.
+    """Produce the original column's previews under schriften/original/.
 
-    The original flyer (proprietary Gotham Narrow) is not re-rendered: the
-    flyer's normal build already commits ``page-NN.png``, ``page-NN-hires.png``
-    and ``preview.pdf``. They are copied verbatim into
-    ``site/public/schriften/original/`` under the ``original-*`` naming the
-    comparison page expects, so the original behaves like any other variant.
+    The original flyer (proprietary Gotham Narrow) is not re-rendered through
+    the font-substitution path — but its previews ARE re-rasterised from the
+    flyer's committed ``preview.pdf`` at the SAME DPIs (THUMB_DPI / HIRES_DPI)
+    as every variant column (see ``render_variant``). Copying the flyer's own
+    ``page-NN.png`` verbatim instead mixes in the gallery's thumbnail DPI and
+    leaves the original column at a different resolution than the alternatives
+    — a visible sharpness mismatch in the side-by-side grid. Re-rasterising
+    keeps all columns pixel-consistent.
+
+    When no ``preview.pdf`` exists, fall back to copying the committed page
+    PNGs verbatim (better a low-res original column than none).
 
     Returns ``{"pdf": Path | None, "pages": {n: (thumb, hires)}}`` — the same
     shape ``render_variant`` returns — or ``{}`` when no page render exists.
     """
+    from visual_diff import rasterise
+
     dest = SITE_PUBLIC / ORIGINAL_SLUG
+    preview_pdf = flyer_dir / "preview.pdf"
+
+    if preview_pdf.exists():
+        dest.mkdir(parents=True, exist_ok=True)
+        thumbs = rasterise(preview_pdf, dest / f"{ORIGINAL_SLUG}-page", THUMB_DPI)
+        hires = rasterise(preview_pdf, dest / f"{ORIGINAL_SLUG}-hires", HIRES_DPI)
+        pages: dict[int, tuple[Path, Path]] = {}
+        for i, thumb in enumerate(thumbs, start=1):
+            page_thumb = dest / f"{ORIGINAL_SLUG}-page-{i:02d}.png"
+            page_hires = dest / f"{ORIGINAL_SLUG}-page-{i:02d}-hires.png"
+            if thumb != page_thumb:
+                thumb.replace(page_thumb)
+            if i <= len(hires):
+                hires[i - 1].replace(page_hires)
+            pages[i] = (page_thumb, page_hires)
+        pdf_dest = dest / f"{ORIGINAL_SLUG}.pdf"
+        shutil.copy(preview_pdf, pdf_dest)
+        print(
+            f"[fonts_compare] {ORIGINAL_SLUG}: rasterised {len(pages)} page(s) "
+            "from preview.pdf + copied preview.pdf"
+        )
+        return {"pdf": pdf_dest, "pages": pages}
+
+    # Fallback: no preview.pdf — copy the flyer's committed page PNGs verbatim.
     page_pngs = sorted(flyer_dir.glob("page-*[0-9].png"))
     if not page_pngs:
         print(
-            f"[fonts_compare] no committed page renders in {flyer_dir} — "
-            "original column will show 'not rendered'"
+            f"[fonts_compare] no preview.pdf and no committed page renders in "
+            f"{flyer_dir} — original column will show 'not rendered'"
         )
         return {}
 
     dest.mkdir(parents=True, exist_ok=True)
-    pages: dict[int, tuple[Path, Path]] = {}
+    pages = {}
     for thumb_src in page_pngs:
         # page-03.png -> 3 ; the matching hi-res is page-03-hires.png.
         n = int(thumb_src.stem.split("-")[1])
@@ -233,17 +265,11 @@ def mirror_original(flyer_dir: Path) -> dict:
             shutil.copy(hires_src, hires_dest)
         pages[n] = (thumb_dest, hires_dest if hires_src.exists() else thumb_dest)
 
-    pdf_dest: Path | None = None
-    preview_pdf = flyer_dir / "preview.pdf"
-    if preview_pdf.exists():
-        pdf_dest = dest / f"{ORIGINAL_SLUG}.pdf"
-        shutil.copy(preview_pdf, pdf_dest)
-
     print(
         f"[fonts_compare] {ORIGINAL_SLUG}: copied {len(pages)} committed "
-        f"page render(s){' + preview.pdf' if pdf_dest else ''}"
+        "page render(s) verbatim (no preview.pdf to rasterise)"
     )
-    return {"pdf": pdf_dest, "pages": pages}
+    return {"pdf": None, "pages": pages}
 
 
 def build_data(data: dict, renders: dict[str, dict], rendered: bool) -> dict:
@@ -367,6 +393,16 @@ def main(argv: list[str] | None = None) -> int:
             out_dir = flyer_dir / "fonts" / slug
             render = render_variant(slug, slas[slug], out_dir)
             mirror_to_public(slug, render)
+            if entry.get("proprietary"):
+                # A proprietary font (e.g. Tahoma): the rendered PDF embeds
+                # the typeface and must NOT be committed or published. Keep
+                # only the raster PNG previews — drop the PDF from disk and
+                # from the data source so the page never links it.
+                pdf = render.get("pdf")
+                if pdf:
+                    pdf.unlink(missing_ok=True)
+                    (SITE_PUBLIC / slug / pdf.name).unlink(missing_ok=True)
+                render["pdf"] = None
             renders[slug] = render
 
     payload = build_data(data, renders, rendered=do_render)
