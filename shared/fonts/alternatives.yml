@@ -24,6 +24,40 @@
 target: "Gotham Narrow"
 flyer: flyer-a6-hochformat-gruenes-cover
 fonts:
+  # Tahoma is NOT a free SIL-OFL alternative — it is a proprietary Microsoft
+  # system font, included here as a deliberate negative example for the
+  # decision comparison (it is the obvious "everyone already has it" pick,
+  # but a poor brand fit). Its .ttf binaries are git-ignored (see .gitignore);
+  # only the raster PNG previews are committed. Tahoma ships just two weights
+  # (Regular, Bold), so the four Gotham Narrow weights collapse onto them —
+  # Black and Ultra both fall back to Bold, which is itself part of the point.
+  - slug: tahoma
+    name: Tahoma
+    license: Proprietär (Microsoft)
+    source: "https://learn.microsoft.com/en-us/typography/font-list/tahoma"
+    family: "Tahoma"
+    # proprietary: rendered PDF embeds the font — fonts_compare_build.py keeps
+    # only the raster PNG previews and never commits/publishes the PDF.
+    proprietary: true
+    files:
+      - tahoma.ttf
+      - tahomabd.ttf
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: Bold
+      Ultra: Bold
+    summary: >-
+      Humanistische Grotesk, die Matthew Carter 1994 für Microsoft zur
+      Bildschirm-Lesbarkeit bei kleinen Pixelgrößen entwarf — eine UI-/System-
+      Schrift, keine Markenschrift. Vorteile: auf praktisch jedem Windows-
+      Rechner vorinstalliert, sehr robust und gut lesbar bei Kleinstgrößen.
+      Nachteile: läuft breit (Gegenteil von Gotham Narrow → Texte überlaufen,
+      Umbrüche verschieben sich), nur zwei Schnitte (Regular, Bold) → Black und
+      Ultra fallen auf Bold zusammen, Headlines verlieren ihre Wucht;
+      proprietär, darf nicht mit den Vorlagen weitergegeben werden. Unterschied:
+      die „Büro-Standard"-Option ohne gestalterischen Anspruch. Einsatz: hier
+      bewusst als abschreckendes Beispiel — kein Marken-Ersatz für Gotham.
   - slug: montserrat
     name: Montserrat
     license: SIL OFL 1.1

@@ -20,6 +20,23 @@
       "pdf": "/schriften/original/original.pdf"
     },
     {
+      "slug": "tahoma",
+      "name": "Tahoma",
+      "license": "Proprietär (Microsoft)",
+      "source": "https://learn.microsoft.com/en-us/typography/font-list/tahoma",
+      "family": "Tahoma",
+      "summary": "Humanistische Grotesk, die Matthew Carter 1994 für Microsoft zur Bildschirm-Lesbarkeit bei kleinen Pixelgrößen entwarf — eine UI-/System- Schrift, keine Markenschrift. Vorteile: auf praktisch jedem Windows- Rechner vorinstalliert, sehr robust und gut lesbar bei Kleinstgrößen. Nachteile: läuft breit (Gegenteil von Gotham Narrow → Texte überlaufen, Umbrüche verschieben sich), nur zwei Schnitte (Regular, Bold) → Black und Ultra fallen auf Bold zusammen, Headlines verlieren ihre Wucht; proprietär, darf nicht mit den Vorlagen weitergegeben werden. Unterschied: die „Büro-Standard\"-Option ohne gestalterischen Anspruch. Einsatz: hier bewusst als abschreckendes Beispiel — kein Marken-Ersatz für Gotham.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "Bold",
+        "Ultra": "Bold"
+      },
+      "original": false,
+      "pdf": null,
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/tahoma/tahoma.sla"
+    },
+    {
       "slug": "montserrat",
       "name": "Montserrat",
       "license": "SIL OFL 1.1",
@@ -113,6 +130,10 @@
           "thumb": "/schriften/original/original-page-01.png",
           "hires": "/schriften/original/original-page-01-hires.png"
         },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-01.png",
+          "hires": "/schriften/tahoma/tahoma-page-01-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-01.png",
           "hires": "/schriften/montserrat/montserrat-page-01-hires.png"
@@ -141,6 +162,10 @@
         "original": {
           "thumb": "/schriften/original/original-page-02.png",
           "hires": "/schriften/original/original-page-02-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-02.png",
+          "hires": "/schriften/tahoma/tahoma-page-02-hires.png"
         },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-02.png",
@@ -171,6 +196,10 @@
           "thumb": "/schriften/original/original-page-03.png",
           "hires": "/schriften/original/original-page-03-hires.png"
         },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-03.png",
+          "hires": "/schriften/tahoma/tahoma-page-03-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-03.png",
           "hires": "/schriften/montserrat/montserrat-page-03-hires.png"
@@ -199,6 +228,10 @@
         "original": {
           "thumb": "/schriften/original/original-page-04.png",
           "hires": "/schriften/original/original-page-04-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-04.png",
+          "hires": "/schriften/tahoma/tahoma-page-04-hires.png"
         },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-04.png",
@@ -229,6 +262,10 @@
           "thumb": "/schriften/original/original-page-05.png",
           "hires": "/schriften/original/original-page-05-hires.png"
         },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-05.png",
+          "hires": "/schriften/tahoma/tahoma-page-05-hires.png"
+        },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-05.png",
           "hires": "/schriften/montserrat/montserrat-page-05-hires.png"
@@ -257,6 +294,10 @@
         "original": {
           "thumb": "/schriften/original/original-page-06.png",
           "hires": "/schriften/original/original-page-06-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-06.png",
+          "hires": "/schriften/tahoma/tahoma-page-06-hires.png"
         },
         "montserrat": {
           "thumb": "/schriften/montserrat/montserrat-page-06.png",
