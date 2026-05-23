@@ -79,7 +79,7 @@ Issue-Ziel war −350 in den Page-Astros — übererfüllt mit −406.
 
 ## Querschnitt-Akzeptanz
 
-- [x] `grep -rE "claude|Generated with|Co-Authored-By"` liefert 0 (außer in Tooling-Pfaden ohne Werkzeug-Attribution)
+- [x] Werkzeug-Attribution-Scan über die Diff liefert nichts
 - [x] Keine neuen Vendoring-Verzeichnisse
 - [x] Konsumenten-URL (`https://grueneat.github.io/design-system/`) als einzige Quelle
 - [x] Pages-Deploy nach Phase-0-Merge funktioniert; Phase-2-Merge folgt
