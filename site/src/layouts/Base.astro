@@ -8,12 +8,15 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>{title} — Grüne Vorlagen</title>
+    <link rel="stylesheet" href="https://grueneat.github.io/design-system/design-system.css" />
     <style is:global>
       :root {
-        --gruen-dunkel: #2a734f;
-        --gruen-hell: #6abf2c;
-        --gelb: #ffeb00;
-        --magenta: #e6177e;
+        /* Lokale Marken-Aliase auf DS-Tokens (Phase 0, #126).
+           Lokale Namen bleiben, Werte verweisen aufs Design-System. */
+        --gruen-dunkel: var(--gat-color-dunkelgruen);
+        --gruen-hell: var(--gat-color-hellgruen);
+        --gelb: var(--gat-color-gelb);
+        --magenta: var(--gat-color-magenta);
         --bg: #fafafa;
         --text: #222;
         --muted: #666;
@@ -25,30 +28,7 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
         color: var(--text);
         background: var(--bg);
       }
-      header {
-        background: var(--gruen-dunkel);
-        color: white;
-        padding: 1rem 2rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        flex-wrap: wrap;
-      }
-      header a { color: white; text-decoration: none; }
-      header h1 { margin: 0; font-size: 1.4rem; }
-      header nav { display: flex; gap: 1rem; flex-wrap: wrap; }
-      header nav a {
-        font-size: 0.95rem;
-        padding: 0.4rem 0.8rem;
-        border-radius: 4px;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        transition: background 0.15s, border-color 0.15s;
-      }
-      header nav a:hover {
-        background: var(--gruen-hell);
-        border-color: var(--gruen-hell);
-      }
+      /* Header-Styles kommen aus dem Design-System (.gat-header --dunkel). */
       main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
       footer { color: var(--muted); padding: 2rem; text-align: center; font-size: 0.85em; }
       h1, h2, h3 { color: var(--gruen-dunkel); }
@@ -56,15 +36,23 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
     </style>
   </head>
   <body>
-    <header>
-      <h1><a href={BASE}>Grüne Vorlagen NÖ</a></h1>
-      <nav>
-        <a href={url('/')}>Galerie</a>
-        <a href={url('experiments/')}>Design-Experimente</a>
-        <a href={url('schriften/')}>Freie Schriften</a>
-      </nav>
+    <a class="gat-skiplink" href="#main">Zum Hauptinhalt springen</a>
+    <header class="gat-header gat-header--dunkel">
+      <div class="gat-header__inner">
+        <a class="gat-header__brand" href={BASE}>
+          <img class="gat-header__logo" src="https://grueneat.github.io/design-system/assets/gruene-logo.svg" alt="Die Grünen" />
+          <span class="gat-header__wordmark">Grüne Vorlagen NÖ</span>
+        </a>
+        <nav aria-label="Hauptnavigation">
+          <ul class="gat-header__nav-list">
+            <li><a href={url('/')}>Galerie</a></li>
+            <li><a href={url('experiments/')}>Design-Experimente</a></li>
+            <li><a href={url('schriften/')}>Freie Schriften</a></li>
+          </ul>
+        </nav>
+      </div>
     </header>
-    <main>
+    <main id="main">
       <slot />
     </main>
     <footer>Grüne NÖ · Skelett-Vorlagen für lokale Gruppen</footer>
