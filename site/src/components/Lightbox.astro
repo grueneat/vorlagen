@@ -1,0 +1,207 @@
+---
+/**
+ * Shared Bildvorschau-Overlay — konsolidiert die drei lokal duplizierten
+ * Lightbox-Implementierungen (templates/[...id].astro, experiments/[id].astro,
+ * schriften/index.astro) auf eine einzige Lösung über das Design-System
+ * `<dialog class="gat-modal">`.
+ *
+ * Markup-Grundgerüst pro Seite einmal einbinden:
+ *
+ *   <Lightbox id="preview-lightbox" hasNav hasExtras />
+ *
+ * Trigger-Verlinkung erfolgt über Daten-Attribute auf den klickbaren
+ * Vorschau-Karten:
+ *
+ *   <a class="app-lightbox-trigger"
+ *      data-lightbox-target="preview-lightbox"
+ *      data-lightbox-group="<group-id>"
+ *      data-lightbox-index="<index in group>"
+ *      data-hires="…hires.png"
+ *      data-label="Beschriftung">
+ *     <img …/>
+ *   </a>
+ *
+ * Die Seite kann eigenes JS hinzufügen, das auf das `lightbox:open`-Event
+ * lauscht (z.B. das Schriften-Switcher-Panel füllt sich so).
+ */
+
+interface Props {
+  /** DOM-ID des Dialogs; muss seitenweit eindeutig sein. */
+  id: string;
+  /** Wenn true, werden `<` und `>` Pfeile angezeigt. */
+  hasNav?: boolean;
+  /** Wenn true, wird der `__extras`-Container gerendert (Slot). */
+  hasExtras?: boolean;
+}
+
+const { id, hasNav = false, hasExtras = false } = Astro.props as Props;
+---
+<dialog id={id} class="gat-modal gat-modal--wide gat-modal--blur app-lightbox" aria-label="Vorschau">
+  <button type="button" class="app-lightbox__close" aria-label="Schließen" data-lightbox-close>Schließen ✕</button>
+  <div class="app-lightbox__label" data-lightbox-label></div>
+  {hasNav && (
+    <>
+      <button type="button" class="app-lightbox__prev" aria-label="Vorheriges" data-lightbox-prev>‹</button>
+      <button type="button" class="app-lightbox__next" aria-label="Nächstes" data-lightbox-next>›</button>
+    </>
+  )}
+  <img class="app-lightbox__image" src="" alt="" data-lightbox-image />
+  {hasExtras && <div class="app-lightbox__extras" data-lightbox-extras><slot /></div>}
+</dialog>
+
+<script is:inline define:vars={{ id, hasNav }}>
+  (function () {
+    var dialog = document.getElementById(id);
+    if (!dialog) return;
+    var img = dialog.querySelector('[data-lightbox-image]');
+    var label = dialog.querySelector('[data-lightbox-label]');
+    var closeBtn = dialog.querySelector('[data-lightbox-close]');
+    var prevBtn = dialog.querySelector('[data-lightbox-prev]');
+    var nextBtn = dialog.querySelector('[data-lightbox-next]');
+
+    // Trigger-Inventar pro Gruppe: alle Links/Buttons, deren
+    // data-lightbox-target diesen Dialog adressiert.
+    var triggers = [].slice.call(document.querySelectorAll(
+      '[data-lightbox-target="' + id + '"]'
+    ));
+    if (!img || !label || !closeBtn) return;
+
+    // Pro Gruppen-ID: sortierte Liste von Triggern.
+    var groups = {};
+    triggers.forEach(function (a) {
+      var g = a.getAttribute('data-lightbox-group') || '__default';
+      (groups[g] = groups[g] || []).push(a);
+    });
+    Object.keys(groups).forEach(function (g) {
+      groups[g].sort(function (x, y) {
+        return Number(x.getAttribute('data-lightbox-index') || 0)
+             - Number(y.getAttribute('data-lightbox-index') || 0);
+      });
+    });
+
+    var currentGroup = [];
+    var currentIndex = -1;
+
+    function emit(name, detail) {
+      dialog.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+    }
+
+    function render() {
+      var a = currentGroup[currentIndex];
+      if (!a) return;
+      img.src = a.getAttribute('data-hires') || '';
+      img.alt = a.getAttribute('data-label') || '';
+      var base = a.getAttribute('data-label') || '';
+      label.textContent = currentGroup.length > 1
+        ? base + ' — ' + (currentIndex + 1) + ' / ' + currentGroup.length
+        : base;
+      if (prevBtn) prevBtn.style.display = currentGroup.length > 1 ? 'block' : 'none';
+      if (nextBtn) nextBtn.style.display = currentGroup.length > 1 ? 'block' : 'none';
+      emit('lightbox:render', { index: currentIndex, group: currentGroup });
+    }
+
+    function open(trigger) {
+      var g = trigger.getAttribute('data-lightbox-group') || '__default';
+      currentGroup = groups[g] || [trigger];
+      currentIndex = currentGroup.indexOf(trigger);
+      if (currentIndex < 0) currentIndex = 0;
+      render();
+      // <dialog>::showModal bringt Focus-Trap + Backdrop + Esc mit.
+      if (typeof dialog.showModal === 'function') {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute('open', '');
+      }
+      document.body.style.overflow = 'hidden';
+      emit('lightbox:open', { index: currentIndex, group: currentGroup });
+    }
+
+    function close() {
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+      img.src = '';
+      document.body.style.overflow = '';
+      emit('lightbox:close', {});
+    }
+
+    function step(delta) {
+      if (currentGroup.length === 0) return;
+      currentIndex = (currentIndex + delta + currentGroup.length) % currentGroup.length;
+      render();
+    }
+
+    triggers.forEach(function (a) {
+      a.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        open(a);
+      });
+    });
+    closeBtn.addEventListener('click', close);
+    if (prevBtn) prevBtn.addEventListener('click', function () { step(-1); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { step(1); });
+
+    // Backdrop-Klick: zielen auf das Dialog-Element selbst (außerhalb von
+    // Image/Buttons) → schließen. Über das Bild selbst → ebenfalls schließen
+    // (cursor: zoom-out signalisiert es).
+    dialog.addEventListener('click', function (ev) {
+      if (ev.target === dialog || ev.target === img) close();
+    });
+
+    // Pfeiltasten — Escape kommt vom <dialog>-Element gratis.
+    document.addEventListener('keydown', function (ev) {
+      if (!dialog.open) return;
+      if (hasNav && ev.key === 'ArrowLeft') { ev.preventDefault(); step(-1); }
+      else if (hasNav && ev.key === 'ArrowRight') { ev.preventDefault(); step(1); }
+    });
+
+    // Touch-Swipe (Mobil): horizontale Geste > 40px wechselt Bild.
+    var startX = null, startY = null;
+    dialog.addEventListener('touchstart', function (ev) {
+      startX = ev.changedTouches[0].clientX;
+      startY = ev.changedTouches[0].clientY;
+    }, { passive: true });
+    dialog.addEventListener('touchend', function (ev) {
+      if (startX === null) return;
+      var dx = ev.changedTouches[0].clientX - startX;
+      var dy = ev.changedTouches[0].clientY - startY;
+      if (hasNav && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+        step(dx < 0 ? 1 : -1);
+      }
+      startX = startY = null;
+    }, { passive: true });
+
+    // Programmatischer Direkt-Öffner: für dynamisch (per JSON) gerenderte
+    // Karten ohne statische [data-lightbox-target]-Trigger im DOM.
+    function openAt(src, text) {
+      img.src = src || '';
+      img.alt = text || '';
+      label.textContent = text || '';
+      if (prevBtn) prevBtn.style.display = 'none';
+      if (nextBtn) nextBtn.style.display = 'none';
+      currentGroup = [];
+      currentIndex = -1;
+      if (typeof dialog.showModal === 'function') {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute('open', '');
+      }
+      document.body.style.overflow = 'hidden';
+      emit('lightbox:open', { src: src, label: text });
+    }
+
+    // Public API (für seitenspezifische Erweiterungen, z.B. Schriften-Switcher).
+    dialog.__lightbox = {
+      open: open,
+      openAt: openAt,
+      close: close,
+      step: step,
+      get index() { return currentIndex; },
+      get group() { return currentGroup; },
+      setIndex: function (i) {
+        if (i < 0 || i >= currentGroup.length) return;
+        currentIndex = i;
+        render();
+      },
+    };
+  })();
+</script>

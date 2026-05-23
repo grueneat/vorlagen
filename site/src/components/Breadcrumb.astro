@@ -8,14 +8,14 @@ interface Crumb {
 }
 const { items } = Astro.props as { items: Crumb[] };
 ---
-<nav aria-label="Brotkrümel-Navigation" style="margin: 0 0 1.25rem 0;">
-  <ol style="list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; padding: 0; margin: 0; font-size: 0.9rem;">
+<nav class="app-breadcrumb" aria-label="Brotkrümel-Navigation">
+  <ol>
     {items.map((c, i) => (
-      <li style="display: flex; align-items: center; gap: 0.4rem;">
+      <li>
         {c.href
           ? <a href={c.href}>{c.label}</a>
-          : <span aria-current="page" style="color: var(--muted);">{c.label}</span>}
-        {i < items.length - 1 && <span aria-hidden="true" style="color: var(--muted);">›</span>}
+          : <span aria-current="page">{c.label}</span>}
+        {i < items.length - 1 && <span aria-hidden="true">›</span>}
       </li>
     ))}
   </ol>

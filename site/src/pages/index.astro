@@ -43,34 +43,28 @@ for (const g of groups.values()) {
 }
 ---
 <Base title="Vorlagen-Galerie">
-  <h1>Vorlagen-Galerie</h1>
+  <h1 class="gat-headline">Vorlagen-Galerie</h1>
   <p>Skelett-Vorlagen für Falzflyer, Plakate, Postkarten, Zeitungen und mehr. Datei runterladen, in Scribus öffnen, eigene Inhalte einsetzen.</p>
-  <a
-    href={url('experiments/')}
-    style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; padding: 1rem 1.25rem; background: var(--gruen-dunkel); color: white; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
-  >
+  <a href={url('experiments/')} class="app-cta app-cta--first">
     <div>
-      <strong style="display: block; font-size: 1.05rem;">Design-Experimente</strong>
-      <span style="font-size: 0.9em; opacity: 0.9;">Click-to-rank Voting auf Layout-Varianten — Hypothesen von mehreren LLMs.</span>
+      <strong class="app-cta__title">Design-Experimente</strong>
+      <span class="app-cta__sub">Click-to-rank Voting auf Layout-Varianten — Hypothesen von mehreren LLMs.</span>
     </div>
-    <span style="font-size: 0.9em; padding: 0.4rem 0.8rem; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; white-space: nowrap;">Ansehen →</span>
+    <span class="app-cta__action">Ansehen →</span>
   </a>
 
-  <a
-    href={url('schriften/')}
-    style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; padding: 1rem 1.25rem; background: var(--gruen-dunkel); color: white; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
-  >
+  <a href={url('schriften/')} class="app-cta">
     <div>
-      <strong style="display: block; font-size: 1.05rem;">Freie Schriften</strong>
-      <span style="font-size: 0.9em; opacity: 0.9;">Vergleich freier Gotham-Alternativen am Flyer-Beispiel — fünf SIL-OFL-Schriften gegenübergestellt.</span>
+      <strong class="app-cta__title">Freie Schriften</strong>
+      <span class="app-cta__sub">Vergleich freier Gotham-Alternativen am Flyer-Beispiel — fünf SIL-OFL-Schriften gegenübergestellt.</span>
     </div>
-    <span style="font-size: 0.9em; padding: 0.4rem 0.8rem; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; white-space: nowrap;">Ansehen →</span>
+    <span class="app-cta__action">Ansehen →</span>
   </a>
 
-  <h2 style="margin-top: 2.5rem;">Vorlagen-Typen</h2>
-  <p style="color: #666; margin-top: -0.25rem;">{orderedCategories.length} Typen · {templates.length} Varianten</p>
+  <h2 class="gat-headline" style="margin-top: 2.5rem;">Vorlagen-Typen</h2>
+  <p style="color: var(--gat-web-text-mute); margin-top: -0.25rem;">{orderedCategories.length} Typen · {templates.length} Varianten</p>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+  <div class="app-card-grid">
     {orderedCategories.map(cat => {
       const g = groups.get(cat)!;
       const cover = pickPreview(g.items);
@@ -78,17 +72,17 @@ for (const g of groups.values()) {
       return (
         <a
           href={url(`typ/${cat}/`)}
-          style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;"
+          class="app-card"
         >
           {cover && (
-            <div style="aspect-ratio: 3 / 4; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-              <img src={cover} alt={g.label} loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            <div class="app-card__media">
+              <img src={cover} alt={g.label} loading="lazy" />
             </div>
           )}
-          <div style="padding: 1rem;">
-            <h3 style="margin: 0 0 0.5rem 0;">{g.label}</h3>
-            <span style="color: #666; font-size: 0.85em;">{n} {n === 1 ? 'Variante' : 'Varianten'}</span>
-            <ul style="margin: 0.5rem 0 0 0; padding-left: 1rem; color: #666; font-size: 0.85em;">
+          <div class="app-card__body">
+            <h3 class="gat-headline">{g.label}</h3>
+            <span class="app-card__meta">{n} {n === 1 ? 'Variante' : 'Varianten'}</span>
+            <ul class="app-card__list">
               {g.items.slice(0, 3).map(t => (
                 <li>{t.data.variant_label ?? t.data.title}</li>
               ))}

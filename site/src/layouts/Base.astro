@@ -1,4 +1,5 @@
 ---
+import '../styles/app.css';
 const { title } = Astro.props;
 const BASE = import.meta.env.BASE_URL;
 const url = (p: string) => BASE + p.replace(/^\//, '');
@@ -17,9 +18,11 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
         --gruen-hell: var(--gat-color-hellgruen);
         --gelb: var(--gat-color-gelb);
         --magenta: var(--gat-color-magenta);
-        --bg: #fafafa;
-        --text: #222;
-        --muted: #666;
+        /* Lokale Site-Aliase auf DS-Web-Tokens (Phase 2, #126).
+           Alle Werte verweisen jetzt aufs DS — drift gestoppt. */
+        --bg: var(--gat-web-bg);
+        --text: var(--gat-web-text);
+        --muted: var(--gat-web-text-mute);
       }
       * { box-sizing: border-box; }
       body {
@@ -31,7 +34,8 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
       /* Header-Styles kommen aus dem Design-System (.gat-header --dunkel). */
       main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
       footer { color: var(--muted); padding: 2rem; text-align: center; font-size: 0.85em; }
-      h1, h2, h3 { color: var(--gruen-dunkel); }
+      /* Headlines opt-in via .gat-headline aus dem Design-System
+         (siehe app.css). Tag-Selektor entfernt — Phase 2, #126. */
       a { color: var(--gruen-dunkel); }
     </style>
   </head>
