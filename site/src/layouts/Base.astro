@@ -11,10 +11,12 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
     <link rel="stylesheet" href="https://grueneat.github.io/design-system/design-system.css" />
     <style is:global>
       :root {
-        --gruen-dunkel: #2a734f;
-        --gruen-hell: #6abf2c;
-        --gelb: #ffeb00;
-        --magenta: #e6177e;
+        /* Lokale Marken-Aliase auf DS-Tokens (Phase 0, #126).
+           Lokale Namen bleiben, Werte verweisen aufs Design-System. */
+        --gruen-dunkel: var(--gat-color-dunkelgruen);
+        --gruen-hell: var(--gat-color-hellgruen);
+        --gelb: var(--gat-color-gelb);
+        --magenta: var(--gat-color-magenta);
         --bg: #fafafa;
         --text: #222;
         --muted: #666;

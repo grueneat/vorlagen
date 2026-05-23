@@ -33,12 +33,12 @@ const avoid = emp.abraten.map((a) => a.slug);
 type Tag = { label: string; fg: string; bg: string } | null;
 const tagFor = (slug: string): Tag => {
   if (slug === primary) return { label: 'Empfehlung', fg: '#0f5c2e', bg: '#e3f5e8' };
-  if (slug === secondary) return { label: 'Zweitwahl', fg: '#2a734f', bg: '#eaf3ee' };
+  if (slug === secondary) return { label: 'Zweitwahl', fg: '#257639', bg: '#eaf3ee' };
   if (avoid.includes(slug)) return { label: 'Nicht empfohlen', fg: '#b3261e', bg: '#fbe9e7' };
   return null;
 };
 const dotColor = (v: number) =>
-  v >= 3 ? '#0f5c2e' : v === 2 ? '#6abf2c' : v === 1 ? '#e69500' : '#b3261e';
+  v >= 3 ? '#0f5c2e' : v === 2 ? '#3e8a25' : v === 1 ? '#e69500' : '#b3261e';
 
 // Live web-font specimens. The five SIL-OFL alternatives are self-hosted
 // (site/public/fonts/) and embedded via @font-face. Tahoma is a proprietary
@@ -78,10 +78,10 @@ const fontFaceCss = specimens
 // Brand palette (Base.astro :root) — shown as quick reference for the
 // headline-on-colour samples.
 const palette = [
-  { name: 'Grün dunkel', hex: '#2a734f' },
-  { name: 'Grün hell', hex: '#6abf2c' },
-  { name: 'Gelb', hex: '#ffeb00' },
-  { name: 'Magenta', hex: '#e6177e' },
+  { name: 'Grün dunkel', hex: '#257639' },
+  { name: 'Grün hell', hex: '#3e8a25' },
+  { name: 'Gelb', hex: '#ffed00' },
+  { name: 'Magenta', hex: '#e6007e' },
 ];
 const HEADLINE = 'Mehr Grün für Niederösterreich.';
 const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnop 0123456789 ßäöü €';
@@ -128,9 +128,9 @@ const KLEINTEXT =
       <div style="font-size: 1.25rem; font-weight: bold; color: #0f5c2e; margin: 0.15rem 0 0.35rem 0;">{emp.primaer.name}</div>
       <p style="margin: 0; color: #1d3b2a; font-size: 0.94em;">{emp.primaer.text}</p>
     </div>
-    <div style="background: #eaf3ee; border-left: 6px solid #2a734f; border-radius: 8px; padding: 1.1rem 1.25rem;">
-      <div style="font-size: 0.78em; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; color: #2a734f;">Zweitwahl</div>
-      <div style="font-size: 1.15rem; font-weight: bold; color: #2a734f; margin: 0.15rem 0 0.35rem 0;">{emp.zweitwahl.name}</div>
+    <div style="background: #eaf3ee; border-left: 6px solid #257639; border-radius: 8px; padding: 1.1rem 1.25rem;">
+      <div style="font-size: 0.78em; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; color: #257639;">Zweitwahl</div>
+      <div style="font-size: 1.15rem; font-weight: bold; color: #257639; margin: 0.15rem 0 0.35rem 0;">{emp.zweitwahl.name}</div>
       <p style="margin: 0; color: #2c3b33; font-size: 0.94em;">{emp.zweitwahl.text}</p>
     </div>
     <div style="background: #fbe9e7; border-left: 6px solid #b3261e; border-radius: 8px; padding: 1.1rem 1.25rem;">
@@ -332,7 +332,7 @@ const KLEINTEXT =
             // recover the (possibly dash-containing) font name reliably.
             const label = `${f.name} · Seite ${pg.page}`;
             return (
-              <div style={`background: white; padding: 0.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);${f.original ? ' outline: 2px solid #6abf2c;' : ''}`}>
+              <div style={`background: white; padding: 0.5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1);${f.original ? ' outline: 2px solid #3e8a25;' : ''}`}>
                 {cell.thumb ? (
                   <a
                     href={url(cell.hires || cell.thumb)}
@@ -419,7 +419,7 @@ const KLEINTEXT =
             'border: none; border-radius: 4px; padding: 0.35rem 0.7rem; ' +
             'font-size: 0.8rem; cursor: pointer; ' +
             (i === current
-              ? 'background: #6abf2c; color: #222; font-weight: bold;'
+              ? 'background: #3e8a25; color: #222; font-weight: bold;'
               : 'background: rgba(255,255,255,0.85); color: #222;');
           btn.addEventListener('click', function (ev) {
             ev.stopPropagation();
