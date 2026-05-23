@@ -1,0 +1,480 @@
+/* ============================================================
+ * App-spezifische Stile (Phase 2, #126).
+ *
+ * Alles, was nicht ins zentrale Design-System gehört, weil
+ * es nur in dieser Vorlagen-Site auftritt. Drei Gruppen:
+ *
+ *   - .app-lightbox*    Bildvorschau-Overlay (3-fach Dedup)
+ *   - .app-card-grid    Wiederkehrendes Galerie-Grid + weiße Karte
+ *   - .app-variant-*,   Voting-Engine (Issue #31/#33)
+ *     .app-checkmark*,
+ *     .app-ranked-*,
+ *     .app-rank-*,
+ *     .app-drag-handle
+ *   - .app-cta          Index-CTA-Banner als Callout-Variante
+ *   - .app-status-tag   Schriften-Bewertungs-Lozenge
+ *   - .app-toast        Voting-Status-Toast (#33, lokal bis DS-v2.2)
+ *
+ * Alle Farben/Radien/Schatten beziehen sich auf DS-Tokens
+ * (--gat-color-*, --gat-web-*, --gat-radius-*, --gat-space-*).
+ * Lokale Aliase --gruen-* sind in Base.astro auf DS-Token gemapt.
+ * ============================================================ */
+
+/* ---- .gat-headline override für die Galerie-Headlines ---- */
+/* Die DS-Headline ist auf H1-Größe ausgelegt; auf der Vorlagen-Site
+   nutzen wir sie als Marker statt der ehemaligen Tag-Selector-Regel
+   `h1, h2, h3 { color: var(--gruen-dunkel) }`. */
+.gat-headline {
+  color: var(--gat-color-dunkelgruen);
+}
+
+/* ============================================================
+ * Lightbox — eine Implementierung statt drei
+ * (Issue #126 Phase 2: konsolidiert templates/[...id].astro,
+ *  experiments/[id].astro, schriften/index.astro)
+ *
+ * Markup: <dialog class="gat-modal gat-modal--wide gat-modal--blur app-lightbox">
+ *   ↳ .app-lightbox__close      (Schließen-Knopf)
+ *   ↳ .app-lightbox__label      (Beschriftung oben links)
+ *   ↳ .app-lightbox__prev/next  (Navigation, optional)
+ *   ↳ .app-lightbox__image      (Bild zentriert)
+ *   ↳ .app-lightbox__extras     (Slot, z.B. Schrift-Switcher)
+ *
+ * Das Dialog-Element bringt focus-trap, Esc-Close, Backdrop
+ * von Haus aus mit; die JS-Schicht muss nur showModal/close
+ * + Nav/Swipe steuern.
+ * ============================================================ */
+.app-lightbox {
+  /* Lightbox überschreibt die Modal-Max-Größe — Bilder wollen
+     so viel Platz wie möglich. */
+  max-width: 96vw;
+  max-height: 96vh;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  color: white;
+  overflow: visible;
+}
+.app-lightbox::backdrop {
+  background: rgba(0, 0, 0, 0.85);
+}
+.app-lightbox__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: white;
+  color: black;
+  border: none;
+  border-radius: var(--gat-web-radius-control);
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  z-index: 2;
+}
+.app-lightbox__label {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  color: white;
+  font-size: 0.95rem;
+  z-index: 2;
+}
+.app-lightbox__prev,
+.app-lightbox__next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  color: black;
+  border: none;
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+}
+.app-lightbox__prev { left: 0.75rem; }
+.app-lightbox__next { right: 0.75rem; }
+.app-lightbox__image {
+  max-width: calc(100vw - 7rem);
+  max-height: calc(100vh - 7rem);
+  display: block;
+  object-fit: contain;
+  cursor: zoom-out;
+  margin: auto;
+}
+.app-lightbox__extras {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  z-index: 2;
+}
+/* Trigger-Container für anklickbare Bilder/Karten. */
+.app-lightbox-trigger {
+  display: block;
+  background: white;
+  padding: 0.5rem;
+  box-shadow: var(--gat-web-shadow);
+  text-decoration: none;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+/* Schriften-Switcher-Tabs in der Lightbox-Extras-Leiste. */
+.app-schrift-tab {
+  border: none;
+  border-radius: var(--gat-web-radius-control);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--gat-web-text);
+}
+.app-schrift-tab--active {
+  background: var(--gat-color-hellgruen);
+  color: var(--gat-web-text);
+  font-weight: bold;
+}
+
+/* ============================================================
+ * Galerie-Grid + weiße Karten (#126 Phase 2, App-Namespace)
+ * Wiederkehrend in index.astro, typ/[category].astro,
+ * experiments/index.astro.
+ * ============================================================ */
+.app-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+.app-card-grid--wide {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+.app-card {
+  background: white;
+  border-radius: var(--gat-web-radius-card);
+  box-shadow: var(--gat-web-shadow);
+  overflow: hidden;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s;
+}
+.app-card__media {
+  aspect-ratio: 3 / 4;
+  background: var(--gat-web-surface-sunk);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.app-card__media img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.app-card__body {
+  padding: 1rem;
+}
+.app-card__body h3 {
+  margin: 0 0 0.5rem 0;
+}
+.app-card__meta {
+  color: var(--gat-web-text-mute);
+  font-size: 0.85em;
+}
+.app-card__list {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1rem;
+  color: var(--gat-web-text-mute);
+  font-size: 0.85em;
+}
+
+/* ============================================================
+ * CTA-Banner (Index-Seite, .app-cta = Variante über .gat-callout)
+ * ============================================================ */
+.app-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  background: var(--gat-color-dunkelgruen);
+  color: white;
+  border-radius: var(--gat-web-radius-card);
+  text-decoration: none;
+  box-shadow: var(--gat-web-shadow);
+  margin-top: 1rem;
+}
+.app-cta--first {
+  margin-top: 1.5rem;
+}
+.app-cta__title {
+  display: block;
+  font-size: 1.05rem;
+}
+.app-cta__sub {
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+.app-cta__action {
+  font-size: 0.9em;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--gat-web-radius-control);
+  white-space: nowrap;
+}
+
+/* ============================================================
+ * Voting-Engine (Issue #31) — App-Namespace .app-*
+ *
+ * Brand-Farben kommen aus DS via --gat-color-* /
+ * --gruen-{dunkel,hell}-Aliase in Base.astro :root.
+ * Touch-Ziele >= 44 x 44 px (CONTEXT 5, WCAG AAA SC 2.5.5).
+ * ============================================================ */
+.app-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.app-variant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.app-variant-card {
+  position: relative;
+  background: white;
+  padding: 0.75rem;
+  box-shadow: var(--gat-web-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.app-variant-card img {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: zoom-in;
+}
+
+/* Sibling-to-image Auswahl-Knopf, oben rechts.
+   Hit-Zone >= 44x44 (CONTEXT 5 + WCAG AAA); sichtbares Icon ~32px. */
+.app-checkmark {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--gat-color-dunkelgruen);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.app-checkmark:hover {
+  background: white;
+  transform: scale(1.05);
+}
+.app-checkmark:focus-visible {
+  outline: 3px solid var(--gat-color-hellgruen);
+  outline-offset: 2px;
+}
+.app-checkmark-visual {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  position: relative;
+}
+.app-checkmark[aria-pressed='true'] {
+  background: var(--gat-color-hellgruen);
+  border-color: var(--gat-color-dunkelgruen);
+}
+.app-checkmark[aria-pressed='true'] .app-checkmark-visual::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 8px;
+  border-left: 3px solid white;
+  border-bottom: 3px solid white;
+  transform: translate(-50%, -65%) rotate(-45deg);
+}
+
+/* Rang-Badge, oben links am Auswahl-Knopf.
+   Hidden bis eine Position vergeben ist. */
+.app-position-badge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: white;
+  border: 1.5px solid var(--gat-color-dunkelgruen);
+  color: var(--gat-color-dunkelgruen);
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sortierbare Rangliste */
+.app-ranked-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.app-ranked-row {
+  min-height: 56px; /* CLS-Reserve beim Insert */
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 0.4rem 0.6rem;
+  display: grid;
+  grid-template-columns: 44px 44px 44px 48px 1fr 44px;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+/* `touch-action: none` AUSSCHLIESSLICH auf .app-drag-handle —
+   auf der Zeile oder Liste killt es das Page-Scrolling auf Mobil
+   (Top-Pitfall #5 aus Issue #31). */
+.app-drag-handle {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4em;
+  color: var(--gat-web-text-mute);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.app-drag-handle:active {
+  cursor: grabbing;
+}
+
+.app-ranked-row .app-arrow-up,
+.app-ranked-row .app-arrow-down,
+.app-ranked-row .app-remove-btn {
+  min-width: 44px;
+  min-height: 44px;
+  background: white;
+  border: 1px solid var(--gat-web-hairline);
+  border-radius: var(--gat-web-radius-control);
+  font-size: 1.1em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.app-ranked-row .app-arrow-up:focus-visible,
+.app-ranked-row .app-arrow-down:focus-visible,
+.app-ranked-row .app-remove-btn:focus-visible {
+  outline: 3px solid var(--gat-color-hellgruen);
+  outline-offset: 2px;
+}
+.app-ranked-row .app-thumbnail {
+  width: 48px;
+  height: 48px;
+  max-width: 48px;
+  max-height: 48px;
+  object-fit: cover;
+}
+.app-ranked-row .app-title {
+  font-size: 0.9rem;
+  color: var(--gat-web-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-rank-empty {
+  color: var(--gat-web-text-soft);
+  font-style: italic;
+  margin: 0.6rem 0 0 0;
+}
+
+/* ---- Voting-Stimme: Submission-Block (#33) -------------------- */
+.app-vote-submission {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.app-vote-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ---- Voting-Stimme: Toast (#33, bis .gat-toast in DS-v2.2) ---- */
+.app-toast {
+  display: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--gat-web-radius-control);
+  font-size: 0.9em;
+}
+.app-toast--ok {
+  background: var(--gat-web-tag-ok-bg);
+  border: 1px solid var(--gat-color-dunkelgruen);
+  color: var(--gat-web-tag-ok-text);
+}
+.app-toast--error {
+  background: var(--gat-web-tag-error-bg);
+  border: 1px solid var(--gat-web-tag-error-text);
+  color: var(--gat-web-tag-error-text);
+}
+
+/* ---- Mobile (~iPhone SE Breite) ------------------------------- */
+@media (max-width: 640px) {
+  .app-variant-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .app-ranked-list {
+    width: 100%;
+  }
+  .app-ranked-row {
+    grid-template-columns: 40px 40px 40px 40px 1fr 40px;
+    gap: 0.3rem;
+  }
+  .app-drag-handle,
+  .app-ranked-row .app-arrow-up,
+  .app-ranked-row .app-arrow-down,
+  .app-ranked-row .app-remove-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

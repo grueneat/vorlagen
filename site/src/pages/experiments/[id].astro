@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Lightbox from '../../components/Lightbox.astro';
 import { getCollection } from 'astro:content';
 
 export async function getStaticPaths() {
@@ -390,14 +391,11 @@ const variantsForJs = hypotheses.map((h) => ({
         }
       </style>
 
-      <!-- Lightbox overlay (mirrors templates/[...id].astro pattern) -->
-      <div id="exp-lightbox" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; cursor: zoom-out; padding: 2rem; box-sizing: border-box;">
-        <button id="exp-lightbox-close" type="button"
-                style="position: absolute; top: 1rem; right: 1rem; background: white; color: black; border: none; border-radius: 4px; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; z-index: 1;">Schließen ✕</button>
-        <div id="exp-lightbox-label" style="position: absolute; top: 1rem; left: 1rem; color: white; font-size: 0.95rem;"></div>
-        <img id="exp-lightbox-image" src="" alt=""
-             style="max-width: 100%; max-height: 100%; margin: auto; display: block; object-fit: contain;" />
-      </div>
+      <!-- Shared lightbox component (#126 Phase 2). Variant cards öffnen
+           den Dialog programmatisch via window.expLightbox.open() weil die
+           Karten zur Laufzeit aus JSON gerendert werden (keine statischen
+           [data-lightbox-target]-Trigger im DOM). -->
+      <Lightbox id="exp-lightbox" />
 
       <script id="exp-data" type="application/json" set:html={JSON.stringify({
         expId,
@@ -574,34 +572,14 @@ const variantsForJs = hypotheses.map((h) => ({
           var exportBtn = document.getElementById('exp-export');
           if (exportBtn) exportBtn.addEventListener('click', doExport);
 
-          // ---- Lightbox ----
-          var lightbox = document.getElementById('exp-lightbox');
-          var lightImg = document.getElementById('exp-lightbox-image');
-          var lightLabel = document.getElementById('exp-lightbox-label');
-          var lightClose = document.getElementById('exp-lightbox-close');
+          // ---- Lightbox (geteilte Komponente, Issue #126 Phase 2) ----
+          // Backdrop-Klick / Esc / focus-trap kommen vom <dialog>-Element;
+          // wir öffnen nur programmatisch über die `openAt()`-API.
+          var lightboxDialog = document.getElementById('exp-lightbox');
           function openLightbox(href, text) {
-            if (!lightbox || !lightImg || !lightLabel) return;
-            lightImg.src = href;
-            lightImg.alt = text || '';
-            lightLabel.textContent = text || '';
-            lightbox.style.display = 'block';
-            document.body.style.overflow = 'hidden';
+            if (!lightboxDialog || !lightboxDialog.__lightbox) return;
+            lightboxDialog.__lightbox.openAt(href, text);
           }
-          function closeLightbox() {
-            if (!lightbox || !lightImg) return;
-            lightbox.style.display = 'none';
-            lightImg.src = '';
-            document.body.style.overflow = '';
-          }
-          if (lightbox) {
-            lightbox.addEventListener('click', function (ev) {
-              if (ev.target === lightbox || ev.target === lightImg) closeLightbox();
-            });
-          }
-          if (lightClose) lightClose.addEventListener('click', closeLightbox);
-          document.addEventListener('keydown', function (ev) {
-            if (ev.key === 'Escape' && lightbox && lightbox.style.display === 'block') closeLightbox();
-          });
 
           // ---- Boot ----
           // Default to rank mode when ≥3 variants (CONTEXT decision 2);
@@ -749,15 +727,9 @@ const variantsForJs = hypotheses.map((h) => ({
               img.loading = 'lazy';
               img.addEventListener('click', function () {
                 // Image-click opens lightbox (parity with direct-pick block).
-                var lightbox = document.getElementById('exp-lightbox');
-                var lightImg = document.getElementById('exp-lightbox-image');
-                var lightLabel = document.getElementById('exp-lightbox-label');
-                if (!lightbox || !lightImg || !lightLabel) return;
-                lightImg.src = v.hires;
-                lightImg.alt = v.name || '';
-                lightLabel.textContent = v.name || '';
-                lightbox.style.display = 'block';
-                document.body.style.overflow = 'hidden';
+                // Geteilte Komponente (Issue #126 Phase 2).
+                var lb = document.getElementById('exp-lightbox');
+                if (lb && lb.__lightbox) lb.__lightbox.openAt(v.hires, v.name || '');
               });
               card.appendChild(img);
 
