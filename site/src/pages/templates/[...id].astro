@@ -41,7 +41,7 @@ const catLabel = t.data.category_label ?? 'Sonstige';
         return (
           <a
             href={url(hiresSrc)}
-            class="app-lightbox-trigger"
+            class="app-lightbox-trigger app-preview-grid__item"
             data-lightbox-target="preview-lightbox"
             data-lightbox-group="default"
             data-lightbox-index={i}
@@ -49,7 +49,7 @@ const catLabel = t.data.category_label ?? 'Sonstige';
             data-label={p.label}
             aria-label={`Vergrößerte Vorschau öffnen: ${p.label}`}
           >
-            <img src={url(p.src)} alt={p.label} loading="lazy" class="app-preview-grid__img" />
+            <img src={url(p.src)} alt={p.label} loading="lazy" />
             <div class="app-preview-grid__caption">{p.label}</div>
           </a>
         );

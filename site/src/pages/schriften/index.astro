@@ -159,17 +159,18 @@ const KLEINTEXT =
     Bewertung: ●●● sehr gut · ●●○ gut · ●○○ schwach · ○○○ ungenügend.
     Tabelle ggf. seitlich scrollen.
   </p>
-  <div style="overflow-x: auto; margin: 1rem 0 2.5rem 0;">
-    <table style="border-collapse: collapse; width: 100%; min-width: 760px; font-size: 0.86em;">
+  <div class="app-eval-table-wrap">
+    <table class="app-eval-table">
       <thead>
         <tr>
-          <th style="text-align: left; padding: 0.5rem 0.6rem; border-bottom: 2px solid var(--gat-web-hairline); position: sticky; left: 0; background: var(--bg); z-index: 1;">Kriterium</th>
+          <th class="app-eval-table__rowhead app-eval-table__rowhead--top">Kriterium</th>
           {cols.map((slug) => {
             const t = tagFor(slug);
+            const mod = t?.mod === 'error' ? 'error' : t?.mod;
             return (
-              <th style={`padding: 0.5rem 0.6rem; border-bottom: 2px solid var(--gat-web-hairline); vertical-align: bottom; min-width: 92px;${t ? ` background: var(--gat-web-tag-${t.mod === 'error' ? 'error' : t.mod}-bg); background: color-mix(in srgb, var(--gat-web-tag-${t.mod === 'error' ? 'error' : t.mod}-bg) 65%, white);` : ''}`}>
+              <th class="app-eval-table__col" style={t ? `background: color-mix(in srgb, var(--gat-web-tag-${mod}-bg) 65%, white);` : ''}>
                 <div style={`font-weight: bold; color: ${t ? t.accent : 'var(--gat-web-text)'};`}>{shortName(slug)}</div>
-                {t && <span class={`gat-tag gat-tag--${t.mod}`} style="margin-top: 0.25rem; font-size: 0.72em;">{t.label}</span>}
+                {t && <span class={`gat-tag gat-tag--${t.mod} app-eval-table__col-tag`}>{t.label}</span>}
               </th>
             );
           })}
@@ -177,20 +178,21 @@ const KLEINTEXT =
       </thead>
       <tbody>
         {krit.map((k, ri) => (
-          <tr style={ri % 2 ? 'background: var(--gat-web-surface-sunk);' : ''}>
-            <th style={`text-align: left; font-weight: 600; padding: 0.5rem 0.6rem; vertical-align: top; position: sticky; left: 0; background: ${ri % 2 ? 'var(--gat-web-surface-sunk)' : 'var(--bg)'}; z-index: 1;`}>
+          <tr class={ri % 2 ? 'app-eval-table__row--alt' : ''}>
+            <th class={`app-eval-table__rowhead${ri % 2 ? ' app-eval-table__rowhead--alt' : ''}`}>
               {k.label}
-              {k.hinweis && <div style="font-weight: 400; color: var(--muted); font-size: 0.86em;">{k.hinweis}</div>}
+              {k.hinweis && <div class="app-eval-table__rowhead-hint">{k.hinweis}</div>}
             </th>
             {cols.map((slug) => {
               const v = k.werte[slug];
               const t = tagFor(slug);
+              const mod = t?.mod === 'error' ? 'error' : t?.mod;
               return (
-                <td style={`padding: 0.5rem 0.6rem; vertical-align: top; text-align: ${k.kind === 'text' ? 'left' : 'center'};${t && k.label === 'Gesamturteil' ? ` background: color-mix(in srgb, var(--gat-web-tag-${t.mod === 'error' ? 'error' : t.mod}-bg) 65%, white);` : ''}`}>
+                <td class={`app-eval-table__cell app-eval-table__cell--${k.kind}`} style={t && k.label === 'Gesamturteil' ? `background: color-mix(in srgb, var(--gat-web-tag-${mod}-bg) 65%, white);` : ''}>
                   {k.kind === 'rating' && (
-                    <span title={`${v} von 3`} style="white-space: nowrap;">
+                    <span class="app-eval-rating" title={`${v} von 3`}>
                       {[1, 2, 3].map((i) => (
-                        <span style={`display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 1px; background: ${i <= v ? dotColor(v) : 'var(--gat-web-hairline)'};`}></span>
+                        <span class="app-eval-rating__dot" style={`background: ${i <= v ? dotColor(v) : 'var(--gat-web-hairline)'};`}></span>
                       ))}
                     </span>
                   )}
@@ -216,34 +218,34 @@ const KLEINTEXT =
     Schrift — isoliert vom Layout, damit sich die Buchstabenformen direkt
     vergleichen lassen.
   </p>
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 1.25rem; margin: 1.25rem 0 2.5rem 0;">
+  <div class="app-specimen-grid">
     {specimens.map((s) => {
       const t = tagFor(s.slug);
       const fam = famOf(s);
       return (
-        <div style={`background: white; border-radius: var(--gat-web-radius-card); box-shadow: var(--gat-web-shadow); padding: 1.1rem 1.25rem;${t ? ` border-top: 4px solid ${t.accent};` : ''}`}>
-          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;">
+        <div class="app-specimen" style={t ? `border-top: 4px solid ${t.accent};` : ''}>
+          <div class="app-specimen__head">
             <h3 class="gat-headline" style="margin: 0;">{s.name}</h3>
             {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
-          <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.6rem; line-height: 1.15; color: var(--gruen-dunkel); margin: 0.6rem 0 0.7rem 0;`}>
+          <div class="app-specimen__headline" style={`font-family: ${fam};`}>
             {HEADLINE}
           </div>
-          <div style="border-top: 1px solid var(--gat-web-hairline); padding-top: 0.5rem;">
-            <div style={`font-family: ${fam}; font-weight: 400; font-size: 1.05rem;`}>Regular — Fließtext</div>
-            <div style={`font-family: ${fam}; font-weight: 700; font-size: 1.05rem;`}>Bold — Auszeichnung</div>
-            <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.05rem;`}>
+          <div class="app-specimen__weights">
+            <div style={`font-family: ${fam}; font-weight: 400;`}>Regular — Fließtext</div>
+            <div style={`font-family: ${fam}; font-weight: 700;`}>Bold — Auszeichnung</div>
+            <div style={`font-family: ${fam}; font-weight: 900;`}>
               {s.web ? 'Black — Headline' : 'Bold — kein schwererer Schnitt'}
             </div>
           </div>
-          <div style={`font-family: ${fam}; font-weight: 400; font-size: 0.82rem; color: var(--gat-web-text); word-break: break-word; margin-top: 0.6rem;`}>
+          <div class="app-specimen__glyphs" style={`font-family: ${fam};`}>
             {GLYPHS}
           </div>
-          <div style={`font-family: ${fam}; font-weight: 400; font-size: 0.7rem; line-height: 1.45; color: var(--gat-web-text-soft); margin-top: 0.5rem;`}>
+          <div class="app-specimen__copy" style={`font-family: ${fam};`}>
             {KLEINTEXT}
           </div>
           {!s.web && (
-            <p style="margin: 0.7rem 0 0 0; font-size: 0.78em; color: var(--gat-web-tag-error-text);">
+            <p class="app-specimen__warning">
               Tahoma ist proprietär und wird hier aus der lokal installierten
               Systemschrift angezeigt (auf Windows vorhanden) — sonst eine
               Ersatzschrift. Tahoma hat nur zwei Schnitte: für Headlines fehlt
@@ -266,25 +268,25 @@ const KLEINTEXT =
     Die Headline-Behandlung des Flyer-Covers (weiß auf Grün, ein Akzentwort
     in Gelb) — je Schrift isoliert, plus die verbindliche Markenpalette.
   </p>
-  <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0 1.25rem 0;">
+  <div class="app-palette">
     {palette.map((c) => (
-      <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.82em;">
-        <span style={`width: 26px; height: 26px; border-radius: var(--gat-web-radius-control); background: ${c.hex}; border: 1px solid rgba(0,0,0,0.15);`}></span>
+      <div class="app-palette__chip">
+        <span class="app-palette__swatch" style={`background: ${c.hex};`}></span>
         <span><strong>{c.name}</strong><br /><span style="color: var(--muted);">{c.hex}</span></span>
       </div>
     ))}
   </div>
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2.5rem;">
+  <div class="app-cover-grid">
     {specimens.map((s) => {
       const fam = famOf(s);
       return (
-        <div style="border-radius: var(--gat-web-radius-card); overflow: hidden; box-shadow: var(--gat-web-shadow);">
-          <div style="background: var(--gruen-dunkel); padding: 1.4rem 1.25rem;">
-            <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.5rem; line-height: 1.1; color: white;`}>
+        <div class="app-cover">
+          <div class="app-cover__hero">
+            <div class="app-cover__title" style={`font-family: ${fam};`}>
               Mehr <span style="color: var(--gelb);">Grün</span> wählen.
             </div>
           </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: white; font-size: 0.82em;">
+          <div class="app-cover__caption">
             <span style="font-weight: bold;">{s.name}</span>
             {!s.web && <span style="color: var(--gat-web-tag-error-text);">Systemschrift</span>}
           </div>
@@ -295,23 +297,23 @@ const KLEINTEXT =
 
   <!-- ============ 5. Schriften am Flyer — Karten ============ -->
   <h2 class="gat-headline">Schriften im Überblick</h2>
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; margin: 1.25rem 0 2.5rem 0;">
+  <div class="app-font-grid">
     {fonts.map((f) => {
       const t = tagFor(f.slug);
       const proprietary = f.original || f.license.startsWith('Propriet');
       return (
-        <div style={`background: white; border-radius: var(--gat-web-radius-card); box-shadow: var(--gat-web-shadow); padding: 1.25rem;${t ? ` border-left: 4px solid ${t.accent};` : ''}`}>
-          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;">
+        <div class="app-font-card" style={t ? `border-left: 4px solid ${t.accent};` : ''}>
+          <div class="app-font-card__head">
             <h3 class="gat-headline" style="margin: 0 0 0.25rem 0;">{f.name}</h3>
             {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
-          <div style="color: var(--gat-web-text-mute); font-size: 0.85em; margin-bottom: 0.6rem;">
+          <div class="app-font-card__meta">
             {proprietary
               ? <span><strong style="color: var(--gat-web-tag-error-text);">Proprietär</strong> · {f.license} · <a href={f.source}>Schrift-Info</a></span>
               : <span>{f.license} · <a href={f.source}>Quelle</a></span>}
           </div>
-          <p style="margin: 0 0 0.75rem 0; color: var(--gat-web-text); font-size: 0.9em;">{f.summary}</p>
-          <div style="font-size: 0.85em;">
+          <p class="app-font-card__summary">{f.summary}</p>
+          <div class="app-font-card__action">
             {f.pdf
               ? <a href={url(f.pdf)}>{f.original ? 'Original-Flyer als PDF' : `Flyer als PDF (${f.name})`}</a>
               : f.slug === 'tahoma'
@@ -331,18 +333,18 @@ const KLEINTEXT =
     Umschalter zwischen den Schrift-Versionen.
   </p>
 
-  <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 1.5rem;">
+  <div class="app-page-stack">
     {pages.map(pg => (
       <section>
         <h3 class="gat-headline" style="margin: 0 0 0.75rem 0;">Seite {pg.page}</h3>
-        <div style={`display: grid; grid-template-columns: repeat(${fonts.length}, 1fr); gap: 1rem;`}>
+        <div class="app-page-cols" style={`grid-template-columns: repeat(${fonts.length}, 1fr);`}>
           {fonts.map((f, fi) => {
             const cell = pg.fonts[f.slug] || { thumb: null, hires: null };
             // " · " separates the font name from the page so the lightbox can
             // recover the (possibly dash-containing) font name reliably.
             const label = `${f.name} · Seite ${pg.page}`;
             return (
-              <div style={`background: white; padding: 0.5rem; box-shadow: var(--gat-web-shadow);${f.original ? ' outline: 2px solid var(--gat-color-hellgruen);' : ''}`}>
+              <div class={`app-page-cell${f.original ? ' app-page-cell--original' : ''}`}>
                 {cell.thumb ? (
                   <a
                     href={url(cell.hires || cell.thumb)}
@@ -353,17 +355,14 @@ const KLEINTEXT =
                     data-hires={url(cell.hires || cell.thumb)}
                     data-label={label}
                     data-font-name={f.name}
-                    style="display: block; text-decoration: none; color: inherit; cursor: zoom-in;"
                     aria-label={`Vergrößern: ${label}`}
                   >
-                    <img src={url(cell.thumb)} alt={label} loading="lazy" style="width: 100%; height: auto; display: block;" />
+                    <img src={url(cell.thumb)} alt={label} loading="lazy" />
                   </a>
                 ) : (
-                  <div style="aspect-ratio: 3 / 4; display: flex; align-items: center; justify-content: center; background: var(--gat-web-surface-sunk); color: var(--gat-web-text-soft); font-size: 0.8em; text-align: center; padding: 0.5rem;">
-                    Noch nicht gerendert
-                  </div>
+                  <div class="app-page-cell__empty">Noch nicht gerendert</div>
                 )}
-                <div style={`text-align: center; font-size: 0.78em; margin-top: 0.4rem; color: ${f.original ? 'var(--gat-web-text)' : 'var(--gat-web-text-mute)'};${f.original ? ' font-weight: bold;' : ''}`}>{f.name}</div>
+                <div class={`app-page-cell__caption${f.original ? ' app-page-cell__caption--original' : ''}`}>{f.name}</div>
               </div>
             );
           })}

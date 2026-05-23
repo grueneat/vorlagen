@@ -172,7 +172,7 @@ h3.gat-headline {
   gap: 1rem;
   margin: 2rem 0;
 }
-.app-preview-grid__img {
+.app-preview-grid__item img {
   width: 100%;
   height: auto;
   display: block;
@@ -182,6 +182,260 @@ h3.gat-headline {
   font-size: 0.8em;
   margin-top: 0.5rem;
   color: var(--gat-web-text-mute);
+}
+
+/* ============================================================
+ * Schriften-Vergleichsseite (Page-spezifisch)
+ * Komponenten: Specimen-Grid, Cover-Vergleich, Font-Karten,
+ *              Seitenvergleich-Stack, Palette-Chips.
+ * Issue #126 Phase 2: aus Inline-Styles in der Page extrahiert.
+ * ============================================================ */
+.app-specimen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 1.25rem;
+  margin: 1.25rem 0 2.5rem 0;
+}
+.app-specimen {
+  background: white;
+  border-radius: var(--gat-web-radius-card);
+  box-shadow: var(--gat-web-shadow);
+  padding: 1.1rem 1.25rem;
+}
+.app-specimen__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.app-specimen__headline {
+  font-weight: 900;
+  font-size: 1.6rem;
+  line-height: 1.15;
+  color: var(--gruen-dunkel);
+  margin: 0.6rem 0 0.7rem 0;
+}
+.app-specimen__weights {
+  border-top: 1px solid var(--gat-web-hairline);
+  padding-top: 0.5rem;
+  font-size: 1.05rem;
+}
+.app-specimen__glyphs {
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--gat-web-text);
+  word-break: break-word;
+  margin-top: 0.6rem;
+}
+.app-specimen__copy {
+  font-weight: 400;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--gat-web-text-soft);
+  margin-top: 0.5rem;
+}
+.app-specimen__warning {
+  margin: 0.7rem 0 0 0;
+  font-size: 0.78em;
+  color: var(--gat-web-tag-error-text);
+}
+
+/* Bewertungstabelle (schriften/index.astro). */
+.app-eval-table-wrap {
+  overflow-x: auto;
+  margin: 1rem 0 2.5rem 0;
+}
+.app-eval-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: 0.86em;
+}
+.app-eval-table__rowhead {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.5rem 0.6rem;
+  vertical-align: top;
+  position: sticky;
+  left: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+.app-eval-table__rowhead--top {
+  border-bottom: 2px solid var(--gat-web-hairline);
+}
+.app-eval-table__rowhead--alt {
+  background: var(--gat-web-surface-sunk);
+}
+.app-eval-table__rowhead-hint {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.86em;
+}
+.app-eval-table__col {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 2px solid var(--gat-web-hairline);
+  vertical-align: bottom;
+  min-width: 92px;
+}
+.app-eval-table__col-tag {
+  margin-top: 0.25rem;
+  font-size: 0.72em;
+}
+.app-eval-table__row--alt {
+  background: var(--gat-web-surface-sunk);
+}
+.app-eval-table__cell {
+  padding: 0.5rem 0.6rem;
+  vertical-align: top;
+}
+.app-eval-table__cell--text { text-align: left; }
+.app-eval-table__cell--rating,
+.app-eval-table__cell--janein { text-align: center; }
+
+.app-eval-rating { white-space: nowrap; }
+.app-eval-rating__dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin: 0 1px;
+}
+
+/* Palette-Chips unter "Headline auf Markenfarbe". */
+.app-palette {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 1.25rem 0;
+}
+.app-palette__chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82em;
+}
+.app-palette__swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--gat-web-radius-control);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* Cover-Grid + Karten (Headline auf Grün). */
+.app-cover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+.app-cover {
+  border-radius: var(--gat-web-radius-card);
+  overflow: hidden;
+  box-shadow: var(--gat-web-shadow);
+}
+.app-cover__hero {
+  background: var(--gruen-dunkel);
+  padding: 1.4rem 1.25rem;
+}
+.app-cover__title {
+  font-weight: 900;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: white;
+}
+.app-cover__caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  font-size: 0.82em;
+}
+
+/* Font-Karten (Schriften im Überblick). */
+.app-font-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin: 1.25rem 0 2.5rem 0;
+}
+.app-font-card {
+  background: white;
+  border-radius: var(--gat-web-radius-card);
+  box-shadow: var(--gat-web-shadow);
+  padding: 1.25rem;
+}
+.app-font-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.app-font-card__meta {
+  color: var(--gat-web-text-mute);
+  font-size: 0.85em;
+  margin-bottom: 0.6rem;
+}
+.app-font-card__summary {
+  margin: 0 0 0.75rem 0;
+  color: var(--gat-web-text);
+  font-size: 0.9em;
+}
+.app-font-card__action {
+  font-size: 0.85em;
+}
+
+/* Seitenvergleich am echten Flyer — Stack pro Seite. */
+.app-page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+.app-page-cols {
+  display: grid;
+  gap: 1rem;
+}
+.app-page-cell {
+  background: white;
+  padding: 0.5rem;
+  box-shadow: var(--gat-web-shadow);
+}
+.app-page-cell--original {
+  outline: 2px solid var(--gat-color-hellgruen);
+}
+.app-page-cell a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: zoom-in;
+}
+.app-page-cell a img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.app-page-cell__empty {
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gat-web-surface-sunk);
+  color: var(--gat-web-text-soft);
+  font-size: 0.8em;
+  text-align: center;
+  padding: 0.5rem;
+}
+.app-page-cell__caption {
+  text-align: center;
+  font-size: 0.78em;
+  margin-top: 0.4rem;
+  color: var(--gat-web-text-mute);
+}
+.app-page-cell__caption--original {
+  color: var(--gat-web-text);
+  font-weight: bold;
 }
 
 /* Schriften-Switcher-Tabs in der Lightbox-Extras-Leiste. */
