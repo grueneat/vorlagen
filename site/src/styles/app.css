@@ -20,12 +20,25 @@
  * Lokale Aliase --gruen-* sind in Base.astro auf DS-Token gemapt.
  * ============================================================ */
 
-/* ---- .gat-headline override für die Galerie-Headlines ---- */
-/* Die DS-Headline ist auf H1-Größe ausgelegt; auf der Vorlagen-Site
-   nutzen wir sie als Marker statt der ehemaligen Tag-Selector-Regel
-   `h1, h2, h3 { color: var(--gruen-dunkel) }`. */
-.gat-headline {
+/* ---- .gat-headline override für die Galerie-Headlines ----
+ * Issue #126 Phase 2: Headlines opt-in über .gat-headline statt
+ * Tag-Selektor `h1, h2, h3` (siehe Base.astro). Die DS-Klasse setzt
+ * standardmäßig H1-Größe/Font/Weight — auf der Vorlagen-Site nutzen
+ * wir sie nur als Farb-Marker. Größen kommen von Browser-Default
+ * bzw. dem jeweiligen Element. */
+.gat-headline,
+h1.gat-headline,
+h2.gat-headline,
+h3.gat-headline {
   color: var(--gat-color-dunkelgruen);
+  /* Die DS-Klasse setzt font-size/line-height/font-family auf H1 —
+     wir nehmen sie wieder zurück, weil wir die Klasse generisch auf
+     h1/h2/h3 setzen wollen und das Element-Default die korrekte
+     Hierarchie liefert. */
+  font-family: inherit;
+  font-weight: bold;
+  font-size: inherit;
+  line-height: inherit;
 }
 
 /* ============================================================

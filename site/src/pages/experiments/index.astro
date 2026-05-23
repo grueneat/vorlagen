@@ -12,7 +12,7 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
 ---
 <Base title="Design-Experimente">
   <p><a href={url('/')}>← Zurück zur Galerie</a></p>
-  <h1>Design-Experimente</h1>
+  <h1 class="gat-headline">Design-Experimente</h1>
   <p>
     Click-to-rank Voting auf strukturell unterschiedlichen Layout-Varianten.
     Hypothesen werden von mehreren LLMs unabhängig generiert, in situ
@@ -35,7 +35,7 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
         const wildcards = hypotheses.filter((h: any) => h && h.wildcard).length;
         return (
           <a href={url(`experiments/${e.data.id}/`)} class="app-card app-card--padded">
-            <h3 style="margin: 0 0 0.5rem 0;">{e.data.subject}</h3>
+            <h3 class="gat-headline" style="margin: 0 0 0.5rem 0;">{e.data.subject}</h3>
             <div class="app-card__meta" style="margin-bottom: 0.75rem;">
               <code>{e.data.id}</code>
             </div>

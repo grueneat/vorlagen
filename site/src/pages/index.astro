@@ -43,7 +43,7 @@ for (const g of groups.values()) {
 }
 ---
 <Base title="Vorlagen-Galerie">
-  <h1>Vorlagen-Galerie</h1>
+  <h1 class="gat-headline">Vorlagen-Galerie</h1>
   <p>Skelett-Vorlagen für Falzflyer, Plakate, Postkarten, Zeitungen und mehr. Datei runterladen, in Scribus öffnen, eigene Inhalte einsetzen.</p>
   <a href={url('experiments/')} class="app-cta app-cta--first">
     <div>
@@ -61,7 +61,7 @@ for (const g of groups.values()) {
     <span class="app-cta__action">Ansehen →</span>
   </a>
 
-  <h2 style="margin-top: 2.5rem;">Vorlagen-Typen</h2>
+  <h2 class="gat-headline" style="margin-top: 2.5rem;">Vorlagen-Typen</h2>
   <p style="color: var(--gat-web-text-mute); margin-top: -0.25rem;">{orderedCategories.length} Typen · {templates.length} Varianten</p>
 
   <div class="app-card-grid">
@@ -80,7 +80,7 @@ for (const g of groups.values()) {
             </div>
           )}
           <div class="app-card__body">
-            <h3>{g.label}</h3>
+            <h3 class="gat-headline">{g.label}</h3>
             <span class="app-card__meta">{n} {n === 1 ? 'Variante' : 'Varianten'}</span>
             <ul class="app-card__list">
               {g.items.slice(0, 3).map(t => (

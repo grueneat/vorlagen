@@ -56,7 +56,7 @@ const variantsForJs = hypotheses.map((h) => ({
 
   {exp && (
     <>
-      <h1>{subject}</h1>
+      <h1 class="gat-headline">{subject}</h1>
       <p class="app-meta">
         <code>{expId}</code> · {hypotheses.length} Hypothesen · LLMs: {llms.join(', ')}
       </p>
@@ -89,7 +89,7 @@ const variantsForJs = hypotheses.map((h) => ({
       </div>
 
       <section id="exp-rank" class="exp-mode" style="display: none;">
-        <h2>Rank</h2>
+        <h2 class="gat-headline">Rank</h2>
         <p style="color: var(--gat-web-text-soft);">
           Klicke das Häkchen oben rechts auf einer Variante, um sie der Rangliste hinzuzufügen.
           Sortiere die Rangliste mit Drag-Drop (Griff <code>⋮⋮</code>) oder den Pfeiltasten ▲/▼.
@@ -110,7 +110,7 @@ const variantsForJs = hypotheses.map((h) => ({
         -->
         <div id="exp-rank-grid" class="app-variant-grid"></div>
 
-        <h3 style="margin-top: 2rem;">Deine Rangliste</h3>
+        <h3 class="gat-headline" style="margin-top: 2rem;">Deine Rangliste</h3>
         <ol id="ranked-list" class="app-ranked-list" aria-label="Your ranked choices"></ol>
         <p class="app-rank-empty" id="rank-empty">
           Noch keine Variante in der Rangliste — klicke ein Häkchen, um zu starten.
@@ -151,7 +151,7 @@ const variantsForJs = hypotheses.map((h) => ({
       </section>
 
       <section id="exp-direct" class="exp-mode" style="display: none;">
-        <h2>Direct-Pick</h2>
+        <h2 class="gat-headline">Direct-Pick</h2>
         <p style="color: var(--gat-web-text-soft);">Klicke den Stern auf einer Variante um sie als Favorit zu markieren.</p>
         <div id="exp-direct-grid" class="app-variant-grid"></div>
       </section>

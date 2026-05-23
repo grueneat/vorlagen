@@ -32,7 +32,7 @@ items.sort((a: any, b: any) =>
     { label: 'Galerie', href: url('/') },
     { label: categoryLabel },
   ]} />
-  <h1>{categoryLabel}</h1>
+  <h1 class="gat-headline">{categoryLabel}</h1>
   <p style="color: var(--gat-web-text-mute);">{items.length} {items.length === 1 ? 'Variante' : 'Varianten'}</p>
 
   <div class="app-card-grid">
@@ -47,7 +47,7 @@ items.sort((a: any, b: any) =>
             </div>
           )}
           <div class="app-card__body">
-            <h3>{label}</h3>
+            <h3 class="gat-headline">{label}</h3>
             {t.data.format && (
               <span class="app-card__meta">
                 {t.data.format}{t.data.pages ? ` · ${t.data.pages} Seiten` : ''}

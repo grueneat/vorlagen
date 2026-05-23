@@ -26,7 +26,7 @@ const catLabel = t.data.category_label ?? 'Sonstige';
     { label: catLabel, href: url(`typ/${catId}/`) },
     { label: t.data.title },
   ]} />
-  <h1>{t.data.title}</h1>
+  <h1 class="gat-headline">{t.data.title}</h1>
   <p>{t.data.description}</p>
 
   {t.data._previews && t.data._previews.length > 0 && (
@@ -62,7 +62,7 @@ const catLabel = t.data.category_label ?? 'Sonstige';
       (templates, experiments, schriften) auf <dialog class="gat-modal">. */}
   <Lightbox id="preview-lightbox" hasNav />
 
-  <h2>Download</h2>
+  <h2 class="gat-headline">Download</h2>
   <p>Bitte die Vorlage mit dem Impressum eures Bundeslandes herunterladen.</p>
   <ul>
     {t.data._downloads && t.data._downloads.map(d => (
@@ -75,6 +75,6 @@ const catLabel = t.data.category_label ?? 'Sonstige';
     <p>Gemeinsame Vorschau: <a href={url(t.data._preview_pdf)}>Vorschau-PDF</a></p>
   )}
 
-  <h2>Anleitung</h2>
+  <h2 class="gat-headline">Anleitung</h2>
   <Content />
 </Base>

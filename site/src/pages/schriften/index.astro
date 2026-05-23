@@ -102,7 +102,7 @@ const KLEINTEXT =
   <style is:inline set:html={fontFaceCss}></style>
 
   <p><a href={url('/')}>← Zurück zur Galerie</a></p>
-  <h1>Schriften-Vergleich — Entscheidungsgrundlage</h1>
+  <h1 class="gat-headline">Schriften-Vergleich — Entscheidungsgrundlage</h1>
   <p>
     Die Vorlagen sind in <strong>Gotham Narrow</strong> gesetzt — einer
     kommerziell lizenzierten Schrift, die <strong>nicht</strong> mit den
@@ -131,7 +131,7 @@ const KLEINTEXT =
   )}
 
   <!-- ============ 1. Empfehlung auf einen Blick ============ -->
-  <h2>Empfehlung auf einen Blick</h2>
+  <h2 class="gat-headline">Empfehlung auf einen Blick</h2>
   <div class="app-empfehlung-stack">
     <div class="gat-callout gat-callout--success">
       <div class="app-empfehlung__kicker">Empfehlung</div>
@@ -154,7 +154,7 @@ const KLEINTEXT =
   </div>
 
   <!-- ============ 2. Bewertungstabelle ============ -->
-  <h2>Bewertung im Detail</h2>
+  <h2 class="gat-headline">Bewertung im Detail</h2>
   <p style="color: var(--muted); margin-top: -0.25rem; font-size: 0.92em;">
     Bewertung: ●●● sehr gut · ●●○ gut · ●○○ schwach · ○○○ ungenügend.
     Tabelle ggf. seitlich scrollen.
@@ -210,7 +210,7 @@ const KLEINTEXT =
   </div>
 
   <!-- ============ 3. Schriftmuster im Direktvergleich ============ -->
-  <h2>Schriftmuster im Direktvergleich</h2>
+  <h2 class="gat-headline">Schriftmuster im Direktvergleich</h2>
   <p style="color: var(--muted); margin-top: -0.25rem; font-size: 0.92em;">
     Dieselbe Headline, Schnitt-Leiter und dasselbe Alphabet in jeder
     Schrift — isoliert vom Layout, damit sich die Buchstabenformen direkt
@@ -223,7 +223,7 @@ const KLEINTEXT =
       return (
         <div style={`background: white; border-radius: var(--gat-web-radius-card); box-shadow: var(--gat-web-shadow); padding: 1.1rem 1.25rem;${t ? ` border-top: 4px solid ${t.accent};` : ''}`}>
           <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;">
-            <h3 style="margin: 0;">{s.name}</h3>
+            <h3 class="gat-headline" style="margin: 0;">{s.name}</h3>
             {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
           <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.6rem; line-height: 1.15; color: var(--gruen-dunkel); margin: 0.6rem 0 0.7rem 0;`}>
@@ -261,7 +261,7 @@ const KLEINTEXT =
   </p>
 
   <!-- ============ 4. Headline & Markenfarben ============ -->
-  <h2>Headline auf Markenfarbe</h2>
+  <h2 class="gat-headline">Headline auf Markenfarbe</h2>
   <p style="color: var(--muted); margin-top: -0.25rem; font-size: 0.92em;">
     Die Headline-Behandlung des Flyer-Covers (weiß auf Grün, ein Akzentwort
     in Gelb) — je Schrift isoliert, plus die verbindliche Markenpalette.
@@ -294,7 +294,7 @@ const KLEINTEXT =
   </div>
 
   <!-- ============ 5. Schriften am Flyer — Karten ============ -->
-  <h2>Schriften im Überblick</h2>
+  <h2 class="gat-headline">Schriften im Überblick</h2>
   <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; margin: 1.25rem 0 2.5rem 0;">
     {fonts.map((f) => {
       const t = tagFor(f.slug);
@@ -302,7 +302,7 @@ const KLEINTEXT =
       return (
         <div style={`background: white; border-radius: var(--gat-web-radius-card); box-shadow: var(--gat-web-shadow); padding: 1.25rem;${t ? ` border-left: 4px solid ${t.accent};` : ''}`}>
           <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;">
-            <h3 style="margin: 0 0 0.25rem 0;">{f.name}</h3>
+            <h3 class="gat-headline" style="margin: 0 0 0.25rem 0;">{f.name}</h3>
             {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
           <div style="color: var(--gat-web-text-mute); font-size: 0.85em; margin-bottom: 0.6rem;">
@@ -324,7 +324,7 @@ const KLEINTEXT =
   </div>
 
   <!-- ============ 6. Seitenvergleich am Flyer ============ -->
-  <h2>Seitenvergleich am echten Flyer</h2>
+  <h2 class="gat-headline">Seitenvergleich am echten Flyer</h2>
   <p style="color: var(--gat-web-text-mute); margin-top: -0.25rem;">
     {pages.length} Flyer-Seiten · je {fonts.length} Spalten (Original +
     {fonts.length - 1} Schriften). Ein Klick öffnet die Großansicht mit
@@ -334,7 +334,7 @@ const KLEINTEXT =
   <div style="display: flex; flex-direction: column; gap: 2rem; margin-top: 1.5rem;">
     {pages.map(pg => (
       <section>
-        <h3 style="margin: 0 0 0.75rem 0;">Seite {pg.page}</h3>
+        <h3 class="gat-headline" style="margin: 0 0 0.75rem 0;">Seite {pg.page}</h3>
         <div style={`display: grid; grid-template-columns: repeat(${fonts.length}, 1fr); gap: 1rem;`}>
           {fonts.map((f, fi) => {
             const cell = pg.fonts[f.slug] || { thumb: null, hires: null };
