@@ -122,29 +122,31 @@ const KLEINTEXT =
   </p>
 
   {!data.rendered && (
-    <p style="background: var(--gelb); color: #222; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.9em;">
-      Hinweis: Die Flyer-Renderings wurden in dieser Umgebung noch nicht
-      erzeugt. Schriftmuster und Bewertung sind unabhängig davon nutzbar.
-    </p>
+    <div class="gat-callout gat-callout--warn">
+      <p style="margin: 0; font-size: 0.9em;">
+        Hinweis: Die Flyer-Renderings wurden in dieser Umgebung noch nicht
+        erzeugt. Schriftmuster und Bewertung sind unabhängig davon nutzbar.
+      </p>
+    </div>
   )}
 
   <!-- ============ 1. Empfehlung auf einen Blick ============ -->
   <h2>Empfehlung auf einen Blick</h2>
-  <div style="display: grid; gap: 1rem; margin: 1rem 0 2rem 0;">
-    <div style="background: #e3f5e8; border-left: 6px solid #0f5c2e; border-radius: 8px; padding: 1.1rem 1.25rem;">
-      <div style="font-size: 0.78em; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; color: #0f5c2e;">Empfehlung</div>
-      <div style="font-size: 1.25rem; font-weight: bold; color: #0f5c2e; margin: 0.15rem 0 0.35rem 0;">{emp.primaer.name}</div>
-      <p style="margin: 0; color: #1d3b2a; font-size: 0.94em;">{emp.primaer.text}</p>
+  <div class="app-empfehlung-stack">
+    <div class="gat-callout gat-callout--success">
+      <div class="app-empfehlung__kicker">Empfehlung</div>
+      <div class="app-empfehlung__name">{emp.primaer.name}</div>
+      <p style="margin: 0; font-size: 0.94em;">{emp.primaer.text}</p>
     </div>
-    <div style="background: #eaf3ee; border-left: 6px solid #257639; border-radius: 8px; padding: 1.1rem 1.25rem;">
-      <div style="font-size: 0.78em; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; color: #257639;">Zweitwahl</div>
-      <div style="font-size: 1.15rem; font-weight: bold; color: #257639; margin: 0.15rem 0 0.35rem 0;">{emp.zweitwahl.name}</div>
-      <p style="margin: 0; color: #2c3b33; font-size: 0.94em;">{emp.zweitwahl.text}</p>
+    <div class="gat-callout gat-callout--info">
+      <div class="app-empfehlung__kicker">Zweitwahl</div>
+      <div class="app-empfehlung__name">{emp.zweitwahl.name}</div>
+      <p style="margin: 0; font-size: 0.94em;">{emp.zweitwahl.text}</p>
     </div>
-    <div style="background: #fbe9e7; border-left: 6px solid #b3261e; border-radius: 8px; padding: 1.1rem 1.25rem;">
-      <div style="font-size: 0.78em; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; color: #b3261e;">Davon abraten</div>
+    <div class="gat-callout gat-callout--danger">
+      <div class="app-empfehlung__kicker">Davon abraten</div>
       {emp.abraten.map((a) => (
-        <p style="margin: 0.4rem 0 0 0; color: #5a201b; font-size: 0.94em;">
+        <p style="margin: 0.4rem 0 0 0; font-size: 0.94em;">
           <strong>{a.name}:</strong> {a.text}
         </p>
       ))}

@@ -45,26 +45,20 @@ for (const g of groups.values()) {
 <Base title="Vorlagen-Galerie">
   <h1>Vorlagen-Galerie</h1>
   <p>Skelett-Vorlagen für Falzflyer, Plakate, Postkarten, Zeitungen und mehr. Datei runterladen, in Scribus öffnen, eigene Inhalte einsetzen.</p>
-  <a
-    href={url('experiments/')}
-    style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; padding: 1rem 1.25rem; background: var(--gruen-dunkel); color: white; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
-  >
+  <a href={url('experiments/')} class="app-cta app-cta--first">
     <div>
-      <strong style="display: block; font-size: 1.05rem;">Design-Experimente</strong>
-      <span style="font-size: 0.9em; opacity: 0.9;">Click-to-rank Voting auf Layout-Varianten — Hypothesen von mehreren LLMs.</span>
+      <strong class="app-cta__title">Design-Experimente</strong>
+      <span class="app-cta__sub">Click-to-rank Voting auf Layout-Varianten — Hypothesen von mehreren LLMs.</span>
     </div>
-    <span style="font-size: 0.9em; padding: 0.4rem 0.8rem; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; white-space: nowrap;">Ansehen →</span>
+    <span class="app-cta__action">Ansehen →</span>
   </a>
 
-  <a
-    href={url('schriften/')}
-    style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; padding: 1rem 1.25rem; background: var(--gruen-dunkel); color: white; border-radius: 8px; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08);"
-  >
+  <a href={url('schriften/')} class="app-cta">
     <div>
-      <strong style="display: block; font-size: 1.05rem;">Freie Schriften</strong>
-      <span style="font-size: 0.9em; opacity: 0.9;">Vergleich freier Gotham-Alternativen am Flyer-Beispiel — fünf SIL-OFL-Schriften gegenübergestellt.</span>
+      <strong class="app-cta__title">Freie Schriften</strong>
+      <span class="app-cta__sub">Vergleich freier Gotham-Alternativen am Flyer-Beispiel — fünf SIL-OFL-Schriften gegenübergestellt.</span>
     </div>
-    <span style="font-size: 0.9em; padding: 0.4rem 0.8rem; border: 1px solid rgba(255,255,255,0.5); border-radius: 4px; white-space: nowrap;">Ansehen →</span>
+    <span class="app-cta__action">Ansehen →</span>
   </a>
 
   <h2 style="margin-top: 2.5rem;">Vorlagen-Typen</h2>
