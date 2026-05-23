@@ -57,7 +57,7 @@ const variantsForJs = hypotheses.map((h) => ({
   {exp && (
     <>
       <h1>{subject}</h1>
-      <p style="color: #666; font-size: 0.9em;">
+      <p class="app-meta">
         <code>{expId}</code> · {hypotheses.length} Hypothesen · LLMs: {llms.join(', ')}
       </p>
       <p>{exp.data.target_weak_area}</p>
@@ -69,58 +69,50 @@ const variantsForJs = hypotheses.map((h) => ({
         </p>
       </div>
 
-      <div style="display: flex; gap: 1rem; align-items: center; margin: 1.5rem 0; flex-wrap: wrap;">
+      <div class="app-exp-toolbar">
         <label>
           Rater:
-          <input id="exp-rater" type="text" value="anonymous"
-                 style="margin-left: 0.5rem; padding: 0.25rem 0.5rem; min-width: 12rem;" />
+          <input id="exp-rater" type="text" value="anonymous" class="app-rater-input" />
         </label>
-        <button id="exp-mode-rank" type="button" class="exp-mode-btn"
-                style="padding: 0.4rem 0.9rem;">Rank</button>
-        <button id="exp-mode-direct" type="button" class="exp-mode-btn"
-                style="padding: 0.4rem 0.9rem;">Direkt-Pick</button>
-        <!--
+        <button id="exp-mode-rank" type="button" class="exp-mode-btn app-mode-btn">Rank</button>
+        <button id="exp-mode-direct" type="button" class="exp-mode-btn app-mode-btn">Direkt-Pick</button>
+        {/*
           Issue #33: the legacy "Export JSON" toolbar button was the only
           submission path in v1 of the voting page. Phone review showed no
           casual voter would download a file and email it back, so it was
           replaced by the email + copy + inline-view trio below. The
-          download button is retained ONLY behind `?dev=1` for debugging
-          (raw JSON inspection, schema testing). Production raters see the
-          three submission paths in the rank section.
-        -->
-        <button id="exp-export" type="button"
-                style="padding: 0.4rem 0.9rem; margin-left: auto; display: none;">
+          download button is retained ONLY behind `?dev=1` for debugging.
+        */}
+        <button id="exp-export" type="button" class="app-mode-btn app-mode-btn--dev" style="display: none;">
           Export JSON (dev)
         </button>
       </div>
 
       <section id="exp-rank" class="exp-mode" style="display: none;">
         <h2>Rank</h2>
-        <p style="color: #555;">
+        <p style="color: var(--gat-web-text-soft);">
           Klicke das Häkchen oben rechts auf einer Variante, um sie der Rangliste hinzuzufügen.
           Sortiere die Rangliste mit Drag-Drop (Griff <code>⋮⋮</code>) oder den Pfeiltasten ▲/▼.
           Bild-Klick öffnet weiterhin das Lightbox.
         </p>
         <!--
           Variant-card markup (JS-rendered; the literal shape is below for
-          grep/audit visibility):
+          grep/audit visibility). Issue #126 Phase 2: app-Namespace.
 
-          <div class="variant-card" data-slug="<slug>">
+          <div class="app-variant-card" data-slug="<slug>">
             <img src="<thumb>" />
-            <button class="checkmark" aria-label="Select <slug>" aria-pressed="false" type="button">
-              <span class="checkmark-visual" aria-hidden="true"></span>
-              <span class="position-badge" aria-hidden="true" hidden></span>
+            <button class="app-checkmark" aria-label="Select <slug>" aria-pressed="false" type="button">
+              <span class="app-checkmark-visual" aria-hidden="true"></span>
+              <span class="app-position-badge" aria-hidden="true" hidden></span>
             </button>
             <strong>title</strong>
           </div>
         -->
-        <div id="exp-rank-grid"
-             style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
-        </div>
+        <div id="exp-rank-grid" class="app-variant-grid"></div>
 
         <h3 style="margin-top: 2rem;">Deine Rangliste</h3>
-        <ol id="ranked-list" aria-label="Your ranked choices"></ol>
-        <p class="rank-empty" id="rank-empty">
+        <ol id="ranked-list" class="app-ranked-list" aria-label="Your ranked choices"></ol>
+        <p class="app-rank-empty" id="rank-empty">
           Noch keine Variante in der Rangliste — klicke ein Häkchen, um zu starten.
         </p>
 
@@ -137,261 +129,38 @@ const variantsForJs = hypotheses.map((h) => ({
           The legacy `#export-rank` JSON-download button is retained but
           hidden by default; toggled visible by `?dev=1` URL param.
         -->
-        <div class="vote-submission" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button id="vote-email" type="button"
-                    style="padding: 0.6rem 1.1rem; background: var(--gruen-hell); color: #222; border: 2px solid var(--gruen-dunkel); border-radius: 4px; font-weight: 600; cursor: pointer; min-height: 44px;">
+        <div class="app-vote-submission">
+          <div class="app-vote-actions">
+            <button id="vote-email" type="button" class="app-vote-btn app-vote-btn--primary">
               Per E-Mail senden
             </button>
-            <button id="vote-copy" type="button"
-                    style="padding: 0.6rem 1.1rem; background: white; color: var(--gruen-dunkel); border: 2px solid var(--gruen-dunkel); border-radius: 4px; font-weight: 600; cursor: pointer; min-height: 44px;">
+            <button id="vote-copy" type="button" class="app-vote-btn">
               In Zwischenablage kopieren
             </button>
           </div>
-          <details style="background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem 0.75rem;">
-            <summary style="cursor: pointer; font-size: 0.9em; color: #444;">Stimme als Text ansehen</summary>
-            <pre id="vote-body-display" readonly aria-readonly="true"
-                 style="margin-top: 0.5rem; white-space: pre-wrap; word-break: break-word; font-size: 0.85em; background: white; padding: 0.6rem; border: 1px solid #ccc; border-radius: 3px; max-height: 300px; overflow: auto; user-select: text;"></pre>
+          <details class="app-vote-details">
+            <summary>Stimme als Text ansehen</summary>
+            <pre id="vote-body-display" class="app-vote-body" readonly aria-readonly="true"></pre>
           </details>
-          <div id="vote-toast" role="status" aria-live="polite"
-               style="display: none; padding: 0.5rem 0.75rem; border-radius: 4px; font-size: 0.9em;"></div>
+          <div id="vote-toast" class="app-toast" role="status" aria-live="polite"></div>
         </div>
 
-        <button id="export-rank" type="button"
-                style="margin-top: 0.75rem; padding: 0.4rem 0.9rem; display: none;">
+        <button id="export-rank" type="button" class="app-mode-btn app-mode-btn--dev" style="display: none;">
           Export ranking JSON (dev)
         </button>
       </section>
 
       <section id="exp-direct" class="exp-mode" style="display: none;">
         <h2>Direct-Pick</h2>
-        <p style="color: #555;">Klicke den Stern auf einer Variante um sie als Favorit zu markieren.</p>
-        <div id="exp-direct-grid"
-             style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
-        </div>
+        <p style="color: var(--gat-web-text-soft);">Klicke den Stern auf einer Variante um sie als Favorit zu markieren.</p>
+        <div id="exp-direct-grid" class="app-variant-grid"></div>
       </section>
 
-      <div id="rank-live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+      <div id="rank-live-region" aria-live="polite" aria-atomic="true" class="app-sr-only"></div>
 
-      <style>
-        /* ============================================================
-           Rank-mode styling (issue #31)
-           Brand colors flow from Base.astro:12-17 (--gruen-hell,
-           --gruen-dunkel). Touch targets are >= 44 x 44px per CONTEXT
-           decision 5 and WCAG AAA SC 2.5.5.
-           ============================================================ */
-
-        .sr-only {
-          position: absolute;
-          width: 1px;
-          height: 1px;
-          padding: 0;
-          margin: -1px;
-          overflow: hidden;
-          clip: rect(0, 0, 0, 0);
-          white-space: nowrap;
-          border: 0;
-        }
-
-        #exp-rank-grid .variant-card {
-          position: relative;
-          background: white;
-          padding: 0.75rem;
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-
-        #exp-rank-grid .variant-card img {
-          width: 100%;
-          height: auto;
-          display: block;
-          cursor: zoom-in;
-        }
-
-        /* Sibling-to-image checkmark button, top-right of the card.
-           Hit zone >= 44x44 (CONTEXT 5 + WCAG AAA); visible icon ~32px. */
-        .checkmark {
-          position: absolute;
-          top: 0.5rem;
-          right: 0.5rem;
-          min-width: 44px;
-          min-height: 44px;
-          padding: 6px;
-          background: rgba(255, 255, 255, 0.85);
-          border: 2px solid var(--gruen-dunkel);
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background 0.15s ease, transform 0.15s ease;
-        }
-
-        .checkmark:hover {
-          background: white;
-          transform: scale(1.05);
-        }
-
-        .checkmark:focus-visible {
-          outline: 3px solid var(--gruen-hell);
-          outline-offset: 2px;
-        }
-
-        .checkmark-visual {
-          display: block;
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: transparent;
-          position: relative;
-        }
-
-        .checkmark[aria-pressed="true"] {
-          background: var(--gruen-hell);
-          border-color: var(--gruen-dunkel);
-        }
-
-        .checkmark[aria-pressed="true"] .checkmark-visual::after {
-          content: "";
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          width: 14px;
-          height: 8px;
-          border-left: 3px solid white;
-          border-bottom: 3px solid white;
-          transform: translate(-50%, -65%) rotate(-45deg);
-        }
-
-        /* Position-number pill, top-left of the checkmark button.
-           Hidden until a position is assigned (T08 toggles `hidden`). */
-        .position-badge {
-          position: absolute;
-          top: -6px;
-          left: -6px;
-          min-width: 18px;
-          height: 18px;
-          padding: 0 4px;
-          background: white;
-          border: 1.5px solid var(--gruen-dunkel);
-          color: var(--gruen-dunkel);
-          font-size: 11px;
-          font-weight: 700;
-          border-radius: 9px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        /* ---- Ranked list (ordered rows below the grid) ----------- */
-
-        #ranked-list {
-          list-style: none;
-          padding: 0;
-          margin: 0.75rem 0 0 0;
-          display: flex;
-          flex-direction: column;
-          gap: 0.4rem;
-        }
-
-        .ranked-row {
-          min-height: 56px; /* reserve height to prevent CLS on insert */
-          background: white;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-          padding: 0.4rem 0.6rem;
-          display: grid;
-          grid-template-columns: 44px 44px 44px 48px 1fr 44px;
-          gap: 0.4rem;
-          align-items: center;
-        }
-
-        /* `touch-action: none` ONLY on .drag-handle — putting it on the
-           row or the list kills page scroll on mobile (top pitfall #5). */
-        .drag-handle {
-          width: 44px;
-          height: 44px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.4em;
-          color: #888;
-          cursor: grab;
-          user-select: none;
-          touch-action: none;
-        }
-
-        .drag-handle:active {
-          cursor: grabbing;
-        }
-
-        .ranked-row .arrow-up,
-        .ranked-row .arrow-down,
-        .ranked-row .remove-btn {
-          min-width: 44px;
-          min-height: 44px;
-          background: white;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          font-size: 1.1em;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
-        }
-
-        .ranked-row .arrow-up:focus-visible,
-        .ranked-row .arrow-down:focus-visible,
-        .ranked-row .remove-btn:focus-visible {
-          outline: 3px solid var(--gruen-hell);
-          outline-offset: 2px;
-        }
-
-        .ranked-row .thumbnail {
-          width: 48px;
-          height: 48px;
-          max-width: 48px;
-          max-height: 48px;
-          object-fit: cover;
-        }
-
-        .ranked-row .title {
-          font-size: 0.9rem;
-          color: #222;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .rank-empty {
-          color: #777;
-          font-style: italic;
-          margin: 0.6rem 0 0 0;
-        }
-
-        /* ---- Mobile (~iPhone SE width) ----------------------------- */
-        @media (max-width: 640px) {
-          #exp-rank-grid {
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
-          }
-          #ranked-list {
-            width: 100%;
-          }
-          .ranked-row {
-            grid-template-columns: 40px 40px 40px 40px 1fr 40px;
-            gap: 0.3rem;
-          }
-          .drag-handle,
-          .ranked-row .arrow-up,
-          .ranked-row .arrow-down,
-          .ranked-row .remove-btn {
-            min-width: 44px;
-            min-height: 44px;
-          }
-        }
-      </style>
+      {/* Rank-mode styles: vollständig nach src/styles/app.css migriert
+          (App-Namespace .app-variant-*, .app-checkmark*, .app-ranked-*,
+          .app-rank-empty, .app-drag-handle). Issue #126 Phase 2. */}
 
       <!-- Shared lightbox component (#126 Phase 2). Variant cards öffnen
            den Dialog programmatisch via window.expLightbox.open() weil die
@@ -462,27 +231,29 @@ const variantsForJs = hypotheses.map((h) => ({
             if (!directGrid) return;
             directGrid.innerHTML = '';
             VARIANTS.forEach(function (v) {
+              // Issue #126 Phase 2: Inline-Styles aus dem JS-Builder
+              // verschwunden, statt dessen .app-direct-card-Familie aus app.css.
               var card = document.createElement('div');
-              card.style.cssText = 'background: white; padding: 0.75rem; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 0.5rem;';
+              card.className = 'app-direct-card';
 
               var img = document.createElement('img');
               img.src = v.thumb;
               img.alt = v.name;
               img.loading = 'lazy';
-              img.style.cssText = 'width: 100%; height: auto; display: block; cursor: zoom-in;';
+              img.className = 'app-direct-card__img';
               img.addEventListener('click', function () {
                 openLightbox(v.hires, v.name);
               });
               card.appendChild(img);
 
               var title = document.createElement('div');
-              title.style.cssText = 'display: flex; gap: 0.5rem; align-items: baseline;';
+              title.className = 'app-direct-card__title';
               var star = document.createElement('button');
               star.type = 'button';
               var picked = (session.direct_picks || []).indexOf(v.slug) >= 0;
               star.textContent = picked ? '★' : '☆';
               star.setAttribute('aria-label', picked ? 'Favorit entfernen' : 'Als Favorit markieren');
-              star.style.cssText = 'background: none; border: none; font-size: 1.4em; cursor: pointer; color: ' + (picked ? '#dca400' : '#888') + ';';
+              star.className = 'app-direct-card__star' + (picked ? ' app-direct-card__star--picked' : '');
               star.addEventListener('click', function () {
                 var picks = session.direct_picks || (session.direct_picks = []);
                 var idx = picks.indexOf(v.slug);
@@ -500,13 +271,13 @@ const variantsForJs = hypotheses.map((h) => ({
               if (v.wildcard) {
                 var wild = document.createElement('span');
                 wild.textContent = 'WILDCARD';
-                wild.style.cssText = 'font-size: 0.7em; background: #ffd400; color: #333; padding: 0.1rem 0.4rem; border-radius: 4px; align-self: flex-start;';
+                wild.className = 'app-direct-card__wildcard';
                 card.appendChild(wild);
               }
 
               if (v.axis_commitments && v.axis_commitments.length) {
                 var axes = document.createElement('div');
-                axes.style.cssText = 'font-size: 0.75em; color: #555;';
+                axes.className = 'app-direct-card__axes';
                 axes.textContent = v.axis_commitments.join(' · ');
                 card.appendChild(axes);
               }
@@ -514,7 +285,7 @@ const variantsForJs = hypotheses.map((h) => ({
               if (v.rationale) {
                 var rat = document.createElement('p');
                 rat.textContent = v.rationale;
-                rat.style.cssText = 'font-size: 0.85em; color: #444; margin: 0;';
+                rat.className = 'app-direct-card__rationale';
                 card.appendChild(rat);
               }
 
@@ -720,7 +491,7 @@ const variantsForJs = hypotheses.map((h) => ({
             grid.innerHTML = '';
             VARIANTS.forEach(function (v) {
               var card = document.createElement('div');
-              card.className = 'variant-card';
+              card.className = 'app-variant-card';
               card.dataset.slug = v.slug;
 
               var img = document.createElement('img');
@@ -743,17 +514,17 @@ const variantsForJs = hypotheses.map((h) => ({
 
               var checkmark = document.createElement('button');
               checkmark.type = 'button';
-              checkmark.className = 'checkmark';
+              checkmark.className = 'app-checkmark';
               checkmark.setAttribute('aria-label', 'Select ' + v.slug);
               checkmark.setAttribute('aria-pressed', 'false');
 
               var checkVisual = document.createElement('span');
-              checkVisual.className = 'checkmark-visual';
+              checkVisual.className = 'app-checkmark-visual';
               checkVisual.setAttribute('aria-hidden', 'true');
               checkmark.appendChild(checkVisual);
 
               var positionBadge = document.createElement('span');
-              positionBadge.className = 'position-badge';
+              positionBadge.className = 'app-position-badge';
               positionBadge.setAttribute('aria-hidden', 'true');
               positionBadge.hidden = true;
               checkmark.appendChild(positionBadge);
@@ -789,18 +560,18 @@ const variantsForJs = hypotheses.map((h) => ({
           function buildRankedRow(slug, idx, total) {
             var v = slugToVariant[slug];
             var li = document.createElement('li');
-            li.className = 'ranked-row';
+            li.className = 'app-ranked-row';
             li.dataset.slug = slug;
 
             var dragHandle = document.createElement('span');
-            dragHandle.className = 'drag-handle';
+            dragHandle.className = 'app-drag-handle';
             dragHandle.setAttribute('aria-hidden', 'true');
             dragHandle.textContent = '⋮⋮';
             li.appendChild(dragHandle);
 
             var arrowUp = document.createElement('button');
             arrowUp.type = 'button';
-            arrowUp.className = 'arrow-up';
+            arrowUp.className = 'app-arrow-up';
             arrowUp.setAttribute('aria-label', "Move '" + slug + "' up");
             arrowUp.textContent = '▲';
             arrowUp.disabled = idx === 0;
@@ -812,7 +583,7 @@ const variantsForJs = hypotheses.map((h) => ({
 
             var arrowDown = document.createElement('button');
             arrowDown.type = 'button';
-            arrowDown.className = 'arrow-down';
+            arrowDown.className = 'app-arrow-down';
             arrowDown.setAttribute('aria-label', "Move '" + slug + "' down");
             arrowDown.textContent = '▼';
             arrowDown.disabled = idx === total - 1;
@@ -823,20 +594,20 @@ const variantsForJs = hypotheses.map((h) => ({
             li.appendChild(arrowDown);
 
             var thumb = document.createElement('img');
-            thumb.className = 'thumbnail';
+            thumb.className = 'app-thumbnail';
             thumb.src = v ? v.thumb : '';
             thumb.alt = '';
             thumb.setAttribute('aria-hidden', 'true');
             li.appendChild(thumb);
 
             var titleEl = document.createElement('span');
-            titleEl.className = 'title';
+            titleEl.className = 'app-title';
             titleEl.textContent = v ? v.name : slug;
             li.appendChild(titleEl);
 
             var removeBtn = document.createElement('button');
             removeBtn.type = 'button';
-            removeBtn.className = 'remove-btn';
+            removeBtn.className = 'app-remove-btn';
             removeBtn.setAttribute('aria-label', "Remove '" + slug + "' from ranking");
             removeBtn.textContent = '×';
             removeBtn.addEventListener('click', function (ev) {
@@ -851,13 +622,13 @@ const variantsForJs = hypotheses.map((h) => ({
           function refreshRankUI() {
             // Update each card's checkmark + position-badge.
             if (grid) {
-              var cards = grid.querySelectorAll('.variant-card');
+              var cards = grid.querySelectorAll('.app-variant-card');
               cards.forEach(function (card) {
                 var slug = card.dataset.slug;
                 var pos = ranking.indexOf(slug);
-                var checkmark = card.querySelector('.checkmark');
+                var checkmark = card.querySelector('.app-checkmark');
                 if (!checkmark) return;
-                var badge = checkmark.querySelector('.position-badge');
+                var badge = checkmark.querySelector('.app-position-badge');
                 if (pos >= 0) {
                   checkmark.setAttribute('aria-pressed', 'true');
                   if (badge) {
@@ -926,8 +697,8 @@ const variantsForJs = hypotheses.map((h) => ({
               sortableInstance = null;
             }
             sortableInstance = new Sortable(rankedList, {
-              handle: '.drag-handle',
-              filter: '.arrow-up,.arrow-down,.remove-btn',
+              handle: '.app-drag-handle',
+              filter: '.app-arrow-up,.app-arrow-down,.app-remove-btn',
               preventOnFilter: true,
               animation: 150,
               delay: 150,
@@ -940,7 +711,7 @@ const variantsForJs = hypotheses.map((h) => ({
                 // Read the new order from the DOM (Sortable already
                 // mutated it); rebuild `ranking` from data-slug attrs.
                 var newRanking = [];
-                rankedList.querySelectorAll('.ranked-row').forEach(function (li) {
+                rankedList.querySelectorAll('.app-ranked-row').forEach(function (li) {
                   newRanking.push(li.dataset.slug);
                 });
                 ranking = newRanking;
@@ -1023,20 +794,14 @@ const variantsForJs = hypotheses.map((h) => ({
           }
 
           // ---- Toast helper --------------------------------------------
+          // Brand-aware Klassen aus app.css (.app-toast --ok|--error);
+          // Inline-Styles wurden in Phase 2 (#126) abgelöst.
           var toastTimer = null;
           function showToast(msg, kind) {
             if (!toastEl) return;
             toastEl.textContent = msg;
-            // Brand-aware colors: success = light green bg, error = soft red.
-            if (kind === 'error') {
-              toastEl.style.background = '#ffe4e4';
-              toastEl.style.border = '1px solid #c66';
-              toastEl.style.color = '#700';
-            } else {
-              toastEl.style.background = '#e7f5d4';
-              toastEl.style.border = '1px solid #6a8b2c';
-              toastEl.style.color = '#234';
-            }
+            toastEl.className = 'app-toast ' +
+              (kind === 'error' ? 'app-toast--error' : 'app-toast--ok');
             toastEl.style.display = 'block';
             if (toastTimer) window.clearTimeout(toastTimer);
             toastTimer = window.setTimeout(function () {

@@ -448,7 +448,119 @@
   margin: 0.6rem 0 0 0;
 }
 
+/* ---- Voting: Toolbar (Rater + Mode + Dev-Export) ----------- */
+.app-exp-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+.app-meta {
+  color: var(--gat-web-text-mute);
+  font-size: 0.9em;
+}
+.app-rater-input {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  min-width: 12rem;
+}
+.app-mode-btn {
+  padding: 0.4rem 0.9rem;
+}
+.app-mode-btn--dev {
+  margin-left: auto;
+}
+
+/* ---- Voting: Direct-Pick-Karten (JS-aufgebaut) ------------- */
+.app-direct-card {
+  background: white;
+  padding: 0.75rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.app-direct-card__img {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: zoom-in;
+}
+.app-direct-card__title {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.app-direct-card__star {
+  background: none;
+  border: none;
+  font-size: 1.4em;
+  cursor: pointer;
+  color: var(--gat-web-text-mute);
+}
+.app-direct-card__star--picked {
+  color: var(--gat-color-gelb);
+}
+.app-direct-card__wildcard {
+  font-size: 0.7em;
+  background: var(--gat-color-gelb);
+  color: var(--gat-color-anthrazit);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--gat-web-radius-control);
+  align-self: flex-start;
+}
+.app-direct-card__axes {
+  font-size: 0.75em;
+  color: var(--gat-web-text-soft);
+}
+.app-direct-card__rationale {
+  font-size: 0.85em;
+  color: var(--gat-web-text);
+  margin: 0;
+}
+
 /* ---- Voting-Stimme: Submission-Block (#33) -------------------- */
+.app-vote-btn {
+  padding: 0.6rem 1.1rem;
+  background: white;
+  color: var(--gat-color-dunkelgruen);
+  border: 2px solid var(--gat-color-dunkelgruen);
+  border-radius: var(--gat-web-radius-control);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+}
+.app-vote-btn--primary {
+  background: var(--gat-color-hellgruen);
+  color: var(--gat-color-anthrazit);
+}
+.app-vote-details {
+  background: var(--gat-web-surface-sunk);
+  border: 1px solid var(--gat-web-hairline);
+  border-radius: var(--gat-web-radius-control);
+  padding: 0.5rem 0.75rem;
+}
+.app-vote-details summary {
+  cursor: pointer;
+  font-size: 0.9em;
+  color: var(--gat-web-text-soft);
+}
+.app-vote-body {
+  margin-top: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85em;
+  background: white;
+  padding: 0.6rem;
+  border: 1px solid var(--gat-web-hairline);
+  border-radius: var(--gat-web-radius-control);
+  max-height: 300px;
+  overflow: auto;
+  user-select: text;
+}
+
+
 .app-vote-submission {
   margin-top: 1rem;
   display: flex;
