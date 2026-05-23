@@ -30,7 +30,7 @@ const catLabel = t.data.category_label ?? 'Sonstige';
   <p>{t.data.description}</p>
 
   {t.data._previews && t.data._previews.length > 0 && (
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin: 2rem 0;">
+    <div class="app-preview-grid">
       {t.data._previews.map((p, i) => {
         // Issue #28: every preview thumbnail clicks through to a hi-res
         // version rendered at 150 dpi (vs 50–100 dpi for thumbnails).
@@ -49,8 +49,8 @@ const catLabel = t.data.category_label ?? 'Sonstige';
             data-label={p.label}
             aria-label={`Vergrößerte Vorschau öffnen: ${p.label}`}
           >
-            <img src={url(p.src)} alt={p.label} loading="lazy" style="width: 100%; height: auto; display: block;" />
-            <div style="text-align: center; font-size: 0.8em; margin-top: 0.5rem; color: var(--gat-web-text-mute);">{p.label}</div>
+            <img src={url(p.src)} alt={p.label} loading="lazy" class="app-preview-grid__img" />
+            <div class="app-preview-grid__caption">{p.label}</div>
           </a>
         );
       })}

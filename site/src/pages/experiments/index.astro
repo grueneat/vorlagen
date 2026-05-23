@@ -21,7 +21,7 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
   </p>
 
   {experiments.length === 0 && (
-    <p style="color: #666; margin-top: 2rem;">
+    <p style="color: var(--gat-web-text-mute); margin-top: 2rem;">
       Noch keine Experimente. Lege ein neues an mit
       <code>bin/experiment-generate &lt;exp-id&gt;</code> →
       <code>bin/experiment-render &lt;exp-id&gt;</code>.
@@ -29,23 +29,20 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
   )}
 
   {experiments.length > 0 && (
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+    <div class="app-card-grid app-card-grid--wide" style="margin-top: 2rem;">
       {experiments.map(e => {
         const hypotheses = Array.isArray(e.data.hypotheses) ? e.data.hypotheses : [];
         const wildcards = hypotheses.filter((h: any) => h && h.wildcard).length;
         return (
-          <a
-            href={url(`experiments/${e.data.id}/`)}
-            style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.25rem; display: block;"
-          >
+          <a href={url(`experiments/${e.data.id}/`)} class="app-card app-card--padded">
             <h3 style="margin: 0 0 0.5rem 0;">{e.data.subject}</h3>
-            <div style="color: #666; font-size: 0.9em; margin-bottom: 0.75rem;">
+            <div class="app-card__meta" style="margin-bottom: 0.75rem;">
               <code>{e.data.id}</code>
             </div>
-            <p style="margin: 0 0 0.75rem 0; color: #444; font-size: 0.9em;">
+            <p style="margin: 0 0 0.75rem 0; color: var(--gat-web-text); font-size: 0.9em;">
               {e.data.target_weak_area}
             </p>
-            <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.85em; color: #555;">
+            <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.85em; color: var(--gat-web-text-soft);">
               <li>Hypothesen: <strong>{hypotheses.length}</strong> (davon {wildcards} Wildcard)</li>
               <li>LLMs: {(e.data.contributing_llms || []).join(', ')}</li>
               <li>Erstellt: {e.data.created}</li>

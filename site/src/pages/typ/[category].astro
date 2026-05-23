@@ -33,34 +33,31 @@ items.sort((a: any, b: any) =>
     { label: categoryLabel },
   ]} />
   <h1>{categoryLabel}</h1>
-  <p style="color: #666;">{items.length} {items.length === 1 ? 'Variante' : 'Varianten'}</p>
+  <p style="color: var(--gat-web-text-mute);">{items.length} {items.length === 1 ? 'Variante' : 'Varianten'}</p>
 
-  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+  <div class="app-card-grid">
     {items.map((t: any) => {
       const preview = t.data._previews?.[0]?.src;
       const label = t.data.variant_label ?? t.data.title;
       return (
-        <a
-          href={url(`templates/${t.id}/`)}
-          style="text-decoration: none; color: inherit; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; display: block; transition: transform 0.15s;"
-        >
+        <a href={url(`templates/${t.id}/`)} class="app-card">
           {preview && (
-            <div style="aspect-ratio: 3 / 4; background: #eee; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-              <img src={url(preview)} alt={label} loading="lazy" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+            <div class="app-card__media">
+              <img src={url(preview)} alt={label} loading="lazy" />
             </div>
           )}
-          <div style="padding: 1rem;">
-            <h3 style="margin: 0 0 0.5rem 0;">{label}</h3>
+          <div class="app-card__body">
+            <h3>{label}</h3>
             {t.data.format && (
-              <span style="color: #666; font-size: 0.85em;">
+              <span class="app-card__meta">
                 {t.data.format}{t.data.pages ? ` · ${t.data.pages} Seiten` : ''}
               </span>
             )}
             {t.data.type === 'family' && (
-              <span style="color: #666; font-size: 0.85em;">Familie · {t.data.sizes?.length} Größen</span>
+              <span class="app-card__meta">Familie · {t.data.sizes?.length} Größen</span>
             )}
             {t.data.description && (
-              <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.9em;">{t.data.description}</p>
+              <p style="margin: 0.5rem 0 0 0; color: var(--gat-web-text-mute); font-size: 0.9em;">{t.data.description}</p>
             )}
           </div>
         </a>

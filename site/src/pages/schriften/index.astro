@@ -163,7 +163,7 @@ const KLEINTEXT =
     <table style="border-collapse: collapse; width: 100%; min-width: 760px; font-size: 0.86em;">
       <thead>
         <tr>
-          <th style="text-align: left; padding: 0.5rem 0.6rem; border-bottom: 2px solid #ccc; position: sticky; left: 0; background: var(--bg); z-index: 1;">Kriterium</th>
+          <th style="text-align: left; padding: 0.5rem 0.6rem; border-bottom: 2px solid var(--gat-web-hairline); position: sticky; left: 0; background: var(--bg); z-index: 1;">Kriterium</th>
           {cols.map((slug) => {
             const t = tagFor(slug);
             return (
@@ -229,21 +229,21 @@ const KLEINTEXT =
           <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.6rem; line-height: 1.15; color: var(--gruen-dunkel); margin: 0.6rem 0 0.7rem 0;`}>
             {HEADLINE}
           </div>
-          <div style="border-top: 1px solid #eee; padding-top: 0.5rem;">
+          <div style="border-top: 1px solid var(--gat-web-hairline); padding-top: 0.5rem;">
             <div style={`font-family: ${fam}; font-weight: 400; font-size: 1.05rem;`}>Regular — Fließtext</div>
             <div style={`font-family: ${fam}; font-weight: 700; font-size: 1.05rem;`}>Bold — Auszeichnung</div>
             <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.05rem;`}>
               {s.web ? 'Black — Headline' : 'Bold — kein schwererer Schnitt'}
             </div>
           </div>
-          <div style={`font-family: ${fam}; font-weight: 400; font-size: 0.82rem; color: #444; word-break: break-word; margin-top: 0.6rem;`}>
+          <div style={`font-family: ${fam}; font-weight: 400; font-size: 0.82rem; color: var(--gat-web-text); word-break: break-word; margin-top: 0.6rem;`}>
             {GLYPHS}
           </div>
-          <div style={`font-family: ${fam}; font-weight: 400; font-size: 0.7rem; line-height: 1.45; color: #555; margin-top: 0.5rem;`}>
+          <div style={`font-family: ${fam}; font-weight: 400; font-size: 0.7rem; line-height: 1.45; color: var(--gat-web-text-soft); margin-top: 0.5rem;`}>
             {KLEINTEXT}
           </div>
           {!s.web && (
-            <p style="margin: 0.7rem 0 0 0; font-size: 0.78em; color: #b3261e;">
+            <p style="margin: 0.7rem 0 0 0; font-size: 0.78em; color: var(--gat-web-tag-error-text);">
               Tahoma ist proprietär und wird hier aus der lokal installierten
               Systemschrift angezeigt (auf Windows vorhanden) — sonst eine
               Ersatzschrift. Tahoma hat nur zwei Schnitte: für Headlines fehlt
@@ -269,7 +269,7 @@ const KLEINTEXT =
   <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0 1.25rem 0;">
     {palette.map((c) => (
       <div style="display: flex; align-items: center; gap: 0.45rem; font-size: 0.82em;">
-        <span style={`width: 26px; height: 26px; border-radius: 4px; background: ${c.hex}; border: 1px solid rgba(0,0,0,0.15);`}></span>
+        <span style={`width: 26px; height: 26px; border-radius: var(--gat-web-radius-control); background: ${c.hex}; border: 1px solid rgba(0,0,0,0.15);`}></span>
         <span><strong>{c.name}</strong><br /><span style="color: var(--muted);">{c.hex}</span></span>
       </div>
     ))}
@@ -278,7 +278,7 @@ const KLEINTEXT =
     {specimens.map((s) => {
       const fam = famOf(s);
       return (
-        <div style="border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div style="border-radius: var(--gat-web-radius-card); overflow: hidden; box-shadow: var(--gat-web-shadow);">
           <div style="background: var(--gruen-dunkel); padding: 1.4rem 1.25rem;">
             <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.5rem; line-height: 1.1; color: white;`}>
               Mehr <span style="color: var(--gelb);">Grün</span> wählen.
@@ -286,7 +286,7 @@ const KLEINTEXT =
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: white; font-size: 0.82em;">
             <span style="font-weight: bold;">{s.name}</span>
-            {!s.web && <span style="color: #b3261e;">Systemschrift</span>}
+            {!s.web && <span style="color: var(--gat-web-tag-error-text);">Systemschrift</span>}
           </div>
         </div>
       );
@@ -305,17 +305,17 @@ const KLEINTEXT =
             <h3 style="margin: 0 0 0.25rem 0;">{f.name}</h3>
             {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
-          <div style="color: #666; font-size: 0.85em; margin-bottom: 0.6rem;">
+          <div style="color: var(--gat-web-text-mute); font-size: 0.85em; margin-bottom: 0.6rem;">
             {proprietary
-              ? <span><strong style="color: #b3261e;">Proprietär</strong> · {f.license} · <a href={f.source}>Schrift-Info</a></span>
+              ? <span><strong style="color: var(--gat-web-tag-error-text);">Proprietär</strong> · {f.license} · <a href={f.source}>Schrift-Info</a></span>
               : <span>{f.license} · <a href={f.source}>Quelle</a></span>}
           </div>
-          <p style="margin: 0 0 0.75rem 0; color: #444; font-size: 0.9em;">{f.summary}</p>
+          <p style="margin: 0 0 0.75rem 0; color: var(--gat-web-text); font-size: 0.9em;">{f.summary}</p>
           <div style="font-size: 0.85em;">
             {f.pdf
               ? <a href={url(f.pdf)}>{f.original ? 'Original-Flyer als PDF' : `Flyer als PDF (${f.name})`}</a>
               : f.slug === 'tahoma'
-                ? <span style="color: #999;">Kein PDF — proprietäre Schrift wird nicht mitveröffentlicht</span>
+                ? <span style="color: var(--gat-web-text-soft);">Kein PDF — proprietäre Schrift wird nicht mitveröffentlicht</span>
                 : <a href={url(f.sla)}>Variant-SLA herunterladen</a>}
           </div>
         </div>
@@ -325,7 +325,7 @@ const KLEINTEXT =
 
   <!-- ============ 6. Seitenvergleich am Flyer ============ -->
   <h2>Seitenvergleich am echten Flyer</h2>
-  <p style="color: #666; margin-top: -0.25rem;">
+  <p style="color: var(--gat-web-text-mute); margin-top: -0.25rem;">
     {pages.length} Flyer-Seiten · je {fonts.length} Spalten (Original +
     {fonts.length - 1} Schriften). Ein Klick öffnet die Großansicht mit
     Umschalter zwischen den Schrift-Versionen.
@@ -363,7 +363,7 @@ const KLEINTEXT =
                     Noch nicht gerendert
                   </div>
                 )}
-                <div style={`text-align: center; font-size: 0.78em; margin-top: 0.4rem; color: ${f.original ? '#222' : '#666'};${f.original ? ' font-weight: bold;' : ''}`}>{f.name}</div>
+                <div style={`text-align: center; font-size: 0.78em; margin-top: 0.4rem; color: ${f.original ? 'var(--gat-web-text)' : 'var(--gat-web-text-mute)'};${f.original ? ' font-weight: bold;' : ''}`}>{f.name}</div>
               </div>
             );
           })}

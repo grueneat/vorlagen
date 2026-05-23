@@ -128,6 +128,49 @@
   cursor: zoom-in;
 }
 
+/* Breadcrumb (lokale Implementierung bis .gat-breadcrumb in DS-v2.3). */
+.app-breadcrumb {
+  margin: 0 0 1.25rem 0;
+}
+.app-breadcrumb ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.app-breadcrumb li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.app-breadcrumb [aria-current='page'],
+.app-breadcrumb [aria-hidden='true'] {
+  color: var(--gat-web-text-mute);
+}
+
+/* Vorschau-Grid (Template-Detailseite). */
+.app-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.app-preview-grid__img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.app-preview-grid__caption {
+  text-align: center;
+  font-size: 0.8em;
+  margin-top: 0.5rem;
+  color: var(--gat-web-text-mute);
+}
+
 /* Schriften-Switcher-Tabs in der Lightbox-Extras-Leiste. */
 .app-schrift-tab {
   border: none;
@@ -183,6 +226,11 @@
 }
 .app-card__body {
   padding: 1rem;
+}
+/* Variante: Karte ohne separate __media/__body-Sektionen.
+   Padding direkt auf der Karte (experiments/index.astro nutzt das). */
+.app-card--padded {
+  padding: 1.25rem;
 }
 .app-card__body h3 {
   margin: 0 0 0.5rem 0;

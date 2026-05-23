@@ -18,9 +18,11 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
         --gruen-hell: var(--gat-color-hellgruen);
         --gelb: var(--gat-color-gelb);
         --magenta: var(--gat-color-magenta);
-        --bg: #fafafa;
-        --text: #222;
-        --muted: #666;
+        /* Lokale Site-Aliase auf DS-Web-Tokens (Phase 2, #126).
+           Alle Werte verweisen jetzt aufs DS — drift gestoppt. */
+        --bg: var(--gat-web-bg);
+        --text: var(--gat-web-text);
+        --muted: var(--gat-web-text-mute);
       }
       * { box-sizing: border-box; }
       body {
