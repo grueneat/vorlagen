@@ -27,19 +27,26 @@ const cols = fonts.map((f) => f.slug);
 const shortName = (slug: string) =>
   slug === 'original' ? 'Gotham Narrow' : (fonts.find((f) => f.slug === slug)?.name ?? slug);
 
-// Recommendation tags drive the colour accents across the page.
+// Empfehlungs-Tag steuert die Farbakzente quer durch die Seite.
+// Issue #126 Phase 2: Status-Lozenges nutzen .gat-tag --ok/--info/--error
+// statt hartkodierter Hex-Werte. `accent` ist die Akzent-CSS-Variable für
+// Border-Top/Border-Left/Ratingstift — wir greifen direkt auf die
+// DS-Tag-Tokens zu.
 const primary = emp.primaer.slug;
 const secondary = emp.zweitwahl.slug;
 const avoid = emp.abraten.map((a) => a.slug);
-type Tag = { label: string; fg: string; bg: string } | null;
+type Tag = { label: string; mod: 'ok' | 'info' | 'error'; accent: string } | null;
 const tagFor = (slug: string): Tag => {
-  if (slug === primary) return { label: 'Empfehlung', fg: '#0f5c2e', bg: '#e3f5e8' };
-  if (slug === secondary) return { label: 'Zweitwahl', fg: '#257639', bg: '#eaf3ee' };
-  if (avoid.includes(slug)) return { label: 'Nicht empfohlen', fg: '#b3261e', bg: '#fbe9e7' };
+  if (slug === primary) return { label: 'Empfehlung', mod: 'ok', accent: 'var(--gat-web-tag-ok-text)' };
+  if (slug === secondary) return { label: 'Zweitwahl', mod: 'info', accent: 'var(--gat-web-tag-info-text)' };
+  if (avoid.includes(slug)) return { label: 'Nicht empfohlen', mod: 'error', accent: 'var(--gat-web-tag-error-text)' };
   return null;
 };
 const dotColor = (v: number) =>
-  v >= 3 ? '#0f5c2e' : v === 2 ? '#3e8a25' : v === 1 ? '#e69500' : '#b3261e';
+  v >= 3 ? 'var(--gat-web-tag-ok-text)'
+    : v === 2 ? 'var(--gat-color-hellgruen)'
+    : v === 1 ? 'var(--gat-web-tag-warn-text)'
+    : 'var(--gat-web-tag-error-text)';
 
 // Live web-font specimens. The five SIL-OFL alternatives are self-hosted
 // (site/public/fonts/) and embedded via @font-face. Tahoma is a proprietary
@@ -158,9 +165,9 @@ const KLEINTEXT =
           {cols.map((slug) => {
             const t = tagFor(slug);
             return (
-              <th style={`padding: 0.5rem 0.6rem; border-bottom: 2px solid #ccc; vertical-align: bottom; min-width: 92px;${t ? ` background: ${t.bg};` : ''}`}>
-                <div style={`font-weight: bold; color: ${t ? t.fg : '#222'};`}>{shortName(slug)}</div>
-                {t && <div style={`font-size: 0.82em; color: ${t.fg};`}>{t.label}</div>}
+              <th style={`padding: 0.5rem 0.6rem; border-bottom: 2px solid var(--gat-web-hairline); vertical-align: bottom; min-width: 92px;${t ? ` background: var(--gat-web-tag-${t.mod === 'error' ? 'error' : t.mod}-bg); background: color-mix(in srgb, var(--gat-web-tag-${t.mod === 'error' ? 'error' : t.mod}-bg) 65%, white);` : ''}`}>
+                <div style={`font-weight: bold; color: ${t ? t.accent : 'var(--gat-web-text)'};`}>{shortName(slug)}</div>
+                {t && <span class={`gat-tag gat-tag--${t.mod}`} style="margin-top: 0.25rem; font-size: 0.72em;">{t.label}</span>}
               </th>
             );
           })}
@@ -168,8 +175,8 @@ const KLEINTEXT =
       </thead>
       <tbody>
         {krit.map((k, ri) => (
-          <tr style={ri % 2 ? 'background: #f4f4f2;' : ''}>
-            <th style={`text-align: left; font-weight: 600; padding: 0.5rem 0.6rem; vertical-align: top; position: sticky; left: 0; background: ${ri % 2 ? '#f4f4f2' : 'var(--bg)'}; z-index: 1;`}>
+          <tr style={ri % 2 ? 'background: var(--gat-web-surface-sunk);' : ''}>
+            <th style={`text-align: left; font-weight: 600; padding: 0.5rem 0.6rem; vertical-align: top; position: sticky; left: 0; background: ${ri % 2 ? 'var(--gat-web-surface-sunk)' : 'var(--bg)'}; z-index: 1;`}>
               {k.label}
               {k.hinweis && <div style="font-weight: 400; color: var(--muted); font-size: 0.86em;">{k.hinweis}</div>}
             </th>
@@ -177,18 +184,18 @@ const KLEINTEXT =
               const v = k.werte[slug];
               const t = tagFor(slug);
               return (
-                <td style={`padding: 0.5rem 0.6rem; vertical-align: top; text-align: ${k.kind === 'text' ? 'left' : 'center'};${t && k.label === 'Gesamturteil' ? ` background: ${t.bg};` : ''}`}>
+                <td style={`padding: 0.5rem 0.6rem; vertical-align: top; text-align: ${k.kind === 'text' ? 'left' : 'center'};${t && k.label === 'Gesamturteil' ? ` background: color-mix(in srgb, var(--gat-web-tag-${t.mod === 'error' ? 'error' : t.mod}-bg) 65%, white);` : ''}`}>
                   {k.kind === 'rating' && (
                     <span title={`${v} von 3`} style="white-space: nowrap;">
                       {[1, 2, 3].map((i) => (
-                        <span style={`display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 1px; background: ${i <= v ? dotColor(v) : '#dcdcdc'};`}></span>
+                        <span style={`display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 1px; background: ${i <= v ? dotColor(v) : 'var(--gat-web-hairline)'};`}></span>
                       ))}
                     </span>
                   )}
                   {k.kind === 'janein' && (
                     v
-                      ? <span style="color: #0f5c2e; font-weight: bold;">✓ Ja</span>
-                      : <span style="color: #b3261e; font-weight: bold;">✗ Nein</span>
+                      ? <span class="gat-tag gat-tag--ok">✓ Ja</span>
+                      : <span class="gat-tag gat-tag--error">✗ Nein</span>
                   )}
                   {k.kind === 'text' && <span>{v}</span>}
                 </td>
@@ -212,10 +219,10 @@ const KLEINTEXT =
       const t = tagFor(s.slug);
       const fam = famOf(s);
       return (
-        <div style={`background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.1rem 1.25rem;${t ? ` border-top: 4px solid ${t.fg};` : ''}`}>
+        <div style={`background: white; border-radius: var(--gat-web-radius-card); box-shadow: var(--gat-web-shadow); padding: 1.1rem 1.25rem;${t ? ` border-top: 4px solid ${t.accent};` : ''}`}>
           <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;">
             <h3 style="margin: 0;">{s.name}</h3>
-            {t && <span style={`font-size: 0.72em; font-weight: bold; text-transform: uppercase; letter-spacing: 0.04em; color: ${t.fg}; background: ${t.bg}; padding: 0.15rem 0.45rem; border-radius: 4px;`}>{t.label}</span>}
+            {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
           <div style={`font-family: ${fam}; font-weight: 900; font-size: 1.6rem; line-height: 1.15; color: var(--gruen-dunkel); margin: 0.6rem 0 0.7rem 0;`}>
             {HEADLINE}
@@ -291,10 +298,10 @@ const KLEINTEXT =
       const t = tagFor(f.slug);
       const proprietary = f.original || f.license.startsWith('Propriet');
       return (
-        <div style={`background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 1.25rem;${t ? ` border-left: 4px solid ${t.fg};` : ''}`}>
+        <div style={`background: white; border-radius: var(--gat-web-radius-card); box-shadow: var(--gat-web-shadow); padding: 1.25rem;${t ? ` border-left: 4px solid ${t.accent};` : ''}`}>
           <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;">
             <h3 style="margin: 0 0 0.25rem 0;">{f.name}</h3>
-            {t && <span style={`font-size: 0.72em; font-weight: bold; text-transform: uppercase; color: ${t.fg}; background: ${t.bg}; padding: 0.15rem 0.45rem; border-radius: 4px;`}>{t.label}</span>}
+            {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
           <div style="color: #666; font-size: 0.85em; margin-bottom: 0.6rem;">
             {proprietary
