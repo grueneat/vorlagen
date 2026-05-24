@@ -37,6 +37,55 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
       /* Headlines opt-in via .gat-headline aus dem Design-System
          (siehe app.css). Tag-Selektor entfernt — Phase 2, #126. */
       a { color: var(--gruen-dunkel); }
+
+      /* Support-Mailto rechts in der Brandbar.
+         Desktop: Icon + Adresse. Mobile (<=640px): nur Icon. */
+      .gat-header__support {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-left: 1rem;
+        padding: 0.35rem 0.6rem;
+        color: white;
+        text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: var(--gat-web-radius-control);
+        font-size: 0.85rem;
+        line-height: 1;
+        white-space: nowrap;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .gat-header__support:hover,
+      .gat-header__support:focus-visible {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.6);
+        color: white;
+      }
+      .gat-header__support-icon {
+        width: 1.1em;
+        height: 1.1em;
+        display: block;
+        flex: none;
+      }
+      @media (max-width: 640px) {
+        .gat-header__support {
+          margin-left: 0.5rem;
+          padding: 0.35rem;
+        }
+        .gat-header__support-label {
+          /* Auf Mobil zeigen wir nur das Icon. Label bleibt fuer
+             Screenreader im DOM, wird aber visuell versteckt. */
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border: 0;
+        }
+      }
     </style>
   </head>
   <body>
@@ -55,6 +104,27 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
             <li><a href="https://grueneat.github.io/werkzeuge/">Werkzeuge</a></li>
           </ul>
         </nav>
+        <a
+          href="mailto:florian.motlik@gruene.at"
+          class="gat-header__support"
+          title="Bei Fragen oder Feedback an den Betreuer dieses Tools schreiben"
+          aria-label="Support-E-Mail florian.motlik@gruene.at"
+        >
+          <svg
+            class="gat-header__support-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
+          </svg>
+          <span class="gat-header__support-label">florian.motlik@gruene.at</span>
+        </a>
       </div>
     </header>
     <main id="main">
