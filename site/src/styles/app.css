@@ -1,10 +1,10 @@
 /* ============================================================
- * App-spezifische Stile (Phase 2, #126).
+ * App-spezifische Stile.
  *
  * Alles, was nicht ins zentrale Design-System gehört, weil
- * es nur in dieser Vorlagen-Site auftritt. Drei Gruppen:
+ * es nur in dieser Vorlagen-Site auftritt. Aktuelle Gruppen:
  *
- *   - .app-lightbox*    Bildvorschau-Overlay (3-fach Dedup)
+ *   - .app-lightbox*    Bildvorschau-Overlay (3-fach Dedup, #126 Phase 2)
  *   - .app-card-grid    Wiederkehrendes Galerie-Grid + weiße Karte
  *   - .app-variant-*,   Voting-Engine (Issue #31/#33)
  *     .app-checkmark*,
@@ -12,7 +12,12 @@
  *     .app-rank-*,
  *     .app-drag-handle
  *   - .app-cta          Index-CTA-Banner als Callout-Variante
- *   - .app-status-tag   Schriften-Bewertungs-Lozenge
+ *   - .app-eval-*       Seitenlokale Ergaenzungen zur .gat-table-
+ *                       Bewertungstabelle (Row-Header-Sticky etc.)
+ *
+ * v2.2-Adoption (v22a): Toast (.app-toast) und Tabelle (.app-eval-
+ * table*) sind durch .gat-toast(er) / .gat-table --sticky-col
+ * ersetzt. Nur kleine seitenlokale Erweiterungen bleiben hier.
  *
  * Alle Farben/Radien/Schatten beziehen sich auf DS-Tokens
  * (--gat-color-*, --gat-web-*, --gat-radius-*, --gat-space-*).
