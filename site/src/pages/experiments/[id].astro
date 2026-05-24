@@ -142,7 +142,18 @@ const variantsForJs = hypotheses.map((h) => ({
             <summary>Stimme als Text ansehen</summary>
             <pre id="vote-body-display" class="app-vote-body" readonly aria-readonly="true"></pre>
           </details>
-          <div id="vote-toast" class="app-toast" role="status" aria-live="polite"></div>
+          {/*
+            DS v2.2: ein Toast in einer .gat-toaster-Region. Bleibt im
+            Layout-Fluss (display:none default) und wird bei Bedarf von
+            showToast() ein-/ausgeblendet; Variante landet per className:
+            .gat-toast--success | .gat-toast--error. App-Pendant
+            (.app-toast --ok|--error) war Platzhalter bis DS v2.2.
+          */}
+          <div class="gat-toaster">
+            <div id="vote-toast" class="gat-toast" role="status" aria-live="polite" style="display: none;">
+              <div id="vote-toast-body" class="gat-toast__body"></div>
+            </div>
+          </div>
         </div>
 
         <button id="export-rank" type="button" class="app-mode-btn app-mode-btn--dev" style="display: none;">
@@ -794,15 +805,18 @@ const variantsForJs = hypotheses.map((h) => ({
           }
 
           // ---- Toast helper --------------------------------------------
-          // Brand-aware Klassen aus app.css (.app-toast --ok|--error);
-          // Inline-Styles wurden in Phase 2 (#126) abgelöst.
+          // DS v2.2: .gat-toast in einer .gat-toaster-Region. Variante via
+          // --success / --error. Text-Slot ist .gat-toast__body, weil die
+          // DS-Komponente Icon/Body/Close trennt.
           var toastTimer = null;
+          var toastBody = document.getElementById('vote-toast-body');
           function showToast(msg, kind) {
             if (!toastEl) return;
-            toastEl.textContent = msg;
-            toastEl.className = 'app-toast ' +
-              (kind === 'error' ? 'app-toast--error' : 'app-toast--ok');
-            toastEl.style.display = 'block';
+            if (toastBody) toastBody.textContent = msg;
+            else toastEl.textContent = msg;
+            toastEl.className = 'gat-toast ' +
+              (kind === 'error' ? 'gat-toast--error' : 'gat-toast--success');
+            toastEl.style.display = 'flex';
             if (toastTimer) window.clearTimeout(toastTimer);
             toastTimer = window.setTimeout(function () {
               toastEl.style.display = 'none';

@@ -1,10 +1,10 @@
 /* ============================================================
- * App-spezifische Stile (Phase 2, #126).
+ * App-spezifische Stile.
  *
  * Alles, was nicht ins zentrale Design-System gehört, weil
- * es nur in dieser Vorlagen-Site auftritt. Drei Gruppen:
+ * es nur in dieser Vorlagen-Site auftritt. Aktuelle Gruppen:
  *
- *   - .app-lightbox*    Bildvorschau-Overlay (3-fach Dedup)
+ *   - .app-lightbox*    Bildvorschau-Overlay (3-fach Dedup, #126 Phase 2)
  *   - .app-card-grid    Wiederkehrendes Galerie-Grid + weiße Karte
  *   - .app-variant-*,   Voting-Engine (Issue #31/#33)
  *     .app-checkmark*,
@@ -12,8 +12,12 @@
  *     .app-rank-*,
  *     .app-drag-handle
  *   - .app-cta          Index-CTA-Banner als Callout-Variante
- *   - .app-status-tag   Schriften-Bewertungs-Lozenge
- *   - .app-toast        Voting-Status-Toast (#33, lokal bis DS-v2.2)
+ *   - .app-eval-*       Seitenlokale Ergaenzungen zur .gat-table-
+ *                       Bewertungstabelle (Row-Header-Sticky etc.)
+ *
+ * v2.2-Adoption (v22a): Toast (.app-toast) und Tabelle (.app-eval-
+ * table*) sind durch .gat-toast(er) / .gat-table --sticky-col
+ * ersetzt. Nur kleine seitenlokale Erweiterungen bleiben hier.
  *
  * Alle Farben/Radien/Schatten beziehen sich auf DS-Tokens
  * (--gat-color-*, --gat-web-*, --gat-radius-*, --gat-space-*).
@@ -240,58 +244,37 @@ h3.gat-headline {
   color: var(--gat-web-tag-error-text);
 }
 
-/* Bewertungstabelle (schriften/index.astro). */
-.app-eval-table-wrap {
-  overflow-x: auto;
-  margin: 1rem 0 2.5rem 0;
-}
-.app-eval-table {
-  border-collapse: collapse;
-  width: 100%;
-  min-width: 760px;
-  font-size: 0.86em;
-}
-.app-eval-table__rowhead {
-  text-align: left;
-  font-weight: 600;
-  padding: 0.5rem 0.6rem;
-  vertical-align: top;
+/* Bewertungstabelle (schriften/index.astro).
+   Visuelle Basis (Zebra, sticky-Col, Padding, Hairlines, Header-
+   Typografie) kommt aus DS v2.2 .gat-table --sticky-col --compact
+   --zebra im .gat-table-scroll-Wrapper.
+
+   Diese seitenlokalen Regeln ergaenzen nur das, was die DS-Klasse
+   nicht abdeckt:
+   - Row-Header (<th scope="row">) sticky: DS deckt nur td:first-child
+   - Hinweis-Untertitel im Row-Header
+   - Spalten-Tag-Lozenge im Spalten-Header */
+.app-eval-rowhead-sticky tbody th:first-child,
+.app-eval-rowhead-sticky tfoot th:first-child {
+  z-index: 1;
+  background: var(--gat-web-surface);
   position: sticky;
   left: 0;
-  background: var(--bg);
-  z-index: 1;
 }
-.app-eval-table__rowhead--top {
-  border-bottom: 2px solid var(--gat-web-hairline);
+.app-eval-rowhead-sticky.gat-table--zebra tbody tr:nth-child(2n) th:first-child {
+  background: var(--gat-web-table-row-stripe);
 }
-.app-eval-table__rowhead--alt {
-  background: var(--gat-web-surface-sunk);
-}
-.app-eval-table__rowhead-hint {
+.app-eval-rowhead-hint {
   font-weight: 400;
-  color: var(--muted);
+  color: var(--gat-web-text-mute);
   font-size: 0.86em;
+  text-transform: none;
+  letter-spacing: 0;
 }
-.app-eval-table__col {
-  padding: 0.5rem 0.6rem;
-  border-bottom: 2px solid var(--gat-web-hairline);
-  vertical-align: bottom;
-  min-width: 92px;
-}
-.app-eval-table__col-tag {
+.app-eval-col-tag {
   margin-top: 0.25rem;
   font-size: 0.72em;
 }
-.app-eval-table__row--alt {
-  background: var(--gat-web-surface-sunk);
-}
-.app-eval-table__cell {
-  padding: 0.5rem 0.6rem;
-  vertical-align: top;
-}
-.app-eval-table__cell--text { text-align: left; }
-.app-eval-table__cell--rating,
-.app-eval-table__cell--janein { text-align: center; }
 
 .app-eval-rating { white-space: nowrap; }
 .app-eval-rating__dot {
@@ -888,23 +871,9 @@ h3.gat-headline {
   flex-wrap: wrap;
 }
 
-/* ---- Voting-Stimme: Toast (#33, bis .gat-toast in DS-v2.2) ---- */
-.app-toast {
-  display: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--gat-web-radius-control);
-  font-size: 0.9em;
-}
-.app-toast--ok {
-  background: var(--gat-web-tag-ok-bg);
-  border: 1px solid var(--gat-color-dunkelgruen);
-  color: var(--gat-web-tag-ok-text);
-}
-.app-toast--error {
-  background: var(--gat-web-tag-error-bg);
-  border: 1px solid var(--gat-web-tag-error-text);
-  color: var(--gat-web-tag-error-text);
-}
+/* Voting-Stimme: Toast → DS v2.2 .gat-toast (--success|--error) in
+   .gat-toaster. Lokale .app-toast-Regel war Platzhalter und ist mit
+   v2.2-Adoption entfallen. */
 
 /* ---- Mobile (~iPhone SE Breite) ------------------------------- */
 @media (max-width: 640px) {
