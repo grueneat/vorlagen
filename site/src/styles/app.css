@@ -239,58 +239,37 @@ h3.gat-headline {
   color: var(--gat-web-tag-error-text);
 }
 
-/* Bewertungstabelle (schriften/index.astro). */
-.app-eval-table-wrap {
-  overflow-x: auto;
-  margin: 1rem 0 2.5rem 0;
-}
-.app-eval-table {
-  border-collapse: collapse;
-  width: 100%;
-  min-width: 760px;
-  font-size: 0.86em;
-}
-.app-eval-table__rowhead {
-  text-align: left;
-  font-weight: 600;
-  padding: 0.5rem 0.6rem;
-  vertical-align: top;
+/* Bewertungstabelle (schriften/index.astro).
+   Visuelle Basis (Zebra, sticky-Col, Padding, Hairlines, Header-
+   Typografie) kommt aus DS v2.2 .gat-table --sticky-col --compact
+   --zebra im .gat-table-scroll-Wrapper.
+
+   Diese seitenlokalen Regeln ergaenzen nur das, was die DS-Klasse
+   nicht abdeckt:
+   - Row-Header (<th scope="row">) sticky: DS deckt nur td:first-child
+   - Hinweis-Untertitel im Row-Header
+   - Spalten-Tag-Lozenge im Spalten-Header */
+.app-eval-rowhead-sticky tbody th:first-child,
+.app-eval-rowhead-sticky tfoot th:first-child {
+  z-index: 1;
+  background: var(--gat-web-surface);
   position: sticky;
   left: 0;
-  background: var(--bg);
-  z-index: 1;
 }
-.app-eval-table__rowhead--top {
-  border-bottom: 2px solid var(--gat-web-hairline);
+.app-eval-rowhead-sticky.gat-table--zebra tbody tr:nth-child(2n) th:first-child {
+  background: var(--gat-web-table-row-stripe);
 }
-.app-eval-table__rowhead--alt {
-  background: var(--gat-web-surface-sunk);
-}
-.app-eval-table__rowhead-hint {
+.app-eval-rowhead-hint {
   font-weight: 400;
-  color: var(--muted);
+  color: var(--gat-web-text-mute);
   font-size: 0.86em;
+  text-transform: none;
+  letter-spacing: 0;
 }
-.app-eval-table__col {
-  padding: 0.5rem 0.6rem;
-  border-bottom: 2px solid var(--gat-web-hairline);
-  vertical-align: bottom;
-  min-width: 92px;
-}
-.app-eval-table__col-tag {
+.app-eval-col-tag {
   margin-top: 0.25rem;
   font-size: 0.72em;
 }
-.app-eval-table__row--alt {
-  background: var(--gat-web-surface-sunk);
-}
-.app-eval-table__cell {
-  padding: 0.5rem 0.6rem;
-  vertical-align: top;
-}
-.app-eval-table__cell--text { text-align: left; }
-.app-eval-table__cell--rating,
-.app-eval-table__cell--janein { text-align: center; }
 
 .app-eval-rating { white-space: nowrap; }
 .app-eval-rating__dot {

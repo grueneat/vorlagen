@@ -159,36 +159,51 @@ const KLEINTEXT =
     Bewertung: ●●● sehr gut · ●●○ gut · ●○○ schwach · ○○○ ungenügend.
     Tabelle ggf. seitlich scrollen.
   </p>
-  <div class="app-eval-table-wrap">
-    <table class="app-eval-table">
+  {/*
+    DS v2.2: .gat-table mit --sticky-col + --compact + --zebra im
+    .gat-table-scroll-Wrapper. Erste Spalte (Kriterien) bleibt beim
+    Quer-Scroll sichtbar. Der DS-Selektor `--sticky-col` deckt nur
+    tbody-td:first-child / thead-th:first-child; Row-Header (<th>)
+    braucht eine kleine seitenlokale Ergaenzung
+    (.app-eval-rowhead-sticky in app.css), damit die scope="row"-
+    Semantik erhalten bleibt. Numerische Spalten gibt es hier nicht
+    (Ratings sind Glyph-Symbole, Ja/Nein sind Tags), daher kein __num.
+  */}
+  <div class="gat-table-scroll">
+    <table class="gat-table gat-table--sticky-col gat-table--compact gat-table--zebra app-eval-rowhead-sticky">
       <thead>
         <tr>
-          <th class="app-eval-table__rowhead app-eval-table__rowhead--top">Kriterium</th>
+          <th>Kriterium</th>
           {cols.map((slug) => {
             const t = tagFor(slug);
             const mod = t?.mod === 'error' ? 'error' : t?.mod;
             return (
-              <th class="app-eval-table__col" style={t ? `background: color-mix(in srgb, var(--gat-web-tag-${mod}-bg) 65%, white);` : ''}>
+              <th style={t ? `background: color-mix(in srgb, var(--gat-web-tag-${mod}-bg) 65%, white);` : ''}>
                 <div style={`font-weight: bold; color: ${t ? t.accent : 'var(--gat-web-text)'};`}>{shortName(slug)}</div>
-                {t && <span class={`gat-tag gat-tag--${t.mod} app-eval-table__col-tag`}>{t.label}</span>}
+                {t && <span class={`gat-tag gat-tag--${t.mod} app-eval-col-tag`}>{t.label}</span>}
               </th>
             );
           })}
         </tr>
       </thead>
       <tbody>
-        {krit.map((k, ri) => (
-          <tr class={ri % 2 ? 'app-eval-table__row--alt' : ''}>
-            <th class={`app-eval-table__rowhead${ri % 2 ? ' app-eval-table__rowhead--alt' : ''}`}>
+        {krit.map((k) => (
+          <tr>
+            <th scope="row">
               {k.label}
-              {k.hinweis && <div class="app-eval-table__rowhead-hint">{k.hinweis}</div>}
+              {k.hinweis && <div class="app-eval-rowhead-hint">{k.hinweis}</div>}
             </th>
             {cols.map((slug) => {
               const v = k.werte[slug];
               const t = tagFor(slug);
               const mod = t?.mod === 'error' ? 'error' : t?.mod;
+              const isGesamt = k.label === 'Gesamturteil';
+              const cellStyle = [
+                k.kind !== 'text' ? 'text-align: center;' : '',
+                t && isGesamt ? `background: color-mix(in srgb, var(--gat-web-tag-${mod}-bg) 65%, white);` : '',
+              ].filter(Boolean).join(' ');
               return (
-                <td class={`app-eval-table__cell app-eval-table__cell--${k.kind}`} style={t && k.label === 'Gesamturteil' ? `background: color-mix(in srgb, var(--gat-web-tag-${mod}-bg) 65%, white);` : ''}>
+                <td style={cellStyle}>
                   {k.kind === 'rating' && (
                     <span class="app-eval-rating" title={`${v} von 3`}>
                       {[1, 2, 3].map((i) => (
