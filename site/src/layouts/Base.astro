@@ -38,6 +38,49 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
          (siehe app.css). Tag-Selektor entfernt — Phase 2, #126. */
       a { color: var(--gruen-dunkel); }
 
+      /* Subbrand-Zeile unter der Wortmarke „Vorlagen":
+         macht sichtbar, dass dieses Tool aus der NÖ-Landesgruppe kommt.
+         Pill „NÖ" als kleiner Akzent, Text dezenter als die Wortmarke. */
+      .gat-header__brand-text {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.15rem;
+        line-height: 1.1;
+      }
+      .gat-header__subbrand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.85);
+        letter-spacing: 0.01em;
+      }
+      .gat-header__subbrand-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.05rem 0.4rem;
+        background: var(--gat-color-hellgruen);
+        color: var(--gat-color-anthrazit, #1a1a1a);
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        line-height: 1.4;
+      }
+      @media (max-width: 640px) {
+        .gat-header__subbrand {
+          font-size: 0.72rem;
+          gap: 0.3rem;
+        }
+        .gat-header__subbrand-pill {
+          font-size: 0.65rem;
+          padding: 0.05rem 0.35rem;
+        }
+      }
+
       /* Support-Mailto rechts in der Brandbar.
          Desktop: Icon + Adresse. Mobile (<=640px): nur Icon. */
       .gat-header__support {
@@ -94,7 +137,13 @@ const url = (p: string) => BASE + p.replace(/^\//, '');
       <div class="gat-header__inner">
         <a class="gat-header__brand" href={BASE}>
           <img class="gat-header__logo" src="https://grueneat.github.io/design-system/assets/gruene-logo.svg" alt="Die Grünen" />
-          <span class="gat-header__wordmark">Grüne Vorlagen NÖ</span>
+          <span class="gat-header__brand-text">
+            <span class="gat-header__wordmark">Vorlagen</span>
+            <span class="gat-header__subbrand">
+              <span class="gat-header__subbrand-pill" aria-hidden="true">NÖ</span>
+              Ein Projekt der Grünen Niederösterreich
+            </span>
+          </span>
         </a>
         <nav aria-label="Hauptnavigation">
           <ul class="gat-header__nav-list">
