@@ -1,7 +1,8 @@
 # Execution: Vorlagen auf Barlow Semi Condensed umstellen
 
 **Started:** 2026-06-07
-**Status:** partial — Tasks 1-4 complete; STOPPED at Task 5 (human-verify visual review) as instructed
+**Status:** partial — Tasks 1-4 complete; Task 5 visual-review FIX loop done (2 overflow defects
+fixed, both audit ok:true); STOPPED before baseline promotion (Task 6, gated on human spot-check)
 **Branch:** issue/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s
 **Scope executed:** Tasks 1-4 ONLY. Tasks 5-7 deliberately NOT executed (Task 5 is the
 checkpoint:human-verify visual review; Tasks 6-7 are gated behind it).
@@ -33,9 +34,78 @@ checkpoint:human-verify visual review; Tasks 6-7 are gated behind it).
   - tischschild-a5-quer rendered (preview.pdf + page-01.png)
   - Verify: no template.sla contains old fonts; every preview.pdf embeds Barlow only,
     zero DejaVu/Gotham/Vollkorn/Minion/Times fallback (direct pdffonts on all 16)
-- [ ] Task 5: VISUAL REVIEW — NOT EXECUTED (checkpoint:human-verify; stopped as instructed)
+- [~] Task 5: VISUAL REVIEW — fix loop done (2 text-overflow defects fixed + re-rendered);
+  baseline promotion still deferred to the human spot-check + Task 6. Commits edd0b84, 1ace4c3.
+  - Fix 1 [flyer-a6-querformat-portraet]: page-2 right body panel (u94a) clipped
+    "quaturem. Ur, omniet vello modi" → frame-local body style linesp 15.0→14.0pt. ok:true.
+  - Fix 2 [zeitung-a4]: demo headlines clipped 2nd lines → shared "Überschrift Dunkelgrün"
+    leading 35→28pt, plus single-line "Oder nur einzeilig" frame fontsize 40→32pt. ok:true.
 - [ ] Task 6: Promote baselines / re-derive TOLERANCES.yml — NOT EXECUTED (gated behind Task 5)
 - [ ] Task 7: Document exception / final grep / full test pass — NOT EXECUTED (gated behind Task 5)
+
+## Task 5 fix log (visual-review overflow fixes)
+
+Two templates had objective text-overflow (Scribus silently dropped characters because Barlow
+Semi Condensed's metrics overflow a fixed text frame). Fixed at the SOURCE (build.py), re-rendered
+(build.py → SLA → headless Scribus → preview.pdf + page PNGs), and verified with
+tools/text_render_audit.py against the still-old baselines (the word/char-presence diff is
+font-agnostic, so ok:true == zero dropped text). pdffonts confirms Barlow-only on both re-renders.
+
+### flyer-a6-querformat-portraet — commit edd0b84
+- **Defect (before):** text_render_audit FAIL, 25 chars missing — words: modi, omniet, quaturem.,
+  ur, vello. preview_word_count 368 vs baseline 373.
+- **Root cause:** the page-2 spread right body panel (frame anname=u94a, x=163mm, 2 columns,
+  h=63.5mm) overflows by one line at Barlow's metrics. Scribus fills column 1 to the frame foot
+  and clips the boundary line ("quaturem. Ur, omniet vello modi") instead of flowing it into
+  column 2. The identical-height left panel (u92e) wraps differently and was unaffected.
+- **Rejected approaches (rendered + audited):** growing the frame height (top fixed) made it WORSE
+  (h 63.5→68.8 → 11 words missing; h→74.0 → 15 words missing) because Scribus auto-balances the two
+  columns, so extra height rebalanced more text into the clip. Moving the top up rebalanced too.
+- **Fix applied:** added a frame-local paragraph style
+  `idml/fliesstext-auf-weissem-hintergrund-eng` (parent of the white-bg body style, linesp
+  15.0→14.0pt) and pointed only the u94a frame + its runs at it. 14.0pt is still inside the IDML's
+  own native 14.30pt leading (documented in the frame comment), so the change is imperceptible and
+  scoped to one frame; no font-size change; the rest of the body keeps the 15.0pt rhythm.
+- **After:** text_render_audit ok:true — missing_chars {}, missing_in_preview {}. pdffonts:
+  BarlowSemiCondensed-Black + -Regular only, zero DejaVu/Gotham/Vollkorn/Minion/Times fallback.
+
+### zeitung-a4 — commit 1ace4c3
+- **Defect (before):** text_render_audit FAIL, 13 chars missing — missing_chars f:1 g:3 k:2 w:1
+  z:2 ü:4. Determined this is GENUINE clipping (not a hyphenation artifact): pdftotext -layout on
+  both PDFs showed several demo-headline second lines present in the baseline but absent in the
+  preview — "sind Überschriften grün", "Text ist ein Abstand", "dunkelgrün sein", "Headlines"
+  (2nd line of "Bitte nur zweizeilige Headlines"), "lange Headline", "Zitat, aber anders" (2nd
+  line of "Ein weiterer Beitrag mit Zitat, aber anders"), and "Oder nur einzeilig" entirely.
+- **Root cause:** all demo headlines use the shared `Überschrift Dunkelgrün` style (fontsize=40,
+  fixed linesp=35). Barlow Semi Condensed Black's ascent at 40pt is taller than the previous face,
+  so two-line headlines pushed their second line past the fixed ~27–28mm frames and Scribus
+  clipped it. Separately the single-line "Oder nur einzeilig" frame is only 15.1mm (42.8pt) tall —
+  shorter than a 40pt Barlow Black line needs — so its baseline fell below the frame foot and the
+  whole line was dropped.
+- **Fix applied (two changes):**
+  1. Shared style `Überschrift Dunkelgrün` leading `linesp` 35→28pt. No child styles inherit it
+     (verified); the 40pt headline size is unchanged; single-line headlines are unaffected by
+     leading. Iterated 35→30 (got to z:2 remaining) → 30→28 (got to z:1 remaining).
+  2. The one short single-line frame "Oder nur einzeilig" (page3, h=15.108mm): set the run
+     fontsize 40→32 so the line clears the box. (default_style_attrs FONTSIZE did NOT work — the
+     trail PARENT re-asserts the 40pt style over the DefaultStyle; a per-run FONTSIZE on the ITEXT
+     does.)
+- **After:** text_render_audit ok:true — missing_chars {}, missing_in_preview {}. Spot-checked the
+  re-rendered preview: all previously-clipped headlines now present ("Ohne Bild im Hintergrund /
+  sind Überschriften grün", "Zwischen Überschrift und / Text ist ein Abstand", "Bitte nur
+  zweizeilige / Headlines", "Ein weiterer Beitrag mit / Zitat, aber anders", "Oder nur einzeilig").
+  pdffonts: BarlowSemiCondensed-Black/-Bold/-Regular only, zero fallback.
+
+### Re-rendered page PNGs for human re-verification (absolute paths)
+flyer-a6-querformat-portraet (all 4 pages):
+- /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/flyer-a6-querformat-portraet/page-01.png (+ page-01-hires.png)
+- /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/flyer-a6-querformat-portraet/page-02.png (+ -hires)
+- /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/flyer-a6-querformat-portraet/page-03.png (+ -hires)  ← the fixed page
+- /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/flyer-a6-querformat-portraet/page-04.png (+ -hires)
+zeitung-a4 (changed headline pages — page-03/-04 carry the visible fixes; full re-render touched 03–10):
+- /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/zeitung-a4/page-03.png (+ -hires)
+- /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/zeitung-a4/page-04.png (+ -hires)
+- (page-05 … page-10 also re-rendered identically-or-near-identically; no defect was on them)
 
 ## Commands + Results
 
@@ -94,13 +164,14 @@ checkpoint:human-verify visual review; Tasks 6-7 are gated behind it).
    `--skip-visual-diff` (all 16 OK) and ran the equivalent pdffonts fallback audit myself — the
    actual Task 4 acceptance check — which is clean across all 16 previews.
 
-## Discovered Issues (FLAGGED for Task 5 human review — NOT fixed)
+## Discovered Issues (FLAGGED for Task 5 human review)
 - **flyer-a6-querformat-portraet: text_render_audit FAIL** — 25 characters of body (lorem) text
   ("modi, omniet, quaturem., ur, vello") suppressed by Scribus, i.e. a body-text frame is now too
-  small for Barlow's metrics and clipped content at the frame edge. This is the alignment/overflow
-  class the Task 5 visual review exists to catch; the fix (adjusting the frame size in
-  templates/flyer-a6-querformat-portraet/build.py and re-rendering) belongs to Task 5 and was NOT
-  applied here per the STOP instruction.
+  small for Barlow's metrics and clipped content at the frame edge.
+  **RESOLVED in the Task 5 fix loop (commit edd0b84) — see the Task 5 fix log above. Now ok:true.**
+- **zeitung-a4: text_render_audit FAIL** — 13 characters dropped; demo-headline second lines
+  clipped (genuine clipping, not hyphenation). **RESOLVED in the Task 5 fix loop (commit 1ace4c3).
+  Now ok:true.**
 - **Vollkorn-italic accents are now UPRIGHT Barlow Black** (no local Barlow italic). Affected spots
   to judge in Task 5: the pull-quote frames (e.g. flyer-a6-querformat-portraet page-04, falzflyer
   inner pull-quote), the postkarte "die Sorgen,"/"Superreiche" Headline-Emphasis lines, and the
