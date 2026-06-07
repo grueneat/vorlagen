@@ -1,7 +1,7 @@
 ---
 id: postkarte-a6-kampagne
 version: 0.2.0
-build_py_sha256: eeb818c561b063a75e516a58d37cb12539cb2c3b015228421d493c6a9498acfb
+build_py_sha256: ef4b458129a6d840d2d28a3f41b3bca450e29ea3d77ea2e9e6eba055da2fb799
 title: Kampagnen-Postkarte A6
 format: A6
 orientation: portrait
@@ -17,7 +17,7 @@ build:
   output: template.sla
 original_sla: ../../postkarte-vorlage-original.sla
 sla_diff_strict: false
-previews_for_sla: 910957cdacccbf7fc56cfeead279f8225497f685ecf7e5dd110f6d5a35afe14d
+previews_for_sla: 9a6e79d3809afe57eef440d7a412a48efee508434be72d0cb5a3ae3375746e8d
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from postkarte-vorlage-original.sla;

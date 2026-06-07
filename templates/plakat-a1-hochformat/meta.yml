@@ -1,6 +1,6 @@
 id: plakat-a1-hochformat
 version: 0.1.0
-build_py_sha256: 898d30245c5d0385aa9193ca228d45fe92a3ba57430d72635770e971d56f4a8e
+build_py_sha256: 7d10c16b97b1e6f27ca7eb9937d98a96b6d4a7cb3b293153823a48b91cfb91c4
 title: 'Event-Plakat A1'
 type: single
 audience:
@@ -19,7 +19,7 @@ original_sla: ../../plakat-a1-hochformat-original.sla
 # the controlled divergence from the original geometry — same rationale as
 # zeitung-a4's documented sla_diff opt-out.
 sla_diff_strict: false
-previews_for_sla: 3acb6f5b13d6ff6731d23c91b2dedc5cfd83380ae4fbc759e407581526eb668f
+previews_for_sla: fb53d7fdd336668d1a6762ade35919b2c262494fe66e5931fe0fa98b9581fef3
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from plakat-a1-hochformat-original.sla;

@@ -67,10 +67,10 @@ category_label: Falzflyer
 category: falzflyer
 idml_source: ../../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig Portrait
   Ordner/26-03-Leporello z-Falz 99x210 6-seitig Portrait.idml
-previews_for_sla: d2404e48f483060feedf48a699232c0b1bb5da598905b7cc2a559a62e7cde137
+previews_for_sla: d5ca38afbf43fe68f0df2f1f53a07000804426f0a7245b09743a7c24c82df8fa
 title: Falzflyer Z-Falz 6-seitig – Porträt-Cover
 version: 0.1.0
-build_py_sha256: 42e086d5d1a710c789b875b961301ac470595e43c5001d12b2fbe5c11a7d1ecb
+build_py_sha256: 0f1b053296bdf79c5e029379b3708072bd3c873231d86f527b5aa19b03e78101
 _downloads:
 - label: Burgenland
   bundesland: bgld

@@ -22,26 +22,31 @@ node_modules/
 # fontconfig during dev-container build (see Dockerfile.claude).
 # Only the root-level fonts/ drop zone is blocked, not shared/fonts/
 # (which holds fontconfig config files, not font binaries).
-/fonts/
+# Use /fonts/* (not /fonts/) so the vendored OFL subdirectories below can be
+# re-included — git cannot re-add a file whose parent directory is excluded.
+/fonts/*
 *.otf
 *.ttf
 *.ttc
 
-# Exception: the SIL-OFL Gotham alternatives (Issue 42) are freely
-# redistributable and intentionally bundled for the font-comparison page.
-!shared/fonts/alternatives/**/*.ttf
+# Exception: Barlow Semi Condensed (SIL-OFL) is the single print font for all
+# templates. Scribus renders locally and cannot pull a webfont, so the TTFs are
+# vendored here as a deliberate print-pipeline exception (same justification as
+# the Vollkorn vendoring). The Dockerfile installs them into fontconfig.
+!fonts/barlow-semi-condensed/
+!fonts/barlow-semi-condensed/*.ttf
+!fonts/barlow-semi-condensed/OFL.txt
 
-# Re-exclude Tahoma: it is proprietary (Microsoft) and must NOT be
-# redistributed. The binaries live here only so the maintainer can render
-# the Tahoma comparison column locally; only the raster PNG previews are
-# committed (never the .ttf and never the font-embedding .pdf).
-shared/fonts/alternatives/tahoma/*.ttf
-site/public/schriften/tahoma/*.pdf
-templates/*/fonts/tahoma/*.pdf
-
-# The SIL-OFL alternatives are also self-hosted under site/public/fonts/ so
-# the comparison page can show live web-font specimens (freely redistributable).
-!site/public/fonts/**/*.ttf
+# Exception: Vollkorn (SIL-OFL, Friedrich Althausen) — the accent italics used
+# by the templates ("Vollkorn Black Italic", "Vollkorn Bold Italic"). The
+# genuine static TTFs are vendored here (same print-pipeline justification as
+# Barlow): Scribus renders locally and cannot pull a webfont, and the build
+# must be reproducible without the gitignored host drop zone. The Dockerfile
+# installs them into fontconfig; the 50-vollkorn-family-alias.conf maps the
+# SLA full-name lookups onto these files.
+!fonts/vollkorn/
+!fonts/vollkorn/*.ttf
+!fonts/vollkorn/OFL.txt
 
 # tools/links_export.py emits .pdf siblings to .ai/.psd raster outputs for
 # forward-compat vector use. The SLA references the raster, not the .pdf.

@@ -17,10 +17,10 @@ category_label: 'Flyer'
 category: 'flyer'
 idml_source: ../../../../../originals/26-03-Flyer A6 Hochformat zweigeteilt Ordner/26-03-Flyer
   A6 Hochformat zweigeteilt.idml
-previews_for_sla: d1010accf8c03e5b388d8cb17a08e84438b17a02a78611481a813438ce6d88ce
+previews_for_sla: 4f0905d83b9c3f4137a6d6532c197e0ef4d8283d3d2a92fe82979a84f8c97049
 title: 'Flyer A6 Hochformat – Zweigeteilt'
 version: 0.1.0
-build_py_sha256: 0d4c5e19f72cc5957085c5f042b18796bf3535ec36ebad6100c8fa05d35bd4dc
+build_py_sha256: 53574da967f30f72a33b0669708cd7a17eade8a5303fe18c0b2744ab9e00cca3
 brand_overrides:
 - id: brand:bleed_3mm
   reason: 'IDML-imported flyer template (scaffold). The IDML''s InDesign document

@@ -45,11 +45,11 @@ colors:
     role: brand-stoerer
 
 fonts:
-  - "Gotham Narrow Book"
-  - "Gotham Narrow Bold"
-  - "Gotham Narrow Black"
-  - "Gotham Narrow Ultra"
+  - "Barlow Semi Condensed Regular"
+  - "Barlow Semi Condensed Bold"
+  - "Barlow Semi Condensed Black"
   - "Vollkorn Black Italic"
+  - "Vollkorn Bold Italic"
 
 # Default paragraph styles. Names use the `ci/` prefix to be unambiguously
 # brand-managed. PARENT inheritance follows Scribus 1.6 semantics: re-emitting
@@ -58,7 +58,7 @@ styles:
   ci/default:
     align: left           # 0 = left, 1 = center, 2 = right, 3 = block
     linesp: 13
-    font: "Gotham Narrow Book"
+    font: "Barlow Semi Condensed Regular"
     fontsize: 12
     fcolor: White
     language: de
@@ -67,11 +67,11 @@ styles:
     parent: ci/default
     align: center
     linesp: 23
-    font: "Gotham Narrow Ultra"
+    font: "Barlow Semi Condensed Black"
     fontsize: 27
     fcolor: White
 
-  ci/headline-vollkorn-italic:
+  ci/headline-emphasis:
     parent: ci/default
     align: center
     linesp: 23
@@ -83,7 +83,7 @@ styles:
     parent: ci/default
     align: center
     linesp: 13
-    font: "Gotham Narrow Book"
+    font: "Barlow Semi Condensed Regular"
     fontsize: 12
     fcolor: White
 
@@ -91,7 +91,7 @@ styles:
     parent: ci/default
     align: left
     linesp: 12
-    font: "Gotham Narrow Book"
+    font: "Barlow Semi Condensed Regular"
     fontsize: 11
     fcolor: Black
 
@@ -99,7 +99,7 @@ styles:
     parent: ci/default
     align: left
     linesp: 6
-    font: "Gotham Narrow Book"
+    font: "Barlow Semi Condensed Regular"
     fontsize: 5
     fcolor: White
 
@@ -107,7 +107,7 @@ styles:
     parent: ci/default
     align: center
     linesp: 11
-    font: "Gotham Narrow Ultra"
+    font: "Barlow Semi Condensed Black"
     fontsize: 10
     fcolor: White
 
@@ -115,7 +115,7 @@ styles:
     parent: ci/default
     align: center
     linesp: 13
-    font: "Gotham Narrow Bold"
+    font: "Barlow Semi Condensed Bold"
     fontsize: 13
     fcolor: White
 
