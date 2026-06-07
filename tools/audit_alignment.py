@@ -578,6 +578,35 @@ def _report_has_findings(rep: TemplateAuditReport) -> bool:
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+def run_headline_spacing(slugs, root: Path) -> int:
+    """Run the static headline-spacing audit across ``slugs``.
+
+    Static mode (no render) so this is CI-safe — CI calls
+    ``audit_alignment.py --all`` without rendering. Returns the number of
+    templates with a headline-spacing violation; prints per-template results.
+    """
+    import headline_spacing_audit as hsa
+
+    templates_dir = root / "templates"
+    failed = 0
+    for slug in slugs:
+        sla = templates_dir / slug / "template.sla"
+        if not sla.exists():
+            continue
+        report = hsa.audit_static(sla, slug=slug)
+        if report.stacks == 0:
+            continue
+        if report.violations:
+            failed += 1
+            print(f"headline_spacing: {slug} — "
+                  f"{len(report.violations)} violation(s):")
+            for v in report.violations:
+                print(f"  [{v.kind}] {v.stem}: {v.detail}")
+        else:
+            print(f"headline_spacing: {slug} OK ({report.stacks} stack(s))")
+    return failed
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="audit_alignment")
     ap.add_argument("slug", nargs="?", default=None)
@@ -625,6 +654,12 @@ def main(argv=None) -> int:
         action="store_false",
         help="Disable the brand:band_consistency check (Issue #25).",
     )
+    ap.add_argument(
+        "--no-headline-spacing", dest="headline_spacing",
+        action="store_false", default=True,
+        help=("Disable the static headline-spacing audit "
+              "(bx4d8: too-tight / uneven / top-gap-collapse stacked headlines)."),
+    )
     ap.add_argument("--root", type=Path, default=REPO_ROOT)
     ns = ap.parse_args(argv)
     if ns.all and ns.slug:
@@ -648,7 +683,13 @@ def main(argv=None) -> int:
             for rep in reps:
                 print(report_to_markdown(rep))
                 print()
+        headline_failed = 0
+        if ns.headline_spacing:
+            headline_failed = run_headline_spacing(
+                [r.slug for r in reps], ns.root)
         if ns.strict and any(_report_has_findings(r) for r in reps):
+            return 1
+        if headline_failed:
             return 1
         return 0
     rep = audit_template(
@@ -664,7 +705,12 @@ def main(argv=None) -> int:
         Path(ns.md).write_text(report_to_markdown(rep), encoding="utf-8")
     else:
         print(report_to_markdown(rep))
+    headline_failed = 0
+    if ns.headline_spacing:
+        headline_failed = run_headline_spacing([ns.slug], ns.root)
     if ns.strict and _report_has_findings(rep):
+        return 1
+    if headline_failed:
         return 1
     return 0
 

@@ -315,3 +315,31 @@ Every preview re-render changes the SLA → meta.yml hash needs updating. Easy t
 
 The current `docs/scribus-sla-attribute-semantics.md` has a LINESPMode section but doesn't document the LINESPMode=2-with-sub-metric-LINESP bug. Should add.
 
+## bx4d8 — metric-driven headline stacks + headline_spacing_audit thresholds
+
+**Root mechanism (confirmed, fontTools):** stacked single-line headline frames
+use Scribus `FLOP=1` ("Font Ascent") — the single baseline sits one hhea
+*ascent* below the frame top. The visible inter-baseline gap is therefore
+`Δy_mm − ascent(font_N) + ascent(font_{N+1})`. Real hhea ascents (units/em):
+**Barlow Semi Condensed = 1.000, Vollkorn = 0.952, Gotham Narrow = 0.800.** The
+old converter constant `_FONT_FLOP_ASCENT_RATIO = {"vollkorn": 0.15}` was simply
+`ascent(Vollkorn) − ascent(Gotham) = 0.152` — correct for Gotham-as-reference,
+WRONG once Barlow (1.000) became line 1. `sla_lib.builder.headline.headline_stack`
+now solves `frame_top_{k+1} = frame_top_k + linesp − ascent(font_{k+1}) +
+ascent(font_k)` from real ascents, so gaps are even by construction.
+
+**`tools/headline_spacing_audit.py` thresholds (locked from the corrected
+baselines so passing templates set the floor):**
+
+| Check | Default | Rationale |
+|---|---|---|
+| `too_tight` | gap < `0.85 × fontsize` | Corpus headline leading runs ~0.9× fontsize; 0.85 floors genuinely-too-tight stacks without tripping intentional tightness. |
+| `uneven` | `(max−min)/mean > 0.15` | Ratio-based, so a uniformly-tight EVEN single-font stack passes (no false positive). |
+| `top_gap_collapse` | top gap < `0.9 × mean(other gaps)` | The "dreizeilige" signature: a Barlow line above a Vollkorn line collapsed the top gap (21.06pt top vs 32.94pt bottom pre-fix). |
+
+The corrected canonical `uaf8` stack measures 27.0pt / 27.0pt static inter-baseline
+gaps; the audit flags the pre-fix geometry on all three checks and passes the
+corrected geometry. Wired into `bin/validate` (static, CI-safe) and
+`bin/audit-alignment` / `tools/audit_alignment.py --all` (so CI's render-free
+run gates on it too).
+
