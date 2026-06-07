@@ -1,7 +1,7 @@
 ---
 id: tischschild-a5-quer
 version: 0.1.0
-build_py_sha256: a6d25c0614771a339af2f78957d1b3246e29b622450e6ce24071f0d1e54aa3db
+build_py_sha256: 9db06d96d5fc9f7e7e7d3ca0228413c93c9ce159ab60f083a4f16fa9a728592d
 title: Tischschild A5 Querformat
 format: A4
 orientation: landscape
@@ -15,7 +15,7 @@ description: Tischschild (Tent-Card) im A5-Querformat zum Aufstellen am Infostan
 build:
   script: build.py
   output: template.sla
-previews_for_sla: e644ea537f8701a38aef221e621964c13bd309123d72ad29fd19d85ec3065c1a
+previews_for_sla: 52ab774eca26cff33cd45b2cad389367a90c4e6bd6dddd5679e724f75bb37ab9
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Body 1.3× and Termine 1.3× and CTA-Footer 1.27× linesp ratios are intentional
