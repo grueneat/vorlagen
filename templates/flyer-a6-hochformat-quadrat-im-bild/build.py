@@ -29,6 +29,7 @@ from sla_lib.builder import (  # noqa: E402
     Polygon,
     PolyLine,
     Run,
+    headline_stack,
     ParaStyle,
     Anchor,
     pack_inline_image,
@@ -274,39 +275,22 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     ))
     # h_mm widened 31.2959mm→67.0278mm: Scribus clips lines when frame_h < 4 explicit lines × line height (leading=32.12pt; IDML overflows silently)
     # Mixed-font headline 'u133f' split into 3 single-line frames: the IDML joins the lines with <Br/> but mixes fonts (e.g. Barlow + Vollkorn), and Scribus's per-line font-metric leading places them at the wrong baseline as one frame. Each line is stacked at the IDML Leading (32.12pt) with a per-font FLOP=1 baseline correction.
-    page0.add(TextFrame(
+    for _f in headline_stack(
+        [
+            ('Das ist eine', 'Barlow Semi Condensed Black', 31, 'White'),
+            ('dreizeilige', 'Vollkorn Black Italic', 31, 'Gelb'),
+            ('Headline', 'Barlow Semi Condensed Black', 31, 'White'),
+        ],
+        top_y_mm=50.222,
         x_mm=17.2731,
-        y_mm=50.222,
         w_mm=70.4538,
         h_mm=20.0025,
-        anname='u133f',
-        layer=0,
+        linesp_pt=32.12029866786047,
+        anname_stem='u133f',
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Das ist eine', font='Barlow Semi Condensed Black', fontsize=31, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'})],
-        trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'},
-    ))
-    page0.add(TextFrame(
-        x_mm=17.2731,
-        y_mm=59.9129,
-        w_mm=70.4538,
-        h_mm=20.0025,
-        anname='u133f_l2',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='dreizeilige', font='Vollkorn Black Italic', fontsize=31, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'})],
-        trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'},
-    ))
-    page0.add(TextFrame(
-        x_mm=17.2731,
-        y_mm=72.8847,
-        w_mm=70.4538,
-        h_mm=20.0025,
-        anname='u133f_l3',
-        layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Headline', font='Barlow Semi Condensed Black', fontsize=31, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'})],
-        trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '32.12029866786047'},
-    ))
+    ):
+        page0.add(_f)
     page0.add(Polygon(
         x_mm=70.0307,
         y_mm=26.1542,
@@ -393,28 +377,21 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     ))
     # h_mm widened 17.9915mm→33.1611mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
     # Mixed-font headline 'u1214' split into 2 single-line frames: the IDML joins the lines with <Br/> but mixes fonts (e.g. Barlow + Vollkorn), and Scribus's per-line font-metric leading places them at the wrong baseline as one frame. Each line is stacked at the IDML Leading (27.00pt) with a per-font FLOP=1 baseline correction.
-    page1.add(TextFrame(
+    for _f in headline_stack(
+        [
+            ('Ich bin eine ', 'Barlow Semi Condensed Black', 30, 'White'),
+            ('Headline.', 'Vollkorn Black Italic', 30, 'Gelb'),
+        ],
+        top_y_mm=15,
         x_mm=15,
-        y_mm=15,
         w_mm=87,
         h_mm=19.4028,
-        anname='u1214',
-        layer=0,
+        linesp_pt=27.0,
+        anname_stem='u1214',
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin eine ', font='Barlow Semi Condensed Black', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'})],
-        trail_attrs={'LINESPMode': '0', 'LINESP': '27.0'},
-    ))
-    page1.add(TextFrame(
-        x_mm=15,
-        y_mm=22.9375,
-        w_mm=87,
-        h_mm=19.4028,
-        anname='u1214_l2',
         layer=0,
-        style='idml/normalparagraphstyle',
-        runs=[Run(text='Headline.', font='Vollkorn Black Italic', fontsize=30, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle')],
-        trail_attrs={'LINESPMode': '0', 'LINESP': '27.0'},
-    ))
+    ):
+        page1.add(_f)
     # h_mm widened 93.9094mm→97.3667mm: Scribus clips lines when frame_h < 17 explicit lines × line height (leading=14.30pt; IDML overflows silently)
     page1.add(TextFrame(
         x_mm=15,

@@ -152,6 +152,7 @@ def headline_stack(
     linesp_pt: float,
     anname_stem: str,
     style: str | None = None,
+    layer: int | None = None,
     align: str | None = "0",
 ) -> list[TextFrame]:
     """Build an even-gap stacked headline from real font metrics.
@@ -166,6 +167,9 @@ def headline_stack(
         anname_stem: object name of the first frame; subsequent frames are
             ``{stem}_l2``, ``{stem}_l3``, … so the audit can group them.
         style: optional ``<DefaultStyle PARENT=...>`` paragraph-style slug.
+        layer: layer index for every line frame (headline frames sit on the
+            text/background layer per template; ``None`` keeps the ``_Frame``
+            default).
         align: paragraph ALIGN on the first frame's run (``"0"`` = left). None
             omits it.
 
@@ -216,6 +220,8 @@ def headline_stack(
         }
         if style:
             frame_kwargs["style"] = style
+        if layer is not None:
+            frame_kwargs["layer"] = layer
         frames.append(TextFrame(**frame_kwargs))
         prev_top_mm = top
         prev_font = font
