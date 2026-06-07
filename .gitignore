@@ -22,7 +22,9 @@ node_modules/
 # fontconfig during dev-container build (see Dockerfile.claude).
 # Only the root-level fonts/ drop zone is blocked, not shared/fonts/
 # (which holds fontconfig config files, not font binaries).
-/fonts/
+# Use /fonts/* (not /fonts/) so the vendored OFL subdirectories below can be
+# re-included — git cannot re-add a file whose parent directory is excluded.
+/fonts/*
 *.otf
 *.ttf
 *.ttc
@@ -31,8 +33,20 @@ node_modules/
 # templates. Scribus renders locally and cannot pull a webfont, so the TTFs are
 # vendored here as a deliberate print-pipeline exception (same justification as
 # the Vollkorn vendoring). The Dockerfile installs them into fontconfig.
+!fonts/barlow-semi-condensed/
 !fonts/barlow-semi-condensed/*.ttf
 !fonts/barlow-semi-condensed/OFL.txt
+
+# Exception: Vollkorn (SIL-OFL, Friedrich Althausen) — the accent italics used
+# by the templates ("Vollkorn Black Italic", "Vollkorn Bold Italic"). The
+# genuine static TTFs are vendored here (same print-pipeline justification as
+# Barlow): Scribus renders locally and cannot pull a webfont, and the build
+# must be reproducible without the gitignored host drop zone. The Dockerfile
+# installs them into fontconfig; the 50-vollkorn-family-alias.conf maps the
+# SLA full-name lookups onto these files.
+!fonts/vollkorn/
+!fonts/vollkorn/*.ttf
+!fonts/vollkorn/OFL.txt
 
 # tools/links_export.py emits .pdf siblings to .ai/.psd raster outputs for
 # forward-compat vector use. The SLA references the raster, not the .pdf.

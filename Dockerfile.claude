@@ -127,6 +127,25 @@ RUN install -m 644 /tmp/barlow-staging/*.ttf /usr/local/share/fonts/gruene/ && \
         { echo "fc-match did not resolve to Barlow" >&2; exit 1; } && \
     echo "Barlow installed: $BN faces" && rm -rf /tmp/barlow-staging
 
+# Vollkorn accent italics (SIL-OFL, Friedrich Althausen) — the two faces the
+# templates use: "Vollkorn Black Italic" (headline accents) and "Vollkorn Bold
+# Italic" (the zweigeteilt pull-quote). The genuine static TTFs ARE committed to
+# the repo (fonts/vollkorn/, a tracked .gitignore exception) so the build is
+# reproducible WITHOUT the gitignored host drop zone above. Scribus renders
+# locally and cannot pull a webfont; this is the same deliberate print-pipeline
+# vendoring exception as Barlow. We install the committed files explicitly here
+# (overwriting any same-named copy that the proprietary drop zone may have
+# dropped) so the rendered output is pinned to the vendored, license-audited
+# files — not whatever happens to be on the build host.
+COPY fonts/vollkorn/ /tmp/vollkorn-staging/
+RUN install -m 644 /tmp/vollkorn-staging/*.ttf /usr/local/share/fonts/gruene/ && \
+    fc-cache -f && \
+    VN=$(fc-list | grep -ci 'vollkorn' || true) && \
+    if [ "$VN" -lt 2 ]; then \
+        echo "VOLLKORN INSTALL FAILED: $VN faces (expected >= 2)" >&2; exit 1; \
+    fi && \
+    echo "Vollkorn committed italics installed: $VN faces" && rm -rf /tmp/vollkorn-staging
+
 # Fontconfig family-name aliases for the Vollkorn accent italics. Scribus SLAs
 # reference these fonts by their full name as a family ("Vollkorn Black Italic" /
 # "Vollkorn Bold Italic"); the static files register as family=Vollkorn +
@@ -135,11 +154,17 @@ RUN install -m 644 /tmp/barlow-staging/*.ttf /usr/local/share/fonts/gruene/ && \
 # font (only Gotham was replaced by Barlow), so both italic faces must resolve.
 COPY shared/fonts/50-vollkorn-family-alias.conf /etc/fonts/conf.d/50-vollkorn-family-alias.conf
 RUN fc-cache -f && \
-    fc-match "Vollkorn Black Italic" | grep -qi 'Vollkorn-BlackItalic' || \
-        { echo "Vollkorn alias not resolving to Vollkorn-BlackItalic.ttf" >&2; exit 1; } && \
-    fc-match "Vollkorn Bold Italic" | grep -qi 'Vollkorn-BoldItalic' || \
-        { echo "Vollkorn alias not resolving to Vollkorn-BoldItalic.ttf" >&2; exit 1; } && \
-    echo "Vollkorn aliases OK: $(fc-match 'Vollkorn Black Italic'); $(fc-match 'Vollkorn Bold Italic')"
+    BI=$(fc-match "Vollkorn Black Italic"); \
+    OI=$(fc-match "Vollkorn Bold Italic"); \
+    echo "$BI" | grep -qi 'Vollkorn-BlackItalic' || \
+        { echo "fc-match 'Vollkorn Black Italic' did not resolve to genuine Vollkorn-BlackItalic.ttf: $BI" >&2; exit 1; }; \
+    echo "$OI" | grep -qi 'Vollkorn-BoldItalic' || \
+        { echo "fc-match 'Vollkorn Bold Italic' did not resolve to genuine Vollkorn-BoldItalic.ttf: $OI" >&2; exit 1; }; \
+    echo "$BI$OI" | grep -qi 'DejaVu' && \
+        { echo "Vollkorn italic resolved to DejaVu fallback — install/alias broken: $BI / $OI" >&2; exit 1; }; \
+    [ "$BI" != "$OI" ] || \
+        { echo "Vollkorn Black Italic and Bold Italic resolved to the SAME file — weights collapsed: $BI" >&2; exit 1; }; \
+    echo "Vollkorn aliases OK (genuine, distinct): $BI; $OI"
 
 # Allow ImageMagick to read/write PDF (Debian's policy.xml blocks PDF by default).
 # We need this for compare/convert in visual diff workflows.
