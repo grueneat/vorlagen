@@ -60,10 +60,14 @@ def build_template():
     # the previous face, so a two-line demo headline (e.g. "Ohne Bild im
     # Hintergrund sind Überschriften grün", "Zwischen Überschrift und Text ist ein
     # Abstand") pushed its second line past the fixed 27.96mm demo frames and
-    # Scribus clipped it. Tightened the fixed leading 35→30pt so both lines fit;
-    # the 40pt headline size (design intent) is unchanged and single-line
-    # headlines are unaffected by leading.
-    doc.add_para_style(ParaStyle(name='Überschrift Dunkelgrün', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', fontsize=40, linesp=28, space_after_pt=0, linesp_mode=0))
+    # Scribus clipped it. c8bg0 over-tightened the fixed leading to 28pt, which
+    # made two-line headline pairs sit too close. Re-justified to 30pt — inside
+    # the safe window: the 27.96mm (~79.3pt) demo frames hold two 40pt Barlow
+    # lines (ascent 1.0*40 + leading + descent 0.2*40 = 78pt at 30pt leading,
+    # a +1.3pt clip margin; 32pt would clip at -0.7pt). 30pt is looser than the
+    # too-tight 28 while staying clip-safe. The 40pt size (design intent) is
+    # unchanged and single-line headlines are unaffected by leading.
+    doc.add_para_style(ParaStyle(name='Überschrift Dunkelgrün', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', fontsize=40, linesp=30, space_after_pt=0, linesp_mode=0))
     doc.add_para_style(ParaStyle(name='Bildunterschrift weiß', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=10, linesp=12))
     doc.add_para_style(ParaStyle(name='Fließtext weiß', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', space_after_pt=0, min_word_track=1, min_glyph_shrink=0.95, align=3, linesp_mode=2))
     doc.add_para_style(ParaStyle(name='Fließtext in grünem Kasten', fcolor='White', language='de', fontsize=11, min_word_track=1, min_glyph_shrink=0.95, align=3, linesp_mode=1))
