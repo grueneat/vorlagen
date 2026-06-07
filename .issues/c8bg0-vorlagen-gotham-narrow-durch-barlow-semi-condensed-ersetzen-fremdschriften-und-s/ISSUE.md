@@ -2,7 +2,7 @@
 id: c8bg0
 title: 'Vorlagen: Gotham Narrow durch Barlow Semi Condensed ersetzen, Fremdschriften
   und Schriftvergleich entfernen, Baseline-PDFs neu erzeugen'
-status: in_review
+status: done
 priority: high
 labels:
 - fonts
