@@ -200,7 +200,7 @@ class Impressum:
     # When prefix_text is set the block emits TWO Runs in the body paragraph:
     # prefix in prefix_font then `text` in the trail_style font.
     prefix_text: Optional[str] = None
-    prefix_font: str = "Gotham Narrow Bold"
+    prefix_font: str = "Barlow Semi Condensed Bold"
     prefix_features: Optional[str] = None    # Postkarte: 'inherit'; Plakat: omit
     prefix_fshade: Optional[int] = 100       # both corpus sites: 100
 
@@ -1050,7 +1050,7 @@ class QuoteSidebar:
     def emit(self) -> Iterable:
         warnings.warn("QuoteSidebar is deprecated", DeprecationWarning, stacklevel=2)
         anchor, x, y = _resolve_pos(self.pos, self.x_mm, self.y_mm)
-        yield TextFrame(x_mm=x, y_mm=y, w_mm=self.w_mm, h_mm=self.h_mm, anchor=anchor, text=self.text, style=Style.HEADLINE_VOLLKORN, fcolor=self.fcolor, layer=2, anname="Pull-Quote (Vollkorn-Italic)")
+        yield TextFrame(x_mm=x, y_mm=y, w_mm=self.w_mm, h_mm=self.h_mm, anchor=anchor, text=self.text, style=Style.HEADLINE_EMPHASIS, fcolor=self.fcolor, layer=2, anname="Pull-Quote (Barlow-Black)")
 """
 
 

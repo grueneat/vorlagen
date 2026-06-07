@@ -140,7 +140,7 @@ def _panel_de() -> list:
             rotation_deg=180,
             anname="Logo Grüne (panel A)",
         ),
-        # 3. Headline (white-on-Dunkelgrün, 26pt Vollkorn Italic) — visual (55, 9, 230, 18)
+        # 3. Headline (white-on-Dunkelgrün, 26pt Barlow Black) — visual (55, 9, 230, 18)
         TextFrame(
             x_mm=285, y_mm=27, w_mm=230, h_mm=18,
             layer=LAYER_TEXT,
@@ -150,7 +150,7 @@ def _panel_de() -> list:
                       paragraph_style="tent/headline")],
             anname="Headline Panel A",
         ),
-        # 4. Pay-off (Gelb 16pt Vollkorn Italic — sub-headline) — visual (55, 27, 230, 8)
+        # 4. Pay-off (Gelb 16pt Barlow Black — sub-headline) — visual (55, 27, 230, 8)
         TextFrame(
             x_mm=285, y_mm=35, w_mm=230, h_mm=8,
             layer=LAYER_TEXT,
@@ -222,7 +222,7 @@ def _panel_de() -> list:
             rotation_deg=0,
             anname="Footer-Strip Panel A",
         ),
-        # 11. CTA-Footer (white-on-Hellgrün URL — 11pt Gotham Bold) — visual (12, 97, 200, 6)
+        # 11. CTA-Footer (white-on-Hellgrün URL — 11pt Barlow Bold) — visual (12, 97, 200, 6)
         TextFrame(
             x_mm=212, y_mm=103, w_mm=200, h_mm=6,
             layer=LAYER_TEXT,
@@ -419,7 +419,7 @@ def build_template() -> Document:
     # Headline: white-on-Dunkelgrün, sized down from 36→26 to match V1 hero-band height.
     doc.add_para_style(ParaStyle(
         name="tent/headline",
-        font="Vollkorn Black Italic",
+        font="Barlow Semi Condensed Black",
         fontsize=26,
         linesp=23.4,
         linesp_mode=0,
@@ -430,7 +430,7 @@ def build_template() -> Document:
     # Body: bullets in white zone — fontsize trimmed 14→12 to fit 16 mm h with 2 short bullets.
     doc.add_para_style(ParaStyle(
         name="tent/body",
-        font="Gotham Narrow Book",
+        font="Barlow Semi Condensed Regular",
         fontsize=12,
         linesp=15.6,
         linesp_mode=0,
@@ -441,7 +441,7 @@ def build_template() -> Document:
     # Termine: trimmed 10→9 to fit 2 lines in 16 mm h (drops the V0 "Nächste Termine" header).
     doc.add_para_style(ParaStyle(
         name="tent/termine",
-        font="Gotham Narrow Book",
+        font="Barlow Semi Condensed Regular",
         fontsize=9,
         linesp=11.7,
         linesp_mode=0,
@@ -452,7 +452,7 @@ def build_template() -> Document:
     # Impressum: white-on-Hellgrün, right-aligned (align=2), bumped 5→6 for footer-strip legibility.
     doc.add_para_style(ParaStyle(
         name="tent/impressum",
-        font="Gotham Narrow Book",
+        font="Barlow Semi Condensed Regular",
         fontsize=6,
         linesp=7.8,
         linesp_mode=0,
@@ -460,10 +460,10 @@ def build_template() -> Document:
         fcolor="White",
         language="de",
     ))
-    # NEW V1: Pay-off — Vollkorn Italic 16pt Gelb, sits below Headline in hero-band.
+    # NEW V1: Pay-off — Barlow Black 16pt Gelb, sits below Headline in hero-band.
     doc.add_para_style(ParaStyle(
         name="tent/payoff",
-        font="Vollkorn Black Italic",
+        font="Barlow Semi Condensed Black",
         fontsize=16,
         linesp=14.4,
         linesp_mode=0,
@@ -471,10 +471,10 @@ def build_template() -> Document:
         fcolor="Gelb",
         language="de",
     ))
-    # NEW V1: CTA-Footer — Gotham Bold 11pt White, lives in Hellgrün footer-strip.
+    # NEW V1: CTA-Footer — Barlow Bold 11pt White, lives in Hellgrün footer-strip.
     doc.add_para_style(ParaStyle(
         name="tent/cta-footer",
-        font="Gotham Narrow Bold",
+        font="Barlow Semi Condensed Bold",
         fontsize=11,
         linesp=14,
         linesp_mode=0,

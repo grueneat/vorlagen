@@ -160,7 +160,7 @@ class _ColorEnum:
 class _StyleEnum:
     """Provides attribute-style access to canonical paragraph style names."""
     HEADLINE_ULTRA = "ci/headline-ultra"
-    HEADLINE_VOLLKORN = "ci/headline-vollkorn-italic"
+    HEADLINE_EMPHASIS = "ci/headline-emphasis"
     BODY_12 = "ci/body-12"
     BODY_11 = "ci/body-11"
     IMPRESSUM = "ci/impressum"

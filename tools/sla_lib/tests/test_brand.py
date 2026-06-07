@@ -69,7 +69,7 @@ class TestBrandGrueneNoe(unittest.TestCase):
     def test_brand_para_styles_present(self):
         """Brand.para_styles contains all CI brand styles."""
         expected_styles = [
-            "ci/default", "ci/headline-ultra", "ci/headline-vollkorn-italic",
+            "ci/default", "ci/headline-ultra", "ci/headline-emphasis",
             "ci/body-12", "ci/body-11", "ci/impressum", "ci/stoerer", "ci/cta",
         ]
         for sname in expected_styles:
