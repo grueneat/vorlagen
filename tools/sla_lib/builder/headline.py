@@ -28,8 +28,6 @@ import functools
 import subprocess
 from pathlib import Path
 
-from fontTools.ttLib import TTFont
-
 from .primitives import Run, TextFrame
 
 PT_TO_MM = 25.4 / 72.0
@@ -123,6 +121,11 @@ def _ascent_em(family: str) -> float:
     top; the hhea metric is what reproduces the rendered ink (verified against
     the old Gotham/Vollkorn 0.15 calibration: 0.952 - 0.800 = 0.152).
     """
+    # Imported lazily so that ``import sla_lib.builder`` never hard-requires
+    # fontTools — only the headline-metric path (local render/authoring) needs
+    # it. Keeps CI test collection working even if fontTools is absent.
+    from fontTools.ttLib import TTFont
+
     ttf = TTFont(_resolve_ttf(family), lazy=True)
     try:
         units_per_em = ttf["head"].unitsPerEm
