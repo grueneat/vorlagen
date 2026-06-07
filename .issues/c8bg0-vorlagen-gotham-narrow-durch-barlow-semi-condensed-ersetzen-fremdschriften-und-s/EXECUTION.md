@@ -287,3 +287,92 @@ modifications (not the incidental public template.sla). gallery_build re-runs id
 **Stopped:** 2026-06-07 — at Task 5 (checkpoint:human-verify visual review) as instructed.
 Baselines NOT promoted, TOLERANCES.yml NOT edited, stale-gate promotion NOT run — those are Task 6
 after the human visual sign-off.
+
+---
+
+## Vollkorn vendored properly (committed, reproducible) — 2026-06-07
+
+**User correction:** "Keine andere Schrift, installiere die richtige vollkorn dazu" — no
+substitute font; install the genuine Vollkorn (esp. real Vollkorn Bold Italic) reproducibly,
+the committed way Barlow is vendored. The prior state relied on an uncommitted, gitignored host
+drop zone + a fontconfig alias — NOT reproducible. Fixed.
+
+### Root cause (verified)
+- Templates use exactly two Vollkorn faces: **Vollkorn Black Italic** (headline accents) and
+  **Vollkorn Bold Italic** (the two `*-zweigeteilt` flyers' white pull-quote).
+- `fonts/Vollkorn/` was gitignored and NOT committed (the `/fonts/` rule blocked everything;
+  only Barlow had an exception). The genuine TTFs existed only in the host drop zone
+  `/root/workspace/fonts/` (now empty) and the live container — a fresh/CI Docker build was NOT
+  guaranteed to have `Vollkorn-BoldItalic.ttf`.
+- Worse: the live container also had `Vollkorn-Italic-VariableFont_wght.ttf`, and fontconfig
+  was resolving "Vollkorn Bold/Black Italic" to that **variable font** — exactly the
+  variable-instance substitute the correction forbids.
+
+### Source of the genuine TTFs
+Official upstream **FAlthausen/Vollkorn-Typeface** (`master:fonts/ttf/`), the canonical static
+OFL release by Friedrich Althausen. Downloaded over network:
+- `Vollkorn-BoldItalic.ttf`  — 331756 bytes, sha256 `a808799b2add65edca00c568ca319db70e73e20e4294887c2a51ac91ed256bee`
+- `Vollkorn-BlackItalic.ttf` — 328804 bytes, sha256 `ea001df007998b3a8e25fbcc28f3739509f0a42d2749f7c510833d918445db0e`
+- `OFL.txt` (4489 bytes, SIL OFL 1.1)
+
+Google Fonts `ofl/vollkorn` now ships ONLY variable fonts (`Vollkorn[wght].ttf`,
+`Vollkorn-Italic[wght].ttf`), so the static statics were taken from the typeface's own upstream.
+
+### Authenticity check (fontTools name table)
+```
+Vollkorn-BoldItalic.ttf : family="Vollkorn"       subfamily="Bold Italic" fullname="Vollkorn Bold Italic"
+                          designer/manufacturer="Friedrich Althausen"  version="Version 5.000; ttfautohint (v1.8.3)"
+                          copyright="Copyright 2018 The Vollkorn Project Authors (.../FAlthausen/Vollkorn-Typeface)"
+                          license=SIL OFL 1.1   numGlyphs=1812
+Vollkorn-BlackItalic.ttf: family="Vollkorn Black" subfamily="Italic"     fullname="Vollkorn Black Italic"
+                          designer/manufacturer="Friedrich Althausen"  version="Version 5.000; ttfautohint (v1.8.3)"
+                          license=SIL OFL 1.1   numGlyphs=1812
+```
+Genuine Vollkorn — NOT DejaVu, NOT a renamed/variable-instance substitute.
+
+### Reproducible vendoring (mirrors Barlow)
+- `fonts/vollkorn/{Vollkorn-BlackItalic.ttf,Vollkorn-BoldItalic.ttf,OFL.txt}` committed.
+  `git ls-files fonts/vollkorn/` → all three tracked.
+- `.gitignore`: changed `/fonts/` → `/fonts/*` and added directory re-includes
+  (`!fonts/vollkorn/`, `!fonts/barlow-semi-condensed/`) so the OFL `*.ttf` exceptions actually
+  re-include the files (git cannot re-add a file under an excluded directory — Barlow's prior
+  exception only "worked" because those files had been `git add -f`'d). Root drop-zone TTFs
+  still ignored (verified: a stray `fonts/SomeFont.ttf` is still ignored).
+- `Dockerfile.claude`: new `COPY fonts/vollkorn/ ...` + install block installs the committed
+  italics into `/usr/local/share/fonts/gruene/`, so the build is reproducible without the host
+  drop zone. Sanity-check hardened to assert both faces resolve to genuine `Vollkorn-*Italic.ttf`,
+  are **distinct files**, and are **not** the DejaVu fallback. Alias conf
+  (`shared/fonts/50-vollkorn-family-alias.conf`) kept as-is (legit full-name→family resolution).
+
+### Live container install + fc-match
+Installed the committed italics into the live fontconfig dir, removed the polluting variable
+font + all other non-committed Vollkorn statics (replicating a clean build with an empty drop
+zone), `fc-cache -f`:
+```
+Vollkorn Black Italic -> Vollkorn-BlackItalic.ttf: "Vollkorn" "Black Italic"
+Vollkorn Bold Italic  -> Vollkorn-BoldItalic.ttf:  "Vollkorn" "Bold Italic"
+```
+Both genuine, distinct, no DejaVu. sha256 of the live files == the committed files.
+
+### Re-render + pdffonts (the "keine andere Schrift" gate)
+Re-rendered the two zweigeteilt flyers (Bold Italic) + postkarte +
+flyer-a6-querformat-portraet + falzflyer-z-falz-6-seitig-portraet (Black Italic), headless.
+`pdffonts` on each preview embeds ONLY:
+```
+flyer-a6-hochformat-zweigeteilt : BarlowSemiCondensed-{Black,Bold,Regular} + Vollkorn-BlackItalic + Vollkorn-BoldItalic
+flyer-a6-querformat-zweigeteilt : BarlowSemiCondensed-{Black,Bold,Regular} + Vollkorn-BlackItalic + Vollkorn-BoldItalic
+postkarte-a6-kampagne           : BarlowSemiCondensed-{Black,Bold,Regular} + Vollkorn-BlackItalic
+flyer-a6-querformat-portraet    : BarlowSemiCondensed-{Black,Regular}      + Vollkorn-BlackItalic
+falzflyer-z-falz-6-seitig-portraet: BarlowSemiCondensed-{Black,Bold,Regular} + Vollkorn-BlackItalic
+```
+Zero DejaVu, zero Gotham/Minion/Times, no other family. `text_render_audit` ok:true on all
+five. `bin/check-stale-previews` exit 0. No `template.sla` source touched (re-rasterize only).
+
+### Commits
+- `250330f` — feat(fonts): vendor genuine Vollkorn italics reproducibly (fonts/vollkorn/, .gitignore, Dockerfile)
+- `4651c97` — chore(render): re-render with genuine Vollkorn italics (5 templates + gallery mirror)
+
+### STOP (as instructed)
+Did NOT promote baselines / edit TOLERANCES.yml / run Tasks 6-7. Stopping after re-render+verify
+so the main agent can visually confirm the genuine Bold-Italic pull-quote on the zweigeteilt
+flyers.
