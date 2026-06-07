@@ -1,11 +1,12 @@
 # Execution: Vorlagen auf Barlow Semi Condensed umstellen
 
 **Started:** 2026-06-07
-**Status:** partial — Tasks 1-4 complete; Task 5 visual-review FIX loop done (2 overflow defects
-fixed, both audit ok:true); STOPPED before baseline promotion (Task 6, gated on human spot-check)
+**Status:** partial — Tasks 1-4 complete; Task 5 overflow fixes done; SCOPE CORRECTION applied
+(Vollkorn restored — only Gotham replaced); all 16 re-rendered + verified; STOPPED before baseline
+promotion (Task 6, gated on human spot-check)
 **Branch:** issue/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s
-**Scope executed:** Tasks 1-4 ONLY. Tasks 5-7 deliberately NOT executed (Task 5 is the
-checkpoint:human-verify visual review; Tasks 6-7 are gated behind it).
+**Scope executed:** Tasks 1-4 + the scope-correction pass (see "Scope correction — Vollkorn
+restored" below). Tasks 6-7 deliberately NOT executed (gated behind the human visual review).
 
 ## Execution Log
 
@@ -106,6 +107,84 @@ zeitung-a4 (changed headline pages — page-03/-04 carry the visible fixes; full
 - /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/zeitung-a4/page-03.png (+ -hires)
 - /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/zeitung-a4/page-04.png (+ -hires)
 - (page-05 … page-10 also re-rendered identically-or-near-identically; no defect was on them)
+
+## Scope correction — Vollkorn restored (2026-06-07)
+
+**Why:** User clarified the scope: *"Die Vollkorn Schrift muss bleiben, nur gothic muss ersetzt
+werden aber Vollkorn bleibt."* The original Task 2 swap (commit `d4d6bea`) wrongly turned EVERY
+font into Barlow, including the `Vollkorn Black Italic` / `Vollkorn Bold Italic` accent/pull-quote
+faces. This pass reverts ONLY the Vollkorn runs back to Vollkorn, leaving the Gotham/Minion/Times
+→ Barlow swaps and the later overflow fixes (`edd0b84`, `1ace4c3`) intact. CONTEXT.md Entscheidung 1
+was updated to record the correction.
+
+### Method (reliable, attribute-anchored)
+For each `templates/*/build.py` and each `*-original.sla`: took the PRE-SWAP version (`git show
+c70d2ed:<path>`), found every run/style whose font was `Vollkorn Black Italic` / `Vollkorn Bold
+Italic`, computed the exact POST-SWAP line the swap produced (apply the full Gotham+Vollkorn→Barlow
+map), located that line in the CURRENT file, and replaced it with the pre-swap line re-swapped
+**only for non-Vollkorn fonts** (so Gotham-origin Barlow runs on the same line stay Barlow; only the
+Vollkorn-origin runs revert). This flips the Vollkorn runs and nothing else. The overflow-fix commits
+were verified NOT to touch any Vollkorn run (they touched the Gotham-origin `Überschrift Dunkelgrün`
+headline style and a white-bg body style), so no reconciliation was needed.
+
+### What reverted (counts)
+- **53× `Vollkorn Black Italic`** + **2× `Vollkorn Bold Italic`** font strings across the 16
+  production `build.py` (55 total) — restored to byte-identical with pre-swap `c70d2ed` (airtight
+  per-file equivalence check passed).
+- **3× `FONT="Vollkorn Black Italic"`** in the root originals
+  (`postkarte-vorlage-original.sla`, `plakat-a1-hochformat-original.sla`,
+  `gruene-zeitung-vorlage-original.sla`) — 1 each.
+- **postkarte** `Headline Emphasis` ParaStyle (build.py + the original SLA): font reverted to
+  `Vollkorn Black Italic`. The style NAME stays `Headline Emphasis` (the Task-2 deviation-1 rename
+  off `Vollkorn Headline sehr wichtig`); the name is descriptive, referenced in 3 places, and has no
+  rendering effect — only the font matters and it is now Vollkorn.
+- **shared/ci.yml**: `ci/headline-emphasis` style font reverted to `Vollkorn Black Italic`; the
+  `fonts:` allow-list now lists **Barlow Semi Condensed Regular/Bold/Black + Vollkorn Black Italic +
+  Vollkorn Bold Italic** and no Gotham. (The allow-list IS enforced — `brand_constraints.py:178`
+  uses `set(load_ci().fonts)` as the allowed-font set — so both Vollkorn faces had to be listed.)
+- **Comments**: 28 "mixes weights (e.g. Barlow Regular + Black)" headline comments → "mixes fonts
+  (e.g. Barlow + Vollkorn)"; 3 tischschild comments ("Barlow Black" → "Vollkorn Italic") restored to
+  match the now-Vollkorn styles.
+
+### Vollkorn-Bold-Italic decision (provisioning)
+`Vollkorn Bold Italic` is used in VISIBLE text (the white pull-quote "Ich bin längeres Zitat…" on
+both `*-zweigeteilt` flyers, page-06). The original pre-issue baseline.pdf **embeds
+`Vollkorn-BoldItalic`** (confirmed via `pdffonts templates/flyer-a6-querformat-zweigeteilt/baseline.pdf`),
+so it was a real, rendered face — not a fallback. The TTF (`Vollkorn-BoldItalic.ttf`) is already
+installed in fontconfig, but `fc-match "Vollkorn Bold Italic"` fell back to DejaVu because the
+style-suffixed name is not a registered family (same quirk as `Vollkorn Black Italic`, which already
+has an alias). **Decision: add a 2nd fontconfig alias** for `Vollkorn Bold Italic` in
+`shared/fonts/50-vollkorn-family-alias.conf` (OFL-clean, no new TTF, mirrors the existing Black-Italic
+alias) and extend the `Dockerfile.claude` sanity-check to assert it. After the alias, `fc-match
+"Vollkorn Bold Italic"` → `Vollkorn-BoldItalic.ttf`, and the re-rendered zweigeteilt previews embed
+`Vollkorn-BoldItalic` (verified via pdffonts) — no DejaVu fallback.
+
+### Re-render + verify results (all 16 production templates)
+- `bin/render-gallery --skip-visual-diff` → all 16 OK; meta.yml SHAs updated; site/public mirror synced.
+- `tools/text_render_audit.py` (--baseline/--preview) → **ok:true for all 15 baselined templates**
+  (tischschild has no baseline, as before). Zero dropped text.
+- `pdffonts` on every preview → **only `BarlowSemiCondensed-*` and `Vollkorn-*`; ZERO
+  Gotham/Minion/Times/DejaVu** fallback. Vollkorn embedded in every accent-bearing template
+  (BlackItalic everywhere; BlackItalic+BoldItalic on both `*-zweigeteilt`).
+- `bin/check-stale-previews` → exit 0 (green).
+- Grep gate `grep -rin "gotham|minion|times roman|tahoma" templates/*/build.py *.sla shared/ci.yml`
+  → CLEAN. `sla_lib unittest discover` → 812 OK (skipped=8), no regressions.
+- Visual spot-check (page PNGs read directly): the yellow Vollkorn-italic accents are back —
+  postkarte "die Sorgen,"/"der Reichtum", flyer "dreizeilige", falzflyer inner pull-quote
+  "Ich bin ein Zitat…", zweigeteilt white Bold-Italic pull-quote "Ich bin längeres Zitat…",
+  tischschild headline+payoff. Surrounding headlines/body remain upright Barlow.
+
+### Key PNGs for human visual confirmation (absolute paths, freshly re-rendered)
+- postkarte: /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/postkarte-a6-kampagne/page-01.png (+ page-02.png)
+- flyer-a6-querformat-portraet "dreizeilige": /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/flyer-a6-querformat-portraet/page-01.png  (+ page-04.png pull-quote area)
+- falzflyer inner pull-quote: /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/falzflyer-z-falz-6-seitig-gruenes-cover/page-02.png
+- zweigeteilt Bold-Italic pull-quote: /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/flyer-a6-querformat-zweigeteilt/page-06.png
+- tischschild headline+payoff: /workspace/vorlagen/.worktrees/c8bg0-vorlagen-gotham-narrow-durch-barlow-semi-condensed-ersetzen-fremdschriften-und-s/templates/tischschild-a5-quer/page-01.png
+
+### Out-of-scope note (unchanged, pre-existing)
+`templates/_smoke/{postcard-a6,zeitung-mini}/template.sla` still reference Gotham — those smoke
+fixtures were never in the swap scope (untouched by `d4d6bea`) and are unrelated to Vollkorn; left
+as-is (pre-existing since before this corrective pass).
 
 ## Commands + Results
 
