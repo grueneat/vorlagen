@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Portrait Ordner/26-03-Flyer
   A6 Querformat Portrait.idml
-previews_for_sla: 6a7483513ec4b45b2ea5aec2450a6ec59fdbdd000ea4ebaf6aad12673b09d882
+previews_for_sla: a77b56bc0af81f3d93f19d0f68b7662ae4cdc394d20832caec5271d13aeadba1
 title: Flyer A6 Querformat – Porträt-Cover
 version: 0.1.0
-build_py_sha256: f92b3af99bde22755c6d0cdfe87b2ccb43d672f890e3c7b6e4c2e2c162e88610
+build_py_sha256: 5bae0e8cf9c9cc91213eea0622906626e043970d90f1f40b8817801136f677b9
 _downloads:
 - label: Burgenland
   bundesland: bgld

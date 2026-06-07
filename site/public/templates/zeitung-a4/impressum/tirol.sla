@@ -13,7 +13,7 @@
     <CHARSTYLE DefaultStyle="1" CNAME="Default Character Style" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" FONTFEATURES="-clig" FEATURES="inherit" LANGUAGE="de" SCOLOR="Black" BGCOLOR="None" FONTSIZE="12" KERN="0" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" FSHADE="100" HyphenWordMin="3" SSHADE="100" BGSHADE="100" TXTSHX="5" TXTSHY="-5" TXTOUT="1" SCALEH="100" SCALEV="100" BASEO="0" />
     <STYLE NAME="ci/default" ALIGN="0" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" />
     <STYLE NAME="ci/headline-ultra" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de" />
-    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" LANGUAGE="de" />
+    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de" />
     <STYLE NAME="ci/body-12" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" />
     <STYLE NAME="ci/body-11" PARENT="ci/default" ALIGN="0" LINESP="12" FONTSIZE="11" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" LANGUAGE="de" />
     <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6" FONTSIZE="5" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" />
@@ -31,7 +31,7 @@
     <STYLE NAME="Schrift Störer  " ALIGN="1" LINESP="13" FONTSIZE="19" VOR="0" FONT="Barlow Semi Condensed Black" FCOLOR="White" FONTFEATURES="-clig" />
     <STYLE NAME="Inhaltsheadline Titelseite" LINESPMode="2" LINESP="11" VOR="0" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="White" FONTFEATURES="-clig" />
     <STYLE NAME="Überschrift weiß" LINESPMode="2" FONTSIZE="40" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" />
-    <STYLE NAME="Überschrift Dunkelgrün" LINESPMode="0" LINESP="35" FONTSIZE="40" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="Dunkelgrün" LANGUAGE="de" FONTFEATURES="-clig" />
+    <STYLE NAME="Überschrift Dunkelgrün" LINESPMode="0" LINESP="28" FONTSIZE="40" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="Dunkelgrün" LANGUAGE="de" FONTFEATURES="-clig" />
     <STYLE NAME="Bildunterschrift weiß" LINESP="12" FONTSIZE="10" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" />
     <STYLE NAME="Fließtext weiß" ALIGN="3" LINESPMode="2" NACH="0" MinWordTrack="1" MinGlyphShrink="0.95" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" />
     <STYLE NAME="Fließtext in grünem Kasten" ALIGN="3" LINESPMode="1" FONTSIZE="11" MinWordTrack="1" MinGlyphShrink="0.95" FCOLOR="White" LANGUAGE="de" />
@@ -39,7 +39,7 @@
     <STYLE NAME="Zwischenüberschrift" LINESPMode="2" VOR="11.34" NACH="0" FONT="Barlow Semi Condensed Bold" FCOLOR="Dunkelgrün" LANGUAGE="de" FONTFEATURES="-clig" />
     <STYLE NAME="Einleitungstext" PARENT="Zwischenüberschrift" FONT="Barlow Semi Condensed Black" FONTFEATURES="-clig" />
     <STYLE NAME="Zwischenüberschrift weiß" PARENT="Zwischenüberschrift" FONT="Barlow Semi Condensed Black" FCOLOR="White" FONTFEATURES="-clig" />
-    <STYLE NAME="Zitat weißer Text" ALIGN="1" FONTSIZE="14" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" />
+    <STYLE NAME="Zitat weißer Text" ALIGN="1" FONTSIZE="14" FONT="Vollkorn Black Italic" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" />
     <STYLE NAME="Zitat grüner Text" PARENT="Zitat weißer Text" FCOLOR="Dunkelgrün" />
     <STYLE NAME="NormalParagraphStyle" LINESPMode="1" FONT="Barlow Semi Condensed Black" FEATURES="inherit" />
     <TableStyle NAME="Default Table Style" />
@@ -420,7 +420,7 @@
     <PAGEOBJECT XPOS="156.693543307087" YPOS="2218.89826771348" OwnPage="3" ItemID="100000066" PTYPE="4" WIDTH="476.884094488189" HEIGHT="42.8265029287213" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="156.693543307087" gYpos="2218.89826771348" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0" FRTYPE="0" path="M0 0 L476.884 0 L476.884 42.8265 L0 42.8265 L0 0 Z" copath="M0 0 L476.884 0 L476.884 42.8265 L0 42.8265 L0 0 Z">
       <StoryText>
         <DefaultStyle LINESPMode="2" />
-        <ITEXT CH="Oder nur einzeilig" />
+        <ITEXT CH="Oder nur einzeilig" FONTSIZE="32" />
         <trail PARENT="Überschrift Dunkelgrün" />
       </StoryText>
     </PAGEOBJECT>

@@ -64,10 +64,10 @@ category_label: Falzflyer
 category: falzflyer
 idml_source: ../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover.idml
-previews_for_sla: fcb8d3fc8a6e7af3e14c20852c73bfc4236743f7afc20dcfdff391b9960d677c
+previews_for_sla: 1d5c6dbfba06bee5f1edb781085e25fa58faa772b606e64fae683c4542b3374d
 title: Falzflyer Z-Falz 6-seitig – Grünes Cover
 version: 0.1.0
-build_py_sha256: 00d13096731a4477d52ac68c3ddbe6a62fcf915524936b050b8b6778fc6aece5
+build_py_sha256: 01be6a5d00070838fea0ad02ba8558caf091a444cc8a4f646e58d5e8de6a712b
 _downloads:
 - label: Burgenland
   bundesland: bgld

@@ -1,7 +1,7 @@
 ---
 id: zeitung-a4
 version: 0.1.0
-build_py_sha256: 8f006627f522ff7d384784ce71da6f9cea67e53e9207b5bc943b829a223f03ff
+build_py_sha256: 4434d8531e25e1c160bbec292b2f940a3fd073aa3d389f66af94f9213c051ab1
 title: Grüne Zeitung A4
 format: A4
 orientation: portrait
@@ -14,7 +14,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 8e74e67ada08517b7a4c0710776eef7b8663a255ea6c280f836f0cda14f0ae05
+previews_for_sla: 076be055bd1f2d1d6b645e95410440060b555e5f6eb48511d135a9ee81523a15
 sla_diff_strict: false
 text_render_strict: false
 brand_overrides:

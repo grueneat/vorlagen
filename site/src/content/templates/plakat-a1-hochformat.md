@@ -1,7 +1,7 @@
 ---
 id: plakat-a1-hochformat
 version: 0.1.0
-build_py_sha256: 6d5d9eb62a04da4ccbaae8a7662baca0a4fff6bab1bc4a59392bc63d238f18be
+build_py_sha256: 7d10c16b97b1e6f27ca7eb9937d98a96b6d4a7cb3b293153823a48b91cfb91c4
 title: Event-Plakat A1
 type: single
 audience:
@@ -14,7 +14,7 @@ build:
   output: template.sla
 original_sla: ../../plakat-a1-hochformat-original.sla
 sla_diff_strict: false
-previews_for_sla: 64f676c26899e6e00bdb87392ff74205b69cddfb1f91cd6a2b36b64a162bc36d
+previews_for_sla: fb53d7fdd336668d1a6762ade35919b2c262494fe66e5931fe0fa98b9581fef3
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Production template auto-generated from plakat-a1-hochformat-original.sla;
