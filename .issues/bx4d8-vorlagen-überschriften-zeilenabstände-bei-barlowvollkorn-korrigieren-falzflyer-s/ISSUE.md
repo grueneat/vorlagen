@@ -2,7 +2,7 @@
 id: bx4d8
 title: 'Vorlagen: Überschriften-Zeilenabstände bei Barlow/Vollkorn korrigieren, Falzflyer-Social-Icons
   fixen, automatisierter Abstands-Check'
-status: open
+status: done
 priority: high
 labels:
 - templates

@@ -1,9 +1,8 @@
 # Execution: Vorlagen — Überschriften-Zeilenabstände (Barlow/Vollkorn), Falzflyer-Social-Icons, Abstands-Audit
 
 **Started:** 2026-06-07
-**Status:** tasks_0_5_complete (Task 6 pending human visual sign-off)
+**Status:** complete (all 6 tasks done; baselines promoted after human visual sign-off)
 **Branch:** issue/bx4d8-vorlagen-überschriften-zeilenabstände-bei-barlowvollkorn-korrigieren-falzflyer-s
-**Scope:** Tasks 0–5 only. Task 6 (baseline promotion) is GATED on the main agent's focused visual review — NOT done here.
 
 ## Execution Log
 
@@ -71,7 +70,22 @@
     +0.3pt clip edge; stacked linesp kept at the IDML design leading (helper makes
     gaps even at that leading — no per-template nudge needed; all pass).
   - NO baselines promoted, NO diff.yml/TOLERANCES.yml touched.
-- [ ] Task 6: Human visual sign-off + baseline promotion — PENDING (main agent)
+- [x] Task 6: Human visual sign-off + baseline promotion + final gates — commit e350858
+  - Human visual sign-off received from the main agent: the "dreizeilige" gaps are
+    now balanced, zeitung headlines clear. Promotion gate (CONTEXT.md decision 5) met.
+  - Promoted 13 baselines (preview.pdf → baseline.pdf):
+    - 12 DSL stacked-headline templates (8 A6 flyers + 4 z-falz falzflyers):
+      `cp preview.pdf baseline.pdf` — these have NO template-preview.sla, so
+      preview.pdf IS the template.sla render (baseline == template.sla render).
+    - zeitung-a4 (original_sla, HAS template-preview.sla): baseline rendered from
+      `template.sla` via `xvfb-run scribus -g -ns -py tools/_export_pdf.py
+      templates/zeitung-a4/template.sla templates/zeitung-a4/baseline.pdf`
+      (NOT template-preview.sla), per the c8bg0-established path.
+  - diff.yml / TOLERANCES.yml NOT touched — Scribus renders deterministically, drift
+    is ~0% vs the new baselines (visual_diff PASS on every changed template). No
+    tolerance loosening. preview.pdf / page-*.png already committed in Task 5 and
+    byte-identical after the deterministic re-render (no change to stage).
+  - Only change committed: the 13 baseline.pdf files (e350858).
 
 ## Key findings (Task 0 measurement basis)
 
@@ -95,10 +109,45 @@ non-blocking word-drift vs the not-yet-promoted baseline (text_render_strict=fal
 geometry on all three checks.
 **bin/audit-alignment --all:** zero headline-spacing violations.
 **bin/check-stale-previews:** exit 0.
-**bin/validate:** NOT run to green here — sla_diff/visual_diff compare against the
-pre-fix baselines, which the intended geometry change exceeds; that is resolved by
-the Task-6 baseline promotion (gated on human sign-off). The headline_spacing static
-gate I added to bin/validate passes.
+**bin/validate (pre-promotion):** NOT green — sla_diff/visual_diff compared against
+the pre-fix baselines; resolved by the Task-6 baseline promotion.
+
+## Task 6 — Final gate results (post-promotion, against the new baselines)
+
+**Baselines promoted:** 13 (12 DSL stacked-headline templates + zeitung-a4). Only
+the 13 `baseline.pdf` files changed; diff.yml/TOLERANCES.yml untouched (drift ~0%).
+
+- **bin/render-gallery (full):** RC=0. 16 `visual_diff (150dpi): PASS`, ZERO
+  FAIL/DRIFT/Traceback. (One transient `scribus exited 0 but produced no PDF` on
+  falzflyer-z-falz-6-seitig-zweigeteiltes-cover during the nested visual_diff render
+  on the first attempt — a Scribus-under-xvfb flush hiccup, NOT a geometry drift;
+  passed cleanly on retry and on the final full clean run.)
+- **bin/check-stale-previews:** exit 0.
+- **bin/validate:** exit 1 — EXPECTED. The only sla_diff FAILs are the 3 original_sla
+  templates (plakat, postkarte, zeitung-a4), all carrying `sla_diff_strict: false`.
+  zeitung-a4's lone sla_diff `critical` is a pre-existing round-trip divergence
+  (PAGEOBJECT[35] FONTSIZE=32 ITEXT, present at the branch base 006be5c). The ONLY
+  template.sla delta my work introduced is `LINESP 28→30` on `Überschrift Dunkelgrün`,
+  which shows up as an `info`-level diff. visual_diff PASS on ALL templates; the new
+  static headline_spacing gate in bin/validate passes.
+- **bin/audit-alignment --all:** exit 0. New `headline_spacing` audit reports OK for
+  all 12 stacked templates (3 stacks each on the 4 falzflyers, 2 stacks each on the
+  8 A6 flyers). Pre-existing zeitung page-14 band-boundary `[ERROR]` lines are
+  non-fatal aggregate findings, unrelated to headline spacing (overall exit 0).
+- **text_render_audit (--preview/--baseline):** ok=True, `missing_in_preview: {}`
+  (zero clipping) on ALL 13 changed templates — including zeitung-a4, whose Task-5
+  residual word-drift was purely vs the not-yet-promoted 28pt baseline and is now
+  fully resolved by the 30pt baseline promotion.
+- **pdffonts:** all 13 baselines AND all 13 previews show ONLY Barlow + Vollkorn —
+  zero DejaVu / Gotham (26 PDFs checked). (Scribus's stderr "subset list: DejaVu
+  Sans Book" warning is substitution chatter; no DejaVu is embedded — pdffonts
+  confirms.)
+- **headline_spacing_audit (static + pixel):** exit 0 on all 12 stacked templates.
+- **Tests (both runners):** pytest 824 passed / 8 skipped (34 subtests); `python3 -m
+  unittest discover tools/sla_lib/tests` → Ran 832 tests, OK (skipped=8).
+
+**Working tree:** clean except the known untracked
+`site/public/templates/*/template.sla` gallery byproducts (13 of them).
 
 ## Deviations from Plan
 
@@ -145,13 +194,15 @@ gate I added to bin/validate passes.
 ## Self-Check
 
 - [x] All files from plan exist (headline.py, headline_spacing_audit.py, both test files)
-- [x] All 5 commits exist on the branch (1dfb02f, de1af7f, 65ce5e5, 5fb4237, 830b486)
-- [x] Full pytest + unittest discover pass (both runners)
+- [x] All commits exist on the branch (1dfb02f, de1af7f, 65ce5e5, 5fb4237, 830b486, e350858)
+- [x] All 13 promoted baselines committed (e350858); diff.yml/TOLERANCES.yml untouched
+- [x] Full pytest + unittest discover pass (both runners, post-commit)
 - [x] No stubs/TODOs/placeholders in new code
 - [x] No leftover debug code (only intentional sys.stderr/stdout CLI output)
 - [x] No tool attribution in commits/code
-- **Result:** PASSED (Tasks 0–5; Task 6 baseline promotion pending human sign-off)
+- [x] Working tree clean except known untracked site/public/*/template.sla byproducts
+- **Result:** PASSED (all 6 tasks complete)
 
-**Tasks 0–5 completed:** 2026-06-07
-**Commits:** 5 (+ this EXECUTION.md)
-**Task 6:** PENDING — gated on the main agent's focused headline-spacing visual review.
+**Completed:** 2026-06-07
+**Commits:** 6 source/baseline commits (1dfb02f, de1af7f, 65ce5e5, 5fb4237, 830b486,
+e350858) + EXECUTION.md docs commits.
