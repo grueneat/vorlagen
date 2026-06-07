@@ -333,9 +333,16 @@ baselines so passing templates set the floor):**
 
 | Check | Default | Rationale |
 |---|---|---|
-| `too_tight` | gap < `0.85 × fontsize` | Corpus headline leading runs ~0.9× fontsize; 0.85 floors genuinely-too-tight stacks without tripping intentional tightness. |
-| `uneven` | `(max−min)/mean > 0.15` | Ratio-based, so a uniformly-tight EVEN single-font stack passes (no false positive). |
-| `top_gap_collapse` | top gap < `0.9 × mean(other gaps)` | The "dreizeilige" signature: a Barlow line above a Vollkorn line collapsed the top gap (21.06pt top vs 32.94pt bottom pre-fix). |
+| `too_tight` | gap < `0.80 × fontsize` | Min ink-top gap ratio across the 12 corrected templates is 0.832; static baselines run 0.90. 0.80 sits below both, still flags the pre-fix collapse (0.72 top gap). |
+| `uneven` | `(max−min)/mean > 0.18` | Even BASELINES still give mildly uneven INK-TOP gaps (Barlow vs Vollkorn cap height); worst corrected 3-line stack = 0.154 ink spread, so 0.18 clears the artifact while flagging the pre-fix 0.321. |
+| `top_gap_collapse` | top gap < `0.9 × mean(other gaps)` | The "dreizeilige" signature: a Barlow line above a Vollkorn line collapsed the top gap (ink-top 22.56pt top vs 31.2pt bottom, ratio 0.72, pre-fix). |
+
+Pixel ink-top before/after (canonical `uaf8`, linesp 27pt): **pre-fix 7.96mm top
+/ 11.01mm bottom (ratio 0.72 — collapsed top) → post-fix 10.16mm top / 8.81mm
+bottom (ratio 1.15)**; static baselines are exactly even (27.0/27.0pt). Even
+baselines are the typographically-correct target; the residual ink-top imbalance
+is the unavoidable cap-height delta between Barlow (cap≈1.0em) and Vollkorn
+(cap≈0.71em).
 
 The corrected canonical `uaf8` stack measures 27.0pt / 27.0pt static inter-baseline
 gaps; the audit flags the pre-fix geometry on all three checks and passes the

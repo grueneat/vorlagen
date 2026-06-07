@@ -31,7 +31,7 @@
     <STYLE NAME="Schrift Störer  " ALIGN="1" LINESP="13" FONTSIZE="19" VOR="0" FONT="Barlow Semi Condensed Black" FCOLOR="White" FONTFEATURES="-clig"/>
     <STYLE NAME="Inhaltsheadline Titelseite" LINESPMode="2" LINESP="11" VOR="0" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="White" FONTFEATURES="-clig"/>
     <STYLE NAME="Überschrift weiß" LINESPMode="2" FONTSIZE="40" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig"/>
-    <STYLE NAME="Überschrift Dunkelgrün" LINESPMode="0" LINESP="28" FONTSIZE="40" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="Dunkelgrün" LANGUAGE="de" FONTFEATURES="-clig"/>
+    <STYLE NAME="Überschrift Dunkelgrün" LINESPMode="0" LINESP="30" FONTSIZE="40" NACH="0" FONT="Barlow Semi Condensed Black" FCOLOR="Dunkelgrün" LANGUAGE="de" FONTFEATURES="-clig"/>
     <STYLE NAME="Bildunterschrift weiß" LINESP="12" FONTSIZE="10" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig"/>
     <STYLE NAME="Fließtext weiß" ALIGN="3" LINESPMode="2" NACH="0" MinWordTrack="1" MinGlyphShrink="0.95" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig"/>
     <STYLE NAME="Fließtext in grünem Kasten" ALIGN="3" LINESPMode="1" FONTSIZE="11" MinWordTrack="1" MinGlyphShrink="0.95" FCOLOR="White" LANGUAGE="de"/>

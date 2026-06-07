@@ -49,13 +49,21 @@ from sla_lib.builder.headline import font_ascent_pt  # noqa: E402
 from sla_lib.reader import SLADocument  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Thresholds. Derived from the corrected Task-2/3 baselines so the passing
-# templates set the floor; see SKILL_FINDINGS / EXECUTION notes for the
-# rationale. min_ratio is intentionally conservative (0.85) — the corpus
-# headlines run ~0.9*fontsize leading, so 0.85 floors genuinely-too-tight
-# stacks without tripping intentional tightness.
-DEFAULT_MIN_RATIO = 0.85          # too_tight: gap < min_ratio * fontsize
-DEFAULT_EVEN_TOL = 0.15           # uneven: (max-min)/mean > even_tol
+# Thresholds. LOCKED from the corrected Task-2/3 renders so the passing
+# templates set the floor (see SKILL_FINDINGS.md). The minimum INK-TOP gap
+# ratio across all 12 corrected templates is 0.832 (the canonical uaf8
+# Vollkorn->Barlow gap); the STATIC path measures even baselines (0.90). A
+# single 0.80 floor sits below both corrected minima yet still flags the
+# pre-fix collapse (0.72 on the top gap) — confirmed against pre/post renders.
+# even_tol is 0.18: even BASELINES (the corrected target) still yield mildly
+# uneven INK-TOP gaps because Barlow and Vollkorn cap heights differ — the
+# worst corrected 3-line stack measures 0.154 ink-top spread, so 0.18 clears
+# the cap-height artifact while still flagging the pre-fix collapse (0.321).
+# The relative checks (uneven / top_gap_collapse) are ratio-based, so a
+# uniformly-tight EVEN single-font stack passes (no false positive); only the
+# absolute floor catches a genuinely-too-tight stack.
+DEFAULT_MIN_RATIO = 0.80          # too_tight: gap < min_ratio * fontsize
+DEFAULT_EVEN_TOL = 0.18           # uneven: (max-min)/mean > even_tol
 DEFAULT_TOP_COLLAPSE_RATIO = 0.9  # top_gap_collapse: top < ratio * mean(others)
 PT_TO_MM = 25.4 / 72.0
 
