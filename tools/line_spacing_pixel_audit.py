@@ -194,6 +194,73 @@ def parse_textframes_from_build_py(build_py: Path) -> dict[str, FrameInfo]:
     return out
 
 
+def parse_textframes_from_sla(sla_path: Path) -> dict[str, FrameInfo]:
+    """Return {anname: FrameInfo} for every text PAGEOBJECT in the SLA.
+
+    Reads the RENDERED geometry, so frames emitted by helpers like
+    ``sla_lib.builder.headline_stack`` (which are not literal ``TextFrame(...)``
+    calls in build.py) are still found. Coordinates are converted from the
+    SLA's absolute scratch space to page-local mm by subtracting the owning
+    page's ``PAGEXPOS``/``PAGEYPOS`` — the same convention
+    ``parse_textframes_from_build_py`` produces.
+    """
+    from sla_lib.reader import SLADocument
+
+    PT2MM = 25.4 / 72.0
+    out: dict[str, FrameInfo] = {}
+    doc = SLADocument(sla_path)
+    pages = doc.pages()
+    # own_page index -> (pagexpos_pt, pageypos_pt)
+    page_origin: dict[int, tuple[float, float]] = {}
+    for idx, pg in enumerate(pages):
+        num = pg.attrib.get("NUM")
+        own = int(num) if num is not None and num.lstrip("-").isdigit() else idx
+        page_origin[own] = (
+            float(pg.attrib.get("PAGEXPOS", "0")),
+            float(pg.attrib.get("PAGEYPOS", "0")),
+        )
+    for obj in doc.page_objects():
+        anname = obj.attrib.get("ANNAME", "")
+        if not anname:
+            continue
+        first_itext = None
+        for it in obj.iter("ITEXT"):
+            first_itext = it
+            break
+        if first_itext is None:
+            continue  # not a populated text frame
+        try:
+            own = int(obj.attrib.get("OwnPage", "0"))
+            xpos = float(obj.attrib.get("XPOS", "0"))
+            ypos = float(obj.attrib.get("YPOS", "0"))
+            w = float(obj.attrib.get("WIDTH", "0"))
+            h = float(obj.attrib.get("HEIGHT", "0"))
+        except ValueError:
+            continue
+        ox, oy = page_origin.get(own, (0.0, 0.0))
+        fill_colors: list[str] = []
+        text_parts: list[str] = []
+        for it in obj.iter("ITEXT"):
+            fc = it.attrib.get("FCOLOR")
+            if fc:
+                fill_colors.append(fc)
+            text_parts.append(it.attrib.get("CH", ""))
+        out[anname] = FrameInfo(
+            anname=anname,
+            page=own,
+            bbox_mm=(
+                (xpos - ox) * PT2MM,
+                (ypos - oy) * PT2MM,
+                w * PT2MM,
+                h * PT2MM,
+            ),
+            rotation_deg=float(obj.attrib.get("ROT", "0") or "0"),
+            fill_colors=tuple(fill_colors),
+            text="".join(text_parts),
+        )
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Pixel-level measurement
 
@@ -741,9 +808,18 @@ def main(argv: Optional[list[str]] = None) -> int:
             sys.stderr.write(str(exc))
             return 3
 
-    frames = parse_textframes_from_build_py(build_py)
+    # Prefer the rendered template.sla as the frame source: headline stacks
+    # emitted by helpers like sla_lib.builder.headline_stack are not literal
+    # TextFrame(...) calls in build.py, so the AST parser would miss them and
+    # silently drop split-headline groups. The SLA carries the real geometry.
+    sla = template_dir / "template.sla"
+    frames: dict[str, FrameInfo] = {}
+    if sla.exists():
+        frames = parse_textframes_from_sla(sla)
     if not frames:
-        sys.stderr.write("No TextFrames found in build.py\n")
+        frames = parse_textframes_from_build_py(build_py)
+    if not frames:
+        sys.stderr.write("No TextFrames found in template.sla or build.py\n")
         return 2
 
     tmpdir = Path(tempfile.mkdtemp(prefix="line_spacing_pixel_"))

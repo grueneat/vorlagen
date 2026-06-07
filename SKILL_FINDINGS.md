@@ -315,3 +315,38 @@ Every preview re-render changes the SLA → meta.yml hash needs updating. Easy t
 
 The current `docs/scribus-sla-attribute-semantics.md` has a LINESPMode section but doesn't document the LINESPMode=2-with-sub-metric-LINESP bug. Should add.
 
+## bx4d8 — metric-driven headline stacks + headline_spacing_audit thresholds
+
+**Root mechanism (confirmed, fontTools):** stacked single-line headline frames
+use Scribus `FLOP=1` ("Font Ascent") — the single baseline sits one hhea
+*ascent* below the frame top. The visible inter-baseline gap is therefore
+`Δy_mm − ascent(font_N) + ascent(font_{N+1})`. Real hhea ascents (units/em):
+**Barlow Semi Condensed = 1.000, Vollkorn = 0.952, Gotham Narrow = 0.800.** The
+old converter constant `_FONT_FLOP_ASCENT_RATIO = {"vollkorn": 0.15}` was simply
+`ascent(Vollkorn) − ascent(Gotham) = 0.152` — correct for Gotham-as-reference,
+WRONG once Barlow (1.000) became line 1. `sla_lib.builder.headline.headline_stack`
+now solves `frame_top_{k+1} = frame_top_k + linesp − ascent(font_{k+1}) +
+ascent(font_k)` from real ascents, so gaps are even by construction.
+
+**`tools/headline_spacing_audit.py` thresholds (locked from the corrected
+baselines so passing templates set the floor):**
+
+| Check | Default | Rationale |
+|---|---|---|
+| `too_tight` | gap < `0.80 × fontsize` | Min ink-top gap ratio across the 12 corrected templates is 0.832; static baselines run 0.90. 0.80 sits below both, still flags the pre-fix collapse (0.72 top gap). |
+| `uneven` | `(max−min)/mean > 0.18` | Even BASELINES still give mildly uneven INK-TOP gaps (Barlow vs Vollkorn cap height); worst corrected 3-line stack = 0.154 ink spread, so 0.18 clears the artifact while flagging the pre-fix 0.321. |
+| `top_gap_collapse` | top gap < `0.9 × mean(other gaps)` | The "dreizeilige" signature: a Barlow line above a Vollkorn line collapsed the top gap (ink-top 22.56pt top vs 31.2pt bottom, ratio 0.72, pre-fix). |
+
+Pixel ink-top before/after (canonical `uaf8`, linesp 27pt): **pre-fix 7.96mm top
+/ 11.01mm bottom (ratio 0.72 — collapsed top) → post-fix 10.16mm top / 8.81mm
+bottom (ratio 1.15)**; static baselines are exactly even (27.0/27.0pt). Even
+baselines are the typographically-correct target; the residual ink-top imbalance
+is the unavoidable cap-height delta between Barlow (cap≈1.0em) and Vollkorn
+(cap≈0.71em).
+
+The corrected canonical `uaf8` stack measures 27.0pt / 27.0pt static inter-baseline
+gaps; the audit flags the pre-fix geometry on all three checks and passes the
+corrected geometry. Wired into `bin/validate` (static, CI-safe) and
+`bin/audit-alignment` / `tools/audit_alignment.py --all` (so CI's render-free
+run gates on it too).
+

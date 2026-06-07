@@ -57,6 +57,7 @@ from __future__ import annotations
 from .ci import Color, Style, load_ci
 from .document import Document, Page
 from .primitives import TextFrame, ImageFrame, Polygon, PolyLine, Line, Anchor, Run, pack_inline_image
+from .headline import headline_stack, font_ascent_pt, font_ascent_mm
 from .styles import DocumentLayer, ParaStyle, CharStyle, SoftShadow
 from .brand import Brand
 from . import blocks
@@ -101,6 +102,9 @@ __all__ = [
     "Anchor",
     "Run",
     "pack_inline_image",
+    "headline_stack",
+    "font_ascent_pt",
+    "font_ascent_mm",
     "ParaStyle",
     "CharStyle",
     "DocumentLayer",

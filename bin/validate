@@ -86,4 +86,20 @@ print(os.path.normpath(os.path.join('$tdir', rel)))
     fi
 done
 
+# bx4d8: static headline-spacing audit (no render — CI-safe). Flags
+# too-tight / uneven / top-gap-collapse stacked headlines across every
+# template carrying a template.sla with a stacked-headline group.
+echo
+echo "=== headline_spacing_audit (static) ==="
+for tdir in templates/*/; do
+    [ -f "${tdir}template.sla" ] || continue
+    tid=$(basename "$tdir")
+    if ! python3 tools/headline_spacing_audit.py \
+        --slug "$tid" --templates-dir templates --static-only > /dev/null 2>&1; then
+        echo "  $tid: FAIL"
+        EXIT=1
+    fi
+done
+echo "headline_spacing_audit: done"
+
 exit $EXIT
