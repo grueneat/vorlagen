@@ -52,8 +52,11 @@ und Zentrierung jedes Texts auf jeder Seite korrekt sind.
   | Gotham Narrow Ultra | Black (900) |
   | Minion Pro / Times Roman / Tahoma | Barlow Semi Condensed (passender Schnitt) |
 
-- **Alle anderen Schriften raus** — nach dem Austausch darf in den Templates
-  keine Nicht-Barlow-Family mehr referenziert sein (verifiziert per grep).
+- **KORREKTUR (User 2026-06-07): Vollkorn bleibt** — nur **Gotham** wird ersetzt.
+  Nach dem Austausch darf keine **Gotham/Minion/Times/Tahoma**-Family mehr in den
+  Templates stehen (verifiziert per grep). **Vollkorn Black/Bold Italic bleibt**
+  als Akzent/Emphasis (Design-System `--gat-font-emphasis`). Zielbild:
+  Barlow (vormals Gotham) + Vollkorn (Akzent).
 
 ### 2. Lokale Font-Bereitstellung für Scribus
 - Scribus rendert PDFs **lokal** und kann keine Webfont per CDN ziehen — Barlow

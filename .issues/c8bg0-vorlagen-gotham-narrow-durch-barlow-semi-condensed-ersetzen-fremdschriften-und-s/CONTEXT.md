@@ -6,12 +6,16 @@ Schriftvergleich entfernen, Baselines neu erzeugen.
 Autonom festgehalten (User: „no questions, just do it"). Aufbauend auf der
 Architektur-Recherche und dem Vorbild Bildgenerator (Issue z6qfk).
 
-## Entscheidung 1 — Eine Schrift: Barlow Semi Condensed, alles andere raus
+## Entscheidung 1 — Gotham → Barlow ersetzen; Vollkorn BLEIBT (Korrektur)
 
-Alle Templates verwenden ausschließlich **Barlow Semi Condensed**. Sämtliche
-Nicht-Barlow-Families werden aus `templates/*/build.py` und den `*-original.sla`
-entfernt und ersetzt. Gewicht-Mapping (verfügbare Barlow-Schnitte
-Regular/Bold/ExtraBold/Black):
+**KORREKTUR (User, 2026-06-07):** „Die Vollkorn Schrift muss bleiben, nur gothic
+muss ersetzt werden aber Vollkorn bleibt." → Es wird **nur Gotham Narrow** durch
+Barlow Semi Condensed ersetzt. **Vollkorn bleibt unverändert** als Akzent-/
+Emphasis-Schrift (entspricht dem Org-Design-System `--gat-font-emphasis =
+"Vollkorn"`). Das Zielbild ist damit Design-System-konform: Barlow für Headlines/
+Fließtext (vormals Gotham), Vollkorn für Akzente/Pull-Quotes/Italic.
+
+Gewicht-Mapping (verfügbare Barlow-Schnitte Regular/Bold/ExtraBold/Black):
 
 | Alt | Neu |
 | :-- | :-- |
@@ -19,15 +23,14 @@ Regular/Bold/ExtraBold/Black):
 | Gotham Narrow Bold | Barlow Semi Condensed Bold (700) |
 | Gotham Narrow Black | Barlow Semi Condensed Black (900) |
 | Gotham Narrow Ultra | Barlow Semi Condensed Black (900) |
-| Minion Pro / Times Roman / Tahoma | Barlow Semi Condensed (passender Schnitt) |
-| **Vollkorn (Black/Bold Italic)** | **Barlow Semi Condensed** (Black, ggf. Italic falls Akzent nötig) |
+| Minion Pro / Times Roman | Barlow Semi Condensed (passender Schnitt) — proprietäre IDML-Reste, nicht Vollkorn |
+| **Vollkorn Black/Bold Italic** | **BLEIBT Vollkorn** (unverändert) |
 
-**Vollkorn-Hinweis:** Vollkorn ist eine freie Akzentschrift und im Org-Design-System
-als `--gat-font-emphasis` vorgesehen. Der User hat aber explizit „alle anderen
-Schriften raus" verlangt → Vollkorn wird in den Templates **ebenfalls durch
-Barlow ersetzt**. Bewusste Entscheidung gemäß Auftrag; nicht im Research
-re-litigieren. (Falls ein kursiver Akzent gebraucht wird: Barlow-Italic-TTF
-nachziehen.)
+**Frühere (verworfene) Annahme:** In der ersten Fassung wurde Vollkorn
+fälschlich mit Barlow ersetzt; das wird zurückgesetzt — Vollkorn-Italic-Akzente
+(z. B. gelbe Pull-Quote-Wörter, Zitate) sind wieder Vollkorn Black/Bold Italic.
+Tahoma/Minion/Times Roman sind proprietäre IDML-Konvertierungsreste (keine
+Marken-/Akzentschriften) und werden weiterhin durch Barlow ersetzt.
 
 ## Entscheidung 2 — Lokale Font-Bereitstellung (Druck-Pipeline-Ausnahme)
 
