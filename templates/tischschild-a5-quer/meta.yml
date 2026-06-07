@@ -77,11 +77,11 @@ slots:
     anname: QR-Code (mitmachen, panel A)
   bullets_a:
     type: text
-    description: Body Panel A — 12pt Gotham Book, 2 short bullets
+    description: Body Panel A — 12pt Barlow Semi Condensed Regular, 2 short bullets
     anname: Body Panel A
   termine_a:
     type: text
-    description: Termine Panel A — 9pt Gotham Book, 2 lines
+    description: Termine Panel A — 9pt Barlow Semi Condensed Regular, 2 lines
     anname: Termine Panel A
   footer_strip_a:
     type: shape
@@ -89,11 +89,11 @@ slots:
     anname: Footer-Strip Panel A
   cta_footer_a:
     type: text
-    description: CTA-Footer Panel A — 11pt Gotham Bold White URL
+    description: CTA-Footer Panel A — 11pt Barlow Semi Condensed Bold White URL
     anname: CTA-Footer Panel A
   impressum_a:
     type: text
-    description: Impressum Panel A — 6pt Gotham Book White right-aligned
+    description: Impressum Panel A — 6pt Barlow Semi Condensed Regular White right-aligned
     anname: Impressum (Tent)
   falzlinie:
     type: shape
