@@ -54,7 +54,7 @@ category_label: 'Flyer'
 category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat gruenes Cover Ordner/26-03-Flyer
   A6 Hochformat gruenes Cover.idml
-previews_for_sla: 421473889f97321a68aeed3c9a3ec5a2053688e86a301a90a5a1e497654c1919
+previews_for_sla: 953ddba4d847bccb563957a8efd9eb0f581ab8b2fbe2db8320f785acf3ed8a1f
 title: 'Flyer A6 Hochformat – Grünes Cover'
 version: 0.1.0
-build_py_sha256: 41484bd4038e17c9ec6be68ccb83338b7b988affda7bfbe2a84a0b6a2cffe640
+build_py_sha256: 68b498ce92129d18737068506c4d1ea1d0efd0777bf472309d6bfda376653ea8

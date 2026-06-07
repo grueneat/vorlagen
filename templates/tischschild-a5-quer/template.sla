@@ -13,17 +13,17 @@
     <CHARSTYLE CNAME="" FONT="Barlow Semi Condensed Regular" FONTSIZE="12" FCOLOR="Black"/>
     <STYLE NAME="ci/default" ALIGN="0" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/headline-ultra" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" LANGUAGE="de"/>
+    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de"/>
     <STYLE NAME="ci/body-12" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/body-11" PARENT="ci/default" ALIGN="0" LINESP="12" FONTSIZE="11" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" LANGUAGE="de"/>
     <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6" FONTSIZE="5" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/stoerer" PARENT="ci/default" ALIGN="1" LINESP="11" FONTSIZE="10" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/cta" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="13" FONT="Barlow Semi Condensed Bold" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="tent/headline" ALIGN="0" LINESPMode="0" LINESP="23.4" FONTSIZE="26" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="tent/headline" ALIGN="0" LINESPMode="0" LINESP="23.4" FONTSIZE="26" FONT="Vollkorn Black Italic" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="tent/body" ALIGN="0" LINESPMode="0" LINESP="15.6" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" LANGUAGE="de"/>
     <STYLE NAME="tent/termine" ALIGN="0" LINESPMode="0" LINESP="11.7" FONTSIZE="9" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" LANGUAGE="de"/>
     <STYLE NAME="tent/impressum" ALIGN="2" LINESPMode="0" LINESP="7.8" FONTSIZE="6" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="tent/payoff" ALIGN="0" LINESPMode="0" LINESP="14.4" FONTSIZE="16" FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" LANGUAGE="de"/>
+    <STYLE NAME="tent/payoff" ALIGN="0" LINESPMode="0" LINESP="14.4" FONTSIZE="16" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de"/>
     <STYLE NAME="tent/cta-footer" ALIGN="0" LINESPMode="0" LINESP="14" FONTSIZE="11" FONT="Barlow Semi Condensed Bold" FCOLOR="White" LANGUAGE="de"/>
     <TableStyle NAME="Default Table Style"/>
     <CellStyle NAME="Default Cell Style"/>

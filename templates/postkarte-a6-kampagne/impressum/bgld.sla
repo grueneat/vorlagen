@@ -14,7 +14,7 @@
     <CHARSTYLE CNAME="Default Character Style (2)" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" FONTFEATURES="-clig" FEATURES="inherit" LANGUAGE="de" SCOLOR="Black" BGCOLOR="None" FONTSIZE="12" KERN="0" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" FSHADE="100" HyphenWordMin="3" SSHADE="100" BGSHADE="100" TXTSHX="5" TXTSHY="-5" TXTOUT="1" SCALEH="100" SCALEV="100" BASEO="0" />
     <STYLE NAME="ci/default" ALIGN="0" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" />
     <STYLE NAME="ci/headline-ultra" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de" />
-    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" LANGUAGE="de" />
+    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de" />
     <STYLE NAME="ci/body-12" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" />
     <STYLE NAME="ci/body-11" PARENT="ci/default" ALIGN="0" LINESP="12" FONTSIZE="11" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" LANGUAGE="de" />
     <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6" FONTSIZE="5" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" />
@@ -27,7 +27,7 @@
     <STYLE NAME="Schrift rosa Kreis" ALIGN="1" LINESPMode="0" LINESP="11" FONTSIZE="10" KERN="0" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" />
     <STYLE NAME="Headline sehr wichtig" ALIGN="1" LINESPMode="0" TXTSHX="5" TXTSHY="-5" TXTOUT="1" LINESP="23" FONTSIZE="27" KERN="1" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" FEATURES="" />
     <STYLE NAME="Kontaktmöglichkeiten" LINESPMode="0" LINESP="10" FONTSIZE="8" FONT="Barlow Semi Condensed Regular" LANGUAGE="de" FONTFEATURES="-clig" />
-    <STYLE NAME="Headline Emphasis" ALIGN="1" LINESPMode="0" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" LANGUAGE="de" FONTFEATURES="-clig" />
+    <STYLE NAME="Headline Emphasis" ALIGN="1" LINESPMode="0" LINESP="23" FONTSIZE="27" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de" FONTFEATURES="-clig" />
     <STYLE NAME="Unterüberschrift" ALIGN="1" LINESPMode="0" TXTSHX="5" TXTSHY="-5" TXTOUT="1" LINESP="16" FONTSIZE="13" NACH="0" KERN="0" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de" FONTFEATURES="-clig" FEATURES="" />
     <TableStyle NAME="Default Table Style" />
     <CellStyle NAME="Default Cell Style" />

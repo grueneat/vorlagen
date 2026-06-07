@@ -12,7 +12,7 @@
     <CHARSTYLE CNAME="" FONT="Barlow Semi Condensed Regular" FONTSIZE="12" FCOLOR="Black"/>
     <STYLE NAME="ci/default" ALIGN="0" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/headline-ultra" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" LANGUAGE="de"/>
+    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23" FONTSIZE="27" FONT="Vollkorn Black Italic" FCOLOR="Gelb" LANGUAGE="de"/>
     <STYLE NAME="ci/body-12" PARENT="ci/default" ALIGN="1" LINESP="13" FONTSIZE="12" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de"/>
     <STYLE NAME="ci/body-11" PARENT="ci/default" ALIGN="0" LINESP="12" FONTSIZE="11" FONT="Barlow Semi Condensed Regular" FCOLOR="Black" LANGUAGE="de"/>
     <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6" FONTSIZE="5" FONT="Barlow Semi Condensed Regular" FCOLOR="White" LANGUAGE="de"/>
@@ -77,7 +77,7 @@
     <PAGEOBJECT XPOS="209.94428346456692" YPOS="128.88696062992128" OwnPage="0" ItemID="100000004" PTYPE="4" WIDTH="199.71155905511813" HEIGHT="56.70000000000001" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338582677165356" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="209.94428346456692" gYpos="128.88696062992128" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0" FRTYPE="0" path="M0 0 L199.712 0 L199.712 56.7 L0 56.7 L0 0 Z" copath="M0 0 L199.712 0 L199.712 56.7 L0 56.7 L0 0 Z" ANNAME="ua62_l2">
       <StoryText>
         <DefaultStyle PARENT="idml/normalparagraphstyle"/>
-        <ITEXT CH="dreizeilige" FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" FONTSIZE="31"/>
+        <ITEXT CH="dreizeilige" FONT="Vollkorn Black Italic" FCOLOR="Gelb" FONTSIZE="31"/>
         <trail PARENT="idml/normalparagraphstyle" ALIGN="1" LINESPMode="0" LINESP="32.12029866786047"/>
       </StoryText>
     </PAGEOBJECT>
@@ -117,7 +117,7 @@
     <PAGEOBJECT XPOS="142.51968503937007" YPOS="422.2164094488189" OwnPage="1" ItemID="100000014" PTYPE="4" WIDTH="218.883968503937" HEIGHT="55.00006299212599" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338582677165356" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="142.51968503937007" gYpos="422.2164094488189" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0" FRTYPE="0" path="M0 0 L218.884 0 L218.884 55.0001 L0 55.0001 L0 0 Z" copath="M0 0 L218.884 0 L218.884 55.0001 L0 55.0001 L0 0 Z" ANNAME="u6aa_l2">
       <StoryText>
         <DefaultStyle PARENT="idml/normalparagraphstyle"/>
-        <ITEXT CH="Headline." FONT="Barlow Semi Condensed Black" FCOLOR="Gelb" FONTSIZE="30"/>
+        <ITEXT CH="Headline." FONT="Vollkorn Black Italic" FCOLOR="Gelb" FONTSIZE="30"/>
         <trail PARENT="idml/normalparagraphstyle" LINESPMode="0" LINESP="27.0"/>
       </StoryText>
     </PAGEOBJECT>
@@ -292,9 +292,9 @@
     <PAGEOBJECT XPOS="250.36859842519686" YPOS="1835.708346456693" OwnPage="5" ItemID="100000033" PTYPE="4" WIDTH="247.2944881889764" HEIGHT="107.49996850393703" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338582677165356" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="250.36859842519686" gYpos="1835.708346456693" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1" ROT="0" FRTYPE="0" path="M0 0 L247.294 0 L247.294 107.5 L0 107.5 L0 0 Z" copath="M0 0 L247.294 0 L247.294 107.5 L0 107.5 L0 0 Z" ANNAME="ua97">
       <StoryText>
         <DefaultStyle PARENT="idml/normalparagraphstyle"/>
-        <ITEXT CH="Ich bin ein Zitat. Ich bin ein prägnantes" FONT="Barlow Semi Condensed Black" FCOLOR="White" FONTSIZE="23"/>
+        <ITEXT CH="Ich bin ein Zitat. Ich bin ein prägnantes" FONT="Vollkorn Black Italic" FCOLOR="White" FONTSIZE="23"/>
         <para PARENT="idml/normalparagraphstyle" ALIGN="1" LINESPMode="0" LINESP="20.480582835836415"/>
-        <ITEXT CH="Zitat." FONT="Barlow Semi Condensed Black" FCOLOR="White" FONTSIZE="23"/>
+        <ITEXT CH="Zitat." FONT="Vollkorn Black Italic" FCOLOR="White" FONTSIZE="23"/>
         <trail PARENT="idml/normalparagraphstyle" ALIGN="1" LINESPMode="0" LINESP="20.480582835836415"/>
       </StoryText>
     </PAGEOBJECT>

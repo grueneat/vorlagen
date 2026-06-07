@@ -54,7 +54,7 @@ category_label: 'Flyer'
 category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Portrait Ordner/26-03-Flyer
   A6 Querformat Portrait.idml
-previews_for_sla: 71e7c9e6f02b505374956a5d9f597a77bc299e7e5aa2d5e29ef782d9c9f0bba9
+previews_for_sla: a77b56bc0af81f3d93f19d0f68b7662ae4cdc394d20832caec5271d13aeadba1
 title: 'Flyer A6 Querformat – Porträt-Cover'
 version: 0.1.0
-build_py_sha256: 567cf12e62d28d6724ac1be5e5e97126b7a810f165a6d9cafa7f064aae66bedd
+build_py_sha256: 5bae0e8cf9c9cc91213eea0622906626e043970d90f1f40b8817801136f677b9
