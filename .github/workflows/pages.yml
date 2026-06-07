@@ -55,7 +55,8 @@ jobs:
           # --ignore-installed sidesteps apt-installed python3-jsonschema
           # (Debian's variant lacks pip RECORD, blocking version upgrade).
           sudo pip install --break-system-packages --ignore-installed --no-cache-dir \
-            "Pillow==12.2.0" "qrcode[pil]==8.2" "pyzbar==0.1.9" "jsonschema==4.26.0"
+            "Pillow==12.2.0" "qrcode[pil]==8.2" "pyzbar==0.1.9" "jsonschema==4.26.0" \
+            "fonttools==4.63.0"
           # Download + extract AppImage if not restored from cache
           if [ ! -d /opt/squashfs-root ]; then
             sudo curl -fsSL -o /opt/scribus.AppImage "$SCRIBUS_URL"
