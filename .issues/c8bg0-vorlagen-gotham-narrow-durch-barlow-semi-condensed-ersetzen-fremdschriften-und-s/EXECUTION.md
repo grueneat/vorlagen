@@ -110,6 +110,21 @@ checkpoint:human-verify visual review; Tasks 6-7 are gated behind it).
   Vollkorn-BlackItalic)" — this is the preview-vs-OLD-Gotham-baseline diff (the baselines are stale
   Gotham PDFs), NOT a fallback in the Barlow preview. It resolves in Task 6 when baselines are promoted.
 
+## Incidental untracked build output (left uncommitted, by design)
+- `site/public/templates/*/template.sla` — gallery_build.py now also copies template.sla into the
+  public mirror, but those were NEVER tracked in the production public dirs (only the orphan
+  `26-03-flyer-a6-hochformat-zweigeteilt/` had one). Left untracked to match repo convention.
+- `shared/assets/26-03-leporello-z-falz-99x210-6-seitig-gruenes-cover/` — a render-pipeline
+  links-export byproduct keyed to the gitignored IDML originals (absent in this worktree). Not part
+  of the tracked falzflyer asset set (those use the un-prefixed `shared/assets/falzflyer-*` dirs,
+  which did NOT change). Left untracked as build output.
+
+## Gallery-mirror sync — commit e979f20
+After Task 4, ran `tools/gallery_build.py` (copy-only) to sync `site/public/templates/` previews +
+page PNGs + the `site/src/content/templates/*.md` SHA frontmatter to the new Barlow renders, so the
+published gallery and the CI copy-only gallery-build stay consistent. Staged only already-tracked
+modifications (not the incidental public template.sla). gallery_build re-runs idempotently (rc=0).
+
 ## Self-Check
 - [x] All files from Tasks 1-4 exist (fonts/, Dockerfile.claude, tischschild preview.pdf, all 16 renders)
 - [x] All 4 commits exist on branch (c70d2ed, d4d6bea, 9358c84, d38b9e7)
