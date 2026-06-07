@@ -51,28 +51,55 @@ class FlyerA6PortraitLayoutTest(unittest.TestCase):
             self.assertIn(anname, self.pos, f"{anname} headline frame missing")
 
     def test_vollkorn_split_line_uses_rendered_ink_correction(self):
-        """The Vollkorn accent line of a split headline must stack with the
-        recalibrated 0.15 FLOP correction, not the old 0.345.
+        """The Vollkorn accent line of a split headline stacks with the
+        METRIC-DRIVEN per-font FLOP correction (issue bx4d8), not the old
+        hardcoded 0.15 constant (which was only correct while line 1 was
+        Gotham).
 
-        Each split frame's YPOS (points) is line-1-y + N*Leading minus a
-        per-font correction. For the Vollkorn line that correction is
-        ``0.15*fontsize`` upward; the old 0.345 placed it ``0.195*fontsize``
-        too high (rendered 5-8pt above the baseline ink). This pins the
-        rendered-ink-calibrated geometry on both split headlines.
+        Scribus FLOP=1 puts the first baseline one font-ascent below the
+        frame top, so each split frame's top is::
+
+            top_{k+1} = top_k + Leading - ascent(font_{k+1}) + ascent(font_k)
+
+        Ascents come from the real installed TTFs via the shared ``headline``
+        helper, so this test stays in lock-step with the emitter instead of
+        pinning a frozen Gotham-era constant.
         """
+        import sys
+
+        sys.path.insert(0, str(WORKTREE / "tools"))
+        from sla_lib.builder.headline import font_ascent_pt
+
+        BARLOW = "Barlow Semi Condensed Black"
+        VOLLKORN = "Vollkorn Black Italic"
+
         # Page-1 headline u1175: 38pt, IDML leading 34.13430472639402pt.
+        # line1 Barlow -> line2 Vollkorn -> line3 Barlow.
         leading_p1 = 34.13430472639402
         y1 = float(self.pos["u1175"].get("YPOS"))
         y2 = float(self.pos["u1175_l2"].get("YPOS"))
         y3 = float(self.pos["u1175_l3"].get("YPOS"))
-        corr_p1 = 0.15 * 38.0  # Vollkorn line correction in points
-        self.assertAlmostEqual(y2, y1 + leading_p1 - corr_p1, delta=0.5)
-        self.assertAlmostEqual(y3, y1 + 2 * leading_p1, delta=0.5)
-        # Page-2 headline u1214: 30pt, IDML leading 27.0pt.
+        exp_y2 = (
+            y1 + leading_p1
+            - font_ascent_pt(VOLLKORN, 38.0)
+            + font_ascent_pt(BARLOW, 38.0)
+        )
+        exp_y3 = (
+            y2 + leading_p1
+            - font_ascent_pt(BARLOW, 38.0)
+            + font_ascent_pt(VOLLKORN, 38.0)
+        )
+        self.assertAlmostEqual(y2, exp_y2, delta=0.5)
+        self.assertAlmostEqual(y3, exp_y3, delta=0.5)
+        # Page-2 headline u1214: 30pt, IDML leading 27.0pt. line1 Barlow -> line2 Vollkorn.
         p1 = float(self.pos["u1214"].get("YPOS"))
         p2 = float(self.pos["u1214_l2"].get("YPOS"))
-        corr_p2 = 0.15 * 30.0
-        self.assertAlmostEqual(p2, p1 + 27.0 - corr_p2, delta=0.5)
+        exp_p2 = (
+            p1 + 27.0
+            - font_ascent_pt(VOLLKORN, 30.0)
+            + font_ascent_pt(BARLOW, 30.0)
+        )
+        self.assertAlmostEqual(p2, exp_p2, delta=0.5)
 
     def test_no_pageobject_emits_linespmode_2(self):
         """Defects 2/3/4 — no <para>/<trail> may carry LINESPMode=2.
