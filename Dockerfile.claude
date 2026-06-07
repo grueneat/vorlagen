@@ -107,6 +107,26 @@ RUN set -e && \
     echo "Brand fonts installed: $N faces" && \
     rm -rf /tmp/fonts-staging
 
+# Barlow Semi Condensed (SIL-OFL) — the single print font for all templates.
+# These TTFs ARE committed to the repo (fonts/barlow-semi-condensed/, a tracked
+# .gitignore exception) because Scribus renders locally and cannot pull a
+# webfont. Deliberate print-pipeline vendoring exception, same justification as
+# the Vollkorn vendoring above. No fontconfig alias is needed: Scribus reads the
+# TTF name table, so "Barlow Semi Condensed Regular/Bold/Black/ExtraBold" all
+# resolve natively. The sanity-check tests the bare family + a face count, NOT
+# the per-weight strings (fc-match resolves "… Regular"/"… Bold" to DejaVu by
+# design, so a per-weight check would spuriously fail).
+COPY fonts/barlow-semi-condensed/ /tmp/barlow-staging/
+RUN install -m 644 /tmp/barlow-staging/*.ttf /usr/local/share/fonts/gruene/ && \
+    fc-cache -f && \
+    BN=$(fc-list | grep -ci 'barlow semi condensed' || true) && \
+    if [ "$BN" -lt 4 ]; then \
+        echo "BARLOW INSTALL FAILED: $BN faces (expected >= 4)" >&2; exit 1; \
+    fi && \
+    fc-match "Barlow Semi Condensed" | grep -qi barlow || \
+        { echo "fc-match did not resolve to Barlow" >&2; exit 1; } && \
+    echo "Barlow installed: $BN faces" && rm -rf /tmp/barlow-staging
+
 # Fontconfig family-name alias for Vollkorn Black Italic. Scribus SLAs reference
 # this font by its full name as a family ("Vollkorn Black Italic"); the static
 # file registers as family=Vollkorn + style="Black Italic". Without this alias,

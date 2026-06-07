@@ -27,6 +27,13 @@ node_modules/
 *.ttf
 *.ttc
 
+# Exception: Barlow Semi Condensed (SIL-OFL) is the single print font for all
+# templates. Scribus renders locally and cannot pull a webfont, so the TTFs are
+# vendored here as a deliberate print-pipeline exception (same justification as
+# the Vollkorn vendoring). The Dockerfile installs them into fontconfig.
+!fonts/barlow-semi-condensed/*.ttf
+!fonts/barlow-semi-condensed/OFL.txt
+
 # Exception: the SIL-OFL Gotham alternatives (Issue 42) are freely
 # redistributable and intentionally bundled for the font-comparison page.
 !shared/fonts/alternatives/**/*.ttf
