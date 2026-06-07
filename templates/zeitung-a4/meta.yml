@@ -1,6 +1,6 @@
 id: zeitung-a4
 version: 0.1.0
-build_py_sha256: 8f006627f522ff7d384784ce71da6f9cea67e53e9207b5bc943b829a223f03ff
+build_py_sha256: e8f1d821433e2e1fb1bb27011ff4d11a8155ab2bac01eb31c2a86d6d600e0d24
 title: 'Grüne Zeitung A4'
 format: A4
 orientation: portrait
@@ -13,7 +13,7 @@ build:
   script: build.py
   output: template.sla
 original_sla: ../../gruene-zeitung-vorlage-original.sla
-previews_for_sla: 8e74e67ada08517b7a4c0710776eef7b8663a255ea6c280f836f0cda14f0ae05
+previews_for_sla: 7a0ebd406733fb8fb63aa71e6d7a872fd46e9cb26b6676696921a4a309934510
 sla_diff_strict: false
 # Zeitung is pinned to a faithful reproduction of the original InDesign SLA
 # (build.py geometry reset to it — 0 position/size drift). Scribus's

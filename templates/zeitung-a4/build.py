@@ -56,7 +56,14 @@ def build_template():
     doc.add_para_style(ParaStyle(name='Schrift Störer  ', font='Barlow Semi Condensed Black', fcolor='White', fontfeatures='-clig', fontsize=19, linesp=13, space_before_pt=0, align=1))
     doc.add_para_style(ParaStyle(name='Inhaltsheadline Titelseite', font='Barlow Semi Condensed Black', fcolor='White', fontfeatures='-clig', linesp=11, space_before_pt=0, space_after_pt=0, linesp_mode=2))
     doc.add_para_style(ParaStyle(name='Überschrift weiß', font='Barlow Semi Condensed Black', fcolor='White', language='de', fontfeatures='-clig', fontsize=40, space_after_pt=0, linesp_mode=2))
-    doc.add_para_style(ParaStyle(name='Überschrift Dunkelgrün', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', fontsize=40, linesp=35, space_after_pt=0, linesp_mode=0))
+    # c8bg0/Barlow: Barlow Semi Condensed Black at 40pt has a taller ascent than
+    # the previous face, so a two-line demo headline (e.g. "Ohne Bild im
+    # Hintergrund sind Überschriften grün", "Zwischen Überschrift und Text ist ein
+    # Abstand") pushed its second line past the fixed 27.96mm demo frames and
+    # Scribus clipped it. Tightened the fixed leading 35→30pt so both lines fit;
+    # the 40pt headline size (design intent) is unchanged and single-line
+    # headlines are unaffected by leading.
+    doc.add_para_style(ParaStyle(name='Überschrift Dunkelgrün', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', fontsize=40, linesp=28, space_after_pt=0, linesp_mode=0))
     doc.add_para_style(ParaStyle(name='Bildunterschrift weiß', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=10, linesp=12))
     doc.add_para_style(ParaStyle(name='Fließtext weiß', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', space_after_pt=0, min_word_track=1, min_glyph_shrink=0.95, align=3, linesp_mode=2))
     doc.add_para_style(ParaStyle(name='Fließtext in grünem Kasten', fcolor='White', language='de', fontsize=11, min_word_track=1, min_glyph_shrink=0.95, align=3, linesp_mode=1))
@@ -785,6 +792,13 @@ def build_template():
         anname="P3 Hero",  # issue #13
     ))
 
+    # c8bg0/Barlow: this single-line demo headline frame is only 15.1mm (42.8pt)
+    # tall. Barlow Semi Condensed Black's ascent at the 40pt style size exceeds
+    # the frame height, so the line's baseline fell below the frame foot and
+    # Scribus dropped "Oder nur einzeilig" entirely. The two-line headline frames
+    # are taller (27–28mm) and unaffected. Override just this frame to 32pt so the
+    # single line clears the short box; the headline style stays 40pt everywhere
+    # else.
     page3.add(TextFrame(
         x_mm=20.000000000000078,
         y_mm=153.4999999999998,
@@ -796,7 +810,7 @@ def build_template():
         trail_style='Überschrift Dunkelgrün',
         col_gap_mm=0,
         runs=[
-            Run(text='Oder nur einzeilig'),
+            Run(text='Oder nur einzeilig', fontsize=32),
         ],
     ))
 
