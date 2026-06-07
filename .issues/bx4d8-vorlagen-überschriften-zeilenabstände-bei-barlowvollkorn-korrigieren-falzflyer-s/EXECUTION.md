@@ -1,7 +1,8 @@
 # Execution: Vorlagen — Überschriften-Zeilenabstände (Barlow/Vollkorn), Falzflyer-Social-Icons, Abstands-Audit
 
 **Started:** 2026-06-07
-**Status:** complete (all 6 tasks done; baselines promoted after human visual sign-off)
+**Status:** complete (all 6 tasks done; baselines promoted after human visual sign-off;
+follow-up: zweigeteiltes-cover left social-icon defect fixed + re-promoted — commit d89019e)
 **Branch:** issue/bx4d8-vorlagen-überschriften-zeilenabstände-bei-barlowvollkorn-korrigieren-falzflyer-s
 
 ## Execution Log
@@ -32,16 +33,50 @@
   - text_render_audit: headlines render in full; residual word-match drift is vs the
     not-yet-promoted 28pt baseline (Task 6), NOT clipping (verified words present in
     preview text). text_render_strict=false → non-blocking.
-- [~] Task 3b: falzflyer social icons — NO SOURCE CHANGE NEEDED (see Deviations)
-  - Disambiguated root cause: all 4 falzflyers' inline social-icon frames are
-    white-on-transparent RGBA PNGs (colortype 6, opaque pixels pure white) — exactly
-    the profile that triggers the Scribus 1.6.x SCALETYPE=1 invisibility bug.
-  - BUT every inline frame already emits SCALETYPE=0 (the ImageFrame default, no
-    override) — the source-level safeguard from RESEARCH cause (a) is ALREADY in place.
-  - Rendered all 4 falzflyers headless: the icons render correctly and visibly
-    (Instagram/butterfly, globe, envelope, etc. — see /tmp/icons_region.png inspection),
-    and render IDENTICALLY to the committed baseline.pdf. No defect reproduces in the
-    post-c8bg0 state. Making a change here would alter working code (rejected).
+- [x] Task 3b: falzflyer social icons — DEFECT FOUND + FIXED (corrects earlier finding) — commit d89019e
+  - **Correction:** the earlier "no defect" conclusion was WRONG for
+    zweigeteiltes-cover. The Scribus-SCALETYPE invisibility angle was a red herring;
+    the real defect is a DATA error in the LEFT social column.
+  - Root cause: in `falzflyer-z-falz-6-seitig-zweigeteiltes-cover/build.py` the three
+    LEFT-column social ImageFrames (u3e7 `@diegruenen`, u3f0 `@diegruenen`,
+    u3f5 `@diegruenenaustria`) all carried the SAME inline blob — the uncropped
+    4-icon composite strip (sha(b64) `f580200d`, from "Social Media Icons weiss.ai")
+    pasted whole into each frame 3×, instead of three distinct per-handle glyphs.
+    The RIGHT column (u477/u4a2/u4da → b4c9b1f6/1ed9c0fe/8695b0a7, the gruene.at
+    bluesky/globe/envelope) was already correct.
+  - Reference: `gruenes-cover/build.py` renders the SAME left column correctly by
+    referencing three distinct CROP PNGs (facebook/instagram/tiktok-weiss) via
+    `image=` + `scale_type=0` — NOT inline blobs. The composite never got split
+    into per-handle crops for zweigeteiltes-cover (it still carries the stale
+    `composite_ai_split.yml`, which gruenes-cover lacks).
+  - Per-handle mapping applied (wrong → correct):
+    - u3e7 `@diegruenen`         : f580200d (composite) → social-facebook-weiss.png
+    - u3f0 `@diegruenen`         : f580200d (composite) → social-instagram-weiss.png
+    - u3f5 `@diegruenenaustria`  : f580200d (composite) → social-tiktok-weiss.png
+  - Fix: copied the three correct crop PNGs from gruenes-cover into
+    `shared/assets/.../zweigeteiltes-cover/crops/social/` and swapped the three
+    inline-blob ImageFrames to `image=<crop> + scale_type=0`, exactly mirroring
+    gruenes-cover. Frame GEOMETRY (x/y/w/h/anname) unchanged. Right column,
+    headlines, everything else untouched.
+  - Verify (visual, page-02-hires): LEFT column now shows three DISTINCT correct
+    icons — Facebook / Instagram / TikTok — each beside its handle, byte-identical
+    to gruenes-cover's left column. Right column (bluesky/globe/envelope → gruene.at)
+    unchanged. Headline spacing from Tasks 1-3 intact.
+  - Propagation: the same swap flows through all 9 impressum aggregate SLAs
+    (each embeds the full template); inline-image count per aggregate 8 → 5.
+  - Gates (zweigeteiltes-cover): render-gallery visual_diff PASS; text_render_audit
+    ok=true (2337/2337 chars, 0 missing); check-stale-previews exit 0; pdffonts
+    baseline+preview ONLY Barlow+Vollkorn (zero DejaVu/Gotham); headline_spacing_audit
+    OK (3 stacks, pixel); audit-alignment exit 0. Unit suites: pytest 824 passed/8
+    skipped + unittest discover OK (both runners green).
+  - Known non-fatal: audit-alignment emits 3 `[WARNING] asset missing/corrupt` for
+    the new social crops — a FALSE POSITIVE from the audit's CWD-relative path
+    resolution (`_template_root` is None, so `../../shared` resolves against
+    `/workspace/vorlagen` = main checkout where the worktree-only crops don't yet
+    exist). Scribus resolves PFILE relative to the SLA file, finds the worktree
+    crops, and renders the icons correctly. Resolves on merge. Non-blocking (RC=0).
+  - The OTHER 3 falzflyers (gruenes-cover, gruenes-cover-2, portraet) were NOT
+    touched — only zweigeteiltes-cover had the duplicated-blob defect.
 - [x] Task 4: headline_spacing_audit.py + wiring + tests — commit 5fb4237
   - `tools/headline_spacing_audit.py`: groups stacks by stem from template.sla
     (SLADocument), static (FLOP=1 + fontTools ascent) + pixel (E4 ink-top) paths,
@@ -162,13 +197,14 @@ the 13 `baseline.pdf` files changed; diff.yml/TOLERANCES.yml untouched (drift ~0
    headline_stack-emitted frames. Fixed by adding `parse_textframes_from_sla` and
    preferring it in E4 `main` — restores split-group detection AND serves the new audit.
 
-3. **[Task 3b - no defect reproduces] Falzflyer social icons already render correctly.**
-   Root cause disambiguated: the icons ARE white-on-transparent RGBA PNGs (the profile
-   that triggers the Scribus 1.6.x SCALETYPE=1 invisibility bug), but every inline frame
-   already emits SCALETYPE=0 (the ImageFrame default, no override) — the RESEARCH cause-(a)
-   safeguard is already in place. Rendered all 4 falzflyers: icons render visibly
-   (Instagram/butterfly, globe, envelope) and IDENTICALLY to the committed baseline.pdf.
-   No source change made — fixing would alter working code (rejected per honest reporting).
+3. **[Task 3b - CORRECTED: defect found + fixed] zweigeteiltes-cover left social icons.**
+   SUPERSEDES the earlier "no defect reproduces" conclusion, which was wrong. The
+   SCALETYPE invisibility angle was a red herring. The actual defect was a DATA error:
+   the three LEFT-column social ImageFrames (u3e7/u3f0/u3f5) all carried the SAME
+   uncropped composite-strip inline blob (`f580200d`) instead of distinct facebook/
+   instagram/tiktok glyphs. Fixed by mirroring gruenes-cover (the correct reference):
+   per-handle crop PNGs via `image=` + `scale_type=0`. Commit d89019e. The other 3
+   falzflyers were verified visually as already-correct and were NOT changed.
 
 4. **[Task 3a - tuning] zeitung-a4 leading set to 30pt, not the plan's start-at-31.**
    Measured: 31pt sits at the +0.3pt clip edge in the 79.3pt frame; 30pt gives +1.3pt
