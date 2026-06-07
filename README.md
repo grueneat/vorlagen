@@ -221,5 +221,14 @@ python3 -m unittest discover tools/sla_lib/tests
 ## Lizenz / Credits
 
 - Templates und Brand: © Die Grünen Niederösterreich
-- Brand-Schriften (Gotham Narrow, Vollkorn Black Italic): proprietäre Lizenzen — **nicht** im Repo gebündelt. Müssen lokal installiert sein, sonst substituiert der Renderer mit DejaVu (sichtbar in PDF-Vorschau).
+- Print-Schriften (SIL Open Font License) — **lokal im Repo gebündelt**, weil
+  Scribus offline rendert und keine Webfonts laden kann (bewusste
+  Print-Pipeline-Ausnahme zur Workspace-No-Vendoring-Regel):
+  - **Barlow Semi Condensed** (Regular/Bold/Black/ExtraBold) — die durchgängige
+    Primärschrift aller Templates; ersetzt das frühere proprietäre Gotham Narrow
+    (vollständig entfernt). Liegt unter `fonts/barlow-semi-condensed/`.
+  - **Vollkorn** (Black Italic + Bold Italic) — die Akzent-/Zitatschrift; liegt
+    unter `fonts/vollkorn/`.
+  - Beide werden vom `Dockerfile.claude` installiert. Fehlen sie im Container,
+    substituiert der Renderer mit DejaVu (sichtbar in der PDF-Vorschau).
 - Pipeline-Code: TBD-Lizenz

@@ -4,17 +4,60 @@ This document explains how the headless Scribus pipeline achieves byte-identical
 
 ---
 
+## Print fonts (current policy)
+
+All templates render with **two locally vendored, SIL-OFL font families**:
+
+- **Barlow Semi Condensed** — the single primary font for every template (body,
+  headlines, captions, CTA, impressum). The four weights used are Regular, Bold,
+  Black, and ExtraBold (ExtraBold is provisioned but currently unused). It
+  replaces the proprietary **Gotham Narrow**, which has been **fully removed**
+  from all templates — no `template.sla`, `build.py`, `*-original.sla`,
+  `shared/ci.yml`, or `brand.py` references it any more.
+- **Vollkorn** — retained as the **accent / pull-quote** font. The templates use
+  exactly two italic faces: **Vollkorn Black Italic** (headline accents) and
+  **Vollkorn Bold Italic** (the `*-zweigeteilt` flyers' white pull-quote).
+
+### Why these fonts are vendored locally (the print-pipeline exception)
+
+The workspace rule is "no vendoring of third-party dependencies — use CDN or a
+package manager." The print pipeline is a **deliberate, documented exception**:
+Scribus renders **locally and offline** and cannot pull a webfont, so the TTFs
+must be on the build host's fontconfig at render time. Both families are **SIL
+Open Font License**, so redistribution inside the repo is license-clean.
+
+The TTFs are therefore committed (tracked via `.gitignore` exceptions), the same
+justification for both families:
+
+- `fonts/barlow-semi-condensed/` — the 4 Barlow TTFs + `OFL.txt`.
+- `fonts/vollkorn/` — `Vollkorn-BlackItalic.ttf`, `Vollkorn-BoldItalic.ttf` +
+  `OFL.txt` (genuine static instances from the FAlthausen/Vollkorn-Typeface
+  upstream; see "Why static, not variable, Vollkorn" below).
+
+`Dockerfile.claude` `COPY`s both committed dirs and installs them into
+`/usr/local/share/fonts/gruene/`, so a clean checkout + `docker build`
+reproduces the exact render environment **without** the gitignored host drop
+zone. The drop-zone block is kept only for the maintainer's legacy proprietary
+Gotham faces, and it **explicitly skips any `Vollkorn-*` file** so the committed
+`fonts/vollkorn/` statics are the single source of truth (a competing Vollkorn
+variable font in the drop zone would otherwise win fontconfig resolution).
+
+---
+
 ## Why fonts must be installed
 
 Without the brand fonts, Scribus falls back to DejaVu Sans for every missing family. Measured impact:
 
 | Font missing | Drift on worst page |
 |---|---|
-| Gotham Narrow (body, headlines, captions) | ~55,000 px / page at 96 dpi |
-| Vollkorn Black Italic (störer badge, masthead) | ~7,000 px / page at 96 dpi |
+| Barlow Semi Condensed (body, headlines, captions) | full layout difference per page |
+| Vollkorn Black/Bold Italic (accents, pull-quote) | ~7,000 px / page at 96 dpi |
 | Both missing | Full layout difference — essentially unrecognisable |
 
-Once both are installed and `fc-cache -f` is run, headless renders are **0 px different** from the user's Scribus desktop export across all 17 pages of all 3 templates (zeitung-a4-grun, plakat-a1-hochformat, postkarte-a6-kampagne).
+> Historical note: before the Barlow swap the primary font was Gotham Narrow
+> (~55,000 px/page drift when missing). Gotham has since been fully removed.
+
+Once both families are installed and `fc-cache -f` is run, headless renders are **0 px different** from the user's Scribus desktop export.
 
 Note: Scribus builds a per-user font cache at `~/.config/scribus/checkfonts150.xml`. This file is auto-regenerated on the first Scribus run after fonts change. In a fresh container the first render incurs a one-time ~3 sec cache rebuild; subsequent renders are fast.
 
@@ -25,39 +68,51 @@ Note: Scribus builds a per-user font cache at `~/.config/scribus/checkfonts150.x
 ### Font files
 
 - **Location in container:** `/usr/local/share/fonts/gruene/`
-- **What's installed:**
-  - `GothamNarrow-*.otf` — 16 files covering all weights (Book, Bold, Black, Ultra, Ultra Italic, Medium, Medium Italic, Light, Light Italic, Thin, Thin Italic, Extra Light, Extra Light Italic, Black Italic, Bold Italic, Book Italic)
-  - `Vollkorn-BlackItalic.ttf` — the specific static instance (see "Why static, not variable Vollkorn" below)
-- **Source files:** `/root/workspace/fonts/` (gitignored; user-controlled drop zone)
-  - `fonts/Gotham Narrow/<weight>/<weight>.otf` — 16 files
-  - `fonts/Vollkorn/static/Vollkorn-BlackItalic.ttf` — required static instance
+- **What's installed (committed, reproducible):**
+  - `BarlowSemiCondensed-{Regular,Bold,Black,ExtraBold}.ttf` — the 4 print
+    weights (Scribus reads the TTF name table, so all four resolve natively; no
+    fontconfig alias is needed for Barlow)
+  - `Vollkorn-BlackItalic.ttf`, `Vollkorn-BoldItalic.ttf` — the two accent
+    italics (static instances; see "Why static, not variable Vollkorn" below)
+- **Committed source in repo (the reproducible exception):**
+  - `fonts/barlow-semi-condensed/*.ttf` + `OFL.txt`
+  - `fonts/vollkorn/*.ttf` + `OFL.txt`
+- **Legacy drop zone:** `/root/workspace/fonts/` (gitignored; user-controlled).
+  Retained only for the maintainer's proprietary Gotham faces. The Dockerfile
+  install **skips `Vollkorn-*`** here so the committed statics own Vollkorn.
 
-### Fontconfig alias
+### Fontconfig alias (Vollkorn only)
 
 - **Location in container:** `/etc/fonts/conf.d/50-vollkorn-family-alias.conf`
 - **Source in repo:** `shared/fonts/50-vollkorn-family-alias.conf`
-- **What it does:** maps the `Vollkorn Black Italic` family name (as referenced in Scribus SLAs) to the actual font's `family=Vollkorn + style="Black Italic"`. Without this alias, fontconfig cannot match the lookup and Scribus falls back to DejaVu.
+- **What it does:** maps the `Vollkorn Black Italic` / `Vollkorn Bold Italic`
+  family names (as referenced in Scribus SLAs) to the actual files'
+  `family=Vollkorn + style="Black Italic" / "Bold Italic"`. Without this alias,
+  fontconfig cannot match the lookup and Scribus falls back to DejaVu. Barlow
+  needs no such alias — its name table exposes the weights as families directly.
 
 ### Verification
 
 ```bash
-# Font count (expect 17 in a dev container with both families installed)
-fc-list | grep -ciE 'gotham narrow|vollkorn'
+# Barlow faces (expect >= 4) and family resolution
+fc-list | grep -ci 'barlow semi condensed'
+fc-match "Barlow Semi Condensed"          # -> a BarlowSemiCondensed-*.ttf
 
-# Vollkorn alias resolution (expect: Vollkorn-BlackItalic.ttf: "Vollkorn" "Black Italic")
-fc-match "Vollkorn Black Italic"
+# Vollkorn accent italics (expect the genuine statics, NOT DejaVu / a variable font)
+fc-match "Vollkorn Black Italic"          # -> Vollkorn-BlackItalic.ttf: "Vollkorn" "Black Italic"
+fc-match "Vollkorn Bold Italic"           # -> Vollkorn-BoldItalic.ttf:  "Vollkorn" "Bold Italic"
 
-# Gotham Narrow lookup
-fc-match "Gotham Narrow Book"
+# pdffonts on any rendered preview/baseline should show ONLY
+# BarlowSemiCondensed-* and Vollkorn-* — zero DejaVu/Gotham/Minion/Times.
 ```
 
 ---
 
 ## Why static, not variable, Vollkorn
 
-The Google Fonts distribution of Vollkorn ships a variable font (`Vollkorn-Italic[wght].ttf`). When instantiated at weight=black, it produces glyph metrics that differ subtly from the user's `Vollkorn-BlackItalic.ttf` static instance. That difference maps to ~7,000 px/page drift on the affected templates.
+The Google Fonts distribution of Vollkorn ships a variable font (`Vollkorn-Italic[wght].ttf`). When instantiated at weight=black or weight=bold, it produces glyph metrics that differ subtly from the static `Vollkorn-BlackItalic.ttf` / `Vollkorn-BoldItalic.ttf` instances. That difference maps to ~7,000 px/page drift on the affected templates. Worse, the variable font registers as `family=Vollkorn` with an italic slant covering the whole weight axis, so `fc-match "Vollkorn Black Italic"` / `"Vollkorn Bold Italic"` will resolve to the **variable instance** instead of the committed static when both are installed.
 
-**Rule:** install only the static `Vollkorn-BlackItalic.ttf`. Do NOT place the variable `Vollkorn-Italic[wght].ttf` in `fonts/Vollkorn/static/` alongside it — fontconfig's family-name resolution is non-deterministic when multiple files provide the same style, and the wrong file will occasionally win.
+**Rule:** the committed `fonts/vollkorn/` statics are the single source of truth. The Dockerfile's proprietary drop-zone install (`COPY fonts/`) **excludes any `Vollkorn-*` file** so a stray `Vollkorn-Italic[wght].ttf` (or any other Vollkorn static) in the drop zone can never compete in fontconfig. Verified: with the variable font installed alongside the statics, both accent lookups mis-resolve to it; with the drop-zone skip applied, `fc-match` returns the committed `Vollkorn-BlackItalic.ttf` / `Vollkorn-BoldItalic.ttf`.
 
 ---
 
@@ -90,9 +145,18 @@ If the checker fires:
 
 ---
 
-## Adding a new font to fonts/
+## Adding a new font
 
-1. Drop the font file(s) into `/root/workspace/fonts/<family>/...` (matching the existing layout: `fonts/Gotham Narrow/<weight>/<weight>.otf`).
+**Preferred (reproducible):** for any SIL-OFL print font, commit the TTFs under a
+tracked `fonts/<family>/` dir (add the `.gitignore` exceptions, mirroring
+`fonts/barlow-semi-condensed/` and `fonts/vollkorn/`) and add a `COPY` + install
+block to `Dockerfile.claude`. This is the only way a clean checkout + `docker
+build` reproduces the render environment — do **not** rely on the gitignored
+drop zone for fonts the templates actually use.
+
+**Legacy drop zone (proprietary, non-OFL only):**
+
+1. Drop the font file(s) into `/root/workspace/fonts/<family>/...`.
 2. Rebuild the dev container:
    ```bash
    docker build -f Dockerfile.claude /root/workspace -t scribus-pipeline-dev
