@@ -86,25 +86,32 @@ RUN pip3 install --break-system-packages --no-cache-dir \
         'SimpleIDML==1.3.1' \
         'pdfplumber==0.11.9'
 
-# Brand fonts (proprietary Gotham Narrow, OFL Vollkorn). Source files live at
+# Proprietary drop zone (Gotham Narrow). Source files live at
 # /root/workspace/fonts/ (gitignored; user-controlled drop zone) and are NOT
-# part of the public repo. The build context must contain `fonts/` — this is
-# a rendering image, fonts are required for correct output. Build fails loudly
-# if the install does not register the expected font count.
+# part of the public repo. Gotham is no longer referenced by any template (all
+# replaced by Barlow), so the drop zone is retained only so the maintainer's
+# legacy proprietary faces remain available; the build no longer hard-fails on
+# their absence.
+#
+# IMPORTANT: this block must NOT install Vollkorn. The committed fonts/vollkorn/
+# block below is the single source of truth for the two accent italics. A host
+# drop zone may carry a competing Vollkorn variable font
+# (Vollkorn-Italic-VariableFont_wght.ttf) whose filename differs from the
+# committed statics, so it would survive (not be overwritten) and compete in
+# fontconfig — letting Scribus resolve "Vollkorn * Italic" to the variable
+# instance instead of the vendored, license-audited static. So skip any
+# Vollkorn-* file here and let the committed block install them exclusively.
 #
 # See docs/render-fidelity.md for the full font-pipeline documentation.
 COPY fonts/ /tmp/fonts-staging/
 RUN set -e && \
     mkdir -p /usr/local/share/fonts/gruene && \
     find /tmp/fonts-staging -type f \( -iname '*.otf' -o -iname '*.ttf' \) \
+        ! -iname 'Vollkorn-*' \
         -exec install -m 644 {} /usr/local/share/fonts/gruene/ \; && \
     fc-cache -f && \
-    N=$(fc-list | grep -ciE 'gotham narrow|vollkorn' || true) && \
-    if [ "$N" -lt 5 ]; then \
-        echo "FONT INSTALL FAILED: only $N font faces registered (expected >= 5)" >&2; \
-        exit 1; \
-    fi && \
-    echo "Brand fonts installed: $N faces" && \
+    N=$(fc-list | grep -ciE 'gotham narrow' || true) && \
+    echo "Brand drop-zone fonts installed: $N Gotham faces (Vollkorn-* skipped — owned by fonts/vollkorn/)" && \
     rm -rf /tmp/fonts-staging
 
 # Barlow Semi Condensed (SIL-OFL) — the single print font for all templates.
