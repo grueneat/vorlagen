@@ -43,7 +43,7 @@
         <STYLE NAME="Zwischenüberschrift" LINESPMode="2" VOR="11.34" NACH="0" FONT="Barlow Semi Condensed Bold" FONTFEATURES="-clig" FCOLOR="Dunkelgrün" LANGUAGE="de"/>
         <STYLE NAME="Einleitungstext" PARENT="Zwischenüberschrift" FONT="Barlow Semi Condensed Black" FONTFEATURES="-clig"/>
         <STYLE NAME="Zwischenüberschrift weiß" PARENT="Zwischenüberschrift" FONT="Barlow Semi Condensed Black" FONTFEATURES="-clig" FCOLOR="White"/>
-        <STYLE NAME="Zitat weißer Text" ALIGN="1" FONT="Barlow Semi Condensed Black" FONTSIZE="14" FONTFEATURES="-clig" FCOLOR="White" LANGUAGE="de"/>
+        <STYLE NAME="Zitat weißer Text" ALIGN="1" FONT="Vollkorn Black Italic" FONTSIZE="14" FONTFEATURES="-clig" FCOLOR="White" LANGUAGE="de"/>
         <STYLE NAME="Zitat grüner Text" PARENT="Zitat weißer Text" FCOLOR="Dunkelgrün"/>
         <STYLE NAME="NormalParagraphStyle" LINESPMode="1" FONT="Barlow Semi Condensed Black" FEATURES="inherit"/>
         <TableStyle NAME="Default Table Style" DefaultStyle="1" FillColor="None" FillShade="100">

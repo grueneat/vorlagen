@@ -71,7 +71,7 @@ def build_template():
     doc.add_para_style(ParaStyle(name='Zwischenüberschrift', font='Barlow Semi Condensed Bold', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', space_before_pt=11.34, space_after_pt=0, linesp_mode=2))
     doc.add_para_style(ParaStyle(name='Einleitungstext', font='Barlow Semi Condensed Black', fontfeatures='-clig', parent='Zwischenüberschrift'))
     doc.add_para_style(ParaStyle(name='Zwischenüberschrift weiß', font='Barlow Semi Condensed Black', fcolor='White', fontfeatures='-clig', parent='Zwischenüberschrift'))
-    doc.add_para_style(ParaStyle(name='Zitat weißer Text', font='Barlow Semi Condensed Black', fcolor='White', language='de', fontfeatures='-clig', fontsize=14, align=1))
+    doc.add_para_style(ParaStyle(name='Zitat weißer Text', font='Vollkorn Black Italic', fcolor='White', language='de', fontfeatures='-clig', fontsize=14, align=1))
     doc.add_para_style(ParaStyle(name='Zitat grüner Text', fcolor='Dunkelgrün', parent='Zitat weißer Text'))
     doc.add_para_style(ParaStyle(name='NormalParagraphStyle', font='Barlow Semi Condensed Black', features='inherit', linesp_mode=1))
 

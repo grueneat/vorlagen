@@ -140,7 +140,7 @@ def _panel_de() -> list:
             rotation_deg=180,
             anname="Logo Grüne (panel A)",
         ),
-        # 3. Headline (white-on-Dunkelgrün, 26pt Barlow Black) — visual (55, 9, 230, 18)
+        # 3. Headline (white-on-Dunkelgrün, 26pt Vollkorn Italic) — visual (55, 9, 230, 18)
         TextFrame(
             x_mm=285, y_mm=27, w_mm=230, h_mm=18,
             layer=LAYER_TEXT,
@@ -150,7 +150,7 @@ def _panel_de() -> list:
                       paragraph_style="tent/headline")],
             anname="Headline Panel A",
         ),
-        # 4. Pay-off (Gelb 16pt Barlow Black — sub-headline) — visual (55, 27, 230, 8)
+        # 4. Pay-off (Gelb 16pt Vollkorn Italic — sub-headline) — visual (55, 27, 230, 8)
         TextFrame(
             x_mm=285, y_mm=35, w_mm=230, h_mm=8,
             layer=LAYER_TEXT,
@@ -419,7 +419,7 @@ def build_template() -> Document:
     # Headline: white-on-Dunkelgrün, sized down from 36→26 to match V1 hero-band height.
     doc.add_para_style(ParaStyle(
         name="tent/headline",
-        font="Barlow Semi Condensed Black",
+        font="Vollkorn Black Italic",
         fontsize=26,
         linesp=23.4,
         linesp_mode=0,
@@ -460,10 +460,10 @@ def build_template() -> Document:
         fcolor="White",
         language="de",
     ))
-    # NEW V1: Pay-off — Barlow Black 16pt Gelb, sits below Headline in hero-band.
+    # NEW V1: Pay-off — Vollkorn Italic 16pt Gelb, sits below Headline in hero-band.
     doc.add_para_style(ParaStyle(
         name="tent/payoff",
-        font="Barlow Semi Condensed Black",
+        font="Vollkorn Black Italic",
         fontsize=16,
         linesp=14.4,
         linesp_mode=0,

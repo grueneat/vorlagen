@@ -48,6 +48,8 @@ fonts:
   - "Barlow Semi Condensed Regular"
   - "Barlow Semi Condensed Bold"
   - "Barlow Semi Condensed Black"
+  - "Vollkorn Black Italic"
+  - "Vollkorn Bold Italic"
 
 # Default paragraph styles. Names use the `ci/` prefix to be unambiguously
 # brand-managed. PARENT inheritance follows Scribus 1.6 semantics: re-emitting
@@ -73,7 +75,7 @@ styles:
     parent: ci/default
     align: center
     linesp: 23
-    font: "Barlow Semi Condensed Black"
+    font: "Vollkorn Black Italic"
     fontsize: 27
     fcolor: Gelb
 

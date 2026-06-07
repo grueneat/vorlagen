@@ -27,7 +27,7 @@
         <STYLE NAME="Schrift rosa Kreis" ALIGN="1" LINESPMode="0" LINESP="11" FONT="Barlow Semi Condensed Black" FONTSIZE="10" FONTFEATURES="-clig" FCOLOR="White" KERN="0" LANGUAGE="de"/>
         <STYLE NAME="Headline sehr wichtig" ALIGN="1" LINESPMode="0" LINESP="23" FONT="Barlow Semi Condensed Black" FONTSIZE="27" FONTFEATURES="-clig" FEATURES="" FCOLOR="White" TXTSHX="5" TXTSHY="-5" TXTOUT="1" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" KERN="1" LANGUAGE="de"/>
         <STYLE NAME="Kontaktmöglichkeiten" LINESPMode="0" LINESP="10" FONT="Barlow Semi Condensed Regular" FONTSIZE="8" FONTFEATURES="-clig" LANGUAGE="de"/>
-        <STYLE NAME="Headline Emphasis" ALIGN="1" LINESPMode="0" LINESP="23" FONT="Barlow Semi Condensed Black" FONTSIZE="27" FONTFEATURES="-clig" FCOLOR="Gelb" LANGUAGE="de"/>
+        <STYLE NAME="Headline Emphasis" ALIGN="1" LINESPMode="0" LINESP="23" FONT="Vollkorn Black Italic" FONTSIZE="27" FONTFEATURES="-clig" FCOLOR="Gelb" LANGUAGE="de"/>
         <STYLE NAME="Unterüberschrift" ALIGN="1" LINESPMode="0" LINESP="16" NACH="0" FONT="Barlow Semi Condensed Regular" FONTSIZE="13" FONTFEATURES="-clig" FEATURES="" FCOLOR="White" TXTSHX="5" TXTSHY="-5" TXTOUT="1" TXTULP="-0.1" TXTULW="-0.1" TXTSTP="-0.1" TXTSTW="-0.1" KERN="0" LANGUAGE="de"/>
         <TableStyle NAME="Default Table Style" DefaultStyle="1" FillColor="None" FillShade="100">
             <TableBorderLeft>

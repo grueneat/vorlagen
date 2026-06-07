@@ -55,7 +55,7 @@ def build_template():
     doc.add_para_style(ParaStyle(name='Schrift rosa Kreis', font='Barlow Semi Condensed Black', fcolor='White', language='de', fontfeatures='-clig', fontsize=10, linesp=11, kern=0, align=1, linesp_mode=0))
     doc.add_para_style(ParaStyle(name='Headline sehr wichtig', font='Barlow Semi Condensed Black', fcolor='White', language='de', fontfeatures='-clig', features='', fontsize=27, linesp=23, kern=1, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=1, linesp_mode=0, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1))
     doc.add_para_style(ParaStyle(name='Kontaktmöglichkeiten', font='Barlow Semi Condensed Regular', language='de', fontfeatures='-clig', fontsize=8, linesp=10, linesp_mode=0))
-    doc.add_para_style(ParaStyle(name='Headline Emphasis', font='Barlow Semi Condensed Black', fcolor='Gelb', language='de', fontfeatures='-clig', fontsize=27, linesp=23, align=1, linesp_mode=0))
+    doc.add_para_style(ParaStyle(name='Headline Emphasis', font='Vollkorn Black Italic', fcolor='Gelb', language='de', fontfeatures='-clig', fontsize=27, linesp=23, align=1, linesp_mode=0))
     doc.add_para_style(ParaStyle(name='Unterüberschrift', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', features='', fontsize=13, linesp=16, space_after_pt=0, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=1, linesp_mode=0, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1))
 
     doc.add_master(

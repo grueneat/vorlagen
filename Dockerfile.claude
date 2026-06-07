@@ -127,15 +127,19 @@ RUN install -m 644 /tmp/barlow-staging/*.ttf /usr/local/share/fonts/gruene/ && \
         { echo "fc-match did not resolve to Barlow" >&2; exit 1; } && \
     echo "Barlow installed: $BN faces" && rm -rf /tmp/barlow-staging
 
-# Fontconfig family-name alias for Vollkorn Black Italic. Scribus SLAs reference
-# this font by its full name as a family ("Vollkorn Black Italic"); the static
-# file registers as family=Vollkorn + style="Black Italic". Without this alias,
-# fontconfig cannot match the lookup and Scribus falls back to DejaVu.
+# Fontconfig family-name aliases for the Vollkorn accent italics. Scribus SLAs
+# reference these fonts by their full name as a family ("Vollkorn Black Italic" /
+# "Vollkorn Bold Italic"); the static files register as family=Vollkorn +
+# style="Black Italic" / "Bold Italic". Without these aliases, fontconfig cannot
+# match the lookup and Scribus falls back to DejaVu. Vollkorn stays the accent
+# font (only Gotham was replaced by Barlow), so both italic faces must resolve.
 COPY shared/fonts/50-vollkorn-family-alias.conf /etc/fonts/conf.d/50-vollkorn-family-alias.conf
 RUN fc-cache -f && \
     fc-match "Vollkorn Black Italic" | grep -qi 'Vollkorn-BlackItalic' || \
         { echo "Vollkorn alias not resolving to Vollkorn-BlackItalic.ttf" >&2; exit 1; } && \
-    echo "Vollkorn alias OK: $(fc-match 'Vollkorn Black Italic')"
+    fc-match "Vollkorn Bold Italic" | grep -qi 'Vollkorn-BoldItalic' || \
+        { echo "Vollkorn alias not resolving to Vollkorn-BoldItalic.ttf" >&2; exit 1; } && \
+    echo "Vollkorn aliases OK: $(fc-match 'Vollkorn Black Italic'); $(fc-match 'Vollkorn Bold Italic')"
 
 # Allow ImageMagick to read/write PDF (Debian's policy.xml blocks PDF by default).
 # We need this for compare/convert in visual diff workflows.
