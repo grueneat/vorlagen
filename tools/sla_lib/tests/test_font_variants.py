@@ -18,11 +18,14 @@ from font_variants import (  # noqa: E402
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+# The comparison swaps from the frozen Gotham baseline (the production
+# template.sla has moved to Barlow Semi Condensed, Issue c8bg0).
 FLYER_TEMPLATE = (
     REPO_ROOT
     / "templates"
     / "flyer-a6-hochformat-gruenes-cover"
-    / "template.sla"
+    / "fonts"
+    / "_base-gotham.sla"
 )
 ALTERNATIVES_DIR = REPO_ROOT / "shared" / "fonts" / "alternatives"
 
@@ -30,9 +33,10 @@ ALTERNATIVES_DIR = REPO_ROOT / "shared" / "fonts" / "alternatives"
 class LoadAlternativesTest(unittest.TestCase):
     def test_entries_each_complete(self):
         data = load_alternatives()
-        # Five free SIL-OFL alternatives plus Tahoma (the proprietary
-        # negative-example column added for the decision comparison).
-        self.assertEqual(len(data["fonts"]), 6)
+        # Six free SIL-OFL alternatives (Montserrat, Outfit, Urbanist,
+        # Raleway, Barlow Semi Condensed, Saira Semi Condensed) plus Tahoma
+        # (the proprietary negative-example column for the decision comparison).
+        self.assertEqual(len(data["fonts"]), 7)
         for entry in data["fonts"]:
             # German summary is mandatory (Issue 42 acceptance criterion).
             self.assertTrue(entry["summary"].strip())

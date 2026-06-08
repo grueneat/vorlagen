@@ -63,6 +63,25 @@ JOBS: dict[str, tuple[str, str, str, dict[str, int]]] = {
     ),
 }
 
+# Families that github.com/google/fonts ships as STATIC per-weight TTFs rather
+# than a [wght] variable font (Saira Semi Condensed lives under
+# ofl/sairasemicondensed as discrete instances). They need no axis pinning —
+# only the same name-table normalisation so each weight registers as
+# "<Base> <Weight>" the way the instantiated families do. slug -> (ofl dir,
+# base family, {weight label: source file name}).
+STATIC_JOBS: dict[str, tuple[str, str, dict[str, str]]] = {
+    "saira-semi-condensed": (
+        "sairasemicondensed",
+        "Saira SemiCondensed",
+        {
+            "Regular": "SairaSemiCondensed-Regular.ttf",
+            "Bold": "SairaSemiCondensed-Bold.ttf",
+            "ExtraBold": "SairaSemiCondensed-ExtraBold.ttf",
+            "Black": "SairaSemiCondensed-Black.ttf",
+        },
+    ),
+}
+
 # Windows / Mac name-record IDs to overwrite so every platform reads the same
 # static family and subfamily strings.
 _NAME_PLATFORMS = ((3, 1, 0x409), (1, 0, 0))
@@ -112,6 +131,66 @@ def instantiate_family(
     return written
 
 
+
+def rename_static_family(
+    slug: str, ofl_dir: str, base: str, files: dict[str, str]
+) -> list[Path]:
+    """Normalise the name tables of ready-made static per-weight TTFs.
+
+    Google Fonts ships some families (e.g. Saira Semi Condensed) as discrete
+    static instances whose name tables use the RIBBI-overflow grouping
+    (``family="Saira SemiCondensed,Saira SemiCondensed ExtraBold"``). Scribus
+    then cannot address the weights cleanly. This downloads each weight and
+    rewrites its name records to ``family="<Base>"`` / ``subfamily="<Weight>"``
+    — the same shape instantiate_family() produces — so Scribus exposes each as
+    ``"<Base> <Weight>"``. Returns written paths.
+    """
+    from fontTools.ttLib import TTFont
+
+    out_dir = ALT_DIR / slug
+    out_dir.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    for label, src_name in files.items():
+        src = out_dir / src_name
+        if not src.exists():
+            _download(ofl_dir, src_name, src)
+        font = TTFont(str(src))
+        name = font["name"]
+        full = f"{base} {label}"
+        for plat in _NAME_PLATFORMS:
+            name.setName(base, 1, *plat)
+            name.setName(label, 2, *plat)
+            name.setName(base, 16, *plat)
+            name.setName(label, 17, *plat)
+            name.setName(full, 4, *plat)
+            name.setName(full.replace(" ", ""), 6, *plat)
+        # Normalise vertical metrics. Some Google Fonts static instances (Saira
+        # Semi Condensed: hhea 1135/-439 → 1.57x line height) carry oversized
+        # vertical metrics that make Scribus' automatic leading explode and
+        # overflow fixed text frames. Pin the leading metrics to a 1.2x line
+        # height (matching the other bundled alternatives, e.g. Barlow) while
+        # keeping usWin* wide enough to cover the real glyph bbox so accents
+        # (German umlauts) are never clipped. USE_TYPO_METRICS makes renderers
+        # prefer the typo line metrics. Letterforms are untouched.
+        head = font["head"]
+        os2 = font["OS/2"]
+        hhea = font["hhea"]
+        hhea.ascent = 1000
+        hhea.descent = -200
+        hhea.lineGap = 0
+        os2.sTypoAscender = 1000
+        os2.sTypoDescender = -200
+        os2.sTypoLineGap = 0
+        os2.usWinAscent = max(head.yMax, 1000)
+        os2.usWinDescent = max(-head.yMin, 200)
+        os2.fsSelection |= 0x80  # USE_TYPO_METRICS
+        out = out_dir / f"{base.replace(' ', '')}-{label}.ttf"
+        font.save(str(out))
+        written.append(out)
+        print(f"[font_instantiate] {slug}: {out.name} ({out.stat().st_size} bytes)")
+    return written
+
+
 def main(argv: list[str] | None = None) -> int:
     try:
         import fontTools  # noqa: F401
@@ -125,6 +204,11 @@ def main(argv: list[str] | None = None) -> int:
     for slug, (ofl_dir, vf_name, base, weights) in JOBS.items():
         instantiate_family(slug, ofl_dir, vf_name, base, weights)
     print(f"[font_instantiate] {len(JOBS)} family/families instantiated")
+
+    for slug, (ofl_dir, base, files) in STATIC_JOBS.items():
+        rename_static_family(slug, ofl_dir, base, files)
+    if STATIC_JOBS:
+        print(f"[font_instantiate] {len(STATIC_JOBS)} static family/families normalised")
     return 0
 
 

@@ -41,7 +41,8 @@
         "outfit": "Geometrische Grotesk (monolinear)",
         "urbanist": "Geometrische Grotesk",
         "raleway": "Elegante geometrische Grotesk",
-        "barlow-semi-condensed": "Grotesk, leicht schmal (semi-condensed)"
+        "barlow-semi-condensed": "Grotesk, leicht schmal (semi-condensed)",
+        "saira-semi-condensed": "Geometrische Grotesk, schmal (semi-condensed)"
       }
     },
     {
@@ -54,7 +55,8 @@
         "outfit": "Normal",
         "urbanist": "Normal",
         "raleway": "Normal",
-        "barlow-semi-condensed": "Schmal — als einzige nah am Original"
+        "barlow-semi-condensed": "Schmal — als einzige nah am Original",
+        "saira-semi-condensed": "Schmal — wie Barlow nah am Original"
       }
     },
     {
@@ -67,7 +69,8 @@
         "outfit": "9 (100 – 900)",
         "urbanist": "Thin – Black + Kursive",
         "raleway": "18 (Thin – Black + Kursive)",
-        "barlow-semi-condensed": "9 (Thin – Black)"
+        "barlow-semi-condensed": "9 (Thin – Black)",
+        "saira-semi-condensed": "9 (Thin – Black)"
       }
     },
     {
@@ -80,7 +83,8 @@
         "outfit": "SIL OFL 1.1 — frei",
         "urbanist": "SIL OFL 1.1 — frei",
         "raleway": "SIL OFL 1.1 — frei",
-        "barlow-semi-condensed": "SIL OFL 1.1 — frei"
+        "barlow-semi-condensed": "SIL OFL 1.1 — frei",
+        "saira-semi-condensed": "SIL OFL 1.1 — frei"
       }
     },
     {
@@ -94,7 +98,8 @@
         "outfit": true,
         "urbanist": true,
         "raleway": true,
-        "barlow-semi-condensed": true
+        "barlow-semi-condensed": true,
+        "saira-semi-condensed": true
       }
     },
     {
@@ -108,7 +113,8 @@
         "outfit": 1,
         "urbanist": 1,
         "raleway": 1,
-        "barlow-semi-condensed": 3
+        "barlow-semi-condensed": 3,
+        "saira-semi-condensed": 3
       }
     },
     {
@@ -122,7 +128,8 @@
         "outfit": 2,
         "urbanist": 2,
         "raleway": 2,
-        "barlow-semi-condensed": 2
+        "barlow-semi-condensed": 2,
+        "saira-semi-condensed": 3
       }
     },
     {
@@ -136,7 +143,8 @@
         "outfit": 3,
         "urbanist": 2,
         "raleway": 3,
-        "barlow-semi-condensed": 3
+        "barlow-semi-condensed": 3,
+        "saira-semi-condensed": 3
       }
     },
     {
@@ -150,7 +158,8 @@
         "outfit": 2,
         "urbanist": 2,
         "raleway": 1,
-        "barlow-semi-condensed": 3
+        "barlow-semi-condensed": 3,
+        "saira-semi-condensed": 2
       }
     },
     {
@@ -164,7 +173,8 @@
         "outfit": 2,
         "urbanist": 1,
         "raleway": 3,
-        "barlow-semi-condensed": 2
+        "barlow-semi-condensed": 2,
+        "saira-semi-condensed": 2
       }
     },
     {
@@ -177,7 +187,8 @@
         "outfit": "Sauber und modern, aber monolinear und kühl — solide, nicht erste Wahl.",
         "urbanist": "Vielseitig, aber generisch und mit geringer Wiedererkennung — kein klares Markenprofil.",
         "raleway": "Ausdrucksstark für Headlines, im Kleinsttext fragil — Display-Schrift, kein Allrounder.",
-        "barlow-semi-condensed": "Empfehlung: einzige schmale, frei weitergebbare Alternative — Vorlagen bleiben ohne Umbau nutzbar."
+        "barlow-semi-condensed": "Empfehlung: einzige schmale, frei weitergebbare Alternative — Vorlagen bleiben ohne Umbau nutzbar.",
+        "saira-semi-condensed": "Die freie, geometrischere „Schwester\" von Barlow: gleiche schmale Laufweite (Layout-Treue), aber plakativer und stärker geometrisch — die stärkste freie Alternative, wenn ein markanteres, Gotham-näheres Schriftbild gewünscht ist."
       }
     }
   ]

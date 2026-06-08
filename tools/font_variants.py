@@ -132,6 +132,20 @@ def variant_sla_path(template_sla: Path, slug: str) -> Path:
     return template_sla.parent / "fonts" / slug / f"{slug}.sla"
 
 
+def comparison_base(data: dict, root: Path = ROOT) -> Path:
+    """Resolve the base SLA the alternatives are swapped *from*.
+
+    The font comparison measures the free alternatives against the original
+    Gotham Narrow flyer. Production ``template.sla`` has since been switched to
+    Barlow Semi Condensed (Issue c8bg0), so the comparison pins its own frozen
+    Gotham baseline via the ``base`` key in alternatives.yml. Falls back to the
+    flyer's ``template.sla`` when no ``base`` is given (legacy / pre-swap).
+    """
+    if data.get("base"):
+        return root / data["base"]
+    return TEMPLATES_DIR / data["flyer"] / "template.sla"
+
+
 def _process_one(
     sla: Path, slug: str, data: dict, out_path: Path | None = None
 ) -> Path:
@@ -145,14 +159,16 @@ def _process_one(
 
 
 def _run_all(data: dict) -> int:
-    """Emit one variant SLA per alternative for the target flyer template."""
+    """Emit one variant SLA per alternative from the frozen comparison base."""
     flyer = data["flyer"]
-    sla = TEMPLATES_DIR / flyer / "template.sla"
-    if not sla.exists():
-        print(f"FATAL: template SLA not found: {sla}", file=sys.stderr)
+    base = comparison_base(data)
+    anchor = TEMPLATES_DIR / flyer / "template.sla"
+    if not base.exists():
+        print(f"FATAL: comparison base SLA not found: {base}", file=sys.stderr)
         return 1
     for entry in data["fonts"]:
-        _process_one(sla, entry["slug"], data)
+        out = variant_sla_path(anchor, entry["slug"])
+        _process_one(base, entry["slug"], data, out_path=out)
     print(f"[font_variants] {len(data['fonts'])} variant SLA(s) written")
     return 0
 

@@ -120,6 +120,23 @@
       "original": false,
       "pdf": "/schriften/barlow-semi-condensed/barlow-semi-condensed.pdf",
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/barlow-semi-condensed/barlow-semi-condensed.sla"
+    },
+    {
+      "slug": "saira-semi-condensed",
+      "name": "Saira Semi Condensed",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/sairasemicondensed",
+      "family": "Saira SemiCondensed",
+      "summary": "Schmal laufende geometrische Grotesk (Omnibus Type) — neben Barlow die zweite freie Schrift, die der schmalen Laufweite von Gotham Narrow nahekommt, dabei aber deutlich geometrischer und plakativer als Barlow. Vorteile: schmale Proportionen (gute Layout-Treue zum Narrow-Original), voller statischer Schnittumfang Thin–Black inkl. ExtraBold, kräftige Headlines mit „Wumms\"; frei (SIL OFL), weitergebbar. Nachteile: wirkt technischer/kühler als Gothams warme Geometrie, etwas enger im Kleintext als Barlow. Unterschied: die freie, „Gotham-nächste\" geometrische Alternative auf der schmalen Achse — die einzige schmale Vergleichsschrift, die nicht zugleich die amtierende Markenschrift (Barlow) ist. Einsatz: starke Wahl, wenn ein geometrischeres, plakativeres Schriftbild als Barlow gewünscht ist.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/saira-semi-condensed/saira-semi-condensed.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/saira-semi-condensed/saira-semi-condensed.sla"
     }
   ],
   "pages": [
@@ -153,6 +170,10 @@
         "barlow-semi-condensed": {
           "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-01.png",
           "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-01-hires.png"
+        },
+        "saira-semi-condensed": {
+          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-01.png",
+          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-01-hires.png"
         }
       }
     },
@@ -186,6 +207,10 @@
         "barlow-semi-condensed": {
           "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-02.png",
           "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-02-hires.png"
+        },
+        "saira-semi-condensed": {
+          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-02.png",
+          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-02-hires.png"
         }
       }
     },
@@ -219,6 +244,10 @@
         "barlow-semi-condensed": {
           "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-03.png",
           "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-03-hires.png"
+        },
+        "saira-semi-condensed": {
+          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-03.png",
+          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-03-hires.png"
         }
       }
     },
@@ -252,6 +281,10 @@
         "barlow-semi-condensed": {
           "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-04.png",
           "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-04-hires.png"
+        },
+        "saira-semi-condensed": {
+          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-04.png",
+          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-04-hires.png"
         }
       }
     },
@@ -285,6 +318,10 @@
         "barlow-semi-condensed": {
           "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-05.png",
           "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-05-hires.png"
+        },
+        "saira-semi-condensed": {
+          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-05.png",
+          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-05-hires.png"
         }
       }
     },
@@ -318,6 +355,10 @@
         "barlow-semi-condensed": {
           "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-06.png",
           "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-06-hires.png"
+        },
+        "saira-semi-condensed": {
+          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-06.png",
+          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-06-hires.png"
         }
       }
     }

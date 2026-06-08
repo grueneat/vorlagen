@@ -48,13 +48,14 @@ const dotColor = (v: number) =>
     : v === 1 ? 'var(--gat-web-tag-warn-text)'
     : 'var(--gat-web-tag-error-text)';
 
-// Live web-font specimens. The five SIL-OFL alternatives are self-hosted
+// Live web-font specimens. The six SIL-OFL alternatives are self-hosted
 // (site/public/fonts/) and embedded via @font-face. Tahoma is a proprietary
 // system font — shown via the locally installed copy (present on Windows),
 // never embedded. Gotham Narrow cannot be embedded at all; it is shown in the
 // rendered-flyer comparison further down.
 const specimens = [
   { slug: 'barlow-semi-condensed', name: 'Barlow Semi Condensed', dir: 'barlow-semi-condensed', base: 'BarlowSemiCondensed', web: true },
+  { slug: 'saira-semi-condensed', name: 'Saira Semi Condensed', dir: 'saira-semi-condensed', base: 'SairaSemiCondensed', web: true },
   { slug: 'montserrat', name: 'Montserrat', dir: 'montserrat', base: 'Montserrat', web: true },
   { slug: 'outfit', name: 'Outfit', dir: 'outfit', base: 'Outfit', web: true },
   { slug: 'urbanist', name: 'Urbanist', dir: 'urbanist', base: 'Urbanist', web: true },
@@ -108,7 +109,7 @@ const KLEINTEXT =
     kommerziell lizenzierten Schrift, die <strong>nicht</strong> mit den
     Vorlagen an Gliederungen und Druckereien weitergegeben werden darf und
     laufende Kosten verursacht. Sie muss ersetzt werden. Diese Seite stellt
-    die Kandidat:innen gegenüber: fünf frei (auch kommerziell) nutzbare,
+    die Kandidat:innen gegenüber: sechs frei (auch kommerziell) nutzbare,
     SIL-OFL-lizenzierte Alternativen — und, als bewusstes Negativbeispiel,
     <strong>Tahoma</strong>: die naheliegende „hat doch jeder"-Wahl, die
     gestalterisch jedoch nicht trägt.

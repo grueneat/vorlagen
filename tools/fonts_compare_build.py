@@ -140,13 +140,20 @@ def install_fonts(data: dict) -> bool:
 
 
 def generate_variant_slas(data: dict, flyer_dir: Path) -> dict[str, Path]:
-    """Generate one variant SLA per alternative. Returns {slug: sla_path}."""
-    template_sla = flyer_dir / "template.sla"
+    """Generate one variant SLA per alternative. Returns {slug: sla_path}.
+
+    Reads from the frozen Gotham comparison base (font_variants.comparison_base);
+    the production template.sla has moved to Barlow (Issue c8bg0) and no longer
+    carries the Gotham references the swap needs. Variant SLAs are still written
+    under templates/<flyer>/fonts/<slug>/ (anchored at template.sla).
+    """
+    base = font_variants.comparison_base(data)
+    anchor = flyer_dir / "template.sla"
     out: dict[str, Path] = {}
     for entry in data["fonts"]:
         slug = entry["slug"]
-        sla = font_variants.variant_sla_path(template_sla, slug)
-        n = font_variants.apply_font(template_sla, sla, entry)
+        sla = font_variants.variant_sla_path(anchor, slug)
+        n = font_variants.apply_font(base, sla, entry)
         print(f"[fonts_compare] {slug}: variant SLA — {n} reference(s)")
         out[slug] = sla
     return out
@@ -199,7 +206,7 @@ def mirror_to_public(slug: str, render: dict) -> None:
             shutil.copy(hires, dest / hires.name)
 
 
-def mirror_original(flyer_dir: Path) -> dict:
+def mirror_original(flyer_dir: Path, data: dict | None = None) -> dict:
     """Produce the original column's previews under schriften/original/.
 
     The original flyer (proprietary Gotham Narrow) is not re-rendered through
@@ -220,7 +227,14 @@ def mirror_original(flyer_dir: Path) -> dict:
     from visual_diff import rasterise
 
     dest = SITE_PUBLIC / ORIGINAL_SLUG
+    # Prefer the frozen Gotham preview (data['original_pdf']): the flyer's live
+    # preview.pdf has moved to Barlow (Issue c8bg0) and would mislabel the
+    # baseline column. Fall back to the live preview only when none is pinned.
     preview_pdf = flyer_dir / "preview.pdf"
+    if data and data.get("original_pdf"):
+        pinned = ROOT / data["original_pdf"]
+        if pinned.exists():
+            preview_pdf = pinned
 
     if preview_pdf.exists():
         dest.mkdir(parents=True, exist_ok=True)
@@ -383,7 +397,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # The original column always uses the flyer's own committed renders —
     # this is a verbatim copy, independent of Scribus availability.
-    original = mirror_original(flyer_dir)
+    original = mirror_original(flyer_dir, data)
     if original:
         renders[ORIGINAL_SLUG] = original
 
