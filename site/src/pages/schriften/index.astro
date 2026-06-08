@@ -48,21 +48,17 @@ const dotColor = (v: number) =>
     : v === 1 ? 'var(--gat-web-tag-warn-text)'
     : 'var(--gat-web-tag-error-text)';
 
-// Live web-font specimens. The six SIL-OFL alternatives are self-hosted
-// (site/public/fonts/) and embedded via @font-face. Tahoma is a proprietary
-// system font — shown via the locally installed copy (present on Windows),
-// never embedded. Gotham Narrow cannot be embedded at all; it is shown in the
-// rendered-flyer comparison further down.
+// Live web-font specimens for the tracking variants. Montserrat and Raleway
+// are self-hosted (site/public/fonts/) and embedded via @font-face; the
+// negative letter-spacing mirrors the Scribus KERN used in the flyer renders.
+// Gotham Narrow cannot be embedded (proprietary) — it is the baseline shown in
+// the rendered-flyer comparison further down.
 const specimens = [
-  { slug: 'barlow-semi-condensed', name: 'Barlow Semi Condensed', dir: 'barlow-semi-condensed', base: 'BarlowSemiCondensed', web: true },
-  { slug: 'saira-semi-condensed', name: 'Saira Semi Condensed', dir: 'saira-semi-condensed', base: 'SairaSemiCondensed', web: true },
-  { slug: 'montserrat', name: 'Montserrat', dir: 'montserrat', base: 'Montserrat', web: true },
   { slug: 'montserrat-eng4', name: 'Montserrat eng (−4)', dir: 'montserrat', base: 'Montserrat', web: true, track: '-0.04em' },
-  { slug: 'montserrat-eng6', name: 'Montserrat eng (−6)', dir: 'montserrat', base: 'Montserrat', web: true, track: '-0.06em' },
-  { slug: 'outfit', name: 'Outfit', dir: 'outfit', base: 'Outfit', web: true },
-  { slug: 'urbanist', name: 'Urbanist', dir: 'urbanist', base: 'Urbanist', web: true },
-  { slug: 'raleway', name: 'Raleway', dir: 'raleway', base: 'Raleway', web: true },
-  { slug: 'tahoma', name: 'Tahoma', dir: '', base: '', web: false },
+  { slug: 'montserrat-eng5', name: 'Montserrat eng (−5)', dir: 'montserrat', base: 'Montserrat', web: true, track: '-0.05em' },
+  { slug: 'raleway-eng3', name: 'Raleway eng (−3)', dir: 'raleway', base: 'Raleway', web: true, track: '-0.03em' },
+  { slug: 'raleway-eng4', name: 'Raleway eng (−4)', dir: 'raleway', base: 'Raleway', web: true, track: '-0.04em' },
+  { slug: 'raleway-eng5', name: 'Raleway eng (−5)', dir: 'raleway', base: 'Raleway', web: true, track: '-0.05em' },
 ];
 const famOf = (s: { slug: string; web: boolean }) =>
   s.web ? `"Spec ${s.slug}", sans-serif` : 'Tahoma, "Segoe UI", Verdana, sans-serif';
@@ -113,11 +109,12 @@ const KLEINTEXT =
     Die Vorlagen sind in <strong>Gotham Narrow</strong> gesetzt — einer
     kommerziell lizenzierten Schrift, die <strong>nicht</strong> mit den
     Vorlagen an Gliederungen und Druckereien weitergegeben werden darf und
-    laufende Kosten verursacht. Sie muss ersetzt werden. Diese Seite stellt
-    die Kandidat:innen gegenüber: sechs frei (auch kommerziell) nutzbare,
-    SIL-OFL-lizenzierte Alternativen — und, als bewusstes Negativbeispiel,
-    <strong>Tahoma</strong>: die naheliegende „hat doch jeder"-Wahl, die
-    gestalterisch jedoch nicht trägt.
+    laufende Kosten verursacht. Sie muss ersetzt werden. Diese Seite stellt das
+    proprietäre Original den beiden engsten freien Kandidatinnen gegenüber:
+    <strong>Montserrat</strong> und <strong>Raleway</strong> — beide bewusst
+    <strong>enger gesetzt</strong> (negatives Tracking), weil sie von Haus aus
+    zu locker laufen und es von keiner einen condensed Schnitt gibt. Montserrat
+    in zwei Stufen (−4, −5), Raleway in drei (−3, −4, −5).
   </p>
   <p style="color: var(--muted); font-size: 0.92em;">
     Verglichen wird auf drei Ebenen: am <strong>Schriftbild</strong> (eigene
@@ -337,9 +334,7 @@ const KLEINTEXT =
           <div class="app-font-card__action">
             {f.pdf
               ? <a href={url(f.pdf)}>{f.original ? 'Original-Flyer als PDF' : `Flyer als PDF (${f.name})`}</a>
-              : f.slug === 'tahoma'
-                ? <span style="color: var(--gat-web-text-soft);">Kein PDF — proprietäre Schrift wird nicht mitveröffentlicht</span>
-                : <a href={url(f.sla)}>Variant-SLA herunterladen</a>}
+              : <a href={url(f.sla)}>Variant-SLA herunterladen</a>}
           </div>
         </div>
       );

@@ -33,11 +33,11 @@ ALTERNATIVES_DIR = REPO_ROOT / "shared" / "fonts" / "alternatives"
 class LoadAlternativesTest(unittest.TestCase):
     def test_entries_each_complete(self):
         data = load_alternatives()
-        # Six free SIL-OFL alternatives (Montserrat, Outfit, Urbanist,
-        # Raleway, Barlow Semi Condensed, Saira Semi Condensed), two Montserrat
-        # tracking variants (eng -4 / -6, no own binaries), plus Tahoma (the
-        # proprietary negative-example column for the decision comparison).
-        self.assertEqual(len(data["fonts"]), 9)
+        # The comparison set: tracking variants of Montserrat (-4, -5) and
+        # Raleway (-3, -4, -5). All free (SIL OFL), none with own binaries —
+        # they borrow Montserrat/Raleway via files_from. Gotham Narrow (the
+        # proprietary baseline) is added by the build tool, not the data source.
+        self.assertEqual(len(data["fonts"]), 5)
         for entry in data["fonts"]:
             # German summary is mandatory (Issue 42 acceptance criterion).
             self.assertTrue(entry["summary"].strip())
@@ -60,21 +60,25 @@ class LoadAlternativesTest(unittest.TestCase):
                 fpath = ALTERNATIVES_DIR / src_slug / fname
                 self.assertTrue(fpath.exists(), f"missing bundled file {fpath}")
 
-    def test_exactly_one_proprietary_entry(self):
+    def test_no_proprietary_entries(self):
         data = load_alternatives()
-        proprietary = [e for e in data["fonts"] if e.get("proprietary")]
-        self.assertEqual([e["slug"] for e in proprietary], ["tahoma"])
+        proprietary = [e["slug"] for e in data["fonts"] if e.get("proprietary")]
+        self.assertEqual(proprietary, [])
 
-    def test_barlow_semi_condensed_is_the_narrow_option(self):
+    def test_all_entries_are_tracking_variants(self):
         data = load_alternatives()
-        slugs = {e["slug"] for e in data["fonts"]}
-        self.assertIn("barlow-semi-condensed", slugs)
+        for e in data["fonts"]:
+            # Every comparison column is a tracking variant: numeric KERN and a
+            # base family it borrows binaries from.
+            self.assertIsInstance(e.get("track"), int)
+            self.assertIn(e["family"], {"Montserrat", "Raleway"})
+            self.assertTrue(e.get("files_from"))
 
 
 class ApplyFontTest(unittest.TestCase):
     def test_substitutes_real_template(self):
         data = load_alternatives()
-        entry = next(e for e in data["fonts"] if e["slug"] == "montserrat")
+        entry = next(e for e in data["fonts"] if e["slug"] == "montserrat-eng4")
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "montserrat.sla"
             count = apply_font(FLYER_TEMPLATE, out, entry)
@@ -108,7 +112,7 @@ class ApplyFontTest(unittest.TestCase):
     def test_is_idempotent(self):
         """A second pass over an already-substituted SLA is byte-identical."""
         data = load_alternatives()
-        entry = next(e for e in data["fonts"] if e["slug"] == "outfit")
+        entry = next(e for e in data["fonts"] if e["slug"] == "raleway-eng4")
         with tempfile.TemporaryDirectory() as tmp:
             first = Path(tmp) / "a.sla"
             second = Path(tmp) / "b.sla"

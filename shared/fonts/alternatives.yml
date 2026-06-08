@@ -1,107 +1,39 @@
-# Freie, SIL-OFL-lizenzierte Gotham-Alternativen für die Schriften-Vergleichsseite.
+# Schriften-Vergleich: Tracking-Varianten von Montserrat und Raleway.
 # Quelle/Begründung: .issues/42-freie-gotham-ersatzschriften-recherche-und-schriften-vergleichsseite/RESEARCH.md
 #
-# target  — die zu ersetzende proprietäre Schrift (alle vier Gotham-Narrow-Schnitte)
-# flyer   — das Template, an dem die Alternativen verglichen werden
-# fonts   — Liste der 5 gewählten Familien:
-#   slug     — Kurzname (Verzeichnis- und URL-Slug)
-#   name     — Anzeigename
-#   license  — Lizenz (alle SIL OFL 1.1)
-#   source   — Bezugsquelle (github.com/google/fonts)
-#   family   — Family-Name, an den der Schnittname angehängt wird; Scribus
-#              referenziert die Schnitte als "<family> <Schnitt>"
-#   files    — gebündelte Schriftdateien unter shared/fonts/alternatives/<slug>/
-#   weights  — Gotham-Narrow-Schnitt -> Ersatz-Schnitt (Schnitt-Name, wie an
-#              `family` angehängt -> "<family> <Schnitt>")
-#   summary  — deutsche Kurz-Zusammenfassung (verbatim aus RESEARCH.md §2)
-#
-# Hinweis: Montserrat, Outfit, Urbanist und Raleway liegen bei Google Fonts
-# nur als [wght]-Variable-Fonts vor. Scribus kann pro Variable-Font nur einen
-# Schnitt ansprechen; daher werden mit tools/font_instantiate.py vier statische
-# Schnitt-TTFs je Familie erzeugt (family="<Base>" / subfamily="<Schnitt>"),
-# wie sie Barlow Semi Condensed bereits ausliefert. Barlow wird direkt als
-# statische Schnitte gebündelt.
+# Verglichen werden Gotham Narrow (Original, proprietär — über das Build-Tool als
+# Spalte ergänzt) gegen eng gesetzte Varianten von Montserrat und Raleway. Beide
+# Schriften laufen von Haus aus zu locker/breit; einen offiziellen condensed
+# Schnitt gibt es bei keiner. Daher werden sie über negatives Tracking
+# (Scribus KERN, in %) enger gesetzt — das verdichtet Buchstaben- UND
+# Wortabstände. Felder:
+#   slug       — Kurzname (Verzeichnis-/URL-Slug)
+#   name       — Anzeigename
+#   family     — Family-Name (Scribus referenziert "<family> <Schnitt>")
+#   files_from — Verzeichnis unter shared/fonts/alternatives/, aus dem die
+#                Schriftdateien geliehen werden (die Tracking-Varianten haben
+#                keine eigenen Binärdateien — nur das Tracking unterscheidet sie)
+#   files      — die geliehenen Datei-Namen (in files_from-Verzeichnis)
+#   track      — manuelles Tracking (Scribus KERN, %, negativ = enger)
+#   weights    — Gotham-Narrow-Schnitt -> Ersatz-Schnitt
+#   summary    — deutsche Kurz-Zusammenfassung
 target: "Gotham Narrow"
 flyer: flyer-a6-hochformat-gruenes-cover
-# base — the frozen Gotham-Narrow reference template the alternatives are
-# swapped from. The production template.sla has since moved to Barlow Semi
-# Condensed (Issue c8bg0), so the comparison keeps its own Gotham baseline
-# here rather than reading the live production template.
 base: templates/flyer-a6-hochformat-gruenes-cover/fonts/_base-gotham.sla
-# original_pdf — frozen Gotham-Narrow flyer preview used to rasterise the
-# 'Original' baseline column (the live preview.pdf has moved to Barlow).
 original_pdf: site/public/schriften/original/original.pdf
 fonts:
-  # Tahoma is NOT a free SIL-OFL alternative — it is a proprietary Microsoft
-  # system font, included here as a deliberate negative example for the
-  # decision comparison (it is the obvious "everyone already has it" pick,
-  # but a poor brand fit). Its .ttf binaries are git-ignored (see .gitignore);
-  # only the raster PNG previews are committed. Tahoma ships just two weights
-  # (Regular, Bold), so the four Gotham Narrow weights collapse onto them —
-  # Black and Ultra both fall back to Bold, which is itself part of the point.
-  - slug: tahoma
-    name: Tahoma
-    license: Proprietär (Microsoft)
-    source: "https://learn.microsoft.com/en-us/typography/font-list/tahoma"
-    family: "Tahoma"
-    # proprietary: rendered PDF embeds the font — fonts_compare_build.py keeps
-    # only the raster PNG previews and never commits/publishes the PDF.
-    proprietary: true
-    files:
-      - tahoma.ttf
-      - tahomabd.ttf
-    weights:
-      Book: Regular
-      Bold: Bold
-      Black: Bold
-      Ultra: Bold
-    summary: >-
-      Humanistische Grotesk, die Matthew Carter 1994 für Microsoft zur
-      Bildschirm-Lesbarkeit bei kleinen Pixelgrößen entwarf — eine UI-/System-
-      Schrift, keine Markenschrift. Vorteile: auf praktisch jedem Windows-
-      Rechner vorinstalliert, sehr robust und gut lesbar bei Kleinstgrößen.
-      Nachteile: läuft breit (Gegenteil von Gotham Narrow → Texte überlaufen,
-      Umbrüche verschieben sich), nur zwei Schnitte (Regular, Bold) → Black und
-      Ultra fallen auf Bold zusammen, Headlines verlieren ihre Wucht;
-      proprietär, darf nicht mit den Vorlagen weitergegeben werden. Unterschied:
-      die „Büro-Standard"-Option ohne gestalterischen Anspruch. Einsatz: hier
-      bewusst als abschreckendes Beispiel — kein Marken-Ersatz für Gotham.
-  - slug: montserrat
-    name: Montserrat
-    license: SIL OFL 1.1
-    source: "https://github.com/google/fonts/tree/main/ofl/montserrat"
-    family: "Montserrat"
-    files:
-      - Montserrat-Regular.ttf
-      - Montserrat-Bold.ttf
-      - Montserrat-ExtraBold.ttf
-      - Montserrat-Black.ttf
-      - OFL.txt
-    weights:
-      Book: Regular
-      Bold: Bold
-      Black: ExtraBold
-      Ultra: Black
-    summary: >-
-      Geometrische Grotesk, von Plakatschriften aus Buenos Aires inspiriert
-      (wie Gotham von New Yorker Beschilderung), sehr nahe Proportionen (~88 %
-      Übereinstimmung in Fachvergleichen). Vorteile: bekannteste freie
-      Gotham-Alternative, 9 Schnitte Thin–Black, sehr breite Sprachunterstützung,
-      ausgereift. Nachteile: läuft etwas breiter als Gotham Narrow, große
-      x-Höhe, keine schmale Variante → Texte können im Layout überlaufen.
-      Unterschied: der „klassischste", wärmste Gotham-Ersatz. Einsatz:
-      Standard-Empfehlung, wenn größtmögliche Nähe zu Gotham gewünscht ist.
-  # Montserrat-Tracking-Varianten (KEINE eigenen Schriftdateien — files_from
-  # leiht Montserrats TTFs). Montserrat hat keinen condensed/narrow Schnitt
-  # (existiert offiziell nicht); deshalb wird die als beste empfundene Schrift
-  # hier nur enger gesetzt: negatives Tracking (Scribus KERN) zieht Buchstaben
-  # UND Wortzwischenraeume zusammen. Zwei Stufen zum Vergleich.
   - slug: montserrat-eng4
     name: "Montserrat eng (−4)"
     license: SIL OFL 1.1
     source: "https://github.com/google/fonts/tree/main/ofl/montserrat"
     family: "Montserrat"
     files_from: montserrat
+    files:
+      - Montserrat-Regular.ttf
+      - Montserrat-Bold.ttf
+      - Montserrat-ExtraBold.ttf
+      - Montserrat-Black.ttf
+      - OFL.txt
     track: -4
     weights:
       Book: Regular
@@ -109,148 +41,88 @@ fonts:
       Black: ExtraBold
       Ultra: Black
     summary: >-
-      Montserrat mit ausgewogen verengtem Tracking (−4 %): gleiche, als beste
-      empfundene Buchstabenform, aber spürbar kompaktere Buchstaben- und
-      Wortabstände. Reaktion darauf, dass Montserrat von Haus aus breit läuft
-      und es keinen offiziellen condensed Schnitt gibt. Wirkt natürlich, nichts
-      drängt. Einsatz: Montserrat-Look ohne den lockeren Standard-Satz.
-  - slug: montserrat-eng6
-    name: "Montserrat eng (−6)"
+      Montserrat mit ausgewogen verengtem Tracking (−4 %): die als beste empfundene Buchstabenform, aber spürbar kompaktere Buchstaben- und Wortabstände. Montserrat läuft von Haus aus breit und hat keinen condensed Schnitt; das Tracking schließt die Abstands-Lücke, ohne zu drängen. Ausgangswahl für den Montserrat-Look.
+
+  - slug: montserrat-eng5
+    name: "Montserrat eng (−5)"
     license: SIL OFL 1.1
     source: "https://github.com/google/fonts/tree/main/ofl/montserrat"
     family: "Montserrat"
     files_from: montserrat
-    track: -6
-    weights:
-      Book: Regular
-      Bold: Bold
-      Black: ExtraBold
-      Ultra: Black
-    summary: >-
-      Montserrat mit stärker verengtem Tracking (−6 %): noch dichter, näher an
-      einer condensed-Anmutung. Maximale Verdichtung, bevor der Satz gedrängt
-      wirkt. Einsatz, wenn der Montserrat-Look so schmal wie sinnvoll laufen soll.
-  - slug: outfit
-    name: Outfit
-    license: SIL OFL 1.1
-    source: "https://github.com/google/fonts/tree/main/ofl/outfit"
-    family: "Outfit"
     files:
-      - Outfit-Regular.ttf
-      - Outfit-Bold.ttf
-      - Outfit-ExtraBold.ttf
-      - Outfit-Black.ttf
+      - Montserrat-Regular.ttf
+      - Montserrat-Bold.ttf
+      - Montserrat-ExtraBold.ttf
+      - Montserrat-Black.ttf
       - OFL.txt
+    track: -5
     weights:
       Book: Regular
       Bold: Bold
       Black: ExtraBold
       Ultra: Black
     summary: >-
-      Rein geometrische, monolineare Konstruktion mit neutraler Anmutung wie
-      Gotham. Vorteile: sehr aufgeräumt/modern, gleichmäßige Strichstärke, 9
-      Gewichte (100–900), display-stark. Nachteile: monolinear → wirkt
-      kühler/technischer, weniger „Charakter"; nicht schmal. Unterschied: die
-      sachlichste, neutralste Option. Einsatz: moderne, klare Gestaltung,
-      Headlines und kurze Texte.
-  - slug: urbanist
-    name: Urbanist
-    license: SIL OFL 1.1
-    source: "https://github.com/google/fonts/tree/main/ofl/urbanist"
-    family: "Urbanist"
-    files:
-      - Urbanist-Regular.ttf
-      - Urbanist-Bold.ttf
-      - Urbanist-ExtraBold.ttf
-      - Urbanist-Black.ttf
-      - OFL.txt
-    weights:
-      Book: Regular
-      Bold: Bold
-      Black: ExtraBold
-      Ultra: Black
-    summary: >-
-      Modernistische geometrische Grotesk aus elementaren Formen, neutral wie
-      Gotham. Vorteile: variabler Font, fein abgestufte Gewichte Thin–Black plus
-      Kursive, sehr vielseitig. Nachteile: geringerer Wiedererkennungswert,
-      etwas generisch; nicht schmal. Unterschied: am stärksten web-/UI-orientiert.
-      Einsatz: flexible Nutzung über viele Gewichte, gut wenn Kursive gebraucht
-      werden.
-  - slug: raleway
-    name: Raleway
+      Montserrat mit stärker verengtem Tracking (−5 %): noch etwas dichter als −4, näher an einer condensed-Anmutung, aber im Fließtext noch ruhig lesbar. Für einen kompakteren Montserrat-Satz, der dem schmalen Gotham-Original näher kommt.
+
+  - slug: raleway-eng3
+    name: "Raleway eng (−3)"
     license: SIL OFL 1.1
     source: "https://github.com/google/fonts/tree/main/ofl/raleway"
     family: "Raleway"
+    files_from: raleway
     files:
       - Raleway-Regular.ttf
       - Raleway-Bold.ttf
       - Raleway-ExtraBold.ttf
       - Raleway-Black.ttf
       - OFL.txt
+    track: -3
     weights:
       Book: Regular
       Bold: Bold
       Black: ExtraBold
       Ultra: Black
     summary: >-
-      Elegante geometrische Grotesk; gilt in Fachquellen als die ähnlichste
-      Gotham-Alternative im Google-Fonts-Verzeichnis; 18 Schnitte Thin–Black +
-      Kursive. Vorteile: sehr elegant in feinen Schnitten, ausdrucksstarke
-      Headlines. Nachteile: in feinen Gewichten zerbrechlich, markante
-      Detailformen (z. B. „w") → für 6-pt-Kleintext weniger robust; nicht
-      schmal. Unterschied: die ausdrucksstärkste, „eleganteste" Option.
-      Einsatz: Headlines, Cover, Display — weniger für Kleinsttext.
-  - slug: barlow-semi-condensed
-    name: Barlow Semi Condensed
+      Raleway mit leichtem Tracking (−3 %): elegante geometrische Grotesk, gilt als eine der ähnlichsten Gotham-Alternativen. Behutsam verengt, damit der elegante Charakter und die feinen Formen erhalten bleiben — die luftigste der drei Raleway-Stufen.
+
+  - slug: raleway-eng4
+    name: "Raleway eng (−4)"
     license: SIL OFL 1.1
-    source: "https://github.com/google/fonts/tree/main/ofl/barlowsemicondensed"
-    family: "Barlow Semi Condensed"
+    source: "https://github.com/google/fonts/tree/main/ofl/raleway"
+    family: "Raleway"
+    files_from: raleway
     files:
-      - BarlowSemiCondensed-Regular.ttf
-      - BarlowSemiCondensed-Bold.ttf
-      - BarlowSemiCondensed-ExtraBold.ttf
-      - BarlowSemiCondensed-Black.ttf
+      - Raleway-Regular.ttf
+      - Raleway-Bold.ttf
+      - Raleway-ExtraBold.ttf
+      - Raleway-Black.ttf
       - OFL.txt
+    track: -4
     weights:
       Book: Regular
       Bold: Bold
       Black: ExtraBold
       Ultra: Black
     summary: >-
-      Leicht schmal laufende Grotesk mit geometrisch-„kalifornischem" Charakter;
-      die einzige der fünf, die der schmalen Laufweite von Gotham Narrow
-      nahekommt. Vorteile: schmale Proportionen → beste Layout-Treue zum
-      Narrow-Original, sehr großer Schnittumfang Thin–Black, gut lesbar auch
-      klein. Nachteile: eher grotesk als rein geometrisch → nüchterner;
-      semi-condensed wirkt weniger „luftig" als Gotham. Unterschied: einzige
-      schmale Variante, beste Passung zur bestehenden Geometrie der Vorlagen.
-      Einsatz: erste Wahl, wenn die Layouts ohne Umbau übernommen werden sollen.
-  - slug: saira-semi-condensed
-    name: Saira Semi Condensed
+      Raleway mit mittlerem Tracking (−4 %): ausgewogen verdichtet — elegante Anmutung bei deutlich kompakteren Abständen. Die mittlere Raleway-Stufe im direkten Vergleich.
+
+  - slug: raleway-eng5
+    name: "Raleway eng (−5)"
     license: SIL OFL 1.1
-    source: "https://github.com/google/fonts/tree/main/ofl/sairasemicondensed"
-    family: "Saira SemiCondensed"
+    source: "https://github.com/google/fonts/tree/main/ofl/raleway"
+    family: "Raleway"
+    files_from: raleway
     files:
-      - SairaSemiCondensed-Regular.ttf
-      - SairaSemiCondensed-Bold.ttf
-      - SairaSemiCondensed-ExtraBold.ttf
-      - SairaSemiCondensed-Black.ttf
+      - Raleway-Regular.ttf
+      - Raleway-Bold.ttf
+      - Raleway-ExtraBold.ttf
+      - Raleway-Black.ttf
       - OFL.txt
+    track: -5
     weights:
       Book: Regular
       Bold: Bold
       Black: ExtraBold
       Ultra: Black
     summary: >-
-      Schmal laufende geometrische Grotesk (Omnibus Type) — neben Barlow die
-      zweite freie Schrift, die der schmalen Laufweite von Gotham Narrow
-      nahekommt, dabei aber deutlich geometrischer und plakativer als Barlow.
-      Vorteile: schmale Proportionen (gute Layout-Treue zum Narrow-Original),
-      voller statischer Schnittumfang Thin–Black inkl. ExtraBold, kräftige
-      Headlines mit „Wumms"; frei (SIL OFL), weitergebbar. Nachteile: wirkt
-      technischer/kühler als Gothams warme Geometrie, etwas enger im Kleintext
-      als Barlow. Unterschied: die freie, „Gotham-nächste" geometrische
-      Alternative auf der schmalen Achse — die einzige schmale Vergleichsschrift,
-      die nicht zugleich die amtierende Markenschrift (Barlow) ist. Einsatz:
-      starke Wahl, wenn ein geometrischeres, plakativeres Schriftbild als
-      Barlow gewünscht ist.
+      Raleway mit starkem Tracking (−5 %): am dichtesten gesetzt, nahe einer condensed-Anmutung. Raleways markante Formen (z. B. „w") rücken eng zusammen; im Kleinsttext die straffste, aber auch anspruchsvollste Variante.
