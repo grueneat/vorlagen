@@ -155,6 +155,14 @@ jobs:
           set -euo pipefail
           PYTHONPATH=tools python3 -m sla_lib.builder.structural_check --all
 
+      - name: Run out-of-bounds audit (printable-area enforcement)
+        # No PAGEOBJECT may sit (almost) entirely outside page+bleed. IDML
+        # pasteboard cruft is pruned/clamped in Document.save(); this gate
+        # fails CI if any off-page object slips through.
+        run: |
+          set -euo pipefail
+          PYTHONPATH=tools python3 tools/out_of_bounds_audit.py --all
+
       - name: Run alignment audit (Issue #22, informational)
         # Heuristic alignment audit. Always informational — `|| true` keeps
         # the step from failing CI on warnings. Promotion to fatal is

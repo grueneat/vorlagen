@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat gruenes Cover Ordner/26-03-Flyer
   A6 gruenes Cover.idml
-previews_for_sla: 2e804eb14ab535ee961fc670cf06ee77f677956181a80e3fc292330a05eb0801
+previews_for_sla: e0f50d07de14179aafbf7924177bb87d6a17952d45ada070f6a3802cc274d703
 title: Flyer A6 Querformat – Grünes Cover
 version: 0.1.0
-build_py_sha256: b1e16929df23e4bc28fe94d02b47784fea89cc77946b6bfa263591e2ecd7fbb5
+build_py_sha256: d97fb7087a8500c8dbfeb69fdbb9c0af9d4dcca1366fb8bfbef444818bae2ed2
 _downloads:
 - label: Burgenland
   bundesland: bgld

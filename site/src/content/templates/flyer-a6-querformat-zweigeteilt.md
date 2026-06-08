@@ -70,10 +70,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat zweigeteilt Ordner/26-03-Flyer
   A6 Querformat zweigeteilt.idml
-previews_for_sla: efd0641d9b6132b458a4742000ead0085a98ddd2b798975d5639b838050269d3
+previews_for_sla: c4a89d7916b09b6c16be4dfdab0338f91e2d5d50cd022168144cbde68ca2abc5
 title: Flyer A6 Querformat – Zweigeteilt
 version: 0.1.0
-build_py_sha256: a942d2966d89c8c750f5f8b1bc5185ffcc2242e7d4171ab662e50954efe7dd36
+build_py_sha256: da2e2713a53157c3fdef94696fcdc678fb254c6d0eef64fb359071e3c0f4a88c
 _downloads:
 - label: Burgenland
   bundesland: bgld

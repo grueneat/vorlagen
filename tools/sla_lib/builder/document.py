@@ -404,8 +404,77 @@ class Document:
         return page
 
     # ---- saving ---------------------------------------------------------
+    # 3 mm print bleed in points: objects may overhang the trim by this much
+    # (full-bleed backgrounds), but anything fully beyond page+bleed is
+    # pasteboard cruft from the IDML import and is dropped at save time.
+    _BLEED_PT = 3.0 * 72.0 / 25.4
+
+    def _prune_offpage(self, root) -> int:
+        """Drop PAGEOBJECTs that lie (almost) entirely outside page+bleed.
+
+        IDML imports leave behind pasteboard markers, fold/registration lines
+        and stray swatches that never appear in the cropped PDF. They are
+        removed here so the emitted SLA only carries printable content (see
+        tools/out_of_bounds_audit.py, which enforces the same invariant).
+
+        Safety: only objects whose bbox intersects page+bleed by < 2 % of their
+        own area are dropped, and never a frame that carries text (ITEXT) — so
+        on-page content and the rotated edge Impressum frames are untouched.
+        """
+        import math
+        doc = root.find(".//DOCUMENT")
+        if doc is None:
+            return 0
+        pw = float(doc.get("PAGEWIDTH")); ph = float(doc.get("PAGEHEIGHT"))
+        bleed = max(self._BLEED_PT, *(float(doc.get(k, "0") or 0) for k in
+                    ("BleedTop", "BleedBottom", "BleedLeft", "BleedRight")))
+        rects = []
+        for pg in doc.findall("PAGE"):
+            px, py = float(pg.get("PAGEXPOS")), float(pg.get("PAGEYPOS"))
+            rects.append((px - bleed, py - bleed, px + pw + bleed, py + ph + bleed))
+
+        def bbox(o):
+            x = float(o.get("XPOS")); y = float(o.get("YPOS"))
+            w = float(o.get("WIDTH")); h = float(o.get("HEIGHT"))
+            a = math.radians(float(o.get("ROT", "0") or 0))
+            ca, sa = math.cos(a), math.sin(a)
+            xs = [x + cx * ca - cy * sa for cx, cy in ((0, 0), (w, 0), (w, h), (0, h))]
+            ys = [y + cx * sa + cy * ca for cx, cy in ((0, 0), (w, 0), (w, h), (0, h))]
+            return min(xs), min(ys), max(xs), max(ys)
+
+        removed = 0
+        for o in list(doc.findall("PAGEOBJECT")):
+            if o.find("ITEXT") is not None:
+                continue  # never drop a text-bearing frame
+            if o.get("PTYPE") not in ("6", "7"):
+                # Only prune plain shapes (6) and lines (7): the off-page
+                # markers, fold/registration guides and colour swatches the
+                # IDML import leaves behind. Removing off-page *text* frames
+                # (PTYPE 4) or *images* (PTYPE 2) is unsafe — Scribus then
+                # suppresses on-page text on some templates (verified). Those
+                # are invisible in the cropped output anyway and are reported
+                # (not auto-removed) by tools/out_of_bounds_audit.py.
+                continue
+            try:
+                op = int(float(o.get("OwnPage", "-1")))
+                bx0, by0, bx1, by1 = bbox(o)
+            except (TypeError, ValueError):
+                continue
+            area = max(1e-6, (bx1 - bx0) * (by1 - by0))
+            if 0 <= op < len(rects):
+                rx0, ry0, rx1, ry1 = rects[op]
+                ix = max(0.0, min(bx1, rx1) - max(bx0, rx0))
+                iy = max(0.0, min(by1, ry1) - max(by0, ry0))
+                if (ix * iy) / area >= 0.02:
+                    continue  # sits on the page (or in its bleed) — keep
+            doc.remove(o)
+            removed += 1
+
+        return removed
+
     def save(self, path: Path | str) -> None:
         root = self._build_xml()
+        self._prune_offpage(root)
         tree = etree.ElementTree(root)
         tree.write(str(path), encoding="UTF-8", xml_declaration=True, standalone=False, pretty_print=True)
 

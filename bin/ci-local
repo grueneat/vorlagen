@@ -128,6 +128,13 @@ done
 step "Run structural check (Issue #12)"
 PYTHONPATH=tools python3 -m sla_lib.builder.structural_check --all
 
+# --- out-of-bounds audit: no objects outside the printable area ----------
+# IDML pasteboard cruft (markers, fold lines, oversized backgrounds) must not
+# survive into the emitted SLAs. Document.save() prunes/clamps it; this gate
+# fails the build if any off-page object slips through.
+step "Run out-of-bounds audit (printable-area enforcement)"
+PYTHONPATH=tools python3 tools/out_of_bounds_audit.py --all || fail "off-page objects present — see out_of_bounds_audit output"
+
 # --- mirror: pages.yml "Run alignment audit (informational)" --------------
 step "Run alignment audit (Issue #22, informational)"
 mkdir -p build/audit
