@@ -1,0 +1,195 @@
+{
+  "_comment": "Redaktionelle Bewertungsmatrix für die Schriften-Entscheidungsseite. Wird NICHT vom Build-Tool (tools/fonts_compare_build.py) erzeugt oder überschrieben — von Hand gepflegt. schriften.json liefert die Render-Artefakte + Kurztexte, diese Datei die Entscheidungs-Bewertung. Slugs müssen zu schriften.json passen.",
+  "ratingLegende": {
+    "3": "sehr gut",
+    "2": "gut",
+    "1": "schwach",
+    "0": "ungenügend"
+  },
+  "empfehlung": {
+    "primaer": {
+      "slug": "barlow-semi-condensed",
+      "name": "Barlow Semi Condensed",
+      "text": "Die einzige Alternative mit schmaler Laufweite — und damit die einzige, in der die bestehenden, auf Gotham Narrow gesetzten Vorlagen ohne Umbau übernommen werden können. Zeilenumbrüche und Abstände bleiben erhalten. Frei lizenziert (SIL OFL), darf mit den Vorlagen weitergegeben werden, vollständiger Schnittumfang von Thin bis Black und auch im 6-pt-Kleintext robust. Die naheliegende, risikoärmste Wahl."
+    },
+    "zweitwahl": {
+      "slug": "montserrat",
+      "name": "Montserrat",
+      "text": "Der nächste freie Verwandte von Gotham — gleiche geometrische Grundhaltung, warmer Charakter, neun Schnitte. Empfehlenswert, wenn das Kommunikationsteam ohnehin bereit ist, die Layouts neu zu setzen: Montserrat läuft breiter als Gotham Narrow, ein 1:1-Übertrag in die bestehenden Vorlagen führt zu Textüberlauf."
+    },
+    "abraten": [
+      {
+        "slug": "original",
+        "name": "Gotham Narrow",
+        "text": "Gestalterisch erstklassig — aber kommerziell lizenziert. Gotham darf nicht mit den Vorlagen an Dritte (Bezirks-/Landesgruppen, Druckereien) weitergegeben werden und verursacht laufende Lizenzkosten. Genau das ist der Grund für diese Schriftensuche."
+      },
+      {
+        "slug": "tahoma",
+        "name": "Tahoma",
+        "text": "Die scheinbar bequeme Wahl, weil auf jedem Windows-Rechner vorhanden — aber gestalterisch ungeeignet: eine breite Bildschirm-/Systemschrift, kein Markenzeichen. Sie läuft dem schmalen Gotham Narrow entgegen (stärkster Layoutbruch von allen), hat nur zwei Schnitte und ist obendrein proprietär. Kein Marken-Ersatz."
+      }
+    ]
+  },
+  "kriterien": [
+    {
+      "label": "Schriftgattung",
+      "kind": "text",
+      "werte": {
+        "original": "Geometrische Grotesk (kondensiert)",
+        "tahoma": "Humanistische UI-/Bildschirmschrift",
+        "montserrat": "Geometrische Grotesk",
+        "outfit": "Geometrische Grotesk (monolinear)",
+        "urbanist": "Geometrische Grotesk",
+        "raleway": "Elegante geometrische Grotesk",
+        "barlow-semi-condensed": "Grotesk, leicht schmal (semi-condensed)",
+        "saira-semi-condensed": "Geometrische Grotesk, schmal (semi-condensed)"
+      }
+    },
+    {
+      "label": "Laufweite ggü. Gotham Narrow",
+      "kind": "text",
+      "werte": {
+        "original": "Schmal — die Vorlagen sind darauf gesetzt",
+        "tahoma": "Breit — das Gegenteil von Narrow",
+        "montserrat": "Normal, etwas breiter",
+        "outfit": "Normal",
+        "urbanist": "Normal",
+        "raleway": "Normal",
+        "barlow-semi-condensed": "Schmal — als einzige nah am Original",
+        "saira-semi-condensed": "Schmal — wie Barlow nah am Original"
+      }
+    },
+    {
+      "label": "Verfügbare Schnitte",
+      "kind": "text",
+      "werte": {
+        "original": "4 genutzt (Book, Bold, Black, Ultra)",
+        "tahoma": "Nur 2 (Regular, Bold)",
+        "montserrat": "9 (Thin – Black)",
+        "outfit": "9 (100 – 900)",
+        "urbanist": "Thin – Black + Kursive",
+        "raleway": "18 (Thin – Black + Kursive)",
+        "barlow-semi-condensed": "9 (Thin – Black)",
+        "saira-semi-condensed": "9 (Thin – Black)"
+      }
+    },
+    {
+      "label": "Lizenz",
+      "kind": "text",
+      "werte": {
+        "original": "Proprietär (Hoefler & Co. / Monotype)",
+        "tahoma": "Proprietär (Microsoft)",
+        "montserrat": "SIL OFL 1.1 — frei",
+        "outfit": "SIL OFL 1.1 — frei",
+        "urbanist": "SIL OFL 1.1 — frei",
+        "raleway": "SIL OFL 1.1 — frei",
+        "barlow-semi-condensed": "SIL OFL 1.1 — frei",
+        "saira-semi-condensed": "SIL OFL 1.1 — frei"
+      }
+    },
+    {
+      "label": "Frei mit den Vorlagen weitergebbar",
+      "kind": "janein",
+      "hinweis": "Darf die Schrift zusammen mit den Vorlagen an Bezirks-/Landesgruppen und Druckereien weitergegeben werden?",
+      "werte": {
+        "original": false,
+        "tahoma": false,
+        "montserrat": true,
+        "outfit": true,
+        "urbanist": true,
+        "raleway": true,
+        "barlow-semi-condensed": true,
+        "saira-semi-condensed": true
+      }
+    },
+    {
+      "label": "Layout-Treue zu Gotham Narrow",
+      "kind": "rating",
+      "hinweis": "Bleiben Zeilenumbrüche und Abstände der bestehenden Vorlagen erhalten, ohne neu zu setzen?",
+      "werte": {
+        "original": 3,
+        "tahoma": 0,
+        "montserrat": 1,
+        "outfit": 1,
+        "urbanist": 1,
+        "raleway": 1,
+        "barlow-semi-condensed": 3,
+        "saira-semi-condensed": 3
+      }
+    },
+    {
+      "label": "Nähe zum Gotham-Schriftbild",
+      "kind": "rating",
+      "hinweis": "Wie ähnlich wirkt das Schriftbild dem gewohnten Gotham?",
+      "werte": {
+        "original": 3,
+        "tahoma": 0,
+        "montserrat": 3,
+        "outfit": 2,
+        "urbanist": 2,
+        "raleway": 2,
+        "barlow-semi-condensed": 2,
+        "saira-semi-condensed": 3
+      }
+    },
+    {
+      "label": "Eignung für Headlines / Cover",
+      "kind": "rating",
+      "hinweis": "Tragfähigkeit der schweren Schnitte für plakative Headlines.",
+      "werte": {
+        "original": 3,
+        "tahoma": 1,
+        "montserrat": 3,
+        "outfit": 3,
+        "urbanist": 2,
+        "raleway": 3,
+        "barlow-semi-condensed": 3,
+        "saira-semi-condensed": 3
+      }
+    },
+    {
+      "label": "Lesbarkeit im Kleintext (≈ 6 pt)",
+      "kind": "rating",
+      "hinweis": "Robustheit im Impressum / in Kleinsttexten.",
+      "werte": {
+        "original": 3,
+        "tahoma": 3,
+        "montserrat": 2,
+        "outfit": 2,
+        "urbanist": 2,
+        "raleway": 1,
+        "barlow-semi-condensed": 3,
+        "saira-semi-condensed": 2
+      }
+    },
+    {
+      "label": "Markenwirkung & Wiedererkennung",
+      "kind": "rating",
+      "hinweis": "Eigenständiger Charakter statt austauschbarer System-Anmutung.",
+      "werte": {
+        "original": 3,
+        "tahoma": 0,
+        "montserrat": 3,
+        "outfit": 2,
+        "urbanist": 1,
+        "raleway": 3,
+        "barlow-semi-condensed": 2,
+        "saira-semi-condensed": 2
+      }
+    },
+    {
+      "label": "Gesamturteil",
+      "kind": "text",
+      "werte": {
+        "original": "Gestalterisch top, aber lizenzpflichtig und nicht weitergebbar — der Anlass dieser Suche.",
+        "tahoma": "Überall vorhanden und klein gut lesbar, aber breit, nur zwei Schnitte, proprietär — kein Marken-Ersatz.",
+        "montserrat": "Stärkste Wahl, sobald die Layouts neu gesetzt werden — der nächste freie Gotham-Verwandte.",
+        "outfit": "Sauber und modern, aber monolinear und kühl — solide, nicht erste Wahl.",
+        "urbanist": "Vielseitig, aber generisch und mit geringer Wiedererkennung — kein klares Markenprofil.",
+        "raleway": "Ausdrucksstark für Headlines, im Kleinsttext fragil — Display-Schrift, kein Allrounder.",
+        "barlow-semi-condensed": "Empfehlung: einzige schmale, frei weitergebbare Alternative — Vorlagen bleiben ohne Umbau nutzbar.",
+        "saira-semi-condensed": "Die freie, geometrischere „Schwester\" von Barlow: gleiche schmale Laufweite (Layout-Treue), aber plakativer und stärker geometrisch — die stärkste freie Alternative, wenn ein markanteres, Gotham-näheres Schriftbild gewünscht ist."
+      }
+    }
+  ]
+}

@@ -47,6 +47,21 @@ node_modules/
 !fonts/vollkorn/
 !fonts/vollkorn/*.ttf
 !fonts/vollkorn/OFL.txt
+# Exception: the SIL-OFL Gotham alternatives (Issue 42) are freely
+# redistributable and intentionally bundled for the font-comparison page.
+!shared/fonts/alternatives/**/*.ttf
+
+# Re-exclude Tahoma: it is proprietary (Microsoft) and must NOT be
+# redistributed. The binaries live here only so the maintainer can render
+# the Tahoma comparison column locally; only the raster PNG previews are
+# committed (never the .ttf and never the font-embedding .pdf).
+shared/fonts/alternatives/tahoma/*.ttf
+site/public/schriften/tahoma/*.pdf
+templates/*/fonts/tahoma/*.pdf
+
+# The SIL-OFL alternatives are also self-hosted under site/public/fonts/ so
+# the comparison page can show live web-font specimens (freely redistributable).
+!site/public/fonts/**/*.ttf
 
 # tools/links_export.py emits .pdf siblings to .ai/.psd raster outputs for
 # forward-compat vector use. The SLA references the raster, not the .pdf.
