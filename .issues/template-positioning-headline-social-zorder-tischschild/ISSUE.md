@@ -3,6 +3,7 @@ id: mvsaj
 title: 'Vorlagen-Positionierung: Headlines zentrieren, Falzflyer-Social-Icons, gelbe
   Akzente vor den Text, Tischschild entfernen'
 status: done
+ship_state: pr_open
 priority: medium
 labels:
 - templates
