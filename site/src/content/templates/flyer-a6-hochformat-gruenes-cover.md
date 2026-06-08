@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat gruenes Cover Ordner/26-03-Flyer
   A6 Hochformat gruenes Cover.idml
-previews_for_sla: 7dac39fa35fb209e510ffcdc1bc510a1dff394db97b15a03337aa0c9ef4e13bf
+previews_for_sla: c581e1d7dfdde1ff7e9005362f41ad9ab18d785656604bd67e26e5feb5be6ae7
 title: Flyer A6 Hochformat – Grünes Cover
 version: 0.1.0
-build_py_sha256: 4f4ec7eb2bdcbb6a1301f246c72dce0e7268dd0d0fbb7d40e86344812c891c69
+build_py_sha256: 188f065899ef09cac53659e78d7ce764b12882267aea72da9e9b234080fc7c27
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -104,3 +104,19 @@ _previews:
   src: /templates/flyer-a6-hochformat-gruenes-cover/page-06.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

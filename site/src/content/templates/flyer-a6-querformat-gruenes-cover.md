@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat gruenes Cover Ordner/26-03-Flyer
   A6 gruenes Cover.idml
-previews_for_sla: e0f50d07de14179aafbf7924177bb87d6a17952d45ada070f6a3802cc274d703
+previews_for_sla: d74bf4b7259c34ab0e222a641c2ddc51cfe6a5cc69bbc94b934ac74ab03a1ec4
 title: Flyer A6 Querformat – Grünes Cover
 version: 0.1.0
-build_py_sha256: d97fb7087a8500c8dbfeb69fdbb9c0af9d4dcca1366fb8bfbef444818bae2ed2
+build_py_sha256: d05a1ef6e0ff9c08c04a05600c87222b35eb5772192a0012903597b43467fcb5
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -104,3 +104,19 @@ _previews:
   src: /templates/flyer-a6-querformat-gruenes-cover/page-06.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

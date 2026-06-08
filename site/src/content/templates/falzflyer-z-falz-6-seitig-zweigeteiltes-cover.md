@@ -68,7 +68,7 @@ idml_source: ../../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig zwe
 previews_for_sla: c540c13c3a53e9248438d7393dcb130993d1640a34d0c2abdfacbb9b587f3c24
 title: Falzflyer Z-Falz 6-seitig – Zweigeteiltes Cover
 version: 0.1.0
-build_py_sha256: 08fdb3550e5cf8b0c9bb695f7a7f4dc61db975c930c7d220882bbe518b99418b
+build_py_sha256: 2538bd9a62db3209265be32f281f8052922ba3f2c2927cfcaf38c113b7854c6a
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -105,3 +105,23 @@ _previews:
   src: /templates/falzflyer-z-falz-6-seitig-zweigeteiltes-cover/page-02.png
 ---
 
+# So nutzt du die Faltflyer-Vorlage
+
+Ein sechsseitiger Faltflyer: gedruckt auf einem A4-Blatt, beidseitig, und im
+Z-Falz zu drei Spalten gefaltet. So entstehen sechs Seiten in Lese-Reihenfolge.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen. Die Vorschaubilder oben
+   zeigen Vorder- und Rückseite mit je drei Faltspalten.
+3. **Reihenfolge beachten** — durch den Z-Falz liegen die Spalten beim Drucken
+   nicht in Lese-Reihenfolge nebeneinander; die Vorschau zeigt, welche Spalte wo
+   landet. Inhalte daher anhand der Beschriftungen zuordnen, nicht nach Position.
+4. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+5. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

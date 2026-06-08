@@ -19,10 +19,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../../originals/26-03-Flyer A6 Hochformat zweigeteilt Ordner/26-03-Flyer
   A6 Hochformat zweigeteilt.idml
-previews_for_sla: d7e132d6439a9a2c5fa03d3a12480fa35a6473323fcbe516ee83fea14b35fc2e
+previews_for_sla: ed720aec5b9aa7d49dbd22c68fdd42f44e6c3f7ebc4f18febc741a2197b7c67d
 title: Flyer A6 Hochformat – Zweigeteilt
 version: 0.1.0
-build_py_sha256: 3a4e607c913d1b6f4316762aada2fb17837329ec86ab4ef3a28883ebb4ddcd2f
+build_py_sha256: 25366f0bf3b512f800568b1e2ac1dc90eaa9c5104da6fb7852eed1d4272ad05b
 brand_overrides:
 - id: brand:bleed_3mm
   reason: 'IDML-imported flyer template (scaffold). The IDML''s InDesign document
@@ -111,3 +111,19 @@ _previews:
   src: /templates/flyer-a6-hochformat-zweigeteilt/page-06.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

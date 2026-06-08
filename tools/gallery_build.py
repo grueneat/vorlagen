@@ -13,7 +13,9 @@ For each templates/<id>/ directory:
     <code>.sla/.pdf/<code>-page-*.png (family) from templates/<id>/
   - Copies them to site/public/templates/<id>/
   - Writes site/src/content/templates/<id>.md with frontmatter from meta.yml
-  - Embeds README.md in the content if present
+  - Embeds USAGE.md (the user-facing "Anleitung") in the content if present.
+    README.md is the maintainer-facing doc and is intentionally NOT embedded —
+    keeping build/SLA/CI internals off the public template page.
 
 If any expected artifact is missing, exits 1 with a clear FATAL message that
 directs the maintainer to run bin/render-gallery locally first.
@@ -162,10 +164,12 @@ def main() -> None:
             f.write("---\n")
             yaml.safe_dump(meta, f, allow_unicode=True, sort_keys=False)
             f.write("---\n\n")
-            # Embed README.md if present
-            readme = TEMPLATES_DIR / tid / "README.md"
-            if readme.exists():
-                f.write(readme.read_text(encoding="utf-8"))
+            # Embed USAGE.md (user-facing Anleitung) if present. README.md is
+            # the maintainer doc and is deliberately not embedded so build/SLA/CI
+            # internals never leak onto the public template page.
+            usage = TEMPLATES_DIR / tid / "USAGE.md"
+            if usage.exists():
+                f.write(usage.read_text(encoding="utf-8"))
         print(f"[gallery] {tid} → {content_path}")
 
 

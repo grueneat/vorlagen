@@ -58,10 +58,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Quadrat in Bild Ordner/26-03-Flyer
   A6 Hochformat Quadrat in Bild.idml
-previews_for_sla: 1b935089c2b40971f059d9d9002296b288598babe589c3f29b07d856f1145e4c
+previews_for_sla: a774472bdbc5640f2a3519bc2601743b65a8246d775e79c1794a1431919505f6
 title: Flyer A6 Hochformat – Quadrat im Bild
 version: 0.1.0
-build_py_sha256: 3de44aca7a735c158c6171aa2a80b07d816e46a14cf4a4f3de192be1f652d022
+build_py_sha256: ce32b07a00361433fc1562423391ea9dfcba80e2daff0193116ea9bcde99554e
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -106,3 +106,19 @@ _previews:
   src: /templates/flyer-a6-hochformat-quadrat-im-bild/page-06.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

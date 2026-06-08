@@ -114,19 +114,22 @@ _previews:
   src: /templates/plakat-a1-hochformat/page-01.png
 ---
 
-# Event-Plakat A1
+# So nutzt du die Plakat-Vorlage
 
-A1 Hochformat (594 × 841 mm) — DSL-built reproduction of `plakat-a1-hochformat-original.sla`.
+Ein Event-Plakat im Format A1 Hochformat (594 × 841 mm) für Veranstaltungen.
 
-## So nutzt du die Vorlage
+## Schritt für Schritt
 
-1. `template.sla` in Scribus öffnen.
-2. Inhalte ersetzen — Headline, Datum, Ort, URL.
-3. Logo platzieren (Bilder-Frame oben rechts, ANNAME "Logo (top-right, weiss)").
-4. PDF exportieren.
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Datum, Ort und URL überschreiben. Klick auf
+   einen Rahmen zeigt unten rechts seinen Namen.
+3. **Logo einsetzen** — der Bildrahmen oben rechts ist für das Logo vorgesehen.
+4. **Impressum prüfen** — falls vorhanden, die gesetzlich vorgeschriebenen
+   Angaben ergänzen, nicht löschen.
+5. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.
 
-Für andere Druckgrößen einfach im Scribus- oder Druckdialog skalieren — die Vektor-Inhalte bleiben dabei verlustfrei.
-
-## Anpassung der Vorlage
-
-`build.py` ist auto-generiert von `tools/sla_to_dsl.py` aus `plakat-a1-hochformat-original.sla`. Hand-Edits werden bei der nächsten Regeneration überschrieben — direkt im Original SLA editieren oder den Konverter erneut laufen lassen.
+> Für andere Druckgrößen kannst du das Plakat im Druckdialog skalieren — die
+> Inhalte sind vektorbasiert und bleiben dabei verlustfrei.

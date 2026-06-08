@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Portrait Ordner/26-03-Flyer
   A6 Querformat Portrait.idml
-previews_for_sla: 666ec7bb9fb918d0b9cec3dc9869e4c45f18ee86835bf48a2bc6f997d918baf1
+previews_for_sla: 2ff171c678409a918f6759e740bf900e2d8c36fa54cb92dc323db59efa1c1d41
 title: Flyer A6 Querformat – Porträt-Cover
 version: 0.1.0
-build_py_sha256: 1274926956169d58d07c6735d19559d0a553a261501e5c240472fceb6c754833
+build_py_sha256: 2b9b1faa64d06d97c3a132773ce78c3d2c5f16545eeb4199856cf57f73197d11
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -100,3 +100,19 @@ _previews:
   src: /templates/flyer-a6-querformat-portraet/page-04.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.
