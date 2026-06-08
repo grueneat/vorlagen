@@ -92,9 +92,6 @@ class ImageFrameCoverageTests(unittest.TestCase):
             ),
         )
 
-    def test_infostand_tent_card_a5_quer(self):
-        self._check("tischschild-a5-quer")
-
     def test_plakat_a1_hochformat(self):
         self._check("plakat-a1-hochformat")
 

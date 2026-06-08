@@ -33,7 +33,6 @@ ALL_TEMPLATES = [
     "postkarte-a6-kampagne",
     "plakat-a1-hochformat",
     "zeitung-a4",
-    "tischschild-a5-quer",
 ]
 
 PROMPT_PATH = ROOT / "tools" / "visual_review" / "prompt_template.md"
@@ -276,7 +275,6 @@ def main(argv=None) -> int:
             "themen-plakat-a3-quer",
             "wahlaufruf-postkarte-a6-quer",
             "wahltag-tueranhaenger",
-            "tischschild-a5-quer",
             "kandidat-falzflyer-din-lang",
         ]:
             try:
