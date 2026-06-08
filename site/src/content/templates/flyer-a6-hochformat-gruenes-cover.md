@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat gruenes Cover Ordner/26-03-Flyer
   A6 Hochformat gruenes Cover.idml
-previews_for_sla: 953ddba4d847bccb563957a8efd9eb0f581ab8b2fbe2db8320f785acf3ed8a1f
+previews_for_sla: 7dac39fa35fb209e510ffcdc1bc510a1dff394db97b15a03337aa0c9ef4e13bf
 title: Flyer A6 Hochformat – Grünes Cover
 version: 0.1.0
-build_py_sha256: 68b498ce92129d18737068506c4d1ea1d0efd0777bf472309d6bfda376653ea8
+build_py_sha256: 4f4ec7eb2bdcbb6a1301f246c72dce0e7268dd0d0fbb7d40e86344812c891c69
 _downloads:
 - label: Burgenland
   bundesland: bgld

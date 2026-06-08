@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no'?>
 <SCRIBUSUTF8NEW Version="1.6.5">
-  <DOCUMENT ANZPAGES="4" PAGEWIDTH="595.2755905511812" PAGEHEIGHT="841.8897637795277" BORDERLEFT="28.34645669291339" BORDERRIGHT="28.34645669291339" BORDERTOP="28.34645669291339" BORDERBOTTOM="28.34645669291339" BleedTop="8.503937007874017" BleedBottom="8.503937007874017" BleedLeft="8.503937007874017" BleedRight="8.503937007874017" ORIENTATION="0" PAGESIZE="Custom" BOOK="0" AUTOSPALTEN="1" ABSTSPALTEN="11" UNITS="1" TITLE="Zeitung Mini Smoke" AUTHOR="Die Grünen Niederösterreich" COMMENTS="" KEYWORDS="" PUBLISHER="" DOCDATE="" DOCTYPE="" DOCFORMAT="" DOCIDENT="" DOCSOURCE="" DOCLANGINFO="" DOCRELATION="" DOCCOVER="" DOCRIGHTS="" DOCCONTRIB="" DFONT="Gotham Narrow Book" DSIZE="12" LANGUAGE="de" PEN="Black" BRUSH="None" PENLINE="Black" PENTEXT="Black" PENSHADE="100" BRUSHSHADE="100" LINESHADE="100" PICTSHADE="100" AUTOMATIC="1" AUTOCHECK="0" BASEGRID="13" BASEO="0" STIL="1" STILLINE="1" WIDTH="1" WIDTHLINE="5" GROUPC="1" HCMS="0" showBleed="1" FIRSTNUM="1" AutoSave="1" AutoSaveTime="600000" AutoSaveCount="1" AutoSaveKeep="0" AUtoSaveInDocDir="1" AutoSaveDir="" ScratchTop="20.0" ScratchLeft="100.0" ScratchRight="100" ScratchBottom="20" GapHorizontal="0" GapVertical="40.0" PAGEC="#ffffff" MARGC="#0033ff" RANDF="0" currentProfile="Default">
+  <DOCUMENT ANZPAGES="4" PAGEWIDTH="595.2755905511812" PAGEHEIGHT="841.8897637795277" BORDERLEFT="28.34645669291339" BORDERRIGHT="28.34645669291339" BORDERTOP="28.34645669291339" BORDERBOTTOM="28.34645669291339" BleedTop="8.503937007874017" BleedBottom="8.503937007874017" BleedLeft="8.503937007874017" BleedRight="8.503937007874017" ORIENTATION="0" PAGESIZE="Custom" BOOK="0" AUTOSPALTEN="1" ABSTSPALTEN="11" UNITS="1" TITLE="Zeitung Mini Smoke" AUTHOR="Die Grünen Niederösterreich" COMMENTS="" KEYWORDS="" PUBLISHER="" DOCDATE="" DOCTYPE="" DOCFORMAT="" DOCIDENT="" DOCSOURCE="" DOCLANGINFO="" DOCRELATION="" DOCCOVER="" DOCRIGHTS="" DOCCONTRIB="" DFONT="Raleway Regular" DSIZE="12" LANGUAGE="de" PEN="Black" BRUSH="None" PENLINE="Black" PENTEXT="Black" PENSHADE="100" BRUSHSHADE="100" LINESHADE="100" PICTSHADE="100" AUTOMATIC="1" AUTOCHECK="0" BASEGRID="13" BASEO="0" STIL="1" STILLINE="1" WIDTH="1" WIDTHLINE="5" GROUPC="1" HCMS="0" showBleed="1" FIRSTNUM="1" AutoSave="1" AutoSaveTime="600000" AutoSaveCount="1" AutoSaveKeep="0" AUtoSaveInDocDir="1" AutoSaveDir="" ScratchTop="20.0" ScratchLeft="100.0" ScratchRight="100" ScratchBottom="20" GapHorizontal="0" GapVertical="40.0" PAGEC="#ffffff" MARGC="#0033ff" RANDF="0" currentProfile="Default">
     <CheckProfile Name="Default" ignoreErrors="0" autoCheck="1" checkGlyphs="1" checkOrphans="1" checkOverflow="1" checkPictures="1" checkPartFilledImageFrames="0" checkResolution="1" checkTransparency="1" minResolution="144" maxResolution="4800" checkAnnotations="0" checkRasterPDF="1" checkForGIF="1" ignoreOffLayers="0" checkOffConflictLayers="0" checkNotCMYKOrSpot="0" checkDeviceColorsAndOutputIntent="0" checkFontNotEmbedded="0" checkFontIsOpenType="0" checkAppliedMasterDifferentSide="1" checkEmptyTextFrames="1"/>
     <COLOR NAME="Black" SPACE="CMYK" C="0" M="0" Y="0" K="100"/>
     <COLOR NAME="White" SPACE="CMYK" C="0" M="0" Y="0" K="0"/>
@@ -9,15 +9,15 @@
     <COLOR NAME="Hellgrün" SPACE="CMYK" C="69" M="0" Y="100" K="0"/>
     <COLOR NAME="Gelb" SPACE="CMYK" C="0" M="0" Y="100" K="0"/>
     <COLOR NAME="Magenta" SPACE="CMYK" C="0" M="100" Y="0" K="0"/>
-    <CHARSTYLE CNAME="" FONT="Gotham Narrow Book" FONTSIZE="12" FCOLOR="Black"/>
-    <STYLE NAME="ci/default" ALIGN="0" LINESP="13.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="12.0" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="ci/headline-ultra" PARENT="ci/default" ALIGN="1" LINESP="23.000000" LINESPMode="2" FONT="Gotham Narrow Ultra" FONTSIZE="27.0" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="ci/headline-vollkorn-italic" PARENT="ci/default" ALIGN="1" LINESP="23.000000" LINESPMode="2" FONT="Vollkorn Black Italic" FONTSIZE="27.0" FCOLOR="Gelb" LANGUAGE="de"/>
-    <STYLE NAME="ci/body-12" PARENT="ci/default" ALIGN="1" LINESP="13.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="12.0" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="ci/body-11" PARENT="ci/default" ALIGN="0" LINESP="12.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="11.0" FCOLOR="Black" LANGUAGE="de"/>
-    <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6.000000" LINESPMode="2" FONT="Gotham Narrow Book" FONTSIZE="5.0" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="ci/stoerer" PARENT="ci/default" ALIGN="1" LINESP="11.000000" LINESPMode="2" FONT="Gotham Narrow Ultra" FONTSIZE="10.0" FCOLOR="White" LANGUAGE="de"/>
-    <STYLE NAME="ci/cta" PARENT="ci/default" ALIGN="1" LINESP="13.000000" LINESPMode="2" FONT="Gotham Narrow Bold" FONTSIZE="13.0" FCOLOR="White" LANGUAGE="de"/>
+    <CHARSTYLE CNAME="" FONT="Raleway Regular" FONTSIZE="12" FCOLOR="Black"/>
+    <STYLE NAME="ci/default" ALIGN="0" LINESP="13.000000" LINESPMode="2" FONT="Raleway Regular" FONTSIZE="12.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/headline-ultra" PARENT="ci/default" ALIGN="1" LINESP="23.000000" LINESPMode="2" FONT="Raleway Black" FONTSIZE="27.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/headline-emphasis" PARENT="ci/default" ALIGN="1" LINESP="23.000000" LINESPMode="2" FONT="Vollkorn Black Italic" FONTSIZE="27.0" FCOLOR="Gelb" LANGUAGE="de"/>
+    <STYLE NAME="ci/body-12" PARENT="ci/default" ALIGN="1" LINESP="13.000000" LINESPMode="2" FONT="Raleway Regular" FONTSIZE="12.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/body-11" PARENT="ci/default" ALIGN="0" LINESP="12.000000" LINESPMode="2" FONT="Raleway Regular" FONTSIZE="11.0" FCOLOR="Black" LANGUAGE="de"/>
+    <STYLE NAME="ci/impressum" PARENT="ci/default" ALIGN="0" LINESP="6.000000" LINESPMode="2" FONT="Raleway Regular" FONTSIZE="5.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/stoerer" PARENT="ci/default" ALIGN="1" LINESP="11.000000" LINESPMode="2" FONT="Raleway Black" FONTSIZE="10.0" FCOLOR="White" LANGUAGE="de"/>
+    <STYLE NAME="ci/cta" PARENT="ci/default" ALIGN="1" LINESP="13.000000" LINESPMode="2" FONT="Raleway Bold" FONTSIZE="13.0" FCOLOR="White" LANGUAGE="de"/>
     <TableStyle NAME="Default Table Style"/>
     <CellStyle NAME="Default Cell Style"/>
     <LAYERS NUMMER="0" LEVEL="0" NAME="Hintergrund" SICHTBAR="1" DRUCKEN="1" EDIT="1" SELECT="1" FLOW="1" TRANS="1" BLEND="0" OUTL="0" LAYERC="#000000"/>
@@ -81,13 +81,13 @@
     <PAGEOBJECT XPOS="128.3464566929134" YPOS="246.7716535433071" OwnPage="0" ItemID="100000004" PTYPE="4" WIDTH="538.5826771653544" HEIGHT="226.7716535433071" CLIPEDIT="0" PWIDTH="0" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="11.338582677165356" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" gXpos="128.3464566929134" gYpos="246.7716535433071" gWidth="0" gHeight="0" LAYER="2" NEXTITEM="-1" BACKITEM="-1" ROT="0" FRTYPE="0" path="M0 0 L538.583 0 L538.583 226.772 L0 226.772 L0 0 Z" copath="M0 0 L538.583 0 L538.583 226.772 L0 226.772 L0 0 Z" ANNAME="Headline 4-zeilig (Brand-Wechselfarbe)">
       <StoryText>
         <DefaultStyle PARENT="ci/headline-ultra"/>
-        <ITEXT CH="[Titel-Headline 1]" FCOLOR="White"/>
+        <ITEXT CH="[Titel-Headline 1]" FCOLOR="White" KERN="-3"/>
         <para PARENT="ci/headline-ultra"/>
-        <ITEXT CH="[Vollkorn-Akzent]" FCOLOR="Gelb"/>
+        <ITEXT CH="[Vollkorn-Akzent]" FCOLOR="Gelb" KERN="-3"/>
         <para PARENT="ci/headline-ultra"/>
-        <ITEXT CH="[Headline 3]" FCOLOR="White"/>
+        <ITEXT CH="[Headline 3]" FCOLOR="White" KERN="-3"/>
         <para PARENT="ci/headline-ultra"/>
-        <ITEXT CH="[Vollkorn-Schluss]" FCOLOR="Gelb"/>
+        <ITEXT CH="[Vollkorn-Schluss]" FCOLOR="Gelb" KERN="-3"/>
         <trail PARENT="ci/headline-ultra"/>
       </StoryText>
     </PAGEOBJECT>

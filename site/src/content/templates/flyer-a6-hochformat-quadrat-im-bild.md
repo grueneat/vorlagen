@@ -58,10 +58,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Quadrat in Bild Ordner/26-03-Flyer
   A6 Hochformat Quadrat in Bild.idml
-previews_for_sla: b25dba4847a2800537d2b670f7946230614705533cd7713a39fca4f608e4f320
+previews_for_sla: 1b935089c2b40971f059d9d9002296b288598babe589c3f29b07d856f1145e4c
 title: Flyer A6 Hochformat – Quadrat im Bild
 version: 0.1.0
-build_py_sha256: 974a42fc28abd56d06f27841a201f0c40bec5bf66fb8341afb2ac79774f16ab2
+build_py_sha256: 3de44aca7a735c158c6171aa2a80b07d816e46a14cf4a4f3de192be1f652d022
 _downloads:
 - label: Burgenland
   bundesland: bgld

@@ -1,7 +1,7 @@
 ---
 id: tischschild-a5-quer
 version: 0.1.0
-build_py_sha256: e2b75f828e1455a2e14c3906e78f3642de9f40a94696758e182aacb177697d09
+build_py_sha256: 496542c2faae791b94dbf5637ae107488a6a41be868bc7c03e3d6c528dc829c2
 title: Tischschild A5 Querformat
 format: A4
 orientation: landscape
@@ -15,7 +15,7 @@ description: Tischschild (Tent-Card) im A5-Querformat zum Aufstellen am Infostan
 build:
   script: build.py
   output: template.sla
-previews_for_sla: 26c1bf03eaffbb17995ccfafac8af2d02993cd3db0f5120620891d117bc34ce1
+previews_for_sla: 1d12191fdc5ee29d3307bb5d629a516f7a66fa247437bebb95e2c8349a76fc25
 brand_overrides:
 - id: brand:line_spacing_0.9
   reason: Body 1.3× and Termine 1.3× and CTA-Footer 1.27× linesp ratios are intentional
@@ -78,11 +78,11 @@ slots:
     anname: QR-Code (mitmachen, panel A)
   bullets_a:
     type: text
-    description: Body Panel A — 12pt Gotham Book, 2 short bullets
+    description: Body Panel A — 12pt Barlow Semi Condensed Regular, 2 short bullets
     anname: Body Panel A
   termine_a:
     type: text
-    description: Termine Panel A — 9pt Gotham Book, 2 lines
+    description: Termine Panel A — 9pt Barlow Semi Condensed Regular, 2 lines
     anname: Termine Panel A
   footer_strip_a:
     type: shape
@@ -90,11 +90,11 @@ slots:
     anname: Footer-Strip Panel A
   cta_footer_a:
     type: text
-    description: CTA-Footer Panel A — 11pt Gotham Bold White URL
+    description: CTA-Footer Panel A — 11pt Barlow Semi Condensed Bold White URL
     anname: CTA-Footer Panel A
   impressum_a:
     type: text
-    description: Impressum Panel A — 6pt Gotham Book White right-aligned
+    description: Impressum Panel A — 6pt Barlow Semi Condensed Regular White right-aligned
     anname: Impressum (Tent)
   falzlinie:
     type: shape
