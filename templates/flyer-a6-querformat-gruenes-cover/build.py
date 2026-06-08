@@ -291,7 +291,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         line_color='None',
         line_width_pt=0,
         anname='ub72',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     # h_mm widened 24.1173mm→43.7444mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=36.41pt; IDML overflows silently)
@@ -371,7 +371,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         line_color='None',
         line_width_pt=0,
         anname='u678',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     # playbook squiggle_realign.py: x_mm 122.819->122.3739, y_mm 39.5->54.8035 (track word 'modi')
@@ -384,7 +384,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         line_color='None',
         line_width_pt=0,
         anname='u679',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     page1.add(TextFrame(
@@ -456,7 +456,7 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
         line_color='None',
         line_width_pt=0,
         anname='u677',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     # playbook squiggle_realign.py: x_mm 47.5693->47.4974, y_mm 23.3405->22.3231 (track word 'auch')
@@ -469,7 +469,7 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
         line_color='None',
         line_width_pt=0,
         anname='u67b',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     # P5/playbook y_mm_shift.py: y_mm 39.1359 → 39.61 (uniform +-1.34pt × sign=-1 → +0.4741mm)
@@ -524,7 +524,7 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         line_color='None',
         line_width_pt=0,
         anname='u962',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     # h_mm widened 17.9915mm→24.6944mm: Scribus clips lines when frame_h < 2 explicit lines × line height (leading=27.00pt; IDML overflows silently)
@@ -564,7 +564,7 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         line_color='None',
         line_width_pt=0,
         anname='u948',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     page3.add(TextFrame(
@@ -698,7 +698,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         w_mm=3.6,
         h_mm=3.6,
         anname='uc20',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
     page5.add(Polygon(
@@ -707,7 +707,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         w_mm=3.6,
         h_mm=3.6,
         anname='uc26',
-        layer=0,
+        layer=2,  # in front of text (selectable in Scribus)
         fill='Gelb',
     ))
 

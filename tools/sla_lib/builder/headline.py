@@ -191,6 +191,12 @@ def headline_stack(
     linesp_mm = linesp_pt * PT_TO_MM
     frames: list[TextFrame] = []
     trail = {"LINESPMode": "0", "LINESP": _fmt_linesp(linesp_pt)}
+    # Each stacked line is a single-paragraph frame, so its paragraph alignment
+    # is carried by the <trail> marker (there is no <para> break). The Run's
+    # paragraph_attrs ALIGN is inert here. Emit ALIGN on the trail for non-left
+    # alignments; left ("0") stays omitted to keep existing templates byte-stable.
+    if align is not None and align != "0":
+        trail["ALIGN"] = align
 
     prev_top_mm = top_y_mm
     prev_font: str | None = None
@@ -208,7 +214,12 @@ def headline_stack(
             )
         anname = anname_stem if idx == 0 else f"{anname_stem}_l{idx + 1}"
         run_kwargs: dict = {"text": text, "font": font, "fontsize": size, "fcolor": fcolor}
-        if idx == 0 and align is not None:
+        # ALIGN on the first line sets the headline paragraph alignment. Each
+        # stacked line is its own single-line frame, so a non-default alignment
+        # (e.g. centered "1") must be repeated on every line — otherwise only the
+        # first line aligns and the rest fall back to the style default (left).
+        # Left ("0") stays first-line-only to keep existing templates byte-stable.
+        if align is not None and (idx == 0 or align != "0"):
             run_kwargs["paragraph_attrs"] = {
                 "ALIGN": align,
                 "LINESPMode": "0",
