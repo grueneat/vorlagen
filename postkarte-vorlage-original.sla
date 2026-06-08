@@ -111,14 +111,14 @@
         <FRAMEOBJECT InID="23787" XPOS="0" YPOS="0" OwnPage="-1" ItemID="236180752" PTYPE="4" WIDTH="476.223307086615" HEIGHT="43.5229357798165" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L476.223 0 L476.223 43.5229 L0 43.5229 L0 0 Z" copath="M0 0 L476.223 0 L476.223 43.5229 L0 43.5229 L0 0 Z" isInline="1" gXpos="0" gYpos="0" gWidth="476.223307086615" gHeight="43.5229357798165" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle LINESPMode="2"/>
-                <ITEXT CH="ÜBERSCHRIFT SEHR WICHTIG"/>
+                <ITEXT CH="ÜBERSCHRIFT SEHR WICHTIG" KERN="-3" />
                 <trail PARENT="Headline sehr wichtig" LINESPMode="2" LINESP="13"/>
             </StoryText>
         </FRAMEOBJECT>
         <FRAMEOBJECT InID="20851" XPOS="0" YPOS="0" OwnPage="-1" ItemID="236169760" PTYPE="4" WIDTH="476.223307086615" HEIGHT="43.5229357798165" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L476.223 0 L476.223 43.5229 L0 43.5229 L0 0 Z" copath="M0 0 L476.223 0 L476.223 43.5229 L0 43.5229 L0 0 Z" isInline="1" gXpos="0" gYpos="0" gWidth="476.223307086615" gHeight="43.5229357798165" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle LINESPMode="2"/>
-                <ITEXT CH="ÜBERSCHRIFT SEHR WICHTIG"/>
+                <ITEXT CH="ÜBERSCHRIFT SEHR WICHTIG" KERN="-3" />
                 <trail PARENT="Headline sehr wichtig" LINESPMode="2" LINESP="13"/>
             </StoryText>
         </FRAMEOBJECT>
@@ -128,46 +128,46 @@
         <PAGEOBJECT XPOS="148.189976377953" YPOS="515.378952755905" OwnPage="1" ItemID="236229392" PTYPE="4" WIDTH="201.259842519685" HEIGHT="321.678578126129" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L201.26 0 L201.26 321.679 L0 321.679 L0 0 Z" copath="M0 0 L201.26 0 L201.26 321.679 L0 321.679 L0 0 Z" gXpos="148.189976377953" gYpos="515.378952755905" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle/>
-                <ITEXT CH="Superreiche"/>
+                <ITEXT CH="Superreiche" KERN="-3" />
                 <para PARENT="Headline Emphasis"/>
-                <ITEXT CH="fair besteuern"/>
+                <ITEXT CH="fair besteuern" KERN="-3" />
                 <para PARENT="Headline sehr wichtig"/>
                 <para PARENT="Headline sehr wichtig"/>
-                <ITEXT CH="Österreich muss sparen. Aber was "/>
+                <ITEXT CH="Österreich muss sparen. Aber was " KERN="-3" />
                 <para PARENT="Fließtext"/>
-                <ITEXT CH="die Regierung macht, ist unfair: "/>
+                <ITEXT CH="die Regierung macht, ist unfair: " KERN="-3" />
                 <para PARENT="Fließtext"/>
-                <ITEXT CH="Sie kürzt bei Familien, Kindern und Pensionist:innen. Für dich werden Gebühren und Öffi-Tickets teurer. "/>
+                <ITEXT CH="Sie kürzt bei Familien, Kindern und Pensionist:innen. Für dich werden Gebühren und Öffi-Tickets teurer. " KERN="-3" />
                 <para PARENT="Fließtext"/>
-                <ITEXT CH="Aber die Superreichen, die zig "/>
+                <ITEXT CH="Aber die Superreichen, die zig " KERN="-3" />
                 <para PARENT="Fließtext"/>
-                <ITEXT CH="Millionen erben, zahlen nichts."/>
+                <ITEXT CH="Millionen erben, zahlen nichts." KERN="-3" />
                 <para PARENT="Fließtext"/>
                 <para PARENT="Unterüberschrift"/>
-                <ITEXT CH="Wir wollen das ändern."/>
+                <ITEXT CH="Wir wollen das ändern." KERN="-3" />
                 <para PARENT="Unterüberschrift"/>
-                <ITEXT CH="Unterschreiben jetzt unsere Petition"/>
+                <ITEXT CH="Unterschreiben jetzt unsere Petition" KERN="-3" />
                 <trail PARENT="Fließtext"/>
             </StoryText>
         </PAGEOBJECT>
         <PAGEOBJECT XPOS="123.146914892519" YPOS="849.154778588456" OwnPage="1" ItemID="236213040" PTYPE="4" WIDTH="109.122935779817" HEIGHT="45.445871559633" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L109.123 0 L109.123 45.4459 L0 45.4459 L0 0 Z" copath="M0 0 L109.123 0 L109.123 45.4459 L0 45.4459 L0 0 Z" gXpos="123.146914892519" gYpos="849.154778588456" gWidth="0" gHeight="0" ALIGN="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle ALIGN="0" LINESP="10"/>
-                <ITEXT FCOLOR="White" FSHADE="100" CH="Facebook Name"/>
+                <ITEXT FCOLOR="White" FSHADE="100" CH="Facebook Name" KERN="-3" />
                 <breakline/>
-                <ITEXT FCOLOR="White" FSHADE="100" CH="Instagram Name"/>
+                <ITEXT FCOLOR="White" FSHADE="100" CH="Instagram Name" KERN="-3" />
                 <breakline/>
-                <ITEXT FCOLOR="White" FSHADE="100" CH="Mail-Adresse"/>
+                <ITEXT FCOLOR="White" FSHADE="100" CH="Mail-Adresse" KERN="-3" />
                 <breakline/>
-                <ITEXT FCOLOR="White" FSHADE="100" CH="Telefonnummer"/>
+                <ITEXT FCOLOR="White" FSHADE="100" CH="Telefonnummer" KERN="-3" />
                 <trail PARENT="Kontaktmöglichkeiten"/>
             </StoryText>
         </PAGEOBJECT>
         <PAGEOBJECT XPOS="274.789116727382" YPOS="863.439182258181" OwnPage="1" ItemID="236218400" PTYPE="4" WIDTH="118.899082568807" HEIGHT="30.1027522935779" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L118.899 0 L118.899 30.1028 L0 30.1028 L0 0 Z" copath="M0 0 L118.899 0 L118.899 30.1028 L0 30.1028 L0 0 Z" gXpos="274.789116727382" gYpos="863.439182258181" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle/>
-                <ITEXT FONT="Raleway Bold" FEATURES="inherit" FCOLOR="White" FSHADE="100" CH="Impressum:"/>
-                <ITEXT FCOLOR="White" FSHADE="100" CH=" Medieninhaber und Herausgeber: Die Grünen Niederösterreich, Daniel-GranStraße 48, 3100 St. Pölten. ·  Druck: Druckerei mit Postanschrift · Evtl. Hinweis auf Umweltzeichens wenn zutreffend"/>
+                <ITEXT FONT="Raleway Bold" FEATURES="inherit" FCOLOR="White" FSHADE="100" CH="Impressum:" KERN="-3" />
+                <ITEXT FCOLOR="White" FSHADE="100" CH=" Medieninhaber und Herausgeber: Die Grünen Niederösterreich, Daniel-GranStraße 48, 3100 St. Pölten. ·  Druck: Druckerei mit Postanschrift · Evtl. Hinweis auf Umweltzeichens wenn zutreffend" KERN="-3" />
                 <trail PARENT="Impressum"/>
             </StoryText>
         </PAGEOBJECT>
@@ -187,20 +187,20 @@
         <PAGEOBJECT XPOS="117.781748392689" YPOS="149.284403669725" OwnPage="0" ItemID="236943536" PTYPE="4" WIDTH="262.076298490212" HEIGHT="133.431192660551" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" HASSOFTSHADOW="1" SOFTSHADOWXOFFSET="1.98425196850394" SOFTSHADOWYOFFSET="1.98425196850394" SOFTSHADOWCOLOR="Dunkelgrün" SOFTSHADOWBLURRADIUS="8.50393700787402" SOFTSHADOWSHADE="100" SOFTSHADOWBLENDMODE="1" SOFTSHADOWOPACITY="0" SOFTSHADOWERASE="0" SOFTSHADOWOBJTRANS="0" path="M0 0 L262.076 0 L262.076 133.431 L0 133.431 L0 0 Z" copath="M0 0 L262.076 0 L262.076 133.431 L0 133.431 L0 0 Z" gXpos="729.287076500758" gYpos="995.733944954131" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle LINESPMode="2"/>
-                <ITEXT FCOLOR="White" FSHADE="100" CH="Bei dir wachsen"/>
+                <ITEXT FCOLOR="White" FSHADE="100" CH="Bei dir wachsen" KERN="-3" />
                 <para PARENT="Headline sehr wichtig"/>
-                <ITEXT CH="die Sorgen,"/>
+                <ITEXT CH="die Sorgen," KERN="-3" />
                 <para PARENT="Headline Emphasis"/>
-                <ITEXT CH="bei ihnen"/>
+                <ITEXT CH="bei ihnen" KERN="-3" />
                 <para PARENT="Headline sehr wichtig"/>
-                <ITEXT CH="der Reichtum"/>
+                <ITEXT CH="der Reichtum" KERN="-3" />
                 <trail PARENT="Headline Emphasis"/>
             </StoryText>
         </PAGEOBJECT>
         <PAGEOBJECT XPOS="149.737328830456" YPOS="246.385321100917" OwnPage="0" ItemID="237179776" PTYPE="4" WIDTH="198.165137614679" HEIGHT="23.9018885357224" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L198.165 0 L198.165 23.9019 L0 23.9019 L0 0 Z" copath="M0 0 L198.165 0 L198.165 23.9019 L0 23.9019 L0 0 Z" gXpos="149.737328830456" gYpos="246.385321100917" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle/>
-                <ITEXT CH="Jetzt Petition unterschreiben!"/>
+                <ITEXT CH="Jetzt Petition unterschreiben!" KERN="-3" />
                 <trail PARENT="Unterüberschrift"/>
             </StoryText>
         </PAGEOBJECT>
@@ -208,11 +208,11 @@
         <PAGEOBJECT XPOS="311.154144943236" YPOS="118.832205204666" OwnPage="0" ItemID="236876896" PTYPE="4" WIDTH="54.2644760876516" HEIGHT="32.7064709807601" FRTYPE="0" CLIPEDIT="0" ROT="351" PWIDTH="1.00000000000002" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L54.2645 0 L54.2645 32.7065 L0 32.7065 L0 0 Z" copath="M0 0 L54.2645 0 L54.2645 32.7065 L0 32.7065 L0 0 Z" gXpos="3.06508717756069" gYpos="-225.302091655016" gWidth="95.3062853457252" gHeight="88.0126374340822" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle/>
-                <ITEXT CH="Super-"/>
+                <ITEXT CH="Super-" KERN="-3" />
                 <breakline/>
-                <ITEXT CH="reiche fair "/>
+                <ITEXT CH="reiche fair " KERN="-3" />
                 <breakline/>
-                <ITEXT CH="besteuern"/>
+                <ITEXT CH="besteuern" KERN="-3" />
                 <trail PARENT="Schrift rosa Kreis"/>
             </StoryText>
         </PAGEOBJECT>
@@ -220,7 +220,7 @@
         <PAGEOBJECT XPOS="130.911640757062" YPOS="808.908256880734" OwnPage="1" ItemID="237165936" PTYPE="4" WIDTH="235.816513761468" HEIGHT="12.5504587155963" FRTYPE="0" CLIPEDIT="0" PWIDTH="1" PLINEART="1" LOCALSCX="1" LOCALSCY="1" LOCALX="0" LOCALY="0" LOCALROT="0" PICART="1" SCALETYPE="1" RATIO="1" COLUMNS="1" COLGAP="0" AUTOTEXT="0" EXTRA="0" TEXTRA="0" BEXTRA="0" REXTRA="0" VAlign="0" FLOP="1" PLTSHOW="0" BASEOF="0" textPathType="0" textPathFlipped="0" path="M0 0 L235.817 0 L235.817 12.5505 L0 12.5505 L0 0 Z" copath="M0 0 L235.817 0 L235.817 12.5505 L0 12.5505 L0 0 Z" gXpos="130.911640757062" gYpos="808.908256880734" gWidth="0" gHeight="0" LAYER="0" NEXTITEM="-1" BACKITEM="-1">
             <StoryText>
                 <DefaultStyle/>
-                <ITEXT FONTSIZE="9" CH="https://gruene.at/superreichebesteuern/"/>
+                <ITEXT FONTSIZE="9" CH="https://gruene.at/superreichebesteuern/" KERN="-3" />
                 <trail PARENT="Fließtext"/>
             </StoryText>
         </PAGEOBJECT>

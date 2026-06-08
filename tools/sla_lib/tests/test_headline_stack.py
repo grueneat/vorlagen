@@ -28,7 +28,7 @@ MM_TO_PT = 72.0 / 25.4
 # Fonts the templates actually use. These resolve to committed TTFs in the
 # container; the SOLVE-relation assertions below stay font-agnostic so they
 # hold even if a metric shifts.
-BARLOW = "Raleway Black"
+BARLOW = "Barlow Semi Condensed Black"
 VOLLKORN = "Vollkorn Black Italic"
 
 
