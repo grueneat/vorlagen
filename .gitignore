@@ -36,6 +36,11 @@ node_modules/
 !fonts/barlow-semi-condensed/
 !fonts/barlow-semi-condensed/*.ttf
 !fonts/barlow-semi-condensed/OFL.txt
+# Raleway (SIL-OFL) — print-pipeline font for the Raleway -3 brand set,
+# same vendoring justification as Barlow (Scribus renders locally).
+!fonts/raleway/
+!fonts/raleway/*.ttf
+!fonts/raleway/OFL.txt
 
 # Exception: Vollkorn (SIL-OFL, Friedrich Althausen) — the accent italics used
 # by the templates ("Vollkorn Black Italic", "Vollkorn Bold Italic"). The

@@ -188,7 +188,7 @@ class ImpressumTests(unittest.TestCase):
         """2-Run bold-prefix idiom (Postkarte build.py:223-236).
 
         prefix_text='Impressum:' emits two ITEXT children in one paragraph:
-        first with Barlow Semi Condensed Bold, second with the body text.
+        first with Raleway Bold, second with the body text.
         """
         parsed = _save(self._doc_with_block(
             prefix_text='Impressum:', prefix_features='inherit'))
@@ -197,11 +197,11 @@ class ImpressumTests(unittest.TestCase):
         itexts = story.findall('ITEXT')
         self.assertEqual(len(itexts), 2,
                          f"Expected 2 ITEXT elements, got {len(itexts)}")
-        self.assertEqual(itexts[0].attrib.get('FONT'), 'Barlow Semi Condensed Bold',
-                         "First ITEXT must carry Barlow Semi Condensed Bold font")
+        self.assertEqual(itexts[0].attrib.get('FONT'), 'Raleway Bold',
+                         "First ITEXT must carry Raleway Bold font")
         self.assertEqual(itexts[0].attrib.get('CH'), 'Impressum:')
-        self.assertNotEqual(itexts[1].attrib.get('FONT'), 'Barlow Semi Condensed Bold',
-                            "Second ITEXT must not carry Barlow Semi Condensed Bold font")
+        self.assertNotEqual(itexts[1].attrib.get('FONT'), 'Raleway Bold',
+                            "Second ITEXT must not carry Raleway Bold font")
         self.assertIn('Grünen Niederösterreich', itexts[1].attrib.get('CH', ''))
 
     def test_impressum_rotated(self):

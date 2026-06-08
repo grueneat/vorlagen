@@ -157,7 +157,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
     """Auto-generated paragraph styles from the source IDML."""
     doc.add_para_style(ParaStyle(
         name='idml/no-paragraph-style',
-        font='Barlow Semi Condensed Regular',
+        font='Raleway Regular',
         fontsize=12,
         align=0,
         fcolor='Black',
@@ -167,7 +167,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
     doc.add_para_style(ParaStyle(
         name='idml/fliesstext-auf-gruenem-hintergrund',
         parent='idml/no-paragraph-style',
-        font='Barlow Semi Condensed Regular',
+        font='Raleway Regular',
         fontsize=11,
         align=3,
         fcolor='White',
@@ -179,7 +179,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
     doc.add_para_style(ParaStyle(
         name='idml/normalparagraphstyle',
         parent='idml/no-paragraph-style',
-        font='Barlow Semi Condensed Regular',
+        font='Raleway Regular',
         fontsize=12,
         align=0,
         fcolor='Black',
@@ -189,7 +189,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
     doc.add_para_style(ParaStyle(
         name='idml/aufzaehlungen-auf-gruenem-hintergrund',
         parent='idml/fliesstext-auf-gruenem-hintergrund',
-        font='Barlow Semi Condensed Regular',
+        font='Raleway Regular',
         fontsize=11,
         align=0,
         fcolor='White',
@@ -202,7 +202,7 @@ def _add_styles(doc: Document) -> None:  # overrides task-3 stub
     doc.add_para_style(ParaStyle(
         name='idml/fliesstext-auf-weissem-hintergrund',
         parent='idml/fliesstext-auf-gruenem-hintergrund',
-        font='Barlow Semi Condensed Regular',
+        font='Raleway Regular',
         fontsize=11,
         align=3,
         fcolor='Dunkelgrün',
@@ -252,9 +252,9 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
     # at 209.8pt. The 3 stacked frames are positioned so x_mm+w/2 lands there.
     for _f in headline_stack(
         [
-            ('Das ist eine', 'Barlow Semi Condensed Black', 31, 'White'),
+            ('Das ist eine', 'Raleway Black', 31, 'White'),
             ('dreizeilige', 'Vollkorn Black Italic', 31, 'Gelb'),
-            ('Headline', 'Barlow Semi Condensed Black', 31, 'White'),
+            ('Headline', 'Raleway Black', 31, 'White'),
         ],
         top_y_mm=28.722,
         x_mm=38.7859,
@@ -287,7 +287,7 @@ def _add_page_0(doc: Document, page0) -> None:  # overrides task-3 stub
         layer=0,
         rotation_deg=-9,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Störer', font='Barlow Semi Condensed Black', fontsize=15, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '13.16780560425879'})],
+        runs=[Run(text='Störer', font='Raleway Black', fontsize=15, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '13.16780560425879'})],
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '13.16780560425879'},
     ))
     page0.add(Polygon(
@@ -347,7 +347,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         layer=0,
         rotation_deg=-90,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Impressum: xxxxxx', font='Barlow Semi Condensed Regular', fontsize=6, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '7.199999999999999'})],
+        runs=[Run(text='Impressum: xxxxxx', font='Raleway Regular', fontsize=6, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '7.199999999999999'})],
         trail_attrs={'LINESPMode': '0', 'LINESP': '7.199999999999999'},
         vertical_text_align=1,
         fill_opacity=0.7,
@@ -356,7 +356,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
     # Mixed-font headline 'u6aa' split into 2 single-line frames: the IDML joins the lines with <Br/> but mixes fonts (e.g. Barlow + Vollkorn), and Scribus's per-line font-metric leading places them at the wrong baseline as one frame. Each line is stacked at the IDML Leading (27.00pt) with a per-font FLOP=1 baseline correction.
     for _f in headline_stack(
         [
-            ('Ich bin eine ', 'Barlow Semi Condensed Black', 30, 'White'),
+            ('Ich bin eine ', 'Raleway Black', 30, 'White'),
             ('Headline.', 'Vollkorn Black Italic', 30, 'Gelb'),
         ],
         top_y_mm=14.8444,
@@ -378,7 +378,7 @@ def _add_page_1(doc: Document, page1) -> None:  # overrides task-3 stub
         anname='u6d8',
         layer=0,
         style='idml/fliesstext-auf-gruenem-hintergrund',
-        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Barlow Semi Condensed Regular', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Barlow Semi Condensed Regular', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
+        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Raleway Regular', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Raleway Regular', paragraph_style='idml/fliesstext-auf-gruenem-hintergrund')],
         columns=2,
         col_gap_mm=6,
     ))
@@ -429,7 +429,7 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
         anname='u67c',
         layer=0,
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
-        runs=[Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='Scim rem ', font='Barlow Semi Condensed Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='Tissi iuntem ressiti ', font='Barlow Semi Condensed Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='Uaerum ium ', font='Barlow Semi Condensed Black'), Run(text='verior alicide liquuntio. ', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='Ur, omniet ', font='Barlow Semi Condensed Regular'), Run(text='vello modi ', font='Barlow Semi Condensed Black'), Run(text='aceprate pem ssi iuntem ilis', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular'), Run(text='', font='Barlow Semi Condensed Regular', separator='tab'), Run(text='Lia vellam, conemporro ', font='Barlow Semi Condensed Regular'), Run(text='moditatque', font='Barlow Semi Condensed Black'), Run(text=' nimil maxim voluptur.', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='tab')],
+        runs=[Run(text='', font='Raleway Regular', separator='tab'), Run(text='•', font='Raleway Regular', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}), Run(text='', font='Raleway Regular', separator='tab'), Run(text='Scim rem ', font='Raleway Black'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='•', font='Raleway Regular'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='Tissi iuntem ressiti ', font='Raleway Black'), Run(text='orerovi tectotmusaqui tota nis quam.', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='•', font='Raleway Regular'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='Uaerum ium ', font='Raleway Black'), Run(text='verior alicide liquuntio. ', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='•', font='Raleway Regular'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='Ur, omniet ', font='Raleway Regular'), Run(text='vello modi ', font='Raleway Black'), Run(text='aceprate pem ssi iuntem ilis', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='•', font='Raleway Regular'), Run(text='', font='Raleway Regular', separator='tab'), Run(text='Lia vellam, conemporro ', font='Raleway Regular'), Run(text='moditatque', font='Raleway Black'), Run(text=' nimil maxim voluptur.', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0'}, separator='para'), Run(text='', font='Raleway Regular', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='tab')],
         columns=2,
         col_gap_mm=6,
     ))
@@ -442,7 +442,7 @@ def _add_page_2(doc: Document, page2) -> None:  # overrides task-3 stub
         anname='u6c1',
         layer=0,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin auch eine Headline.', font='Barlow Semi Condensed Black', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'})],
+        runs=[Run(text='Ich bin auch eine Headline.', font='Raleway Black', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'})],
         trail_attrs={'LINESPMode': '0', 'LINESP': '27.0'},
     ))
     page2.add(PolyLine(
@@ -489,7 +489,7 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         # not a paragraph break. The converter emitted separator='para' (a
         # paragraph end) which adds a phantom empty paragraph and pushed the
         # block ~27pt down. Corrected to separator='breakline' (soft <Br/>).
-        runs=[Run(text='Ich bin eine ', font='Barlow Semi Condensed Black', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'}), Run(text='', has_itext=False, separator='breakline'), Run(text='Headline.', font='Barlow Semi Condensed Black', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle')],
+        runs=[Run(text='Ich bin eine ', font='Raleway Black', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'}), Run(text='', has_itext=False, separator='breakline'), Run(text='Headline.', font='Raleway Black', fontsize=30, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle')],
         trail_attrs={'LINESPMode': '0', 'LINESP': '27.0'},
     ))
     # h_mm widened 53.7551mm→63.5000mm: Scribus clips lines when frame_h < 11 explicit lines × line height (leading=14.30pt; IDML overflows silently)
@@ -501,7 +501,7 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         anname='u92e',
         layer=0,
         style='idml/fliesstext-auf-weissem-hintergrund',
-        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Barlow Semi Condensed Regular', paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Barlow Semi Condensed Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Barlow Semi Condensed Regular', paragraph_style='idml/fliesstext-auf-weissem-hintergrund')],
+        runs=[Run(text='Usapiene mporia quisin consequid que in et volor re doleceat laciisci nectur?', font='Raleway Regular', paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Tinvend igenis ute voloria qui cus ', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='et ut optate vendam ilis volorias\u2028pita dis at rem et molo ipsum fuga. Et eaque volor, ipis eos sinusae di que parmquas senihicto consent, ut qui doloruptam et volorro qui optate nis eaquamus.', font='Raleway Regular'), Run(text='', has_itext=False, paragraph_style='idml/fliesstext-auf-weissem-hintergrund', paragraph_attrs={'ALIGN': '3'}, separator='para'), Run(text='Lia vellam, conemporro modi\u2028tatque nii tectotmusa qui tota nis quam quis quae cum et arum vendellab voloriaspita dis quaturem. Ur, omniet vello modi aceprate pem ssi ir, sit, quatenisto optatib eaquiate rumentios quo oditibust, quis et et quaturem. Et eaque volor, ipis eosenihicto consent. Nam quatur.', font='Raleway Regular', paragraph_style='idml/fliesstext-auf-weissem-hintergrund')],
         columns=2,
         col_gap_mm=6,
     ))
@@ -527,7 +527,7 @@ def _add_page_3(doc: Document, page3) -> None:  # overrides task-3 stub
         layer=0,
         rotation_deg=-90,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Impressum: xxxxxx', font='Barlow Semi Condensed Regular', fontsize=6, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '7.199999999999999'})],
+        runs=[Run(text='Impressum: xxxxxx', font='Raleway Regular', fontsize=6, fcolor='Dunkelgrün', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '7.199999999999999'})],
         trail_attrs={'LINESPMode': '0', 'LINESP': '7.199999999999999'},
         vertical_text_align=1,
         fill_opacity=0.7,
@@ -563,7 +563,7 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
         anname='u90b',
         layer=0,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Ich bin auch ', font='Barlow Semi Condensed Black', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'}, separator='para'), Run(text='eine Headline.', font='Barlow Semi Condensed Black', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
+        runs=[Run(text='Ich bin auch ', font='Raleway Black', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'}), Run(text='', has_itext=False, paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '27.0'}, separator='para'), Run(text='eine Headline.', font='Raleway Black', fontsize=30, fcolor='White', paragraph_style='idml/normalparagraphstyle')],
         trail_attrs={'LINESPMode': '0', 'LINESP': '27.0'},
     ))
     # tune: bullet-paragraph LINESP set to 15.0 (body leading). The IDML's
@@ -579,7 +579,7 @@ def _add_page_4(doc: Document, page4) -> None:  # overrides task-3 stub
         anname='u9df',
         layer=0,
         style='idml/aufzaehlungen-auf-gruenem-hintergrund',
-        runs=[Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Scim rem ', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Uaerum ium ', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün'), Run(text='verior alicide liquuntio. ', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Ur, omniet ', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='vello modi ', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün'), Run(text='aceprate pem ssi iuntem ilis', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Lia vellam, conemporro ', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='moditatque', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün'), Run(text=' nimil maxim voluptur.', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', font='Barlow Semi Condensed Bold', fcolor='Dunkelgrün', separator='tab'), Run(text='Ur, omniet vello', font='Barlow Semi Condensed Bold', fcolor='Dunkelgrün'), Run(text=' modi aceprate pem ssi ir, quis et quaturem', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='.', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün'), Run(text='', font='Barlow Semi Condensed Regular', fcolor='Dunkelgrün', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='tab')],
+        runs=[Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Raleway Regular', fcolor='Dunkelgrün', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Scim rem ', font='Raleway Black', fcolor='Dunkelgrün'), Run(text='utas si vellaccum eatus nullquae cum et arum vendellab iditatequi aut qui beat audit re.', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Uaerum ium ', font='Raleway Black', fcolor='Dunkelgrün'), Run(text='verior alicide liquuntio. ', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Ur, omniet ', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='vello modi ', font='Raleway Black', fcolor='Dunkelgrün'), Run(text='aceprate pem ssi iuntem ilis', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='Lia vellam, conemporro ', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='moditatque', font='Raleway Black', fcolor='Dunkelgrün'), Run(text=' nimil maxim voluptur.', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', has_itext=False, paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', paragraph_attrs={'ALIGN': '0', 'LINESPMode': '0', 'LINESP': '15.0'}, separator='para'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', separator='tab'), Run(text='•', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', font='Raleway Bold', fcolor='Dunkelgrün', separator='tab'), Run(text='Ur, omniet vello', font='Raleway Bold', fcolor='Dunkelgrün'), Run(text=' modi aceprate pem ssi ir, quis et quaturem', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='.', font='Raleway Regular', fcolor='Dunkelgrün'), Run(text='', font='Raleway Regular', fcolor='Dunkelgrün', paragraph_style='idml/aufzaehlungen-auf-gruenem-hintergrund', separator='tab')],
         trail_attrs={'LINESPMode': '0', 'LINESP': '15.0'},
         columns=2,
         col_gap_mm=6,
@@ -634,7 +634,7 @@ def _add_page_5(doc: Document, page5) -> None:  # overrides task-3 stub
         anname='uaae',
         layer=0,
         style='idml/normalparagraphstyle',
-        runs=[Run(text='Leonore Gewessler', font='Barlow Semi Condensed Regular', fontsize=11, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '14.3'})],
+        runs=[Run(text='Leonore Gewessler', font='Raleway Regular', fontsize=11, fcolor='Gelb', paragraph_style='idml/normalparagraphstyle', paragraph_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '14.3'})],
         trail_attrs={'ALIGN': '1', 'LINESPMode': '0', 'LINESP': '14.3'},
     ))
     page5.add(PolyLine(

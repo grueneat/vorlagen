@@ -134,6 +134,23 @@ RUN install -m 644 /tmp/barlow-staging/*.ttf /usr/local/share/fonts/gruene/ && \
         { echo "fc-match did not resolve to Barlow" >&2; exit 1; } && \
     echo "Barlow installed: $BN faces" && rm -rf /tmp/barlow-staging
 
+# Raleway (SIL-OFL) — the print font for the "Raleway -3" brand set. Committed
+# under fonts/raleway/ (tracked .gitignore exception); Scribus renders locally
+# and cannot pull a webfont. Static per-weight TTFs (Regular/Bold/ExtraBold/
+# Black); Scribus reads the name table so "Raleway Regular/Bold/Black" resolve
+# natively. Sanity-check on the bare family + face count (fc-match resolves
+# "Raleway Regular" to DejaVu by design — a per-weight check would misfire).
+COPY fonts/raleway/ /tmp/raleway-staging/
+RUN install -m 644 /tmp/raleway-staging/*.ttf /usr/local/share/fonts/gruene/ && \
+    fc-cache -f && \
+    RN=$(fc-list | grep -ci 'raleway' || true) && \
+    if [ "$RN" -lt 4 ]; then \
+        echo "RALEWAY INSTALL FAILED: $RN faces (expected >= 4)" >&2; exit 1; \
+    fi && \
+    fc-match "Raleway" | grep -qi raleway || \
+        { echo "fc-match did not resolve to Raleway" >&2; exit 1; } && \
+    echo "Raleway installed: $RN faces" && rm -rf /tmp/raleway-staging
+
 # Vollkorn accent italics (SIL-OFL, Friedrich Althausen) — the two faces the
 # templates use: "Vollkorn Black Italic" (headline accents) and "Vollkorn Bold
 # Italic" (the zweigeteilt pull-quote). The genuine static TTFs ARE committed to

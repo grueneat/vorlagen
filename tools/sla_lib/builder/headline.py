@@ -45,7 +45,7 @@ def _fmt_linesp(value: float) -> str:
 
 # Repo font directory holding the committed print-pipeline TTFs (the sanctioned
 # vendoring exception). fc-match resolves family aliases at render time, but its
-# style-word queries (e.g. "Barlow Semi Condensed Regular") sometimes fall back
+# style-word queries (e.g. "Raleway Regular") sometimes fall back
 # to DejaVu; this directory is the deterministic fallback for ascent metrics.
 _REPO_FONTS_DIR = Path(__file__).resolve().parents[3] / "fonts"
 
@@ -58,6 +58,11 @@ _FONT_FILE_HINTS: tuple[tuple[str, str, str], ...] = (
     ("barlow semi condensed", "extra bold", "BarlowSemiCondensed-ExtraBold"),
     ("barlow semi condensed", "bold", "BarlowSemiCondensed-Bold"),
     ("barlow semi condensed", "", "BarlowSemiCondensed-Regular"),
+    ("raleway", "black", "Raleway-Black"),
+    ("raleway", "extrabold", "Raleway-ExtraBold"),
+    ("raleway", "extra bold", "Raleway-ExtraBold"),
+    ("raleway", "bold", "Raleway-Bold"),
+    ("raleway", "", "Raleway-Regular"),
     ("vollkorn", "black", "Vollkorn-BlackItalic"),
     ("vollkorn", "", "Vollkorn-BoldItalic"),
 )

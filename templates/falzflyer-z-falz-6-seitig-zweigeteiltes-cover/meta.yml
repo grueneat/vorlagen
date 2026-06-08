@@ -60,7 +60,7 @@ category_label: 'Falzflyer'
 category: 'falzflyer'
 idml_source: ../../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig zweigeteiltes Cover.idml
-previews_for_sla: ce4bd4885c3b362a3f56ad6e979fc7d7d2c302758e94d76dc73716c76070f9f6
+previews_for_sla: db92b633bd5cbf8d8dc4c0fcf6407baa7d8d37e007bacd3694ef10bda2b742b6
 title: 'Falzflyer Z-Falz 6-seitig – Zweigeteiltes Cover'
 version: 0.1.0
-build_py_sha256: 14f18d4b92e5e8fd4701f621b12b6e05c6706e6812517163cd4c2aeedd71bfe1
+build_py_sha256: 08fdb3550e5cf8b0c9bb695f7a7f4dc61db975c930c7d220882bbe518b99418b

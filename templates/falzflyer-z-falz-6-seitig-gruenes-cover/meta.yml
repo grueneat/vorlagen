@@ -62,7 +62,7 @@ category_label: 'Falzflyer'
 category: 'falzflyer'
 idml_source: ../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig gruenes
   Cover Ordner/26-03-Leporello z-Falz 99x210 6-seitig gruenes Cover.idml
-previews_for_sla: a9d80e33a618011aeda82147dc30293f861acfb0c11d89c4abf7ba1d087a9a6e
+previews_for_sla: edd26780e7f19220df3513304d44daab0b4fdf9f890b395e10c245a6c19f5b77
 title: 'Falzflyer Z-Falz 6-seitig – Grünes Cover'
 version: 0.1.0
-build_py_sha256: 677b3f5372ff5af4baa214903a0b43657a6049ad864ec2a63feb3fe1a82a8c29
+build_py_sha256: 25b29bdc8a1427392ce135d1fc41507df1db3de54f5d24c2d669d1e53b409269

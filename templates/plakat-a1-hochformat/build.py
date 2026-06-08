@@ -30,7 +30,7 @@ def build_template():
         author='',
         facing_pages=False,
         column_gap_default_pt=11,
-        deffont='Barlow Semi Condensed Black',
+        deffont='Raleway Black',
         defsize=12,
         first_page_num=1,
         hcms=True,
@@ -40,12 +40,12 @@ def build_template():
         extra_pdf_attrs={'ImageP': 'sRGB display profile (ICC v2.2)', 'InfoString': '', 'PicRes': '300', 'PrintP': 'PSO Uncoated ISO12647 (ECI)', 'RGBMode': '1', 'RecalcPic': '0', 'SolidP': 'sRGB display profile (ICC v2.2)', 'UseProfiles2': '0', 'Version': '14', 'bleedMarks': '1', 'useDocBleeds': '1'},
     )
 
-    doc.add_char_style(CharStyle(name='Default Character Style', font='Barlow Semi Condensed Black', fcolor='Black', fontfeatures='', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
+    doc.add_char_style(CharStyle(name='Default Character Style', font='Raleway Black', fcolor='Black', fontfeatures='', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
     doc.add_para_style(ParaStyle(name='Default Paragraph Style', bcolor='None', bullet='0', linesp=15, space_before_pt=0, space_after_pt=0, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, paragraph_effect_offset=0, align=0, linesp_mode=0, drop_lines=2, hyph_consecutive_lines=2, direction=0, bshade=100, numeration=0, drop_cap=False, is_default=True))
-    doc.add_para_style(ParaStyle(name='Headlineweiß', font='Barlow Semi Condensed Black', fcolor='White', language='de', fontfeatures='-clig', features='', fontsize=160, linesp=150, kern=1, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=0, linesp_mode=0, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, baseline_offset=0))
+    doc.add_para_style(ParaStyle(name='Headlineweiß', font='Raleway Black', fcolor='White', language='de', fontfeatures='-clig', features='', fontsize=160, linesp=150, kern=1, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=0, linesp_mode=0, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, baseline_offset=0))
     doc.add_para_style(ParaStyle(name='Überschrift gelb', font='Vollkorn Black Italic', fcolor='Gelb', language='de', bcolor='None', fontfeatures='-clig', features='', fontsize=160, linesp=150, space_after_pt=0, kern=2.5, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=0, linesp_mode=0, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1))
-    doc.add_para_style(ParaStyle(name='Fließtext', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=50, linesp_mode=1))
-    doc.add_para_style(ParaStyle(name='Impressum', font='Barlow Semi Condensed Regular', language='de', fontfeatures='-clig', fontsize=20, linesp=20, linesp_mode=0))
+    doc.add_para_style(ParaStyle(name='Fließtext', font='Raleway Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=50, linesp_mode=1))
+    doc.add_para_style(ParaStyle(name='Impressum', font='Raleway Regular', language='de', fontfeatures='-clig', fontsize=20, linesp=20, linesp_mode=0))
 
     doc.add_master(
         name='Normal',
@@ -110,7 +110,7 @@ def build_template():
         trail_style='Impressum',
         col_gap_mm=0,
         runs=[
-            Run(text='Impressum:', font='Barlow Semi Condensed Bold', fcolor='White', fshade=100),
+            Run(text='Impressum:', font='Raleway Bold', fcolor='White', fshade=100),
             Run(text=' Medieninhaber und Herausgeber: Die Grünen Niederösterreich, Daniel-GranStraße 48, 3100 St. Pölten. ·  Druck: Druckerei mit Postanschrift · Evtl. Hinweis auf Umweltzeichens wenn zutreffend', fcolor='White', fshade=100),
         ],
     ))
