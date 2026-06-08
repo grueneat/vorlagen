@@ -67,10 +67,10 @@ category_label: Falzflyer
 category: falzflyer
 idml_source: ../../../../../originals/26-03-Leporello z-Falz 99x210 6-seitig Portrait
   Ordner/26-03-Leporello z-Falz 99x210 6-seitig Portrait.idml
-previews_for_sla: b66a2bc2a9fc290742a58df59bae182e4d12b74707ce323cedf6d126604d8561
+previews_for_sla: c0c55bc1e7c0805a3f2f5324d93838030014b70e8de6b30695497d03d910b837
 title: Falzflyer Z-Falz 6-seitig – Porträt-Cover
 version: 0.1.0
-build_py_sha256: a1aab70b8004fe37ee2c496954c58aae1d25efebf2adb7eeaea582fbee4ef4d9
+build_py_sha256: 0439edc757c2f2b53698310d87b27c83216199d28057a260ce832a0812b1701b
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -107,3 +107,23 @@ _previews:
   src: /templates/falzflyer-z-falz-6-seitig-portraet/page-02.png
 ---
 
+# So nutzt du die Faltflyer-Vorlage
+
+Ein sechsseitiger Faltflyer: gedruckt auf einem A4-Blatt, beidseitig, und im
+Z-Falz zu drei Spalten gefaltet. So entstehen sechs Seiten in Lese-Reihenfolge.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen. Die Vorschaubilder oben
+   zeigen Vorder- und Rückseite mit je drei Faltspalten.
+3. **Reihenfolge beachten** — durch den Z-Falz liegen die Spalten beim Drucken
+   nicht in Lese-Reihenfolge nebeneinander; die Vorschau zeigt, welche Spalte wo
+   landet. Inhalte daher anhand der Beschriftungen zuordnen, nicht nach Position.
+4. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+5. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

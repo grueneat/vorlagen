@@ -11,6 +11,10 @@ export async function getStaticPaths() {
 const { t } = Astro.props;
 const { Content } = await render(t);
 
+// Nur eine "Anleitung" zeigen, wenn die Vorlage auch eine hat (USAGE.md →
+// Body). Templates ohne USAGE.md rendern keine leere Überschrift.
+const hasAnleitung = Boolean(t.body && t.body.trim().length > 0);
+
 const BASE = import.meta.env.BASE_URL;
 const url = (p: string) => BASE + p.replace(/^\//, '');
 
@@ -94,6 +98,10 @@ const catLabel = t.data.category_label ?? 'Sonstige';
     <p>Gemeinsame Vorschau: <a href={url(t.data._preview_pdf)}>Vorschau-PDF</a></p>
   )}
 
-  <h2 class="gat-headline">Anleitung</h2>
-  <Content />
+  {hasAnleitung && (
+    <>
+      <h2 class="gat-headline">Anleitung</h2>
+      <Content />
+    </>
+  )}
 </Base>

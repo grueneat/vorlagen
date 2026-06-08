@@ -70,10 +70,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat zweigeteilt Ordner/26-03-Flyer
   A6 Querformat zweigeteilt.idml
-previews_for_sla: c4a89d7916b09b6c16be4dfdab0338f91e2d5d50cd022168144cbde68ca2abc5
+previews_for_sla: 93dc2a4fc72d79f33d9d5c4119086e99483d66d121e261c45bd1430f4a93e800
 title: Flyer A6 Querformat – Zweigeteilt
 version: 0.1.0
-build_py_sha256: da2e2713a53157c3fdef94696fcdc678fb254c6d0eef64fb359071e3c0f4a88c
+build_py_sha256: a67ebb881d71c9b4d8fdac4b5c269a05000680bd8ad78484090a9de8329a34e7
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -118,3 +118,19 @@ _previews:
   src: /templates/flyer-a6-querformat-zweigeteilt/page-06.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

@@ -56,10 +56,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Querformat Quadrat in Bild Ordner/26-03-Flyer
   A6 Querformat Quadrat in Bild.idml
-previews_for_sla: d7c1d8a82fd262039b11800aa792d372f3eba6bddfbd96cb9e2ede3e502d534c
+previews_for_sla: 4241de1d1d6d2711a11745d4b1bf64f9161f47de703b61fb1e2c94f7c755592b
 title: Flyer A6 Querformat – Quadrat im Bild
 version: 0.1.0
-build_py_sha256: 6213fdd7647b0cbf6b0f6c85d5e02bd0a7a19c8cb51e4ece37c2efcdea9c64dc
+build_py_sha256: 9fe560b6741aa3f8fb4a9bbcd4dbeeee7e4a6bdc4ba1715bc9162b1312993012
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -104,3 +104,19 @@ _previews:
   src: /templates/flyer-a6-querformat-quadrat-im-bild/page-06.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

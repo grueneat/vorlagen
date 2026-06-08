@@ -59,10 +59,10 @@ category_label: Flyer
 category: flyer
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Portrait Ordner/26-03-Flyer
   A6 Hochformat Portrait.idml
-previews_for_sla: 3642ce80f381ac7fa67d92d19edf67b753b5fbf80e2ebd4c31177bb79c8886ae
+previews_for_sla: 608ca38507a639e4d5a7e40a4e552a6028f46721deba09ed0a3bf5ea852cb40c
 title: Flyer A6 Hochformat – Porträt-Cover
 version: 0.1.0
-build_py_sha256: 9f16f4f1f6c7523b0b7fc717bd84f6a4ee7a706dc545baf9960f4519f5765859
+build_py_sha256: 497e488591be5f247eb43181d487a9bd4dd6e6f4e49ad9b58007aa954d919542
 _downloads:
 - label: Burgenland
   bundesland: bgld
@@ -107,3 +107,19 @@ _previews:
   src: /templates/flyer-a6-hochformat-portraet/page-06.png
 ---
 
+# So nutzt du die Flyer-Vorlage
+
+Ein A6-Flyer zum Verteilen — Cover plus Innenseiten.
+
+## Schritt für Schritt
+
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Headline, Fließtext, Fotos und Logo austauschen. Klick
+   auf einen Rahmen zeigt unten rechts seinen Namen, so erkennst du, was wofür
+   gedacht ist. Die Vorschaubilder oben zeigen alle Seiten der Vorlage.
+3. **Impressum prüfen** — der Impressums-Block ist gesetzlich vorgeschrieben.
+   Angaben ergänzen, nicht löschen.
+4. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.

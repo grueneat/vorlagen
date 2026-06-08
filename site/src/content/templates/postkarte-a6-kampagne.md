@@ -147,35 +147,26 @@ _previews:
   src: /templates/postkarte-a6-kampagne/page-02.png
 ---
 
-# Kampagnen-Postkarte A6
+# So nutzt du die Postkarten-Vorlage
 
-Zweiseitige A6-Postkarte für Kampagnen, Petitionen, Events.
+Eine zweiseitige A6-Postkarte für Kampagnen, Petitionen und Events — Vorderseite
+mit Botschaft, Rückseite mit Erklärtext und QR-Code.
 
-## So nutzt du die Vorlage
+## Schritt für Schritt
 
-1. `template.sla` in Scribus öffnen.
-2. Pinke Beschriftungen am oberen Seitenrand zeigen "Vorderseite" / "Rückseite" — werden im PDF nicht gedruckt (Hilfslinien-Layer).
-3. Frames sind beschriftet: Headline, Störer-Text, Erklärtext, URL, Impressum, etc. Klick auf einen Frame zeigt seinen Namen rechts unten in den Object Properties.
-4. Inhalte ersetzen, Logo bei Bedarf einsetzen, QR-Code unter `[QR-Code (wird aus URL generiert)]` als Bild platzieren.
-5. PDF exportieren — fertig.
+1. **Vorlage öffnen** — `template.sla` mit [Scribus](https://www.scribus.net)
+   öffnen (kostenlos für Windows, macOS und Linux). Die oben verlinkten
+   Schriften vorher installieren.
+2. **Inhalte ersetzen** — Texte überschreiben, Logo bei Bedarf einsetzen. Die
+   Rahmen sind beschriftet: ein Klick zeigt unten rechts den Namen, z. B.
+   „Headline", „Störer-Text", „Erklärtext Rückseite" oder „Kampagnen-URL".
+3. **QR-Code einsetzen** — den Platzhalter „QR-Code" auf der Rückseite durch dein
+   eigenes QR-Bild ersetzen (deine Kampagnen-URL). Die URL darunter im Textfeld
+   anpassen.
+4. **Impressum prüfen** — der einzeilige Impressums-Block ist gesetzlich
+   vorgeschrieben. Angaben ergänzen, nicht löschen.
+5. **Als PDF exportieren** — *Datei → Exportieren → Als PDF speichern*. Fertig
+   für die Druckerei.
 
-## Slots
-
-Siehe `meta.yml`. Beispiel:
-
-| Slot | ANNAME (im Scribus sichtbar) | Hinweis |
-|---|---|---|
-| `headline` | Headline 4-zeilig (Brand-Wechselfarbe) | 4 Zeilen, alternierend Weiß/Gelb |
-| `stoerer` | Störer-Text 3-zeilig | 3 Zeilen im Magenta-Kreis |
-| `body` | Erklärtext Rückseite | Mehrzeiliger Erklärtext |
-| `url` | Kampagnen-URL | unter dem QR-Code |
-| `impressum` | Impressum (1-zeilig) | gesetzlich vorgeschrieben |
-| `logo` | Logo Grüne (weiss, zentriert) | Bild aus shared/logos/ |
-
-## Vorlagen-Generierung
-
-`template.sla` ist aus `build.py` über die DSL erzeugt:
-
-```bash
-python3 templates/postkarte-a6-kampagne/build.py
-```
+> Die pinken Beschriftungen „Vorderseite" / „Rückseite" am oberen Rand liegen
+> auf dem Hilfslinien-Layer und werden nicht gedruckt.
