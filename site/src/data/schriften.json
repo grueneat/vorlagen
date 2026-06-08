@@ -20,46 +20,12 @@
       "pdf": "/schriften/original/original.pdf"
     },
     {
-      "slug": "tahoma",
-      "name": "Tahoma",
-      "license": "Proprietär (Microsoft)",
-      "source": "https://learn.microsoft.com/en-us/typography/font-list/tahoma",
-      "family": "Tahoma",
-      "summary": "Humanistische Grotesk, die Matthew Carter 1994 für Microsoft zur Bildschirm-Lesbarkeit bei kleinen Pixelgrößen entwarf — eine UI-/System- Schrift, keine Markenschrift. Vorteile: auf praktisch jedem Windows- Rechner vorinstalliert, sehr robust und gut lesbar bei Kleinstgrößen. Nachteile: läuft breit (Gegenteil von Gotham Narrow → Texte überlaufen, Umbrüche verschieben sich), nur zwei Schnitte (Regular, Bold) → Black und Ultra fallen auf Bold zusammen, Headlines verlieren ihre Wucht; proprietär, darf nicht mit den Vorlagen weitergegeben werden. Unterschied: die „Büro-Standard\"-Option ohne gestalterischen Anspruch. Einsatz: hier bewusst als abschreckendes Beispiel — kein Marken-Ersatz für Gotham.",
-      "weights": {
-        "Book": "Regular",
-        "Bold": "Bold",
-        "Black": "Bold",
-        "Ultra": "Bold"
-      },
-      "original": false,
-      "pdf": null,
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/tahoma/tahoma.sla"
-    },
-    {
-      "slug": "montserrat",
-      "name": "Montserrat",
-      "license": "SIL OFL 1.1",
-      "source": "https://github.com/google/fonts/tree/main/ofl/montserrat",
-      "family": "Montserrat",
-      "summary": "Geometrische Grotesk, von Plakatschriften aus Buenos Aires inspiriert (wie Gotham von New Yorker Beschilderung), sehr nahe Proportionen (~88 % Übereinstimmung in Fachvergleichen). Vorteile: bekannteste freie Gotham-Alternative, 9 Schnitte Thin–Black, sehr breite Sprachunterstützung, ausgereift. Nachteile: läuft etwas breiter als Gotham Narrow, große x-Höhe, keine schmale Variante → Texte können im Layout überlaufen. Unterschied: der „klassischste\", wärmste Gotham-Ersatz. Einsatz: Standard-Empfehlung, wenn größtmögliche Nähe zu Gotham gewünscht ist.",
-      "weights": {
-        "Book": "Regular",
-        "Bold": "Bold",
-        "Black": "ExtraBold",
-        "Ultra": "Black"
-      },
-      "original": false,
-      "pdf": "/schriften/montserrat/montserrat.pdf",
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat/montserrat.sla"
-    },
-    {
       "slug": "montserrat-eng4",
       "name": "Montserrat eng (−4)",
       "license": "SIL OFL 1.1",
       "source": "https://github.com/google/fonts/tree/main/ofl/montserrat",
       "family": "Montserrat",
-      "summary": "Montserrat mit ausgewogen verengtem Tracking (−4 %): gleiche, als beste empfundene Buchstabenform, aber spürbar kompaktere Buchstaben- und Wortabstände. Reaktion darauf, dass Montserrat von Haus aus breit läuft und es keinen offiziellen condensed Schnitt gibt. Wirkt natürlich, nichts drängt. Einsatz: Montserrat-Look ohne den lockeren Standard-Satz.",
+      "summary": "Montserrat mit ausgewogen verengtem Tracking (−4 %): die als beste empfundene Buchstabenform, aber spürbar kompaktere Buchstaben- und Wortabstände. Montserrat läuft von Haus aus breit und hat keinen condensed Schnitt; das Tracking schließt die Abstands-Lücke, ohne zu drängen. Ausgangswahl für den Montserrat-Look.",
       "weights": {
         "Book": "Regular",
         "Bold": "Bold",
@@ -71,12 +37,12 @@
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat-eng4/montserrat-eng4.sla"
     },
     {
-      "slug": "montserrat-eng6",
-      "name": "Montserrat eng (−6)",
+      "slug": "montserrat-eng5",
+      "name": "Montserrat eng (−5)",
       "license": "SIL OFL 1.1",
       "source": "https://github.com/google/fonts/tree/main/ofl/montserrat",
       "family": "Montserrat",
-      "summary": "Montserrat mit stärker verengtem Tracking (−6 %): noch dichter, näher an einer condensed-Anmutung. Maximale Verdichtung, bevor der Satz gedrängt wirkt. Einsatz, wenn der Montserrat-Look so schmal wie sinnvoll laufen soll.",
+      "summary": "Montserrat mit stärker verengtem Tracking (−5 %): noch etwas dichter als −4, näher an einer condensed-Anmutung, aber im Fließtext noch ruhig lesbar. Für einen kompakteren Montserrat-Satz, der dem schmalen Gotham-Original näher kommt.",
       "weights": {
         "Book": "Regular",
         "Bold": "Bold",
@@ -84,50 +50,16 @@
         "Ultra": "Black"
       },
       "original": false,
-      "pdf": "/schriften/montserrat-eng6/montserrat-eng6.pdf",
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat-eng6/montserrat-eng6.sla"
+      "pdf": "/schriften/montserrat-eng5/montserrat-eng5.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat-eng5/montserrat-eng5.sla"
     },
     {
-      "slug": "outfit",
-      "name": "Outfit",
-      "license": "SIL OFL 1.1",
-      "source": "https://github.com/google/fonts/tree/main/ofl/outfit",
-      "family": "Outfit",
-      "summary": "Rein geometrische, monolineare Konstruktion mit neutraler Anmutung wie Gotham. Vorteile: sehr aufgeräumt/modern, gleichmäßige Strichstärke, 9 Gewichte (100–900), display-stark. Nachteile: monolinear → wirkt kühler/technischer, weniger „Charakter\"; nicht schmal. Unterschied: die sachlichste, neutralste Option. Einsatz: moderne, klare Gestaltung, Headlines und kurze Texte.",
-      "weights": {
-        "Book": "Regular",
-        "Bold": "Bold",
-        "Black": "ExtraBold",
-        "Ultra": "Black"
-      },
-      "original": false,
-      "pdf": "/schriften/outfit/outfit.pdf",
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/outfit/outfit.sla"
-    },
-    {
-      "slug": "urbanist",
-      "name": "Urbanist",
-      "license": "SIL OFL 1.1",
-      "source": "https://github.com/google/fonts/tree/main/ofl/urbanist",
-      "family": "Urbanist",
-      "summary": "Modernistische geometrische Grotesk aus elementaren Formen, neutral wie Gotham. Vorteile: variabler Font, fein abgestufte Gewichte Thin–Black plus Kursive, sehr vielseitig. Nachteile: geringerer Wiedererkennungswert, etwas generisch; nicht schmal. Unterschied: am stärksten web-/UI-orientiert. Einsatz: flexible Nutzung über viele Gewichte, gut wenn Kursive gebraucht werden.",
-      "weights": {
-        "Book": "Regular",
-        "Bold": "Bold",
-        "Black": "ExtraBold",
-        "Ultra": "Black"
-      },
-      "original": false,
-      "pdf": "/schriften/urbanist/urbanist.pdf",
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/urbanist/urbanist.sla"
-    },
-    {
-      "slug": "raleway",
-      "name": "Raleway",
+      "slug": "raleway-eng3",
+      "name": "Raleway eng (−3)",
       "license": "SIL OFL 1.1",
       "source": "https://github.com/google/fonts/tree/main/ofl/raleway",
       "family": "Raleway",
-      "summary": "Elegante geometrische Grotesk; gilt in Fachquellen als die ähnlichste Gotham-Alternative im Google-Fonts-Verzeichnis; 18 Schnitte Thin–Black + Kursive. Vorteile: sehr elegant in feinen Schnitten, ausdrucksstarke Headlines. Nachteile: in feinen Gewichten zerbrechlich, markante Detailformen (z. B. „w\") → für 6-pt-Kleintext weniger robust; nicht schmal. Unterschied: die ausdrucksstärkste, „eleganteste\" Option. Einsatz: Headlines, Cover, Display — weniger für Kleinsttext.",
+      "summary": "Raleway mit leichtem Tracking (−3 %): elegante geometrische Grotesk, gilt als eine der ähnlichsten Gotham-Alternativen. Behutsam verengt, damit der elegante Charakter und die feinen Formen erhalten bleiben — die luftigste der drei Raleway-Stufen.",
       "weights": {
         "Book": "Regular",
         "Bold": "Bold",
@@ -135,16 +67,16 @@
         "Ultra": "Black"
       },
       "original": false,
-      "pdf": "/schriften/raleway/raleway.pdf",
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/raleway/raleway.sla"
+      "pdf": "/schriften/raleway-eng3/raleway-eng3.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/raleway-eng3/raleway-eng3.sla"
     },
     {
-      "slug": "barlow-semi-condensed",
-      "name": "Barlow Semi Condensed",
+      "slug": "raleway-eng4",
+      "name": "Raleway eng (−4)",
       "license": "SIL OFL 1.1",
-      "source": "https://github.com/google/fonts/tree/main/ofl/barlowsemicondensed",
-      "family": "Barlow Semi Condensed",
-      "summary": "Leicht schmal laufende Grotesk mit geometrisch-„kalifornischem\" Charakter; die einzige der fünf, die der schmalen Laufweite von Gotham Narrow nahekommt. Vorteile: schmale Proportionen → beste Layout-Treue zum Narrow-Original, sehr großer Schnittumfang Thin–Black, gut lesbar auch klein. Nachteile: eher grotesk als rein geometrisch → nüchterner; semi-condensed wirkt weniger „luftig\" als Gotham. Unterschied: einzige schmale Variante, beste Passung zur bestehenden Geometrie der Vorlagen. Einsatz: erste Wahl, wenn die Layouts ohne Umbau übernommen werden sollen.",
+      "source": "https://github.com/google/fonts/tree/main/ofl/raleway",
+      "family": "Raleway",
+      "summary": "Raleway mit mittlerem Tracking (−4 %): ausgewogen verdichtet — elegante Anmutung bei deutlich kompakteren Abständen. Die mittlere Raleway-Stufe im direkten Vergleich.",
       "weights": {
         "Book": "Regular",
         "Bold": "Bold",
@@ -152,16 +84,16 @@
         "Ultra": "Black"
       },
       "original": false,
-      "pdf": "/schriften/barlow-semi-condensed/barlow-semi-condensed.pdf",
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/barlow-semi-condensed/barlow-semi-condensed.sla"
+      "pdf": "/schriften/raleway-eng4/raleway-eng4.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/raleway-eng4/raleway-eng4.sla"
     },
     {
-      "slug": "saira-semi-condensed",
-      "name": "Saira Semi Condensed",
+      "slug": "raleway-eng5",
+      "name": "Raleway eng (−5)",
       "license": "SIL OFL 1.1",
-      "source": "https://github.com/google/fonts/tree/main/ofl/sairasemicondensed",
-      "family": "Saira SemiCondensed",
-      "summary": "Schmal laufende geometrische Grotesk (Omnibus Type) — neben Barlow die zweite freie Schrift, die der schmalen Laufweite von Gotham Narrow nahekommt, dabei aber deutlich geometrischer und plakativer als Barlow. Vorteile: schmale Proportionen (gute Layout-Treue zum Narrow-Original), voller statischer Schnittumfang Thin–Black inkl. ExtraBold, kräftige Headlines mit „Wumms\"; frei (SIL OFL), weitergebbar. Nachteile: wirkt technischer/kühler als Gothams warme Geometrie, etwas enger im Kleintext als Barlow. Unterschied: die freie, „Gotham-nächste\" geometrische Alternative auf der schmalen Achse — die einzige schmale Vergleichsschrift, die nicht zugleich die amtierende Markenschrift (Barlow) ist. Einsatz: starke Wahl, wenn ein geometrischeres, plakativeres Schriftbild als Barlow gewünscht ist.",
+      "source": "https://github.com/google/fonts/tree/main/ofl/raleway",
+      "family": "Raleway",
+      "summary": "Raleway mit starkem Tracking (−5 %): am dichtesten gesetzt, nahe einer condensed-Anmutung. Raleways markante Formen (z. B. „w\") rücken eng zusammen; im Kleinsttext die straffste, aber auch anspruchsvollste Variante.",
       "weights": {
         "Book": "Regular",
         "Bold": "Bold",
@@ -169,8 +101,8 @@
         "Ultra": "Black"
       },
       "original": false,
-      "pdf": "/schriften/saira-semi-condensed/saira-semi-condensed.pdf",
-      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/saira-semi-condensed/saira-semi-condensed.sla"
+      "pdf": "/schriften/raleway-eng5/raleway-eng5.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/raleway-eng5/raleway-eng5.sla"
     }
   ],
   "pages": [
@@ -181,41 +113,25 @@
           "thumb": "/schriften/original/original-page-01.png",
           "hires": "/schriften/original/original-page-01-hires.png"
         },
-        "tahoma": {
-          "thumb": "/schriften/tahoma/tahoma-page-01.png",
-          "hires": "/schriften/tahoma/tahoma-page-01-hires.png"
-        },
-        "montserrat": {
-          "thumb": "/schriften/montserrat/montserrat-page-01.png",
-          "hires": "/schriften/montserrat/montserrat-page-01-hires.png"
-        },
-        "outfit": {
-          "thumb": "/schriften/outfit/outfit-page-01.png",
-          "hires": "/schriften/outfit/outfit-page-01-hires.png"
-        },
-        "urbanist": {
-          "thumb": "/schriften/urbanist/urbanist-page-01.png",
-          "hires": "/schriften/urbanist/urbanist-page-01-hires.png"
-        },
-        "raleway": {
-          "thumb": "/schriften/raleway/raleway-page-01.png",
-          "hires": "/schriften/raleway/raleway-page-01-hires.png"
-        },
-        "barlow-semi-condensed": {
-          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-01.png",
-          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-01-hires.png"
-        },
-        "saira-semi-condensed": {
-          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-01.png",
-          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-01-hires.png"
-        },
         "montserrat-eng4": {
           "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-01.png",
           "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-01-hires.png"
         },
-        "montserrat-eng6": {
-          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-01.png",
-          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-01-hires.png"
+        "montserrat-eng5": {
+          "thumb": "/schriften/montserrat-eng5/montserrat-eng5-page-01.png",
+          "hires": "/schriften/montserrat-eng5/montserrat-eng5-page-01-hires.png"
+        },
+        "raleway-eng3": {
+          "thumb": "/schriften/raleway-eng3/raleway-eng3-page-01.png",
+          "hires": "/schriften/raleway-eng3/raleway-eng3-page-01-hires.png"
+        },
+        "raleway-eng4": {
+          "thumb": "/schriften/raleway-eng4/raleway-eng4-page-01.png",
+          "hires": "/schriften/raleway-eng4/raleway-eng4-page-01-hires.png"
+        },
+        "raleway-eng5": {
+          "thumb": "/schriften/raleway-eng5/raleway-eng5-page-01.png",
+          "hires": "/schriften/raleway-eng5/raleway-eng5-page-01-hires.png"
         }
       }
     },
@@ -226,41 +142,25 @@
           "thumb": "/schriften/original/original-page-02.png",
           "hires": "/schriften/original/original-page-02-hires.png"
         },
-        "tahoma": {
-          "thumb": "/schriften/tahoma/tahoma-page-02.png",
-          "hires": "/schriften/tahoma/tahoma-page-02-hires.png"
-        },
-        "montserrat": {
-          "thumb": "/schriften/montserrat/montserrat-page-02.png",
-          "hires": "/schriften/montserrat/montserrat-page-02-hires.png"
-        },
-        "outfit": {
-          "thumb": "/schriften/outfit/outfit-page-02.png",
-          "hires": "/schriften/outfit/outfit-page-02-hires.png"
-        },
-        "urbanist": {
-          "thumb": "/schriften/urbanist/urbanist-page-02.png",
-          "hires": "/schriften/urbanist/urbanist-page-02-hires.png"
-        },
-        "raleway": {
-          "thumb": "/schriften/raleway/raleway-page-02.png",
-          "hires": "/schriften/raleway/raleway-page-02-hires.png"
-        },
-        "barlow-semi-condensed": {
-          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-02.png",
-          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-02-hires.png"
-        },
-        "saira-semi-condensed": {
-          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-02.png",
-          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-02-hires.png"
-        },
         "montserrat-eng4": {
           "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-02.png",
           "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-02-hires.png"
         },
-        "montserrat-eng6": {
-          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-02.png",
-          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-02-hires.png"
+        "montserrat-eng5": {
+          "thumb": "/schriften/montserrat-eng5/montserrat-eng5-page-02.png",
+          "hires": "/schriften/montserrat-eng5/montserrat-eng5-page-02-hires.png"
+        },
+        "raleway-eng3": {
+          "thumb": "/schriften/raleway-eng3/raleway-eng3-page-02.png",
+          "hires": "/schriften/raleway-eng3/raleway-eng3-page-02-hires.png"
+        },
+        "raleway-eng4": {
+          "thumb": "/schriften/raleway-eng4/raleway-eng4-page-02.png",
+          "hires": "/schriften/raleway-eng4/raleway-eng4-page-02-hires.png"
+        },
+        "raleway-eng5": {
+          "thumb": "/schriften/raleway-eng5/raleway-eng5-page-02.png",
+          "hires": "/schriften/raleway-eng5/raleway-eng5-page-02-hires.png"
         }
       }
     },
@@ -271,41 +171,25 @@
           "thumb": "/schriften/original/original-page-03.png",
           "hires": "/schriften/original/original-page-03-hires.png"
         },
-        "tahoma": {
-          "thumb": "/schriften/tahoma/tahoma-page-03.png",
-          "hires": "/schriften/tahoma/tahoma-page-03-hires.png"
-        },
-        "montserrat": {
-          "thumb": "/schriften/montserrat/montserrat-page-03.png",
-          "hires": "/schriften/montserrat/montserrat-page-03-hires.png"
-        },
-        "outfit": {
-          "thumb": "/schriften/outfit/outfit-page-03.png",
-          "hires": "/schriften/outfit/outfit-page-03-hires.png"
-        },
-        "urbanist": {
-          "thumb": "/schriften/urbanist/urbanist-page-03.png",
-          "hires": "/schriften/urbanist/urbanist-page-03-hires.png"
-        },
-        "raleway": {
-          "thumb": "/schriften/raleway/raleway-page-03.png",
-          "hires": "/schriften/raleway/raleway-page-03-hires.png"
-        },
-        "barlow-semi-condensed": {
-          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-03.png",
-          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-03-hires.png"
-        },
-        "saira-semi-condensed": {
-          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-03.png",
-          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-03-hires.png"
-        },
         "montserrat-eng4": {
           "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-03.png",
           "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-03-hires.png"
         },
-        "montserrat-eng6": {
-          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-03.png",
-          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-03-hires.png"
+        "montserrat-eng5": {
+          "thumb": "/schriften/montserrat-eng5/montserrat-eng5-page-03.png",
+          "hires": "/schriften/montserrat-eng5/montserrat-eng5-page-03-hires.png"
+        },
+        "raleway-eng3": {
+          "thumb": "/schriften/raleway-eng3/raleway-eng3-page-03.png",
+          "hires": "/schriften/raleway-eng3/raleway-eng3-page-03-hires.png"
+        },
+        "raleway-eng4": {
+          "thumb": "/schriften/raleway-eng4/raleway-eng4-page-03.png",
+          "hires": "/schriften/raleway-eng4/raleway-eng4-page-03-hires.png"
+        },
+        "raleway-eng5": {
+          "thumb": "/schriften/raleway-eng5/raleway-eng5-page-03.png",
+          "hires": "/schriften/raleway-eng5/raleway-eng5-page-03-hires.png"
         }
       }
     },
@@ -316,41 +200,25 @@
           "thumb": "/schriften/original/original-page-04.png",
           "hires": "/schriften/original/original-page-04-hires.png"
         },
-        "tahoma": {
-          "thumb": "/schriften/tahoma/tahoma-page-04.png",
-          "hires": "/schriften/tahoma/tahoma-page-04-hires.png"
-        },
-        "montserrat": {
-          "thumb": "/schriften/montserrat/montserrat-page-04.png",
-          "hires": "/schriften/montserrat/montserrat-page-04-hires.png"
-        },
-        "outfit": {
-          "thumb": "/schriften/outfit/outfit-page-04.png",
-          "hires": "/schriften/outfit/outfit-page-04-hires.png"
-        },
-        "urbanist": {
-          "thumb": "/schriften/urbanist/urbanist-page-04.png",
-          "hires": "/schriften/urbanist/urbanist-page-04-hires.png"
-        },
-        "raleway": {
-          "thumb": "/schriften/raleway/raleway-page-04.png",
-          "hires": "/schriften/raleway/raleway-page-04-hires.png"
-        },
-        "barlow-semi-condensed": {
-          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-04.png",
-          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-04-hires.png"
-        },
-        "saira-semi-condensed": {
-          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-04.png",
-          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-04-hires.png"
-        },
         "montserrat-eng4": {
           "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-04.png",
           "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-04-hires.png"
         },
-        "montserrat-eng6": {
-          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-04.png",
-          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-04-hires.png"
+        "montserrat-eng5": {
+          "thumb": "/schriften/montserrat-eng5/montserrat-eng5-page-04.png",
+          "hires": "/schriften/montserrat-eng5/montserrat-eng5-page-04-hires.png"
+        },
+        "raleway-eng3": {
+          "thumb": "/schriften/raleway-eng3/raleway-eng3-page-04.png",
+          "hires": "/schriften/raleway-eng3/raleway-eng3-page-04-hires.png"
+        },
+        "raleway-eng4": {
+          "thumb": "/schriften/raleway-eng4/raleway-eng4-page-04.png",
+          "hires": "/schriften/raleway-eng4/raleway-eng4-page-04-hires.png"
+        },
+        "raleway-eng5": {
+          "thumb": "/schriften/raleway-eng5/raleway-eng5-page-04.png",
+          "hires": "/schriften/raleway-eng5/raleway-eng5-page-04-hires.png"
         }
       }
     },
@@ -361,41 +229,25 @@
           "thumb": "/schriften/original/original-page-05.png",
           "hires": "/schriften/original/original-page-05-hires.png"
         },
-        "tahoma": {
-          "thumb": "/schriften/tahoma/tahoma-page-05.png",
-          "hires": "/schriften/tahoma/tahoma-page-05-hires.png"
-        },
-        "montserrat": {
-          "thumb": "/schriften/montserrat/montserrat-page-05.png",
-          "hires": "/schriften/montserrat/montserrat-page-05-hires.png"
-        },
-        "outfit": {
-          "thumb": "/schriften/outfit/outfit-page-05.png",
-          "hires": "/schriften/outfit/outfit-page-05-hires.png"
-        },
-        "urbanist": {
-          "thumb": "/schriften/urbanist/urbanist-page-05.png",
-          "hires": "/schriften/urbanist/urbanist-page-05-hires.png"
-        },
-        "raleway": {
-          "thumb": "/schriften/raleway/raleway-page-05.png",
-          "hires": "/schriften/raleway/raleway-page-05-hires.png"
-        },
-        "barlow-semi-condensed": {
-          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-05.png",
-          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-05-hires.png"
-        },
-        "saira-semi-condensed": {
-          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-05.png",
-          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-05-hires.png"
-        },
         "montserrat-eng4": {
           "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-05.png",
           "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-05-hires.png"
         },
-        "montserrat-eng6": {
-          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-05.png",
-          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-05-hires.png"
+        "montserrat-eng5": {
+          "thumb": "/schriften/montserrat-eng5/montserrat-eng5-page-05.png",
+          "hires": "/schriften/montserrat-eng5/montserrat-eng5-page-05-hires.png"
+        },
+        "raleway-eng3": {
+          "thumb": "/schriften/raleway-eng3/raleway-eng3-page-05.png",
+          "hires": "/schriften/raleway-eng3/raleway-eng3-page-05-hires.png"
+        },
+        "raleway-eng4": {
+          "thumb": "/schriften/raleway-eng4/raleway-eng4-page-05.png",
+          "hires": "/schriften/raleway-eng4/raleway-eng4-page-05-hires.png"
+        },
+        "raleway-eng5": {
+          "thumb": "/schriften/raleway-eng5/raleway-eng5-page-05.png",
+          "hires": "/schriften/raleway-eng5/raleway-eng5-page-05-hires.png"
         }
       }
     },
@@ -406,41 +258,25 @@
           "thumb": "/schriften/original/original-page-06.png",
           "hires": "/schriften/original/original-page-06-hires.png"
         },
-        "tahoma": {
-          "thumb": "/schriften/tahoma/tahoma-page-06.png",
-          "hires": "/schriften/tahoma/tahoma-page-06-hires.png"
-        },
-        "montserrat": {
-          "thumb": "/schriften/montserrat/montserrat-page-06.png",
-          "hires": "/schriften/montserrat/montserrat-page-06-hires.png"
-        },
-        "outfit": {
-          "thumb": "/schriften/outfit/outfit-page-06.png",
-          "hires": "/schriften/outfit/outfit-page-06-hires.png"
-        },
-        "urbanist": {
-          "thumb": "/schriften/urbanist/urbanist-page-06.png",
-          "hires": "/schriften/urbanist/urbanist-page-06-hires.png"
-        },
-        "raleway": {
-          "thumb": "/schriften/raleway/raleway-page-06.png",
-          "hires": "/schriften/raleway/raleway-page-06-hires.png"
-        },
-        "barlow-semi-condensed": {
-          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-06.png",
-          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-06-hires.png"
-        },
-        "saira-semi-condensed": {
-          "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-06.png",
-          "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-06-hires.png"
-        },
         "montserrat-eng4": {
           "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-06.png",
           "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-06-hires.png"
         },
-        "montserrat-eng6": {
-          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-06.png",
-          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-06-hires.png"
+        "montserrat-eng5": {
+          "thumb": "/schriften/montserrat-eng5/montserrat-eng5-page-06.png",
+          "hires": "/schriften/montserrat-eng5/montserrat-eng5-page-06-hires.png"
+        },
+        "raleway-eng3": {
+          "thumb": "/schriften/raleway-eng3/raleway-eng3-page-06.png",
+          "hires": "/schriften/raleway-eng3/raleway-eng3-page-06-hires.png"
+        },
+        "raleway-eng4": {
+          "thumb": "/schriften/raleway-eng4/raleway-eng4-page-06.png",
+          "hires": "/schriften/raleway-eng4/raleway-eng4-page-06-hires.png"
+        },
+        "raleway-eng5": {
+          "thumb": "/schriften/raleway-eng5/raleway-eng5-page-06.png",
+          "hires": "/schriften/raleway-eng5/raleway-eng5-page-06-hires.png"
         }
       }
     }

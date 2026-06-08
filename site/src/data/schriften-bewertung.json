@@ -8,25 +8,20 @@
   },
   "empfehlung": {
     "primaer": {
-      "slug": "barlow-semi-condensed",
-      "name": "Barlow Semi Condensed",
-      "text": "Die einzige Alternative mit schmaler Laufweite — und damit die einzige, in der die bestehenden, auf Gotham Narrow gesetzten Vorlagen ohne Umbau übernommen werden können. Zeilenumbrüche und Abstände bleiben erhalten. Frei lizenziert (SIL OFL), darf mit den Vorlagen weitergegeben werden, vollständiger Schnittumfang von Thin bis Black und auch im 6-pt-Kleintext robust. Die naheliegende, risikoärmste Wahl."
+      "slug": "montserrat-eng4",
+      "name": "Montserrat eng (−4)",
+      "text": "Die als beste empfundene Schrift, mit dem Abstandsproblem gelöst: Montserrats Buchstabenform, eng (−4) gesetzt. Ausgewogen — kompakt, ohne zu drängen."
     },
     "zweitwahl": {
-      "slug": "montserrat",
-      "name": "Montserrat",
-      "text": "Der nächste freie Verwandte von Gotham — gleiche geometrische Grundhaltung, warmer Charakter, neun Schnitte. Empfehlenswert, wenn das Kommunikationsteam ohnehin bereit ist, die Layouts neu zu setzen: Montserrat läuft breiter als Gotham Narrow, ein 1:1-Übertrag in die bestehenden Vorlagen führt zu Textüberlauf."
+      "slug": "raleway-eng4",
+      "name": "Raleway eng (−4)",
+      "text": "Die elegantere Alternative im direkten Vergleich: Raleway, eng (−4) gesetzt. Ausdrucksstark in Headlines; in Kleinsttexten anspruchsvoller als Montserrat."
     },
     "abraten": [
       {
         "slug": "original",
         "name": "Gotham Narrow",
-        "text": "Gestalterisch erstklassig — aber kommerziell lizenziert. Gotham darf nicht mit den Vorlagen an Dritte (Bezirks-/Landesgruppen, Druckereien) weitergegeben werden und verursacht laufende Lizenzkosten. Genau das ist der Grund für diese Schriftensuche."
-      },
-      {
-        "slug": "tahoma",
-        "name": "Tahoma",
-        "text": "Die scheinbar bequeme Wahl, weil auf jedem Windows-Rechner vorhanden — aber gestalterisch ungeeignet: eine breite Bildschirm-/Systemschrift, kein Markenzeichen. Sie läuft dem schmalen Gotham Narrow entgegen (stärkster Layoutbruch von allen), hat nur zwei Schnitte und ist obendrein proprietär. Kein Marken-Ersatz."
+        "text": "Das proprietäre Original — gestalterisch top, aber lizenzpflichtig und nicht mit den Vorlagen weitergebbar. Nur als Referenz im Vergleich, nicht als Zielschrift."
       }
     ]
   },
@@ -36,15 +31,11 @@
       "kind": "text",
       "werte": {
         "original": "Geometrische Grotesk (kondensiert)",
-        "tahoma": "Humanistische UI-/Bildschirmschrift",
-        "montserrat": "Geometrische Grotesk",
-        "outfit": "Geometrische Grotesk (monolinear)",
-        "urbanist": "Geometrische Grotesk",
-        "raleway": "Elegante geometrische Grotesk",
-        "barlow-semi-condensed": "Grotesk, leicht schmal (semi-condensed)",
-        "saira-semi-condensed": "Geometrische Grotesk, schmal (semi-condensed)",
         "montserrat-eng4": "Geometrische Grotesk (enger gesetzt, −4)",
-        "montserrat-eng6": "Geometrische Grotesk (enger gesetzt, −6)"
+        "montserrat-eng5": "Geometrische Grotesk (enger gesetzt, −5)",
+        "raleway-eng3": "Elegante geometr. Grotesk (enger, −3)",
+        "raleway-eng4": "Elegante geometr. Grotesk (enger, −4)",
+        "raleway-eng5": "Elegante geometr. Grotesk (enger, −5)"
       }
     },
     {
@@ -52,15 +43,11 @@
       "kind": "text",
       "werte": {
         "original": "Schmal — die Vorlagen sind darauf gesetzt",
-        "tahoma": "Breit — das Gegenteil von Narrow",
-        "montserrat": "Normal, etwas breiter",
-        "outfit": "Normal",
-        "urbanist": "Normal",
-        "raleway": "Normal",
-        "barlow-semi-condensed": "Schmal — als einzige nah am Original",
-        "saira-semi-condensed": "Schmal — wie Barlow nah am Original",
         "montserrat-eng4": "Enger gesetzt (Tracking −4) — kompakter",
-        "montserrat-eng6": "Deutlich enger (Tracking −6) — fast condensed"
+        "montserrat-eng5": "Deutlich enger (Tracking −5)",
+        "raleway-eng3": "Leicht enger (Tracking −3)",
+        "raleway-eng4": "Enger gesetzt (Tracking −4)",
+        "raleway-eng5": "Deutlich enger (Tracking −5)"
       }
     },
     {
@@ -68,15 +55,11 @@
       "kind": "text",
       "werte": {
         "original": "4 genutzt (Book, Bold, Black, Ultra)",
-        "tahoma": "Nur 2 (Regular, Bold)",
-        "montserrat": "9 (Thin – Black)",
-        "outfit": "9 (100 – 900)",
-        "urbanist": "Thin – Black + Kursive",
-        "raleway": "18 (Thin – Black + Kursive)",
-        "barlow-semi-condensed": "9 (Thin – Black)",
-        "saira-semi-condensed": "9 (Thin – Black)",
         "montserrat-eng4": "9 (Thin – Black)",
-        "montserrat-eng6": "9 (Thin – Black)"
+        "montserrat-eng5": "9 (Thin – Black)",
+        "raleway-eng3": "18 (Thin – Black + Kursive)",
+        "raleway-eng4": "18 (Thin – Black + Kursive)",
+        "raleway-eng5": "18 (Thin – Black + Kursive)"
       }
     },
     {
@@ -84,15 +67,11 @@
       "kind": "text",
       "werte": {
         "original": "Proprietär (Hoefler & Co. / Monotype)",
-        "tahoma": "Proprietär (Microsoft)",
-        "montserrat": "SIL OFL 1.1 — frei",
-        "outfit": "SIL OFL 1.1 — frei",
-        "urbanist": "SIL OFL 1.1 — frei",
-        "raleway": "SIL OFL 1.1 — frei",
-        "barlow-semi-condensed": "SIL OFL 1.1 — frei",
-        "saira-semi-condensed": "SIL OFL 1.1 — frei",
         "montserrat-eng4": "SIL OFL 1.1 — frei",
-        "montserrat-eng6": "SIL OFL 1.1 — frei"
+        "montserrat-eng5": "SIL OFL 1.1 — frei",
+        "raleway-eng3": "SIL OFL 1.1 — frei",
+        "raleway-eng4": "SIL OFL 1.1 — frei",
+        "raleway-eng5": "SIL OFL 1.1 — frei"
       }
     },
     {
@@ -101,15 +80,11 @@
       "hinweis": "Darf die Schrift zusammen mit den Vorlagen an Bezirks-/Landesgruppen und Druckereien weitergegeben werden?",
       "werte": {
         "original": false,
-        "tahoma": false,
-        "montserrat": true,
-        "outfit": true,
-        "urbanist": true,
-        "raleway": true,
-        "barlow-semi-condensed": true,
-        "saira-semi-condensed": true,
         "montserrat-eng4": true,
-        "montserrat-eng6": true
+        "montserrat-eng5": true,
+        "raleway-eng3": true,
+        "raleway-eng4": true,
+        "raleway-eng5": true
       }
     },
     {
@@ -118,15 +93,11 @@
       "hinweis": "Bleiben Zeilenumbrüche und Abstände der bestehenden Vorlagen erhalten, ohne neu zu setzen?",
       "werte": {
         "original": 3,
-        "tahoma": 0,
-        "montserrat": 1,
-        "outfit": 1,
-        "urbanist": 1,
-        "raleway": 1,
-        "barlow-semi-condensed": 3,
-        "saira-semi-condensed": 3,
         "montserrat-eng4": 2,
-        "montserrat-eng6": 2
+        "montserrat-eng5": 2,
+        "raleway-eng3": 1,
+        "raleway-eng4": 2,
+        "raleway-eng5": 2
       }
     },
     {
@@ -135,15 +106,11 @@
       "hinweis": "Wie ähnlich wirkt das Schriftbild dem gewohnten Gotham?",
       "werte": {
         "original": 3,
-        "tahoma": 0,
-        "montserrat": 3,
-        "outfit": 2,
-        "urbanist": 2,
-        "raleway": 2,
-        "barlow-semi-condensed": 2,
-        "saira-semi-condensed": 3,
         "montserrat-eng4": 3,
-        "montserrat-eng6": 3
+        "montserrat-eng5": 3,
+        "raleway-eng3": 2,
+        "raleway-eng4": 2,
+        "raleway-eng5": 2
       }
     },
     {
@@ -152,15 +119,11 @@
       "hinweis": "Tragfähigkeit der schweren Schnitte für plakative Headlines.",
       "werte": {
         "original": 3,
-        "tahoma": 1,
-        "montserrat": 3,
-        "outfit": 3,
-        "urbanist": 2,
-        "raleway": 3,
-        "barlow-semi-condensed": 3,
-        "saira-semi-condensed": 3,
         "montserrat-eng4": 3,
-        "montserrat-eng6": 3
+        "montserrat-eng5": 3,
+        "raleway-eng3": 3,
+        "raleway-eng4": 3,
+        "raleway-eng5": 3
       }
     },
     {
@@ -169,15 +132,11 @@
       "hinweis": "Robustheit im Impressum / in Kleinsttexten.",
       "werte": {
         "original": 3,
-        "tahoma": 3,
-        "montserrat": 2,
-        "outfit": 2,
-        "urbanist": 2,
-        "raleway": 1,
-        "barlow-semi-condensed": 3,
-        "saira-semi-condensed": 2,
         "montserrat-eng4": 2,
-        "montserrat-eng6": 1
+        "montserrat-eng5": 2,
+        "raleway-eng3": 1,
+        "raleway-eng4": 1,
+        "raleway-eng5": 1
       }
     },
     {
@@ -186,15 +145,11 @@
       "hinweis": "Eigenständiger Charakter statt austauschbarer System-Anmutung.",
       "werte": {
         "original": 3,
-        "tahoma": 0,
-        "montserrat": 3,
-        "outfit": 2,
-        "urbanist": 1,
-        "raleway": 3,
-        "barlow-semi-condensed": 2,
-        "saira-semi-condensed": 2,
         "montserrat-eng4": 3,
-        "montserrat-eng6": 3
+        "montserrat-eng5": 3,
+        "raleway-eng3": 3,
+        "raleway-eng4": 3,
+        "raleway-eng5": 3
       }
     },
     {
@@ -202,15 +157,11 @@
       "kind": "text",
       "werte": {
         "original": "Gestalterisch top, aber lizenzpflichtig und nicht weitergebbar — der Anlass dieser Suche.",
-        "tahoma": "Überall vorhanden und klein gut lesbar, aber breit, nur zwei Schnitte, proprietär — kein Marken-Ersatz.",
-        "montserrat": "Stärkste Wahl, sobald die Layouts neu gesetzt werden — der nächste freie Gotham-Verwandte.",
-        "outfit": "Sauber und modern, aber monolinear und kühl — solide, nicht erste Wahl.",
-        "urbanist": "Vielseitig, aber generisch und mit geringer Wiedererkennung — kein klares Markenprofil.",
-        "raleway": "Ausdrucksstark für Headlines, im Kleinsttext fragil — Display-Schrift, kein Allrounder.",
-        "barlow-semi-condensed": "Empfehlung: einzige schmale, frei weitergebbare Alternative — Vorlagen bleiben ohne Umbau nutzbar.",
-        "saira-semi-condensed": "Die freie, geometrischere „Schwester\" von Barlow: gleiche schmale Laufweite (Layout-Treue), aber plakativer und stärker geometrisch — die stärkste freie Alternative, wenn ein markanteres, Gotham-näheres Schriftbild gewünscht ist.",
         "montserrat-eng4": "Montserrat-Look, ausgewogen enger gesetzt — schließt die Abstands-Lücke ohne zu drängen.",
-        "montserrat-eng6": "Montserrat noch dichter — nahe condensed-Anmutung; Kleintext etwas straffer."
+        "montserrat-eng5": "Montserrat noch etwas dichter als −4 — kompakter, im Fließtext weiter ruhig lesbar.",
+        "raleway-eng3": "Raleway behutsam verengt — eleganter Charakter bleibt, luftigste der drei Stufen.",
+        "raleway-eng4": "Raleway ausgewogen verdichtet — elegant und deutlich kompakter.",
+        "raleway-eng5": "Raleway am dichtesten — nahe condensed; markante Formen rücken eng, Kleinsttext anspruchsvoll."
       }
     }
   ]
