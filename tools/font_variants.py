@@ -63,6 +63,21 @@ def load_alternatives(path: str | Path | None = None) -> dict:
     return data
 
 
+def resolve_files(data: dict, entry: dict) -> tuple[str, list[str]]:
+    """Resolve (dir-slug, file-list) for a font entry.
+
+    A tracking variant (e.g. ``montserrat-eng4``) carries no own font binaries;
+    it sets ``files_from: <slug>`` to borrow another entry's bundled files
+    (same family, only the run tracking differs). Returns the directory slug
+    under shared/fonts/alternatives/ and the list of font/license files.
+    """
+    src_slug = entry.get("files_from", entry["slug"])
+    files = entry.get("files")
+    if files is None and src_slug != entry["slug"]:
+        files = _entry_for(data, src_slug).get("files", [])
+    return src_slug, (files or [])
+
+
 def _entry_for(data: dict, slug: str) -> dict:
     """Resolve a font entry by slug."""
     by_slug = {e["slug"]: e for e in data["fonts"]}
@@ -100,8 +115,13 @@ def apply_font(
     root = tree.getroot()
 
     mapping = _weight_map(font_entry)
+    # Optional manual tracking (Scribus KERN, in %). Used by the tightened
+    # "<font> eng" comparison columns: the font has no condensed cut, so we
+    # pull letters and word spaces closer via negative tracking on the runs.
+    track = font_entry.get("track")
     replaced = 0
     for el in root.iter():
+        swapped_here = False
         for attr in _FONT_ATTRS:
             value = el.get(attr)
             if value is None or not value.startswith(_GOTHAM_PREFIX):
@@ -117,6 +137,10 @@ def apply_font(
                 )
             el.set(attr, new_value)
             replaced += 1
+            swapped_here = True
+        # Apply tracking to the actual text runs (ITEXT), not style defs.
+        if track is not None and swapped_here and el.tag == "ITEXT":
+            el.set("KERN", str(track))
 
     if replaced == 0:
         raise RuntimeError(f"no Gotham Narrow font reference found in {sla_path}")

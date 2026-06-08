@@ -54,6 +54,40 @@
       "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat/montserrat.sla"
     },
     {
+      "slug": "montserrat-eng4",
+      "name": "Montserrat eng (−4)",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/montserrat",
+      "family": "Montserrat",
+      "summary": "Montserrat mit ausgewogen verengtem Tracking (−4 %): gleiche, als beste empfundene Buchstabenform, aber spürbar kompaktere Buchstaben- und Wortabstände. Reaktion darauf, dass Montserrat von Haus aus breit läuft und es keinen offiziellen condensed Schnitt gibt. Wirkt natürlich, nichts drängt. Einsatz: Montserrat-Look ohne den lockeren Standard-Satz.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/montserrat-eng4/montserrat-eng4.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat-eng4/montserrat-eng4.sla"
+    },
+    {
+      "slug": "montserrat-eng6",
+      "name": "Montserrat eng (−6)",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/montserrat",
+      "family": "Montserrat",
+      "summary": "Montserrat mit stärker verengtem Tracking (−6 %): noch dichter, näher an einer condensed-Anmutung. Maximale Verdichtung, bevor der Satz gedrängt wirkt. Einsatz, wenn der Montserrat-Look so schmal wie sinnvoll laufen soll.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/montserrat-eng6/montserrat-eng6.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat-eng6/montserrat-eng6.sla"
+    },
+    {
       "slug": "outfit",
       "name": "Outfit",
       "license": "SIL OFL 1.1",
@@ -174,6 +208,14 @@
         "saira-semi-condensed": {
           "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-01.png",
           "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-01-hires.png"
+        },
+        "montserrat-eng4": {
+          "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-01.png",
+          "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-01-hires.png"
+        },
+        "montserrat-eng6": {
+          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-01.png",
+          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-01-hires.png"
         }
       }
     },
@@ -211,6 +253,14 @@
         "saira-semi-condensed": {
           "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-02.png",
           "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-02-hires.png"
+        },
+        "montserrat-eng4": {
+          "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-02.png",
+          "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-02-hires.png"
+        },
+        "montserrat-eng6": {
+          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-02.png",
+          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-02-hires.png"
         }
       }
     },
@@ -248,6 +298,14 @@
         "saira-semi-condensed": {
           "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-03.png",
           "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-03-hires.png"
+        },
+        "montserrat-eng4": {
+          "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-03.png",
+          "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-03-hires.png"
+        },
+        "montserrat-eng6": {
+          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-03.png",
+          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-03-hires.png"
         }
       }
     },
@@ -285,6 +343,14 @@
         "saira-semi-condensed": {
           "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-04.png",
           "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-04-hires.png"
+        },
+        "montserrat-eng4": {
+          "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-04.png",
+          "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-04-hires.png"
+        },
+        "montserrat-eng6": {
+          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-04.png",
+          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-04-hires.png"
         }
       }
     },
@@ -322,6 +388,14 @@
         "saira-semi-condensed": {
           "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-05.png",
           "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-05-hires.png"
+        },
+        "montserrat-eng4": {
+          "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-05.png",
+          "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-05-hires.png"
+        },
+        "montserrat-eng6": {
+          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-05.png",
+          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-05-hires.png"
         }
       }
     },
@@ -359,6 +433,14 @@
         "saira-semi-condensed": {
           "thumb": "/schriften/saira-semi-condensed/saira-semi-condensed-page-06.png",
           "hires": "/schriften/saira-semi-condensed/saira-semi-condensed-page-06-hires.png"
+        },
+        "montserrat-eng4": {
+          "thumb": "/schriften/montserrat-eng4/montserrat-eng4-page-06.png",
+          "hires": "/schriften/montserrat-eng4/montserrat-eng4-page-06-hires.png"
+        },
+        "montserrat-eng6": {
+          "thumb": "/schriften/montserrat-eng6/montserrat-eng6-page-06.png",
+          "hires": "/schriften/montserrat-eng6/montserrat-eng6-page-06-hires.png"
         }
       }
     }

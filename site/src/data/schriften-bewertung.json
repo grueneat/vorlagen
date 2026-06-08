@@ -42,7 +42,9 @@
         "urbanist": "Geometrische Grotesk",
         "raleway": "Elegante geometrische Grotesk",
         "barlow-semi-condensed": "Grotesk, leicht schmal (semi-condensed)",
-        "saira-semi-condensed": "Geometrische Grotesk, schmal (semi-condensed)"
+        "saira-semi-condensed": "Geometrische Grotesk, schmal (semi-condensed)",
+        "montserrat-eng4": "Geometrische Grotesk (enger gesetzt, −4)",
+        "montserrat-eng6": "Geometrische Grotesk (enger gesetzt, −6)"
       }
     },
     {
@@ -56,7 +58,9 @@
         "urbanist": "Normal",
         "raleway": "Normal",
         "barlow-semi-condensed": "Schmal — als einzige nah am Original",
-        "saira-semi-condensed": "Schmal — wie Barlow nah am Original"
+        "saira-semi-condensed": "Schmal — wie Barlow nah am Original",
+        "montserrat-eng4": "Enger gesetzt (Tracking −4) — kompakter",
+        "montserrat-eng6": "Deutlich enger (Tracking −6) — fast condensed"
       }
     },
     {
@@ -70,7 +74,9 @@
         "urbanist": "Thin – Black + Kursive",
         "raleway": "18 (Thin – Black + Kursive)",
         "barlow-semi-condensed": "9 (Thin – Black)",
-        "saira-semi-condensed": "9 (Thin – Black)"
+        "saira-semi-condensed": "9 (Thin – Black)",
+        "montserrat-eng4": "9 (Thin – Black)",
+        "montserrat-eng6": "9 (Thin – Black)"
       }
     },
     {
@@ -84,7 +90,9 @@
         "urbanist": "SIL OFL 1.1 — frei",
         "raleway": "SIL OFL 1.1 — frei",
         "barlow-semi-condensed": "SIL OFL 1.1 — frei",
-        "saira-semi-condensed": "SIL OFL 1.1 — frei"
+        "saira-semi-condensed": "SIL OFL 1.1 — frei",
+        "montserrat-eng4": "SIL OFL 1.1 — frei",
+        "montserrat-eng6": "SIL OFL 1.1 — frei"
       }
     },
     {
@@ -99,7 +107,9 @@
         "urbanist": true,
         "raleway": true,
         "barlow-semi-condensed": true,
-        "saira-semi-condensed": true
+        "saira-semi-condensed": true,
+        "montserrat-eng4": true,
+        "montserrat-eng6": true
       }
     },
     {
@@ -114,7 +124,9 @@
         "urbanist": 1,
         "raleway": 1,
         "barlow-semi-condensed": 3,
-        "saira-semi-condensed": 3
+        "saira-semi-condensed": 3,
+        "montserrat-eng4": 2,
+        "montserrat-eng6": 2
       }
     },
     {
@@ -129,7 +141,9 @@
         "urbanist": 2,
         "raleway": 2,
         "barlow-semi-condensed": 2,
-        "saira-semi-condensed": 3
+        "saira-semi-condensed": 3,
+        "montserrat-eng4": 3,
+        "montserrat-eng6": 3
       }
     },
     {
@@ -144,7 +158,9 @@
         "urbanist": 2,
         "raleway": 3,
         "barlow-semi-condensed": 3,
-        "saira-semi-condensed": 3
+        "saira-semi-condensed": 3,
+        "montserrat-eng4": 3,
+        "montserrat-eng6": 3
       }
     },
     {
@@ -159,7 +175,9 @@
         "urbanist": 2,
         "raleway": 1,
         "barlow-semi-condensed": 3,
-        "saira-semi-condensed": 2
+        "saira-semi-condensed": 2,
+        "montserrat-eng4": 2,
+        "montserrat-eng6": 1
       }
     },
     {
@@ -174,7 +192,9 @@
         "urbanist": 1,
         "raleway": 3,
         "barlow-semi-condensed": 2,
-        "saira-semi-condensed": 2
+        "saira-semi-condensed": 2,
+        "montserrat-eng4": 3,
+        "montserrat-eng6": 3
       }
     },
     {
@@ -188,7 +208,9 @@
         "urbanist": "Vielseitig, aber generisch und mit geringer Wiedererkennung — kein klares Markenprofil.",
         "raleway": "Ausdrucksstark für Headlines, im Kleinsttext fragil — Display-Schrift, kein Allrounder.",
         "barlow-semi-condensed": "Empfehlung: einzige schmale, frei weitergebbare Alternative — Vorlagen bleiben ohne Umbau nutzbar.",
-        "saira-semi-condensed": "Die freie, geometrischere „Schwester\" von Barlow: gleiche schmale Laufweite (Layout-Treue), aber plakativer und stärker geometrisch — die stärkste freie Alternative, wenn ein markanteres, Gotham-näheres Schriftbild gewünscht ist."
+        "saira-semi-condensed": "Die freie, geometrischere „Schwester\" von Barlow: gleiche schmale Laufweite (Layout-Treue), aber plakativer und stärker geometrisch — die stärkste freie Alternative, wenn ein markanteres, Gotham-näheres Schriftbild gewünscht ist.",
+        "montserrat-eng4": "Montserrat-Look, ausgewogen enger gesetzt — schließt die Abstands-Lücke ohne zu drängen.",
+        "montserrat-eng6": "Montserrat noch dichter — nahe condensed-Anmutung; Kleintext etwas straffer."
       }
     }
   ]

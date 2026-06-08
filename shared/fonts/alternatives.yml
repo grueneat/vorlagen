@@ -91,6 +91,45 @@ fonts:
       x-Höhe, keine schmale Variante → Texte können im Layout überlaufen.
       Unterschied: der „klassischste", wärmste Gotham-Ersatz. Einsatz:
       Standard-Empfehlung, wenn größtmögliche Nähe zu Gotham gewünscht ist.
+  # Montserrat-Tracking-Varianten (KEINE eigenen Schriftdateien — files_from
+  # leiht Montserrats TTFs). Montserrat hat keinen condensed/narrow Schnitt
+  # (existiert offiziell nicht); deshalb wird die als beste empfundene Schrift
+  # hier nur enger gesetzt: negatives Tracking (Scribus KERN) zieht Buchstaben
+  # UND Wortzwischenraeume zusammen. Zwei Stufen zum Vergleich.
+  - slug: montserrat-eng4
+    name: "Montserrat eng (−4)"
+    license: SIL OFL 1.1
+    source: "https://github.com/google/fonts/tree/main/ofl/montserrat"
+    family: "Montserrat"
+    files_from: montserrat
+    track: -4
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: ExtraBold
+      Ultra: Black
+    summary: >-
+      Montserrat mit ausgewogen verengtem Tracking (−4 %): gleiche, als beste
+      empfundene Buchstabenform, aber spürbar kompaktere Buchstaben- und
+      Wortabstände. Reaktion darauf, dass Montserrat von Haus aus breit läuft
+      und es keinen offiziellen condensed Schnitt gibt. Wirkt natürlich, nichts
+      drängt. Einsatz: Montserrat-Look ohne den lockeren Standard-Satz.
+  - slug: montserrat-eng6
+    name: "Montserrat eng (−6)"
+    license: SIL OFL 1.1
+    source: "https://github.com/google/fonts/tree/main/ofl/montserrat"
+    family: "Montserrat"
+    files_from: montserrat
+    track: -6
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: ExtraBold
+      Ultra: Black
+    summary: >-
+      Montserrat mit stärker verengtem Tracking (−6 %): noch dichter, näher an
+      einer condensed-Anmutung. Maximale Verdichtung, bevor der Satz gedrängt
+      wirkt. Einsatz, wenn der Montserrat-Look so schmal wie sinnvoll laufen soll.
   - slug: outfit
     name: Outfit
     license: SIL OFL 1.1
