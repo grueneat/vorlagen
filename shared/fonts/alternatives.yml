@@ -1,0 +1,180 @@
+# Freie, SIL-OFL-lizenzierte Gotham-Alternativen für die Schriften-Vergleichsseite.
+# Quelle/Begründung: .issues/42-freie-gotham-ersatzschriften-recherche-und-schriften-vergleichsseite/RESEARCH.md
+#
+# target  — die zu ersetzende proprietäre Schrift (alle vier Gotham-Narrow-Schnitte)
+# flyer   — das Template, an dem die Alternativen verglichen werden
+# fonts   — Liste der 5 gewählten Familien:
+#   slug     — Kurzname (Verzeichnis- und URL-Slug)
+#   name     — Anzeigename
+#   license  — Lizenz (alle SIL OFL 1.1)
+#   source   — Bezugsquelle (github.com/google/fonts)
+#   family   — Family-Name, an den der Schnittname angehängt wird; Scribus
+#              referenziert die Schnitte als "<family> <Schnitt>"
+#   files    — gebündelte Schriftdateien unter shared/fonts/alternatives/<slug>/
+#   weights  — Gotham-Narrow-Schnitt -> Ersatz-Schnitt (Schnitt-Name, wie an
+#              `family` angehängt -> "<family> <Schnitt>")
+#   summary  — deutsche Kurz-Zusammenfassung (verbatim aus RESEARCH.md §2)
+#
+# Hinweis: Montserrat, Outfit, Urbanist und Raleway liegen bei Google Fonts
+# nur als [wght]-Variable-Fonts vor. Scribus kann pro Variable-Font nur einen
+# Schnitt ansprechen; daher werden mit tools/font_instantiate.py vier statische
+# Schnitt-TTFs je Familie erzeugt (family="<Base>" / subfamily="<Schnitt>"),
+# wie sie Barlow Semi Condensed bereits ausliefert. Barlow wird direkt als
+# statische Schnitte gebündelt.
+target: "Gotham Narrow"
+flyer: flyer-a6-hochformat-gruenes-cover
+fonts:
+  # Tahoma is NOT a free SIL-OFL alternative — it is a proprietary Microsoft
+  # system font, included here as a deliberate negative example for the
+  # decision comparison (it is the obvious "everyone already has it" pick,
+  # but a poor brand fit). Its .ttf binaries are git-ignored (see .gitignore);
+  # only the raster PNG previews are committed. Tahoma ships just two weights
+  # (Regular, Bold), so the four Gotham Narrow weights collapse onto them —
+  # Black and Ultra both fall back to Bold, which is itself part of the point.
+  - slug: tahoma
+    name: Tahoma
+    license: Proprietär (Microsoft)
+    source: "https://learn.microsoft.com/en-us/typography/font-list/tahoma"
+    family: "Tahoma"
+    # proprietary: rendered PDF embeds the font — fonts_compare_build.py keeps
+    # only the raster PNG previews and never commits/publishes the PDF.
+    proprietary: true
+    files:
+      - tahoma.ttf
+      - tahomabd.ttf
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: Bold
+      Ultra: Bold
+    summary: >-
+      Humanistische Grotesk, die Matthew Carter 1994 für Microsoft zur
+      Bildschirm-Lesbarkeit bei kleinen Pixelgrößen entwarf — eine UI-/System-
+      Schrift, keine Markenschrift. Vorteile: auf praktisch jedem Windows-
+      Rechner vorinstalliert, sehr robust und gut lesbar bei Kleinstgrößen.
+      Nachteile: läuft breit (Gegenteil von Gotham Narrow → Texte überlaufen,
+      Umbrüche verschieben sich), nur zwei Schnitte (Regular, Bold) → Black und
+      Ultra fallen auf Bold zusammen, Headlines verlieren ihre Wucht;
+      proprietär, darf nicht mit den Vorlagen weitergegeben werden. Unterschied:
+      die „Büro-Standard"-Option ohne gestalterischen Anspruch. Einsatz: hier
+      bewusst als abschreckendes Beispiel — kein Marken-Ersatz für Gotham.
+  - slug: montserrat
+    name: Montserrat
+    license: SIL OFL 1.1
+    source: "https://github.com/google/fonts/tree/main/ofl/montserrat"
+    family: "Montserrat"
+    files:
+      - Montserrat-Regular.ttf
+      - Montserrat-Bold.ttf
+      - Montserrat-ExtraBold.ttf
+      - Montserrat-Black.ttf
+      - OFL.txt
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: ExtraBold
+      Ultra: Black
+    summary: >-
+      Geometrische Grotesk, von Plakatschriften aus Buenos Aires inspiriert
+      (wie Gotham von New Yorker Beschilderung), sehr nahe Proportionen (~88 %
+      Übereinstimmung in Fachvergleichen). Vorteile: bekannteste freie
+      Gotham-Alternative, 9 Schnitte Thin–Black, sehr breite Sprachunterstützung,
+      ausgereift. Nachteile: läuft etwas breiter als Gotham Narrow, große
+      x-Höhe, keine schmale Variante → Texte können im Layout überlaufen.
+      Unterschied: der „klassischste", wärmste Gotham-Ersatz. Einsatz:
+      Standard-Empfehlung, wenn größtmögliche Nähe zu Gotham gewünscht ist.
+  - slug: outfit
+    name: Outfit
+    license: SIL OFL 1.1
+    source: "https://github.com/google/fonts/tree/main/ofl/outfit"
+    family: "Outfit"
+    files:
+      - Outfit-Regular.ttf
+      - Outfit-Bold.ttf
+      - Outfit-ExtraBold.ttf
+      - Outfit-Black.ttf
+      - OFL.txt
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: ExtraBold
+      Ultra: Black
+    summary: >-
+      Rein geometrische, monolineare Konstruktion mit neutraler Anmutung wie
+      Gotham. Vorteile: sehr aufgeräumt/modern, gleichmäßige Strichstärke, 9
+      Gewichte (100–900), display-stark. Nachteile: monolinear → wirkt
+      kühler/technischer, weniger „Charakter"; nicht schmal. Unterschied: die
+      sachlichste, neutralste Option. Einsatz: moderne, klare Gestaltung,
+      Headlines und kurze Texte.
+  - slug: urbanist
+    name: Urbanist
+    license: SIL OFL 1.1
+    source: "https://github.com/google/fonts/tree/main/ofl/urbanist"
+    family: "Urbanist"
+    files:
+      - Urbanist-Regular.ttf
+      - Urbanist-Bold.ttf
+      - Urbanist-ExtraBold.ttf
+      - Urbanist-Black.ttf
+      - OFL.txt
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: ExtraBold
+      Ultra: Black
+    summary: >-
+      Modernistische geometrische Grotesk aus elementaren Formen, neutral wie
+      Gotham. Vorteile: variabler Font, fein abgestufte Gewichte Thin–Black plus
+      Kursive, sehr vielseitig. Nachteile: geringerer Wiedererkennungswert,
+      etwas generisch; nicht schmal. Unterschied: am stärksten web-/UI-orientiert.
+      Einsatz: flexible Nutzung über viele Gewichte, gut wenn Kursive gebraucht
+      werden.
+  - slug: raleway
+    name: Raleway
+    license: SIL OFL 1.1
+    source: "https://github.com/google/fonts/tree/main/ofl/raleway"
+    family: "Raleway"
+    files:
+      - Raleway-Regular.ttf
+      - Raleway-Bold.ttf
+      - Raleway-ExtraBold.ttf
+      - Raleway-Black.ttf
+      - OFL.txt
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: ExtraBold
+      Ultra: Black
+    summary: >-
+      Elegante geometrische Grotesk; gilt in Fachquellen als die ähnlichste
+      Gotham-Alternative im Google-Fonts-Verzeichnis; 18 Schnitte Thin–Black +
+      Kursive. Vorteile: sehr elegant in feinen Schnitten, ausdrucksstarke
+      Headlines. Nachteile: in feinen Gewichten zerbrechlich, markante
+      Detailformen (z. B. „w") → für 6-pt-Kleintext weniger robust; nicht
+      schmal. Unterschied: die ausdrucksstärkste, „eleganteste" Option.
+      Einsatz: Headlines, Cover, Display — weniger für Kleinsttext.
+  - slug: barlow-semi-condensed
+    name: Barlow Semi Condensed
+    license: SIL OFL 1.1
+    source: "https://github.com/google/fonts/tree/main/ofl/barlowsemicondensed"
+    family: "Barlow Semi Condensed"
+    files:
+      - BarlowSemiCondensed-Regular.ttf
+      - BarlowSemiCondensed-Bold.ttf
+      - BarlowSemiCondensed-ExtraBold.ttf
+      - BarlowSemiCondensed-Black.ttf
+      - OFL.txt
+    weights:
+      Book: Regular
+      Bold: Bold
+      Black: ExtraBold
+      Ultra: Black
+    summary: >-
+      Leicht schmal laufende Grotesk mit geometrisch-„kalifornischem" Charakter;
+      die einzige der fünf, die der schmalen Laufweite von Gotham Narrow
+      nahekommt. Vorteile: schmale Proportionen → beste Layout-Treue zum
+      Narrow-Original, sehr großer Schnittumfang Thin–Black, gut lesbar auch
+      klein. Nachteile: eher grotesk als rein geometrisch → nüchterner;
+      semi-condensed wirkt weniger „luftig" als Gotham. Unterschied: einzige
+      schmale Variante, beste Passung zur bestehenden Geometrie der Vorlagen.
+      Einsatz: erste Wahl, wenn die Layouts ohne Umbau übernommen werden sollen.

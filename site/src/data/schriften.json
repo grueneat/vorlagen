@@ -1,0 +1,325 @@
+{
+  "target": "Gotham Narrow",
+  "flyer": "flyer-a6-hochformat-gruenes-cover",
+  "rendered": true,
+  "fonts": [
+    {
+      "slug": "original",
+      "name": "Original — Gotham Narrow",
+      "license": "Proprietär (Hoefler & Co.)",
+      "source": "https://www.typography.com/fonts/gotham/styles/gothamnarrow",
+      "family": "Gotham Narrow",
+      "summary": "Die Schrift, in der die Vorlagen aktuell gesetzt sind: Gotham Narrow von Hoefler & Co. (heute Monotype). Sie ist hier als Vergleichs-Grundlage abgebildet — die unveränderte Original-Gestaltung, an der sich die fünf freien Alternativen messen lassen. Gotham Narrow ist eine kommerziell lizenzierte, proprietäre Schrift und darf nicht frei mit den Vorlagen weitergegeben werden; genau deshalb werden die freien, SIL-OFL-lizenzierten Ersatzschriften evaluiert. Diese Spalte wird nicht neu gerendert, sondern zeigt die regulären Render-Artefakte des Flyers.",
+      "weights": {
+        "Book": "Book",
+        "Bold": "Bold",
+        "Black": "Black",
+        "Ultra": "Ultra"
+      },
+      "original": true,
+      "pdf": "/schriften/original/original.pdf"
+    },
+    {
+      "slug": "tahoma",
+      "name": "Tahoma",
+      "license": "Proprietär (Microsoft)",
+      "source": "https://learn.microsoft.com/en-us/typography/font-list/tahoma",
+      "family": "Tahoma",
+      "summary": "Humanistische Grotesk, die Matthew Carter 1994 für Microsoft zur Bildschirm-Lesbarkeit bei kleinen Pixelgrößen entwarf — eine UI-/System- Schrift, keine Markenschrift. Vorteile: auf praktisch jedem Windows- Rechner vorinstalliert, sehr robust und gut lesbar bei Kleinstgrößen. Nachteile: läuft breit (Gegenteil von Gotham Narrow → Texte überlaufen, Umbrüche verschieben sich), nur zwei Schnitte (Regular, Bold) → Black und Ultra fallen auf Bold zusammen, Headlines verlieren ihre Wucht; proprietär, darf nicht mit den Vorlagen weitergegeben werden. Unterschied: die „Büro-Standard\"-Option ohne gestalterischen Anspruch. Einsatz: hier bewusst als abschreckendes Beispiel — kein Marken-Ersatz für Gotham.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "Bold",
+        "Ultra": "Bold"
+      },
+      "original": false,
+      "pdf": null,
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/tahoma/tahoma.sla"
+    },
+    {
+      "slug": "montserrat",
+      "name": "Montserrat",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/montserrat",
+      "family": "Montserrat",
+      "summary": "Geometrische Grotesk, von Plakatschriften aus Buenos Aires inspiriert (wie Gotham von New Yorker Beschilderung), sehr nahe Proportionen (~88 % Übereinstimmung in Fachvergleichen). Vorteile: bekannteste freie Gotham-Alternative, 9 Schnitte Thin–Black, sehr breite Sprachunterstützung, ausgereift. Nachteile: läuft etwas breiter als Gotham Narrow, große x-Höhe, keine schmale Variante → Texte können im Layout überlaufen. Unterschied: der „klassischste\", wärmste Gotham-Ersatz. Einsatz: Standard-Empfehlung, wenn größtmögliche Nähe zu Gotham gewünscht ist.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/montserrat/montserrat.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/montserrat/montserrat.sla"
+    },
+    {
+      "slug": "outfit",
+      "name": "Outfit",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/outfit",
+      "family": "Outfit",
+      "summary": "Rein geometrische, monolineare Konstruktion mit neutraler Anmutung wie Gotham. Vorteile: sehr aufgeräumt/modern, gleichmäßige Strichstärke, 9 Gewichte (100–900), display-stark. Nachteile: monolinear → wirkt kühler/technischer, weniger „Charakter\"; nicht schmal. Unterschied: die sachlichste, neutralste Option. Einsatz: moderne, klare Gestaltung, Headlines und kurze Texte.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/outfit/outfit.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/outfit/outfit.sla"
+    },
+    {
+      "slug": "urbanist",
+      "name": "Urbanist",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/urbanist",
+      "family": "Urbanist",
+      "summary": "Modernistische geometrische Grotesk aus elementaren Formen, neutral wie Gotham. Vorteile: variabler Font, fein abgestufte Gewichte Thin–Black plus Kursive, sehr vielseitig. Nachteile: geringerer Wiedererkennungswert, etwas generisch; nicht schmal. Unterschied: am stärksten web-/UI-orientiert. Einsatz: flexible Nutzung über viele Gewichte, gut wenn Kursive gebraucht werden.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/urbanist/urbanist.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/urbanist/urbanist.sla"
+    },
+    {
+      "slug": "raleway",
+      "name": "Raleway",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/raleway",
+      "family": "Raleway",
+      "summary": "Elegante geometrische Grotesk; gilt in Fachquellen als die ähnlichste Gotham-Alternative im Google-Fonts-Verzeichnis; 18 Schnitte Thin–Black + Kursive. Vorteile: sehr elegant in feinen Schnitten, ausdrucksstarke Headlines. Nachteile: in feinen Gewichten zerbrechlich, markante Detailformen (z. B. „w\") → für 6-pt-Kleintext weniger robust; nicht schmal. Unterschied: die ausdrucksstärkste, „eleganteste\" Option. Einsatz: Headlines, Cover, Display — weniger für Kleinsttext.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/raleway/raleway.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/raleway/raleway.sla"
+    },
+    {
+      "slug": "barlow-semi-condensed",
+      "name": "Barlow Semi Condensed",
+      "license": "SIL OFL 1.1",
+      "source": "https://github.com/google/fonts/tree/main/ofl/barlowsemicondensed",
+      "family": "Barlow Semi Condensed",
+      "summary": "Leicht schmal laufende Grotesk mit geometrisch-„kalifornischem\" Charakter; die einzige der fünf, die der schmalen Laufweite von Gotham Narrow nahekommt. Vorteile: schmale Proportionen → beste Layout-Treue zum Narrow-Original, sehr großer Schnittumfang Thin–Black, gut lesbar auch klein. Nachteile: eher grotesk als rein geometrisch → nüchterner; semi-condensed wirkt weniger „luftig\" als Gotham. Unterschied: einzige schmale Variante, beste Passung zur bestehenden Geometrie der Vorlagen. Einsatz: erste Wahl, wenn die Layouts ohne Umbau übernommen werden sollen.",
+      "weights": {
+        "Book": "Regular",
+        "Bold": "Bold",
+        "Black": "ExtraBold",
+        "Ultra": "Black"
+      },
+      "original": false,
+      "pdf": "/schriften/barlow-semi-condensed/barlow-semi-condensed.pdf",
+      "sla": "templates/flyer-a6-hochformat-gruenes-cover/fonts/barlow-semi-condensed/barlow-semi-condensed.sla"
+    }
+  ],
+  "pages": [
+    {
+      "page": 1,
+      "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-01.png",
+          "hires": "/schriften/original/original-page-01-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-01.png",
+          "hires": "/schriften/tahoma/tahoma-page-01-hires.png"
+        },
+        "montserrat": {
+          "thumb": "/schriften/montserrat/montserrat-page-01.png",
+          "hires": "/schriften/montserrat/montserrat-page-01-hires.png"
+        },
+        "outfit": {
+          "thumb": "/schriften/outfit/outfit-page-01.png",
+          "hires": "/schriften/outfit/outfit-page-01-hires.png"
+        },
+        "urbanist": {
+          "thumb": "/schriften/urbanist/urbanist-page-01.png",
+          "hires": "/schriften/urbanist/urbanist-page-01-hires.png"
+        },
+        "raleway": {
+          "thumb": "/schriften/raleway/raleway-page-01.png",
+          "hires": "/schriften/raleway/raleway-page-01-hires.png"
+        },
+        "barlow-semi-condensed": {
+          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-01.png",
+          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-01-hires.png"
+        }
+      }
+    },
+    {
+      "page": 2,
+      "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-02.png",
+          "hires": "/schriften/original/original-page-02-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-02.png",
+          "hires": "/schriften/tahoma/tahoma-page-02-hires.png"
+        },
+        "montserrat": {
+          "thumb": "/schriften/montserrat/montserrat-page-02.png",
+          "hires": "/schriften/montserrat/montserrat-page-02-hires.png"
+        },
+        "outfit": {
+          "thumb": "/schriften/outfit/outfit-page-02.png",
+          "hires": "/schriften/outfit/outfit-page-02-hires.png"
+        },
+        "urbanist": {
+          "thumb": "/schriften/urbanist/urbanist-page-02.png",
+          "hires": "/schriften/urbanist/urbanist-page-02-hires.png"
+        },
+        "raleway": {
+          "thumb": "/schriften/raleway/raleway-page-02.png",
+          "hires": "/schriften/raleway/raleway-page-02-hires.png"
+        },
+        "barlow-semi-condensed": {
+          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-02.png",
+          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-02-hires.png"
+        }
+      }
+    },
+    {
+      "page": 3,
+      "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-03.png",
+          "hires": "/schriften/original/original-page-03-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-03.png",
+          "hires": "/schriften/tahoma/tahoma-page-03-hires.png"
+        },
+        "montserrat": {
+          "thumb": "/schriften/montserrat/montserrat-page-03.png",
+          "hires": "/schriften/montserrat/montserrat-page-03-hires.png"
+        },
+        "outfit": {
+          "thumb": "/schriften/outfit/outfit-page-03.png",
+          "hires": "/schriften/outfit/outfit-page-03-hires.png"
+        },
+        "urbanist": {
+          "thumb": "/schriften/urbanist/urbanist-page-03.png",
+          "hires": "/schriften/urbanist/urbanist-page-03-hires.png"
+        },
+        "raleway": {
+          "thumb": "/schriften/raleway/raleway-page-03.png",
+          "hires": "/schriften/raleway/raleway-page-03-hires.png"
+        },
+        "barlow-semi-condensed": {
+          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-03.png",
+          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-03-hires.png"
+        }
+      }
+    },
+    {
+      "page": 4,
+      "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-04.png",
+          "hires": "/schriften/original/original-page-04-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-04.png",
+          "hires": "/schriften/tahoma/tahoma-page-04-hires.png"
+        },
+        "montserrat": {
+          "thumb": "/schriften/montserrat/montserrat-page-04.png",
+          "hires": "/schriften/montserrat/montserrat-page-04-hires.png"
+        },
+        "outfit": {
+          "thumb": "/schriften/outfit/outfit-page-04.png",
+          "hires": "/schriften/outfit/outfit-page-04-hires.png"
+        },
+        "urbanist": {
+          "thumb": "/schriften/urbanist/urbanist-page-04.png",
+          "hires": "/schriften/urbanist/urbanist-page-04-hires.png"
+        },
+        "raleway": {
+          "thumb": "/schriften/raleway/raleway-page-04.png",
+          "hires": "/schriften/raleway/raleway-page-04-hires.png"
+        },
+        "barlow-semi-condensed": {
+          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-04.png",
+          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-04-hires.png"
+        }
+      }
+    },
+    {
+      "page": 5,
+      "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-05.png",
+          "hires": "/schriften/original/original-page-05-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-05.png",
+          "hires": "/schriften/tahoma/tahoma-page-05-hires.png"
+        },
+        "montserrat": {
+          "thumb": "/schriften/montserrat/montserrat-page-05.png",
+          "hires": "/schriften/montserrat/montserrat-page-05-hires.png"
+        },
+        "outfit": {
+          "thumb": "/schriften/outfit/outfit-page-05.png",
+          "hires": "/schriften/outfit/outfit-page-05-hires.png"
+        },
+        "urbanist": {
+          "thumb": "/schriften/urbanist/urbanist-page-05.png",
+          "hires": "/schriften/urbanist/urbanist-page-05-hires.png"
+        },
+        "raleway": {
+          "thumb": "/schriften/raleway/raleway-page-05.png",
+          "hires": "/schriften/raleway/raleway-page-05-hires.png"
+        },
+        "barlow-semi-condensed": {
+          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-05.png",
+          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-05-hires.png"
+        }
+      }
+    },
+    {
+      "page": 6,
+      "fonts": {
+        "original": {
+          "thumb": "/schriften/original/original-page-06.png",
+          "hires": "/schriften/original/original-page-06-hires.png"
+        },
+        "tahoma": {
+          "thumb": "/schriften/tahoma/tahoma-page-06.png",
+          "hires": "/schriften/tahoma/tahoma-page-06-hires.png"
+        },
+        "montserrat": {
+          "thumb": "/schriften/montserrat/montserrat-page-06.png",
+          "hires": "/schriften/montserrat/montserrat-page-06-hires.png"
+        },
+        "outfit": {
+          "thumb": "/schriften/outfit/outfit-page-06.png",
+          "hires": "/schriften/outfit/outfit-page-06-hires.png"
+        },
+        "urbanist": {
+          "thumb": "/schriften/urbanist/urbanist-page-06.png",
+          "hires": "/schriften/urbanist/urbanist-page-06-hires.png"
+        },
+        "raleway": {
+          "thumb": "/schriften/raleway/raleway-page-06.png",
+          "hires": "/schriften/raleway/raleway-page-06-hires.png"
+        },
+        "barlow-semi-condensed": {
+          "thumb": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-06.png",
+          "hires": "/schriften/barlow-semi-condensed/barlow-semi-condensed-page-06-hires.png"
+        }
+      }
+    }
+  ]
+}

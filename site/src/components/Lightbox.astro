@@ -1,8 +1,8 @@
 ---
 /**
- * Shared Bildvorschau-Overlay — konsolidiert die lokal duplizierten
- * Lightbox-Implementierungen (templates/[...id].astro, experiments/[id].astro)
- * auf eine einzige Lösung über das Design-System
+ * Shared Bildvorschau-Overlay — konsolidiert die drei lokal duplizierten
+ * Lightbox-Implementierungen (templates/[...id].astro, experiments/[id].astro,
+ * schriften/index.astro) auf eine einzige Lösung über das Design-System
  * `<dialog class="gat-modal">`.
  *
  * Markup-Grundgerüst pro Seite einmal einbinden:
@@ -22,7 +22,7 @@
  *   </a>
  *
  * Die Seite kann eigenes JS hinzufügen, das auf das `lightbox:open`-Event
- * lauscht (z.B. um ein seitenspezifisches Extras-Panel zu befüllen).
+ * lauscht (z.B. das Schriften-Switcher-Panel füllt sich so).
  */
 
 interface Props {
@@ -189,7 +189,7 @@ const { id, hasNav = false, hasExtras = false } = Astro.props as Props;
       emit('lightbox:open', { src: src, label: text });
     }
 
-    // Public API (für seitenspezifische Erweiterungen).
+    // Public API (für seitenspezifische Erweiterungen, z.B. Schriften-Switcher).
     dialog.__lightbox = {
       open: open,
       openAt: openAt,

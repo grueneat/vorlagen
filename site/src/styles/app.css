@@ -12,8 +12,11 @@
  *     .app-rank-*,
  *     .app-drag-handle
  *   - .app-cta          Index-CTA-Banner als Callout-Variante
+ *   - .app-eval-*       Seitenlokale Ergaenzungen zur .gat-table-
+ *                       Bewertungstabelle (Row-Header-Sticky etc.)
  *
- * v2.2-Adoption (v22a): Toast (.app-toast) ist durch .gat-toast(er)
+ * v2.2-Adoption (v22a): Toast (.app-toast) und Tabelle (.app-eval-
+ * table*) sind durch .gat-toast(er) / .gat-table --sticky-col
  * ersetzt. Nur kleine seitenlokale Erweiterungen bleiben hier.
  *
  * Alle Farben/Radien/Schatten beziehen sich auf DS-Tokens
@@ -45,7 +48,7 @@ h3.gat-headline {
 /* ============================================================
  * Lightbox — eine Implementierung statt drei
  * (Issue #126 Phase 2: konsolidiert templates/[...id].astro,
- *  experiments/[id].astro)
+ *  experiments/[id].astro, schriften/index.astro)
  *
  * Markup: <dialog class="gat-modal gat-modal--wide gat-modal--blur app-lightbox">
  *   ↳ .app-lightbox__close      (Schließen-Knopf)
@@ -186,6 +189,255 @@ h3.gat-headline {
 }
 
 /* ============================================================
+ * Schriften-Vergleichsseite (Page-spezifisch)
+ * Komponenten: Specimen-Grid, Cover-Vergleich, Font-Karten,
+ *              Seitenvergleich-Stack, Palette-Chips.
+ * Issue #126 Phase 2: aus Inline-Styles in der Page extrahiert.
+ * ============================================================ */
+.app-specimen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 1.25rem;
+  margin: 1.25rem 0 2.5rem 0;
+}
+.app-specimen {
+  background: white;
+  border-radius: var(--gat-web-radius-card);
+  box-shadow: var(--gat-web-shadow);
+  padding: 1.1rem 1.25rem;
+}
+.app-specimen__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.app-specimen__headline {
+  font-weight: 900;
+  font-size: 1.6rem;
+  line-height: 1.15;
+  color: var(--gruen-dunkel);
+  margin: 0.6rem 0 0.7rem 0;
+}
+.app-specimen__weights {
+  border-top: 1px solid var(--gat-web-hairline);
+  padding-top: 0.5rem;
+  font-size: 1.05rem;
+}
+.app-specimen__glyphs {
+  font-weight: 400;
+  font-size: 0.82rem;
+  color: var(--gat-web-text);
+  word-break: break-word;
+  margin-top: 0.6rem;
+}
+.app-specimen__copy {
+  font-weight: 400;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--gat-web-text-soft);
+  margin-top: 0.5rem;
+}
+.app-specimen__warning {
+  margin: 0.7rem 0 0 0;
+  font-size: 0.78em;
+  color: var(--gat-web-tag-error-text);
+}
+
+/* Bewertungstabelle (schriften/index.astro).
+   Visuelle Basis (Zebra, sticky-Col, Padding, Hairlines, Header-
+   Typografie) kommt aus DS v2.2 .gat-table --sticky-col --compact
+   --zebra im .gat-table-scroll-Wrapper.
+
+   Diese seitenlokalen Regeln ergaenzen nur das, was die DS-Klasse
+   nicht abdeckt:
+   - Row-Header (<th scope="row">) sticky: DS deckt nur td:first-child
+   - Hinweis-Untertitel im Row-Header
+   - Spalten-Tag-Lozenge im Spalten-Header */
+.app-eval-rowhead-sticky tbody th:first-child,
+.app-eval-rowhead-sticky tfoot th:first-child {
+  z-index: 1;
+  background: var(--gat-web-surface);
+  position: sticky;
+  left: 0;
+}
+.app-eval-rowhead-sticky.gat-table--zebra tbody tr:nth-child(2n) th:first-child {
+  background: var(--gat-web-table-row-stripe);
+}
+.app-eval-rowhead-hint {
+  font-weight: 400;
+  color: var(--gat-web-text-mute);
+  font-size: 0.86em;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.app-eval-col-tag {
+  margin-top: 0.25rem;
+  font-size: 0.72em;
+}
+
+.app-eval-rating { white-space: nowrap; }
+.app-eval-rating__dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin: 0 1px;
+}
+
+/* Palette-Chips unter "Headline auf Markenfarbe". */
+.app-palette {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 1.25rem 0;
+}
+.app-palette__chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82em;
+}
+.app-palette__swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--gat-web-radius-control);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* Cover-Grid + Karten (Headline auf Grün). */
+.app-cover-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+.app-cover {
+  border-radius: var(--gat-web-radius-card);
+  overflow: hidden;
+  box-shadow: var(--gat-web-shadow);
+}
+.app-cover__hero {
+  background: var(--gruen-dunkel);
+  padding: 1.4rem 1.25rem;
+}
+.app-cover__title {
+  font-weight: 900;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  color: white;
+}
+.app-cover__caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  font-size: 0.82em;
+}
+
+/* Font-Karten (Schriften im Überblick). */
+.app-font-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+  margin: 1.25rem 0 2.5rem 0;
+}
+.app-font-card {
+  background: white;
+  border-radius: var(--gat-web-radius-card);
+  box-shadow: var(--gat-web-shadow);
+  padding: 1.25rem;
+}
+.app-font-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.app-font-card__meta {
+  color: var(--gat-web-text-mute);
+  font-size: 0.85em;
+  margin-bottom: 0.6rem;
+}
+.app-font-card__summary {
+  margin: 0 0 0.75rem 0;
+  color: var(--gat-web-text);
+  font-size: 0.9em;
+}
+.app-font-card__action {
+  font-size: 0.85em;
+}
+
+/* Seitenvergleich am echten Flyer — Stack pro Seite. */
+.app-page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+.app-page-cols {
+  display: grid;
+  gap: 1rem;
+}
+.app-page-cell {
+  background: white;
+  padding: 0.5rem;
+  box-shadow: var(--gat-web-shadow);
+}
+.app-page-cell--original {
+  outline: 2px solid var(--gat-color-hellgruen);
+}
+.app-page-cell a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: zoom-in;
+}
+.app-page-cell a img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.app-page-cell__empty {
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gat-web-surface-sunk);
+  color: var(--gat-web-text-soft);
+  font-size: 0.8em;
+  text-align: center;
+  padding: 0.5rem;
+}
+.app-page-cell__caption {
+  text-align: center;
+  font-size: 0.78em;
+  margin-top: 0.4rem;
+  color: var(--gat-web-text-mute);
+}
+.app-page-cell__caption--original {
+  color: var(--gat-web-text);
+  font-weight: bold;
+}
+
+/* Schriften-Switcher-Tabs in der Lightbox-Extras-Leiste. */
+.app-schrift-tab {
+  border: none;
+  border-radius: var(--gat-web-radius-control);
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--gat-web-text);
+}
+.app-schrift-tab--active {
+  background: var(--gat-color-hellgruen);
+  color: var(--gat-web-text);
+  font-weight: bold;
+}
+
+/* ============================================================
  * Galerie-Grid + weiße Karten (#126 Phase 2, App-Namespace)
  * Wiederkehrend in index.astro, typ/[category].astro,
  * experiments/index.astro.
@@ -242,6 +494,27 @@ h3.gat-headline {
   padding-left: 1rem;
   color: var(--gat-web-text-mute);
   font-size: 0.85em;
+}
+
+/* ============================================================
+ * Schriften-Empfehlung Callout-Stapel — passt sich an die
+ * .gat-callout-Varianten an, ergänzt sie um Kicker + großen Namen.
+ * ============================================================ */
+.app-empfehlung-stack {
+  display: grid;
+  gap: 1rem;
+  margin: 1rem 0 2rem 0;
+}
+.app-empfehlung__kicker {
+  font-size: 0.78em;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.app-empfehlung__name {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin: 0.15rem 0 0.35rem 0;
 }
 
 /* ============================================================
