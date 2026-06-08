@@ -125,8 +125,9 @@ def install_fonts(data: dict) -> bool:
 
     copied = 0
     for entry in data["fonts"]:
-        src_dir = ALTERNATIVES_DIR / entry["slug"]
-        for fname in entry["files"]:
+        src_slug, files = font_variants.resolve_files(data, entry)
+        src_dir = ALTERNATIVES_DIR / src_slug
+        for fname in files:
             if not fname.lower().endswith((".ttf", ".otf", ".ttc")):
                 continue
             src = src_dir / fname

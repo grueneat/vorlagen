@@ -57,6 +57,8 @@ const specimens = [
   { slug: 'barlow-semi-condensed', name: 'Barlow Semi Condensed', dir: 'barlow-semi-condensed', base: 'BarlowSemiCondensed', web: true },
   { slug: 'saira-semi-condensed', name: 'Saira Semi Condensed', dir: 'saira-semi-condensed', base: 'SairaSemiCondensed', web: true },
   { slug: 'montserrat', name: 'Montserrat', dir: 'montserrat', base: 'Montserrat', web: true },
+  { slug: 'montserrat-eng4', name: 'Montserrat eng (−4)', dir: 'montserrat', base: 'Montserrat', web: true, track: '-0.04em' },
+  { slug: 'montserrat-eng6', name: 'Montserrat eng (−6)', dir: 'montserrat', base: 'Montserrat', web: true, track: '-0.06em' },
   { slug: 'outfit', name: 'Outfit', dir: 'outfit', base: 'Outfit', web: true },
   { slug: 'urbanist', name: 'Urbanist', dir: 'urbanist', base: 'Urbanist', web: true },
   { slug: 'raleway', name: 'Raleway', dir: 'raleway', base: 'Raleway', web: true },
@@ -64,6 +66,9 @@ const specimens = [
 ];
 const famOf = (s: { slug: string; web: boolean }) =>
   s.web ? `"Spec ${s.slug}", sans-serif` : 'Tahoma, "Segoe UI", Verdana, sans-serif';
+// Tracking variants ("Montserrat eng") carry an optional letter-spacing —
+// the live counterpart to the Scribus KERN used in the flyer renders.
+const lsOf = (s: { track?: string }) => (s.track ? `letter-spacing:${s.track};` : '');
 
 // @font-face block — built here so the src URLs carry the deploy base path.
 const fontFaceCss = specimens
@@ -244,20 +249,20 @@ const KLEINTEXT =
             <h3 class="gat-headline" style="margin: 0;">{s.name}</h3>
             {t && <span class={`gat-tag gat-tag--${t.mod}`}>{t.label}</span>}
           </div>
-          <div class="app-specimen__headline" style={`font-family: ${fam};`}>
+          <div class="app-specimen__headline" style={`font-family: ${fam};${lsOf(s)}`}>
             {HEADLINE}
           </div>
           <div class="app-specimen__weights">
-            <div style={`font-family: ${fam}; font-weight: 400;`}>Regular — Fließtext</div>
-            <div style={`font-family: ${fam}; font-weight: 700;`}>Bold — Auszeichnung</div>
-            <div style={`font-family: ${fam}; font-weight: 900;`}>
+            <div style={`font-family: ${fam};${lsOf(s)} font-weight: 400;`}>Regular — Fließtext</div>
+            <div style={`font-family: ${fam};${lsOf(s)} font-weight: 700;`}>Bold — Auszeichnung</div>
+            <div style={`font-family: ${fam};${lsOf(s)} font-weight: 900;`}>
               {s.web ? 'Black — Headline' : 'Bold — kein schwererer Schnitt'}
             </div>
           </div>
-          <div class="app-specimen__glyphs" style={`font-family: ${fam};`}>
+          <div class="app-specimen__glyphs" style={`font-family: ${fam};${lsOf(s)}`}>
             {GLYPHS}
           </div>
-          <div class="app-specimen__copy" style={`font-family: ${fam};`}>
+          <div class="app-specimen__copy" style={`font-family: ${fam};${lsOf(s)}`}>
             {KLEINTEXT}
           </div>
           {!s.web && (
@@ -298,7 +303,7 @@ const KLEINTEXT =
       return (
         <div class="app-cover">
           <div class="app-cover__hero">
-            <div class="app-cover__title" style={`font-family: ${fam};`}>
+            <div class="app-cover__title" style={`font-family: ${fam};${lsOf(s)}`}>
               Mehr <span style="color: var(--gelb);">Grün</span> wählen.
             </div>
           </div>
