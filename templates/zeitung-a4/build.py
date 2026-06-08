@@ -31,7 +31,7 @@ def build_template():
         author='',
         facing_pages=True,
         column_gap_default_pt=12,
-        deffont='Barlow Semi Condensed Black',
+        deffont='Raleway Black',
         defsize=12,
         first_page_num=1,
         hcms=True,
@@ -43,20 +43,20 @@ def build_template():
 
     doc.add_color('Green', rgb=(0, 255, 0))
 
-    doc.add_char_style(CharStyle(name='Default Character Style', font='Barlow Semi Condensed Regular', fcolor='Black', fontfeatures='-clig', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
-    doc.add_para_style(ParaStyle(name='Default Paragraph Style', font='Barlow Semi Condensed Regular', bcolor='None', fontfeatures='-clig', bullet='0', linesp=15, space_before_pt=0, space_after_pt=5, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, paragraph_effect_offset=0, align=0, linesp_mode=0, drop_lines=2, hyph_consecutive_lines=2, direction=0, bshade=100, numeration=0, drop_cap=False, is_default=True))
-    doc.add_para_style(ParaStyle(name='[No paragraph style]', font='Barlow Semi Condensed Regular', fcolor='Black', features='inherit', parent='Default Paragraph Style', fontsize=12, space_before_pt=0, space_after_pt=0, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, txt_underline_pos=-0.1, txt_strike_pos=-0.1, align=0, linesp_mode=1, drop_lines=0, baseline_offset=0, drop_cap=False))
-    doc.add_para_style(ParaStyle(name='Titelseite Header', font='Barlow Semi Condensed Black', fcolor='Gelb', language='de', fontfeatures='-clig', features='', fontsize=55, linesp=46, space_before_pt=5, space_after_pt=5, min_word_track=1, kern=1, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=1, linesp_mode=2, scalev=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, keep_together=False))
-    doc.add_para_style(ParaStyle(name='Monat/Ausgabe', font='Barlow Semi Condensed Black', fcolor='White', language='de', fontfeatures='-clig', fontsize=13, kern=0, linesp_mode=2))
-    doc.add_para_style(ParaStyle(name='Zustellerhinweis (Post)', font='Barlow Semi Condensed Regular', fcolor='Black', language='de', fontfeatures='-clig', fontsize=6, align=0, linesp_mode=2, fshade=100))
-    doc.add_para_style(ParaStyle(name='Impressum', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=8, linesp=9))
-    doc.add_para_style(ParaStyle(name='Copyright', font='Barlow Semi Condensed Regular', language='de', fontfeatures='-clig', fontsize=5.5))
-    doc.add_para_style(ParaStyle(name='Seitenzahl', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün', fontfeatures='-clig'))
+    doc.add_char_style(CharStyle(name='Default Character Style', font='Raleway Regular', fcolor='Black', fontfeatures='-clig', features='inherit', language='de', scolor='Black', bgcolor='None', fontsize=12, kern=0, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, fshade=100, hyph_word_min=3, sshade=100, bgshade=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, scaleh=100, scalev=100, baseline_offset=0, is_default=True))
+    doc.add_para_style(ParaStyle(name='Default Paragraph Style', font='Raleway Regular', bcolor='None', fontfeatures='-clig', bullet='0', linesp=15, space_before_pt=0, space_after_pt=5, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, paragraph_effect_offset=0, align=0, linesp_mode=0, drop_lines=2, hyph_consecutive_lines=2, direction=0, bshade=100, numeration=0, drop_cap=False, is_default=True))
+    doc.add_para_style(ParaStyle(name='[No paragraph style]', font='Raleway Regular', fcolor='Black', features='inherit', parent='Default Paragraph Style', fontsize=12, space_before_pt=0, space_after_pt=0, first_indent_pt=0, left_indent_pt=0, right_indent_pt=0, txt_underline_pos=-0.1, txt_strike_pos=-0.1, align=0, linesp_mode=1, drop_lines=0, baseline_offset=0, drop_cap=False))
+    doc.add_para_style(ParaStyle(name='Titelseite Header', font='Raleway Black', fcolor='Gelb', language='de', fontfeatures='-clig', features='', fontsize=55, linesp=46, space_before_pt=5, space_after_pt=5, min_word_track=1, kern=1, txt_underline_pos=-0.1, txt_underline_width=-0.1, txt_strike_pos=-0.1, txt_strike_width=-0.1, align=1, linesp_mode=2, scalev=100, txt_shadow_x=5, txt_shadow_y=-5, txt_outline=1, keep_together=False))
+    doc.add_para_style(ParaStyle(name='Monat/Ausgabe', font='Raleway Black', fcolor='White', language='de', fontfeatures='-clig', fontsize=13, kern=0, linesp_mode=2))
+    doc.add_para_style(ParaStyle(name='Zustellerhinweis (Post)', font='Raleway Regular', fcolor='Black', language='de', fontfeatures='-clig', fontsize=6, align=0, linesp_mode=2, fshade=100))
+    doc.add_para_style(ParaStyle(name='Impressum', font='Raleway Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=8, linesp=9))
+    doc.add_para_style(ParaStyle(name='Copyright', font='Raleway Regular', language='de', fontfeatures='-clig', fontsize=5.5))
+    doc.add_para_style(ParaStyle(name='Seitenzahl', font='Raleway Black', fcolor='Dunkelgrün', fontfeatures='-clig'))
     doc.add_para_style(ParaStyle(name='Fließtext ', space_after_pt=0, min_word_track=1, min_glyph_shrink=0.95, max_glyph_extend=1, align=3, linesp_mode=2, hyph_consecutive_lines=3, hyph_word_min=3, keep_lines_start=0, direction=0, keep_together=False))
-    doc.add_para_style(ParaStyle(name='Schrift Störer  ', font='Barlow Semi Condensed Black', fcolor='White', fontfeatures='-clig', fontsize=19, linesp=13, space_before_pt=0, align=1))
-    doc.add_para_style(ParaStyle(name='Inhaltsheadline Titelseite', font='Barlow Semi Condensed Black', fcolor='White', fontfeatures='-clig', linesp=11, space_before_pt=0, space_after_pt=0, linesp_mode=2))
-    doc.add_para_style(ParaStyle(name='Überschrift weiß', font='Barlow Semi Condensed Black', fcolor='White', language='de', fontfeatures='-clig', fontsize=40, space_after_pt=0, linesp_mode=2))
-    # c8bg0/Barlow: Barlow Semi Condensed Black at 40pt has a taller ascent than
+    doc.add_para_style(ParaStyle(name='Schrift Störer  ', font='Raleway Black', fcolor='White', fontfeatures='-clig', fontsize=19, linesp=13, space_before_pt=0, align=1))
+    doc.add_para_style(ParaStyle(name='Inhaltsheadline Titelseite', font='Raleway Black', fcolor='White', fontfeatures='-clig', linesp=11, space_before_pt=0, space_after_pt=0, linesp_mode=2))
+    doc.add_para_style(ParaStyle(name='Überschrift weiß', font='Raleway Black', fcolor='White', language='de', fontfeatures='-clig', fontsize=40, space_after_pt=0, linesp_mode=2))
+    # c8bg0/Barlow: Raleway Black at 40pt has a taller ascent than
     # the previous face, so a two-line demo headline (e.g. "Ohne Bild im
     # Hintergrund sind Überschriften grün", "Zwischen Überschrift und Text ist ein
     # Abstand") pushed its second line past the fixed 27.96mm demo frames and
@@ -67,17 +67,17 @@ def build_template():
     # a +1.3pt clip margin; 32pt would clip at -0.7pt). 30pt is looser than the
     # too-tight 28 while staying clip-safe. The 40pt size (design intent) is
     # unchanged and single-line headlines are unaffected by leading.
-    doc.add_para_style(ParaStyle(name='Überschrift Dunkelgrün', font='Barlow Semi Condensed Black', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', fontsize=40, linesp=30, space_after_pt=0, linesp_mode=0))
-    doc.add_para_style(ParaStyle(name='Bildunterschrift weiß', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=10, linesp=12))
-    doc.add_para_style(ParaStyle(name='Fließtext weiß', font='Barlow Semi Condensed Regular', fcolor='White', language='de', fontfeatures='-clig', space_after_pt=0, min_word_track=1, min_glyph_shrink=0.95, align=3, linesp_mode=2))
+    doc.add_para_style(ParaStyle(name='Überschrift Dunkelgrün', font='Raleway Black', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', fontsize=40, linesp=30, space_after_pt=0, linesp_mode=0))
+    doc.add_para_style(ParaStyle(name='Bildunterschrift weiß', font='Raleway Regular', fcolor='White', language='de', fontfeatures='-clig', fontsize=10, linesp=12))
+    doc.add_para_style(ParaStyle(name='Fließtext weiß', font='Raleway Regular', fcolor='White', language='de', fontfeatures='-clig', space_after_pt=0, min_word_track=1, min_glyph_shrink=0.95, align=3, linesp_mode=2))
     doc.add_para_style(ParaStyle(name='Fließtext in grünem Kasten', fcolor='White', language='de', fontsize=11, min_word_track=1, min_glyph_shrink=0.95, align=3, linesp_mode=1))
-    doc.add_para_style(ParaStyle(name='Headline in grünem Kasten', font='Barlow Semi Condensed Bold', fcolor='White', language='de', fontfeatures='-clig', space_after_pt=0, align=1, linesp_mode=2))
-    doc.add_para_style(ParaStyle(name='Zwischenüberschrift', font='Barlow Semi Condensed Bold', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', space_before_pt=11.34, space_after_pt=0, linesp_mode=2))
-    doc.add_para_style(ParaStyle(name='Einleitungstext', font='Barlow Semi Condensed Black', fontfeatures='-clig', parent='Zwischenüberschrift'))
-    doc.add_para_style(ParaStyle(name='Zwischenüberschrift weiß', font='Barlow Semi Condensed Black', fcolor='White', fontfeatures='-clig', parent='Zwischenüberschrift'))
+    doc.add_para_style(ParaStyle(name='Headline in grünem Kasten', font='Raleway Bold', fcolor='White', language='de', fontfeatures='-clig', space_after_pt=0, align=1, linesp_mode=2))
+    doc.add_para_style(ParaStyle(name='Zwischenüberschrift', font='Raleway Bold', fcolor='Dunkelgrün', language='de', fontfeatures='-clig', space_before_pt=11.34, space_after_pt=0, linesp_mode=2))
+    doc.add_para_style(ParaStyle(name='Einleitungstext', font='Raleway Black', fontfeatures='-clig', parent='Zwischenüberschrift'))
+    doc.add_para_style(ParaStyle(name='Zwischenüberschrift weiß', font='Raleway Black', fcolor='White', fontfeatures='-clig', parent='Zwischenüberschrift'))
     doc.add_para_style(ParaStyle(name='Zitat weißer Text', font='Vollkorn Black Italic', fcolor='White', language='de', fontfeatures='-clig', fontsize=14, align=1))
     doc.add_para_style(ParaStyle(name='Zitat grüner Text', fcolor='Dunkelgrün', parent='Zitat weißer Text'))
-    doc.add_para_style(ParaStyle(name='NormalParagraphStyle', font='Barlow Semi Condensed Black', features='inherit', linesp_mode=1))
+    doc.add_para_style(ParaStyle(name='NormalParagraphStyle', font='Raleway Black', features='inherit', linesp_mode=1))
 
     doc.add_master(
         name='Neue Musterseite rechts',
@@ -274,7 +274,7 @@ def build_template():
         layer=0,
         anname='u2989',
         clip_edit=True,
-        default_style_attrs={'ALIGN': '1', 'LINESP': '15', 'FONT': 'Barlow Semi Condensed Regular', 'FONTSIZE': '30', 'FCOLOR': 'White'},
+        default_style_attrs={'ALIGN': '1', 'LINESP': '15', 'FONT': 'Raleway Regular', 'FONTSIZE': '30', 'FCOLOR': 'White'},
         trail_style='Titelseite Header',
         text_align=1,
         col_gap_mm=1.3578247063856936,
@@ -292,7 +292,7 @@ def build_template():
         layer=0,
         anname='u29b9',
         clip_edit=True,
-        default_style_attrs={'FONT': 'Barlow Semi Condensed Regular', 'FCOLOR': 'White'},
+        default_style_attrs={'FONT': 'Raleway Regular', 'FCOLOR': 'White'},
         trail_style='Fließtext ',
         trail_attrs={'ALIGN': '0'},
         col_gap_mm=4.2333333333333325,
@@ -797,7 +797,7 @@ def build_template():
     ))
 
     # c8bg0/Barlow: this single-line demo headline frame is only 15.1mm (42.8pt)
-    # tall. Barlow Semi Condensed Black's ascent at the 40pt style size exceeds
+    # tall. Raleway Black's ascent at the 40pt style size exceeds
     # the frame height, so the line's baseline fell below the frame foot and
     # Scribus dropped "Oder nur einzeilig" entirely. The two-line headline frames
     # are taller (27–28mm) and unaffected. Override just this frame to 32pt so the

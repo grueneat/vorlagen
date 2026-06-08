@@ -22,7 +22,7 @@ from sla_lib.builder.primitives import Run, TextFrame  # noqa: E402
 
 import headline_spacing_audit as hsa  # noqa: E402
 
-BARLOW = "Barlow Semi Condensed Black"
+BARLOW = "Raleway Black"
 VOLLKORN = "Vollkorn Black Italic"
 
 

@@ -200,7 +200,7 @@ class Impressum:
     # When prefix_text is set the block emits TWO Runs in the body paragraph:
     # prefix in prefix_font then `text` in the trail_style font.
     prefix_text: Optional[str] = None
-    prefix_font: str = "Barlow Semi Condensed Bold"
+    prefix_font: str = "Raleway Bold"
     prefix_features: Optional[str] = None    # Postkarte: 'inherit'; Plakat: omit
     prefix_fshade: Optional[int] = 100       # both corpus sites: 100
 

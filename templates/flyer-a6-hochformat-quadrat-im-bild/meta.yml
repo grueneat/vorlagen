@@ -56,7 +56,7 @@ category_label: 'Flyer'
 category: 'flyer'
 idml_source: ../../../../originals/26-03-Flyer A6 Hochformat Quadrat in Bild Ordner/26-03-Flyer
   A6 Hochformat Quadrat in Bild.idml
-previews_for_sla: 952301b32aa1167857ffaa853e8669c29521d2e85870fcb9c9657659951bcf38
+previews_for_sla: fa37d2b9f0b5ba0a3fa3bc4b3c70992534c72d938a3660bf89082b502fbbe9b7
 title: 'Flyer A6 Hochformat – Quadrat im Bild'
 version: 0.1.0
-build_py_sha256: fd7d3e7ee67ab9e1ef501df84acb52130e4acfc15d7b9246bf5b61dc995bb31b
+build_py_sha256: 3de44aca7a735c158c6171aa2a80b07d816e46a14cf4a4f3de192be1f652d022

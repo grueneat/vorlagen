@@ -70,11 +70,11 @@ class FlyerA6PortraitLayoutTest(unittest.TestCase):
         sys.path.insert(0, str(WORKTREE / "tools"))
         from sla_lib.builder.headline import font_ascent_pt
 
-        BARLOW = "Barlow Semi Condensed Black"
+        RALEWAY = "Raleway Black"
         VOLLKORN = "Vollkorn Black Italic"
 
         # Page-1 headline u1175: 38pt, IDML leading 34.13430472639402pt.
-        # line1 Barlow -> line2 Vollkorn -> line3 Barlow.
+        # line1 Raleway -> line2 Vollkorn -> line3 Raleway.
         leading_p1 = 34.13430472639402
         y1 = float(self.pos["u1175"].get("YPOS"))
         y2 = float(self.pos["u1175_l2"].get("YPOS"))
@@ -82,22 +82,22 @@ class FlyerA6PortraitLayoutTest(unittest.TestCase):
         exp_y2 = (
             y1 + leading_p1
             - font_ascent_pt(VOLLKORN, 38.0)
-            + font_ascent_pt(BARLOW, 38.0)
+            + font_ascent_pt(RALEWAY, 38.0)
         )
         exp_y3 = (
             y2 + leading_p1
-            - font_ascent_pt(BARLOW, 38.0)
+            - font_ascent_pt(RALEWAY, 38.0)
             + font_ascent_pt(VOLLKORN, 38.0)
         )
         self.assertAlmostEqual(y2, exp_y2, delta=0.5)
         self.assertAlmostEqual(y3, exp_y3, delta=0.5)
-        # Page-2 headline u1214: 30pt, IDML leading 27.0pt. line1 Barlow -> line2 Vollkorn.
+        # Page-2 headline u1214: 30pt, IDML leading 27.0pt. line1 Raleway -> line2 Vollkorn.
         p1 = float(self.pos["u1214"].get("YPOS"))
         p2 = float(self.pos["u1214_l2"].get("YPOS"))
         exp_p2 = (
             p1 + 27.0
             - font_ascent_pt(VOLLKORN, 30.0)
-            + font_ascent_pt(BARLOW, 30.0)
+            + font_ascent_pt(RALEWAY, 30.0)
         )
         self.assertAlmostEqual(p2, exp_p2, delta=0.5)
 

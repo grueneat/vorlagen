@@ -359,6 +359,12 @@ _RUN_ATTR_MAP_INT = (
     ("strike_position", "TXTSTP"),
 )
 
+# Project-wide default manual tracking (Scribus KERN, in %) applied to every
+# ITEXT run that does not set its own ``kern``. The brand switched to Raleway,
+# which runs loose; -3 % tightens letter and word spacing uniformly (the
+# "Raleway -3" decision). Set to None to disable the default.
+DEFAULT_KERN: float | None = -3.0
+
 _RUN_ATTR_MAP_NUM = (
     ("fontsize", "FONTSIZE"),
     ("kern", "KERN"),
@@ -387,6 +393,10 @@ def _apply_run_attrs(it: etree._Element, run: Run) -> None:
         v = getattr(run, kw)
         if v is not None:
             it.set(attr, str(v))
+    # Uniform brand tracking: when a run sets no explicit KERN, apply the
+    # project default (Raleway -3) so every text run is tracked consistently.
+    if DEFAULT_KERN is not None and it.get("KERN") is None:
+        it.set("KERN", _fmt_num(DEFAULT_KERN))
 
 
 def _normalise_run(item, *, _internal: bool = False) -> Run:

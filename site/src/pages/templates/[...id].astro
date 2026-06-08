@@ -29,6 +29,25 @@ const catLabel = t.data.category_label ?? 'Sonstige';
   <h1 class="gat-headline">{t.data.title}</h1>
   <p>{t.data.description}</p>
 
+  {/* Prominenter Schrift-Hinweis: die Vorlagen sind in Raleway + Vollkorn
+      gesetzt; ohne installierte Schriften werden sie falsch dargestellt.
+      Rendert auf jeder Template-Seite. */}
+  <div class="gat-callout gat-callout--warn app-font-notice">
+    <p style="margin: 0 0 0.5rem 0;">
+      <strong>Wichtig — Schriften zuerst installieren:</strong> Diese Vorlage ist in
+      <strong>Raleway</strong> (Text &amp; Headlines) und <strong>Vollkorn</strong>
+      (kursive Akzente) gesetzt. Beide Schriften müssen <strong>vor dem Öffnen
+      heruntergeladen und auf deinem Rechner installiert</strong> sein — sonst
+      wird die Vorlage mit einer Ersatzschrift falsch dargestellt (verschobene
+      Umbrüche, falsche Abstände).
+    </p>
+    <p style="margin: 0;">
+      <a href={url('/fonts/gruene-vorlagen-schriften.zip')} class="app-font-notice__dl">
+        ↓ Schriften herunterladen (Raleway + Vollkorn, inkl. Installations-Anleitung)
+      </a>
+    </p>
+  </div>
+
   {t.data._previews && t.data._previews.length > 0 && (
     <div class="app-preview-grid">
       {t.data._previews.map((p, i) => {
