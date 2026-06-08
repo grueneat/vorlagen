@@ -233,6 +233,25 @@ RUN set -e; \
     pdftoppm -v 2>&1 | head -1; \
     python3 -c "import lxml.etree, yaml, simple_idml.idml; print('python deps ok')"
 
+# Wire the repo-local skills into Claude Code's user-level skill directory
+# so a fresh container picks up /idml-scaffold, /idml-tune, /idml-import,
+# and /experiments automatically. Claude Code only discovers skills from
+# ~/.claude/skills/<name>/SKILL.md — it does NOT walk the workspace's
+# .claude/skills/ tree. The base image already has its own skills there
+# (adf-author, containerize, generate-skill, etc.); we add ours as
+# symlinks that resolve to the mounted /root/workspace at runtime, so
+# editing .claude/skills/* in the repo immediately flows through without
+# a container rebuild.
+#
+# The symlinks are created at BUILD time, but their targets only exist
+# at RUNTIME (when the workspace volume is mounted). That's fine: symlinks
+# are just stored paths, they're not validated until traversed.
+RUN mkdir -p /root/.claude/skills && \
+    for s in idml-scaffold idml-tune idml-import experiments; do \
+        ln -sfn "/root/workspace/.claude/skills/$s" "/root/.claude/skills/$s"; \
+    done && \
+    ls -la /root/.claude/skills/ | grep -E 'idml-|experiments'
+
 # Default working directory is the mounted repo (volume from base image).
 WORKDIR /root/workspace
 
